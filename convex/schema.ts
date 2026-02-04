@@ -48,6 +48,5 @@ export default defineSchema({
     file: v.optional(v.string()),
     sender: v.string(),
     room: v.id("rooms"),
-    timeSent: v.number(),
-  }),
+  }).index("by_room", ["room"]),
 });

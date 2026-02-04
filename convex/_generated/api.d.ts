@@ -9,8 +9,9 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chat_mutate from "../chat/mutate.js";
+import type * as chat_query from "../chat/query.js";
 import type * as http from "../http.js";
-import type * as myFunctions from "../myFunctions.js";
 
 import type {
   ApiFromModules,
@@ -20,8 +21,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  "chat/mutate": typeof chat_mutate;
+  "chat/query": typeof chat_query;
   http: typeof http;
-  myFunctions: typeof myFunctions;
 }>;
 
 /**
