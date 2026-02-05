@@ -49,4 +49,8 @@ export default defineSchema({
     sender: v.string(),
     room: v.id("rooms"),
   }).index("by_room", ["room"]),
+
+  userProfile: defineTable({
+    role: v.union(v.literal("admin"), v.literal("maker"), v.literal("client")),
+  }),
 });
