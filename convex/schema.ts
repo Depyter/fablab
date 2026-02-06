@@ -5,6 +5,7 @@ export default defineSchema({
   // Services that the users can see and admin can manage
   services: defineTable({
     name: v.string(),
+    images: v.array(v.string()), // array of fileids in convex
     description: v.string(),
     type: v.string(),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -51,6 +52,9 @@ export default defineSchema({
   }).index("by_room", ["room"]),
 
   userProfile: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    email: v.string(),
     role: v.union(v.literal("admin"), v.literal("maker"), v.literal("client")),
   }),
 });
