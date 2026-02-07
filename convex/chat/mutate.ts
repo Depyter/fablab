@@ -5,7 +5,7 @@ import { authComponent } from "../auth";
 export const sendMessage = mutation({
   args: {
     content: v.string(),
-    file: v.optional(v.string()),
+    file: v.optional(v.id("_storage")),
     sender: v.string(),
     room: v.id("rooms"),
   },

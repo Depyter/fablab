@@ -11,7 +11,10 @@
 import type * as auth from "../auth.js";
 import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
+import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as services_mutate from "../services/mutate.js";
+import type * as services_query from "../services/query.js";
 import type * as users from "../users.js";
 
 import type {
@@ -24,7 +27,10 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   "chat/mutate": typeof chat_mutate;
   "chat/query": typeof chat_query;
+  files: typeof files;
   http: typeof http;
+  "services/mutate": typeof services_mutate;
+  "services/query": typeof services_query;
   users: typeof users;
 }>;
 

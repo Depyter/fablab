@@ -5,7 +5,7 @@ export default defineSchema({
   // Services that the users can see and admin can manage
   services: defineTable({
     name: v.string(),
-    images: v.array(v.string()), // array of fileids in convex
+    images: v.array(v.id("_storage")), // array of fileids in convex
     description: v.string(),
     type: v.string(),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -13,6 +13,7 @@ export default defineSchema({
 
   bookings: defineTable({
     bookingNumber: v.int64(),
+    userId: v.string(),
     service: v.id("services"),
     pricing: v.union(
       v.literal("normal"),
@@ -34,7 +35,7 @@ export default defineSchema({
     ),
     booking: v.id("bookings"),
     proof: v.string(), // transaction number of the proof
-    image: v.optional(v.string()), // optional file upload for proof of payment
+    image: v.optional(v.id("_storage")), // optional file upload for proof of payment
   }),
 
   rooms: defineTable({
@@ -46,7 +47,7 @@ export default defineSchema({
 
   messages: defineTable({
     content: v.string(),
-    file: v.optional(v.string()),
+    file: v.optional(v.id("_storage")),
     sender: v.string(),
     room: v.id("rooms"),
   }).index("by_room", ["room"]),
