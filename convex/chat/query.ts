@@ -28,13 +28,29 @@ export const getRooms = query({
 
     if (!userProfile) throw new Error("User profile does not exist!!");
 
-    const rooms = await ctx.db
+    const roomMembers = await ctx.db
       .query("roomMembers")
       .withIndex("by_participantId", (q) =>
         q.eq("participantId", userProfile?._id),
       )
-      .first();
+      .collect();
 
-    return rooms;
+    const roomsWithDetails = await Promise.all(
+      roomMembers.map(async (member) => {
+        const room = await ctx.db.get(member.roomId);
+
+        let lastMessage = null;
+        if (room?.lastMessageId) {
+          lastMessage = await ctx.db.get(room.lastMessageId);
+        }
+
+        return {
+          ...room,
+          lastMessage: lastMessage,
+        };
+      }),
+    );
+
+    return roomsWithDetails;
   },
 });
