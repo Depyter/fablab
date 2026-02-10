@@ -13,7 +13,7 @@ export default defineSchema({
 
   bookings: defineTable({
     bookingNumber: v.int64(),
-    userId: v.string(),
+    userId: v.id("userProfile"),
     service: v.id("services"),
     pricing: v.union(
       v.literal("normal"),
@@ -40,10 +40,17 @@ export default defineSchema({
 
   rooms: defineTable({
     name: v.string(),
-    participants: v.array(v.string()),
+    members: v.id("roomMembers"),
     color: v.string(), // can be a string literal if need be down the road
     lastMessageId: v.optional(v.id("messages")),
   }),
+
+  roomMembers: defineTable({
+    roomId: v.id("rooms"),
+    participantId: v.id("userProfile"),
+  })
+    .index("by_roomId", ["roomId"])
+    .index("by_participantId", ["participantId"]),
 
   messages: defineTable({
     content: v.string(),
@@ -57,5 +64,5 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     role: v.union(v.literal("admin"), v.literal("maker"), v.literal("client")),
-  }),
+  }).index("by_userId", ["userId"]),
 });

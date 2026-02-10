@@ -6,7 +6,6 @@ export const sendMessage = mutation({
   args: {
     content: v.string(),
     file: v.optional(v.id("_storage")),
-    sender: v.string(),
     room: v.id("rooms"),
   },
   handler: async (ctx, args) => {
@@ -18,7 +17,7 @@ export const sendMessage = mutation({
     await ctx.db.insert("messages", {
       content: args.content,
       file: args.file,
-      sender: args.sender,
+      sender: betterAuthUser.name,
       room: args.room,
     });
   },
