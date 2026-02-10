@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ArchiveX, Command, File, Inbox, Send, Trash2 } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Command,
+  Folder,
+  MessageCircle,
+  Printer,
+} from "lucide-react";
 
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
@@ -29,33 +35,27 @@ const data = {
   },
   navMain: [
     {
-      title: "Inbox",
+      title: "Projects",
       url: "#",
-      icon: Inbox,
+      icon: Folder,
       isActive: true,
     },
     {
-      title: "Drafts",
+      title: "Services",
       url: "#",
-      icon: File,
+      icon: Printer,
       isActive: false,
     },
     {
-      title: "Sent",
+      title: "Reports",
       url: "#",
-      icon: Send,
+      icon: BriefcaseBusiness,
       isActive: false,
     },
     {
-      title: "Junk",
+      title: "Chats",
       url: "#",
-      icon: ArchiveX,
-      isActive: false,
-    },
-    {
-      title: "Trash",
-      url: "#",
-      icon: Trash2,
+      icon: MessageCircle,
       isActive: false,
     },
   ],
