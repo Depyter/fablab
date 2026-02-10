@@ -34,9 +34,13 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
     socialProviders: {
-      github: {
-        clientId: process.env.GITHUB_CLIENT_ID as string,
-        clientSecret: process.env.GITHUB_CLIENT_KEY as string,
+      // github: {
+      //   clientId: process.env.GITHUB_CLIENT_ID as string,
+      //   clientSecret: process.env.GITHUB_CLIENT_KEY as string,
+      // },
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID as string,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       },
     },
     plugins: [
