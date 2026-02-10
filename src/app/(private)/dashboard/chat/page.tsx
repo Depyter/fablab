@@ -1,62 +1,34 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { useState } from "react";
-import { Id } from "@convex/_generated/dataModel";
-import { ChatInterface } from "@/components/chat/chat-interface";
+import { MessageCircle, Sparkles } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
-export default function ChatDebugPage() {
-  const [roomId, setRoomId] = useState<string>("");
-  const [message, setMessage] = useState("");
-  const [sender, setSender] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+export default function ChatPage() {
+  return (
+    <div className="h-full flex items-center justify-center p-8">
+      <Card className="max-w-md w-full border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center space-y-6">
+          <div className="relative">
+            <MessageCircle className="h-24 w-24 text-muted-foreground/40" />
+            <Sparkles className="h-8 w-8 text-primary absolute -top-2 -right-2 animate-pulse" />
+          </div>
 
-  const sendMessage = useMutation(api.chat.mutate.sendMessage);
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              No Chat Selected
+            </h2>
+            <p className="text-muted-foreground text-sm max-w-sm">
+              Pick a conversation from the sidebar to start chatting, or create
+              a new room to break the ice! 💬
+            </p>
+          </div>
 
-  // Only fetch messages if we have a valid room ID
-  const messages = useQuery(
-    api.chat.query.getRoomMessages,
-    roomId
-      ? {
-          room: roomId as Id<"rooms">,
-          paginationOpts: { numItems: 20, cursor: null },
-        }
-      : "skip",
+          <div className="pt-4 text-xs text-muted-foreground/60 italic">
+            &ldquo;Even the best conversations start with a single
+            message&rdquo;
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (!roomId.trim()) {
-      setError("Room ID is required");
-      return;
-    }
-
-    if (!message.trim()) {
-      setError("Message content is required");
-      return;
-    }
-
-    if (!sender.trim()) {
-      setError("Sender name is required");
-      return;
-    }
-
-    try {
-      await sendMessage({
-        content: message,
-        room: roomId as Id<"rooms">,
-      });
-      setMessage("");
-      setSuccess("Message sent successfully!");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message");
-    }
-  };
-
-  return <ChatInterface />;
 }

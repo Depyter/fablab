@@ -40,7 +40,7 @@ export default defineSchema({
 
   rooms: defineTable({
     name: v.string(),
-    members: v.id("roomMembers"),
+    // members: v.union(v.id("roomMembers"), v.null()),
     color: v.string(), // can be a string literal if need be down the road
     lastMessageId: v.optional(v.id("messages")),
   }),

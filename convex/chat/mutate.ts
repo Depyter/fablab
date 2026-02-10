@@ -14,11 +14,15 @@ export const sendMessage = mutation({
 
     if (!betterAuthUser) throw new Error("Unauthorized");
 
-    await ctx.db.insert("messages", {
+    const message = await ctx.db.insert("messages", {
       content: args.content,
       file: args.file,
       sender: betterAuthUser.name,
       room: args.room,
+    });
+
+    await ctx.db.patch("rooms", args.room, {
+      lastMessageId: message,
     });
   },
 });
