@@ -13,7 +13,7 @@ export default function ChatLayout({
           "--sidebar-width": "350px",
         } as React.CSSProperties
       }
-      className="h-full"
+      className="h-full max-h-full min-h-0"
     >
       <ChatSidebar />
       <SidebarInset className="h-full overflow-hidden">{children}</SidebarInset>
