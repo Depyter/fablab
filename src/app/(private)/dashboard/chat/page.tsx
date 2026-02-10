@@ -59,12 +59,27 @@ export default function ChatDebugPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="h-full overflow-auto bg-gray-50">
+      <div className="max-w-4xl mx-auto p-8">
         <h1 className="text-3xl font-bold mb-8 text-gray-900">
           Chat Debug Page
         </h1>
-
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          {Array.from({ length: 24 }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-muted/50 aspect-video h-12 w-full rounded-lg"
+            />
+          ))}
+        </div>
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          {Array.from({ length: 24 }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-muted/50 aspect-video h-12 w-full rounded-lg"
+            />
+          ))}
+        </div>
         {/* Configuration Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">
@@ -142,7 +157,7 @@ export default function ChatDebugPage() {
         </div>
 
         {/* Messages Display Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Messages</h2>
 
           {!roomId ? (
@@ -192,7 +207,7 @@ export default function ChatDebugPage() {
         </div>
 
         {/* Debug Info */}
-        <div className="mt-6 bg-gray-800 rounded-lg shadow-md p-6 text-white">
+        <div className="bg-gray-800 rounded-lg shadow-md p-6 text-white mb-8">
           <h2 className="text-xl font-semibold mb-4">Debug Info</h2>
           <div className="space-y-2 text-sm font-mono">
             <p>
