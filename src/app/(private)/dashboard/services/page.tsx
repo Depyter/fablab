@@ -41,7 +41,7 @@ export default function ServicesPage() {
     {
       id: 3,
       imageSrc: "/fablab_mural.png",
-      title: "Large CNC Service",
+      title: "CNC Service",
       description: "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
       regularPrice: 420,
       discountedPrice: 360,
@@ -72,8 +72,8 @@ export default function ServicesPage() {
 
   if (services.length === 0 && mockServiceList.length === 0) {
     return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Available Services</h1>
+      <div className="container mx-auto p-6 ">
+        <h1 className="text-3xl font-bold mb-6 sticky">Available Services</h1>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-center">
@@ -87,7 +87,7 @@ export default function ServicesPage() {
 
   return (
     <div className="container mx-auto p-8">
-      <div className="mb-6">
+      <div className="mb-6 sticky">
         <h1 className="text-3xl font-bold">Available Services</h1>
         <p className="text-muted-foreground mt-2">
           Total services: {services.length}
@@ -150,7 +150,8 @@ export default function ServicesPage() {
           //   </CardFooter>
           // </Card>
         ))}
-        
+
+        <CardButton />
       </div>
     </div>
   );

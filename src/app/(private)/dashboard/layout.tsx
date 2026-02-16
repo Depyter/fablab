@@ -22,9 +22,9 @@ export default function DashBoardLayout({
 }) {
   return (
     <TooltipProvider>
-      <SidebarProvider className="h-screen overflow-hidden">
+      <SidebarProvider className="flex h-screen">
         <AppSidebar />
-        <SidebarInset className="flex flex-col h-full overflow-hidden">
+        <SidebarInset className="flex flex-col h-full overflow-y-auto">
           <header className="flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
@@ -47,7 +47,7 @@ export default function DashBoardLayout({
               </Breadcrumb>
             </div>
           </header>
-          <div className="flex-1 overflow-hidden">{children}</div>
+          <div className="flex-1 overflow-y-auto">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
