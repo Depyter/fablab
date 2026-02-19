@@ -24,28 +24,31 @@ export default function ServicesPage() {
       id: 1,
       imageSrc: "/fablab_mural.png",
       title: "3D Printing Service",
-      description: "Professional 3D printing service offering FDM and resin printing in various materials. Perfect for prototyping, product development, custom parts, and creative projects. ",
+      description:
+        "Professional 3D printing service offering FDM and resin printing in various materials. Perfect for prototyping, product development, custom parts, and creative projects. ",
       regularPrice: 3,
       discountedPrice: 2,
-      unit: "min"
+      unit: "min",
     },
     {
       id: 2,
       imageSrc: "/fablab_mural.png",
       title: "Laser Cutting Service",
-      description: "Precision laser cutting service for various materials including wood, acrylic, and fabric. Ideal for detailed designs and custom projects.",
+      description:
+        "Precision laser cutting service for various materials including wood, acrylic, and fabric. Ideal for detailed designs and custom projects.",
       regularPrice: 20,
       discountedPrice: 15,
-      unit: "min"
+      unit: "min",
     },
     {
       id: 3,
       imageSrc: "/fablab_mural.png",
       title: "Large CNC Service",
-      description: "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
+      description:
+        "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
       regularPrice: 420,
       discountedPrice: 360,
-      unit: "hr"
+      unit: "hr",
     },
   ];
 
@@ -96,61 +99,16 @@ export default function ServicesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {mockServiceList.map((service) => (
-          
-          
           <ServiceCard
+            key={service.id}
             imageSrc={service.imageSrc}
             title={service.title}
             description={service.description}
             regularPrice={service.regularPrice}
             discountedPrice={service.discountedPrice}
             unit={service.unit}
-  
           />
-          
-          // <Card key={service._id}>
-          //   <CardHeader>
-          //     <div className="flex items-start justify-between gap-2">
-          //       <CardTitle className="flex-1">{service.name}</CardTitle>
-          //       <Badge
-          //         variant={
-          //           service.status === "Available" ? "default" : "destructive"
-          //         }
-          //       >
-          //         {service.status}
-          //       </Badge>
-          //     </div>
-          //     <CardDescription>{service.type}</CardDescription>
-          //   </CardHeader>
-
-          //   <CardContent className="space-y-3">
-          //     <div>
-          //       <p className="text-sm text-muted-foreground mb-1">
-          //         Description:
-          //       </p>
-          //       <p className="text-sm">{service.description}</p>
-          //     </div>
-
-          //     {service.images && service.images.length > 0 && (
-          //       <div>
-          //         <p className="text-sm text-muted-foreground mb-1">Images:</p>
-          //         <div className="flex flex-wrap gap-1">
-          //           {service.images.map((imageId, index) => (
-          //             <Badge key={index} variant="outline">
-          //               {imageId.slice(0, 8)}...
-          //             </Badge>
-          //           ))}
-          //         </div>
-          //       </div>
-          //     )}
-          //   </CardContent>
-
-          //   <CardFooter className="text-xs text-muted-foreground border-t">
-          //     ID: {service._id}
-          //   </CardFooter>
-          // </Card>
         ))}
-        
       </div>
     </div>
   );
