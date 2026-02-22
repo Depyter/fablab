@@ -17,7 +17,7 @@ export default function ChatPage({
   // Get current user info
   const currentUser = useQuery(api.auth.getCurrentUser);
 
-  if (!currentUser) {
+  if (!currentUser?.name) {
     return (
       <div className="h-full flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
