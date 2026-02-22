@@ -10,14 +10,14 @@ export const sendMessage = mutation({
   },
   handler: async (ctx, args) => {
     // do an auth check
-    const betterAuthUser = await authComponent.getAuthUser(ctx);
+    const user = await ctx.auth.getUserIdentity();
 
-    if (!betterAuthUser) throw new Error("Unauthorized");
+    if (!user || !user?.name) throw new Error("Unauthorized");
 
     const message = await ctx.db.insert("messages", {
       content: args.content,
       file: args.file,
-      sender: betterAuthUser.name,
+      sender: user.name,
       room: args.room,
     });
 

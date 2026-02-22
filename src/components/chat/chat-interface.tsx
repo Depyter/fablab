@@ -36,14 +36,17 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
+    const content = input;
+    setInput(""); // Clear immediately so the user isn't blocked waiting for the server
+
     try {
       await sendMessage({
-        content: input,
+        content,
         room: roomId,
       });
-      setInput("");
     } catch (error) {
       console.error("Failed to send message:", error);
+      setInput(content); // Restore the message so the user doesn't lose it on failure
     }
   };
 
