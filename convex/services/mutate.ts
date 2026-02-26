@@ -1,6 +1,5 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { authComponent } from "../auth";
 
 export const addService = mutation({
   args: {
@@ -11,9 +10,9 @@ export const addService = mutation({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
-    const betterAuthUser = await authComponent.getAuthUser(ctx);
+    const user = await ctx.auth.getUserIdentity();
     // properly check if admin user or maker
-    if (!betterAuthUser) throw new Error("Unauthorized");
+    if (!user) throw new Error("Unauthorized");
     await ctx.db.insert("services", {
       name: args.name,
       images: args.images,
