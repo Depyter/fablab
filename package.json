@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "build": "next build",
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "next dev",
     "dev:backend": "convex dev",
     "predev": "convex dev --until-success && convex dashboard",
-    "build": "next build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern \"convex/_generated/**\"",
     "format": "prettier --write .",
@@ -15,12 +15,17 @@
     "test": "vitest",
     "test:once": "vitest run",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:coverage": "vitest run --coverage --coverage.reporter=text"
+    "test:coverage": "vitest run --coverage --coverage.reporter=text",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",
     "@convex-dev/better-auth": "^0.10.10",
     "@edge-runtime/vm": "^5.0.0",
+    "@opennextjs/cloudflare": "^1.17.1",
     "better-auth": "1.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -47,6 +52,7 @@
     "npm-run-all2": "^8.0.4",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.68.1"
   }
 }
