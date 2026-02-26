@@ -99,11 +99,15 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" {...props} className="bg-transparent hover:bg-primary-muted">
+    <Sidebar
+      collapsible="icon"
+      {...props}
+      className="bg-transparent hover:bg-primary-muted"
+    >
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent >
+      <SidebarContent>
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
