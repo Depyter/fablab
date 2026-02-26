@@ -13,6 +13,8 @@ import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as projects_mutate from "../projects/mutate.js";
+import type * as projects_query from "../projects/query.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
 import type * as users from "../users.js";
@@ -29,6 +31,8 @@ declare const fullApi: ApiFromModules<{
   "chat/query": typeof chat_query;
   files: typeof files;
   http: typeof http;
+  "projects/mutate": typeof projects_mutate;
+  "projects/query": typeof projects_query;
   "services/mutate": typeof services_mutate;
   "services/query": typeof services_query;
   users: typeof users;

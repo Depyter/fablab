@@ -1,6 +1,5 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { authComponent } from "../auth";
 
 export const sendMessage = mutation({
   args: {
@@ -25,22 +24,4 @@ export const sendMessage = mutation({
       lastMessageId: message,
     });
   },
-});
-
-export const createRoom = mutation({
-  args: {
-    name: v.string(),
-    participants: v.array(v.string()),
-    color: v.string(),
-  },
-  handler: async (ctx, args) => {},
-});
-
-export const updateRoom = mutation({
-  args: {
-    name: v.string(),
-    participants: v.array(v.string()),
-    color: v.string(),
-  },
-  handler: async (ctx, args) => {},
 });

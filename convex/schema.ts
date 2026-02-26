@@ -11,8 +11,9 @@ export default defineSchema({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   }),
 
-  bookings: defineTable({
-    bookingNumber: v.int64(),
+  projects: defineTable({
+    alias: v.string(),
+    // bookingNumber: v.int64(),
     userId: v.id("userProfile"),
     service: v.id("services"),
     pricing: v.union(
@@ -20,10 +21,15 @@ export default defineSchema({
       v.literal("UP"),
       v.literal("Special"),
     ),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())), // storageId given by the frontend
     specialInstructions: v.string(),
-  }),
+  }).index("by_userProfile", ["userId"]),
 
   receipts: defineTable({
     receiptNumber: v.int64(),
@@ -64,5 +70,7 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     role: v.union(v.literal("admin"), v.literal("maker"), v.literal("client")),
-  }).index("by_userId", ["userId"]),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_role", ["role"]),
 });
