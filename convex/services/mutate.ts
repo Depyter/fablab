@@ -1,5 +1,6 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
+import { checkAuthority } from "./helper";
 
 export const addService = mutation({
   args: {
@@ -11,8 +12,12 @@ export const addService = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
     // properly check if admin user or maker
-    if (!user) throw new Error("Unauthorized");
+    if (!authorization) throw new Error("Unauthorized. Cannot add service.");
+
     await ctx.db.insert("services", {
       name: args.name,
       images: args.images,
@@ -28,7 +33,11 @@ export const deleteService = mutation({
     service: v.id("services"),
   },
   handler: async (ctx, args) => {
-    // properly check auth roles then deleteService
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization) throw new Error("Unauthorized. Cannot delete service.");
 
     await ctx.db.delete("services", args.service);
   },

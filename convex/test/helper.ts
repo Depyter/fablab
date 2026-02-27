@@ -2,7 +2,11 @@ import schema from "../schema";
 import { convexTest } from "convex-test";
 import { internal, api } from "../_generated/api";
 
-export async function setupProject() {
+/**
+ *
+ * @returns Two users, Harley (Client) and Aera (Admin) roles.
+ */
+export async function setupUsers() {
   const t = convexTest(schema);
 
   // Create Initial Users for mock
@@ -18,8 +22,14 @@ export async function setupProject() {
     name: "Aera",
   });
 
-  const tHarley = t.withIdentity({ subject: "1" });
-  const tAera = t.withIdentity({ subject: "2" });
+  const tHarley = t.withIdentity({ subject: "1", name: "Harley" });
+  const tAera = t.withIdentity({ subject: "2", name: "Aera" });
+
+  return { t, tHarley, tAera };
+}
+
+export async function setupProject() {
+  const { t, tHarley, tAera } = await setupUsers();
 
   await tAera.mutation(api.services.mutate.addService, {
     name: "3d printing",
@@ -50,4 +60,8 @@ export async function setupProject() {
   });
 
   return { t, tHarley, tAera, serviceId, projectId, roomId };
+}
+
+export async function setupService() {
+  const { tHarley, tAera } = await setupUsers();
 }
