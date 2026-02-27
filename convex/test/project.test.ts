@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { setupProject } from "./helper";
+import { api } from "../_generated/api";
 
 describe("Project and Chat functionality", () => {
   test("Initialization", async () => {
@@ -53,5 +54,33 @@ describe("Project and Chat functionality", () => {
     });
   });
 
-  test("Chat messaging", async () => {});
+  test("Chat messaging", async () => {
+    const { t, tAera, tHarley, roomId } = await setupProject();
+
+    await tAera.mutation(api.chat.mutate.sendMessage, {
+      content: "Hello this project...",
+      room: roomId,
+    });
+
+    await tHarley.mutation(api.chat.mutate.sendMessage, {
+      content: "Hello Aera",
+      room: roomId,
+    });
+
+    // Check if the message is sent
+    await t.run(async (ctx) => {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_room", (q) => q.eq("room", roomId))
+        .collect();
+
+      expect(messages.length).toBe(3);
+      // first message is from the system
+      expect(messages[1].sender).toBe("Aera");
+      expect(messages[2].sender).toBe("Harley");
+
+      expect(messages[1].content).toBe("Hello this project...");
+      expect(messages[2].content).toBe("Hello Aera");
+    });
+  });
 });
