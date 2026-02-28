@@ -61,7 +61,3 @@ export async function setupProject() {
 
   return { t, tHarley, tAera, serviceId, projectId, roomId };
 }
-
-export async function setupService() {
-  const { tHarley, tAera } = await setupUsers();
-}

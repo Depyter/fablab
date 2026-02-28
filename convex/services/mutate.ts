@@ -28,21 +28,6 @@ export const addService = mutation({
   },
 });
 
-export const deleteService = mutation({
-  args: {
-    service: v.id("services"),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot delete service.");
-
-    await ctx.db.delete("services", args.service);
-  },
-});
-
 export const updateService = mutation({
   args: {
     service: v.id("services"),
@@ -54,7 +39,12 @@ export const updateService = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    // properly check auth roles then updateService
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization) throw new Error("Unauthorized. Cannot add service.");
+
     const updates: Partial<{
       name: string;
       description: string;
@@ -89,6 +79,25 @@ export const addImageToService = mutation({
   },
 });
 
+export const deleteService = mutation({
+  args: {
+    service: v.id("services"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization) throw new Error("Unauthorized. Cannot delete service.");
+
+    const service = await ctx.db.get(args.service);
+
+    if (!service) throw new Error("Service not found!");
+    await Promise.all(service.images.map((image) => ctx.storage.delete(image)));
+    await ctx.db.delete("services", args.service);
+  },
+});
+
 export const deleteImageToService = mutation({
   args: {
     service: v.id("services"),
@@ -99,6 +108,7 @@ export const deleteImageToService = mutation({
 
     if (!service) throw new Error("Service does not exist!");
     const updatedList = service.images.filter((id) => id !== args.image);
+    await ctx.storage.delete(args.image);
 
     await ctx.db.patch("services", args.service, {
       images: updatedList,

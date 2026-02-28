@@ -9,7 +9,7 @@
     "dev:backend": "convex dev",
     "predev": "convex dev --until-success && convex dashboard",
     "start": "next start",
-    "lint": "eslint . --ignore-pattern \"convex/_generated/**\"",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest",
