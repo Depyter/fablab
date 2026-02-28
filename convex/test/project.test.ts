@@ -83,4 +83,7 @@ describe("Project and Chat functionality", () => {
       expect(messages[2].content).toBe("Hello Aera");
     });
   });
+
+  test("Update Project (Privileged - Owner, Admin, Maker)", async () => {});
+  test("Update Project (Non-privileged)", async () => {});
 });

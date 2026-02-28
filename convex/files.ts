@@ -4,6 +4,9 @@ import { mutation } from "./_generated/server";
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
     return await ctx.storage.generateUploadUrl();
   },
 });
