@@ -8,9 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useRouter } from "next/navigation";
 
 interface ServiceCardProps {
     // required
+    id: number | string;
     imageSrc: string;
     title: string;
     description: string;
@@ -22,13 +24,13 @@ interface ServiceCardProps {
     imageAlt?: string;
     badgeText?: string;
     badgeVariant?: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
-    onButtonClick?: () => void;
     buttonText?: string;
     showBadge?: boolean;
     className?: string;
 }
 
 export function ServiceCard({
+    id,
     imageSrc,
     title,
     description,
@@ -37,12 +39,18 @@ export function ServiceCard({
     imageAlt = "Service image",
     badgeText = "Featured",
     badgeVariant = "secondary",
-    onButtonClick,
     buttonText = "View Service",
     showBadge = true,
     className = "",
     unit = "per unit",
 }: ServiceCardProps) {
+
+  const router = useRouter();
+  
+  const handleButtonClick = () => {
+    router.push(`/dashboard/services/${id}`);
+  };
+
   return (
     <Card className={`relative mx-auto w-full max-w-sm pt-0 ${className}`}>
       <div className="absolute inset-0 z-30 aspect-video bg-black/35" />
@@ -75,7 +83,7 @@ export function ServiceCard({
 
       <div className="flex-1/2" />
       <CardFooter>
-        <Button className="w-full" onClick={onButtonClick}>{buttonText}</Button>
+        <Button className="w-full" onClick={(e) => { e.stopPropagation(); handleButtonClick(); }}>{buttonText}</Button>
       </CardFooter>
     </Card>
   )

@@ -2,53 +2,18 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ServiceCard } from "@/components/services/service-card";
 import { CardButton } from "@/components/services/card-button";
-import { union } from "better-auth";
+import { MOCK_SERVICES } from "@/lib/mock-data";
+import Link from "next/link"; // FIXED: Correct Next.js Import
 
 export default function ServicesPage() {
   const services = useQuery(api.services.query.getServices);
+  const mockServiceList = MOCK_SERVICES;
 
-  const mockServiceList = [
-    {
-      id: 1,
-      imageSrc: "/fablab_mural.png",
-      title: "3D Printing Service",
-      description: "Professional 3D printing service offering FDM and resin printing in various materials. Perfect for prototyping, product development, custom parts, and creative projects. ",
-      regularPrice: 3,
-      discountedPrice: 2,
-      unit: "min"
-    },
-    {
-      id: 2,
-      imageSrc: "/fablab_mural.png",
-      title: "Laser Cutting Service",
-      description: "Precision laser cutting service for various materials including wood, acrylic, and fabric. Ideal for detailed designs and custom projects.",
-      regularPrice: 20,
-      discountedPrice: 15,
-      unit: "min"
-    },
-    {
-      id: 3,
-      imageSrc: "/fablab_mural.png",
-      title: "CNC Service",
-      description: "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
-      regularPrice: 420,
-      discountedPrice: 360,
-      unit: "hr"
-    },
-  ];
-
+  // Loading State
   if (services === undefined) {
     return (
       <div className="container mx-auto p-6 space-y-4">
@@ -56,13 +21,8 @@ export default function ServicesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-20 w-full" />
-              </CardContent>
+              <CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader>
+              <CardContent><Skeleton className="h-20 w-full" /></CardContent>
             </Card>
           ))}
         </div>
@@ -70,87 +30,46 @@ export default function ServicesPage() {
     );
   }
 
+  // Empty State
   if (services.length === 0 && mockServiceList.length === 0) {
     return (
-      <div className="container mx-auto p-6 ">
-        <h1 className="text-3xl font-bold mb-6 sticky">Available Services</h1>
+      <div className="container mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-6">Available Services</h1>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground text-center">
-              No services found. Add some services to see them here.
-            </p>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            No services found.
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Main 
   return (
     <div className="container mx-auto p-8">
       <div className="mb-6 sticky">
         <h1 className="text-3xl font-bold">Available Services</h1>
         <p className="text-muted-foreground mt-2">
-          Total services: {services.length}
+          Total services: {mockServiceList.length}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {mockServiceList.map((service) => (
-          
-          
-          <ServiceCard
-            imageSrc={service.imageSrc}
-            title={service.title}
-            description={service.description}
-            regularPrice={service.regularPrice}
-            discountedPrice={service.discountedPrice}
-            unit={service.unit}
-  
-          />
-          
-          // <Card key={service._id}>
-          //   <CardHeader>
-          //     <div className="flex items-start justify-between gap-2">
-          //       <CardTitle className="flex-1">{service.name}</CardTitle>
-          //       <Badge
-          //         variant={
-          //           service.status === "Available" ? "default" : "destructive"
-          //         }
-          //       >
-          //         {service.status}
-          //       </Badge>
-          //     </div>
-          //     <CardDescription>{service.type}</CardDescription>
-          //   </CardHeader>
-
-          //   <CardContent className="space-y-3">
-          //     <div>
-          //       <p className="text-sm text-muted-foreground mb-1">
-          //         Description:
-          //       </p>
-          //       <p className="text-sm">{service.description}</p>
-          //     </div>
-
-          //     {service.images && service.images.length > 0 && (
-          //       <div>
-          //         <p className="text-sm text-muted-foreground mb-1">Images:</p>
-          //         <div className="flex flex-wrap gap-1">
-          //           {service.images.map((imageId, index) => (
-          //             <Badge key={index} variant="outline">
-          //               {imageId.slice(0, 8)}...
-          //             </Badge>
-          //           ))}
-          //         </div>
-          //       </div>
-          //     )}
-          //   </CardContent>
-
-          //   <CardFooter className="text-xs text-muted-foreground border-t">
-          //     ID: {service._id}
-          //   </CardFooter>
-          // </Card>
+         
+            <ServiceCard
+              key={service.id}
+              id = {service.id}
+              imageSrc={service.imageSrc}
+              title={service.title}
+              description={service.description}
+              regularPrice={service.regularPrice}
+              discountedPrice={service.discountedPrice}
+              unit={service.unit}
+              
+            />
+         
         ))}
-
         <CardButton />
       </div>
     </div>
