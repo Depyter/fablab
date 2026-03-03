@@ -99,6 +99,7 @@ export default function ServicesPage() {
           
           
           <ServiceCard
+            key={service.id}
             id={service.id}
             imageSrc={service.imageSrc}
             title={service.title}

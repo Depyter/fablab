@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ServiceCard } from "@/components/services/service-card";
 import { CardButton } from "@/components/services/card-button";
 import { MOCK_SERVICES } from "@/lib/mock-data";
-import Link from "next/link"; // FIXED: Correct Next.js Import
 
 export default function ServicesPage() {
   const services = useQuery(api.services.query.getServices);
