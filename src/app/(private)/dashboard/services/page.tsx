@@ -59,7 +59,7 @@ export default function ServicesPage() {
             <ServiceCard
               key={service.id}
               id = {service.id}
-              imageSrc={service.imageSrc}
+              imageSrc={service.images[0]}
               title={service.title}
               description={service.description}
               regularPrice={service.regularPrice}

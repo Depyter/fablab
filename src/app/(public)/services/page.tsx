@@ -15,39 +15,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ServiceCard } from "@/components/services/service-card";
 import { CardButton } from "@/components/services/card-button";
 import { union } from "better-auth";
+import { MOCK_SERVICES } from "@/lib/mock-data";
 
 export default function ServicesPage() {
   const services = useQuery(api.services.query.getServices);
-
-  const mockServiceList = [
-    {
-      id: 1,
-      imageSrc: "/fablab_mural.png",
-      title: "3D Printing Service",
-      description: "Professional 3D printing service offering FDM and resin printing in various materials. Perfect for prototyping, product development, custom parts, and creative projects. ",
-      regularPrice: 3,
-      discountedPrice: 2,
-      unit: "min"
-    },
-    {
-      id: 2,
-      imageSrc: "/fablab_mural.png",
-      title: "Laser Cutting Service",
-      description: "Precision laser cutting service for various materials including wood, acrylic, and fabric. Ideal for detailed designs and custom projects.",
-      regularPrice: 20,
-      discountedPrice: 15,
-      unit: "min"
-    },
-    {
-      id: 3,
-      imageSrc: "/fablab_mural.png",
-      title: "Large CNC Service",
-      description: "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
-      regularPrice: 420,
-      discountedPrice: 360,
-      unit: "hr"
-    },
-  ];
+  const mockServiceList = MOCK_SERVICES; // Replace with actual data when available
 
   if (services === undefined) {
     return (
@@ -101,7 +73,7 @@ export default function ServicesPage() {
           <ServiceCard
             key={service.id}
             id={service.id}
-            imageSrc={service.imageSrc}
+            imageSrc={service.images[0]}
             title={service.title}
             description={service.description}
             regularPrice={service.regularPrice}

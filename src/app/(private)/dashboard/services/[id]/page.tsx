@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PriceTile } from "@/components/services/price-tile";
 import Link from "next/link";
+import { ServiceGallery } from "../../../../../components/services/image-carousel";
 
 export default function ServiceDetailsPage() {
   const params = useParams();
@@ -53,16 +54,7 @@ export default function ServiceDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Left Gallery */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="aspect-[4/3] rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <img src={service.imageSrc} alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-             {[1,2,3].map(i => (
-               <div key={i} className="aspect-square rounded-xl border border-gray-100 overflow-hidden cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
-                 <img src={service.imageSrc} className="w-full h-full object-cover" />
-               </div>
-             ))}
-          </div>
+          <ServiceGallery images={service.images} />
         </div>
 
         {/* Right Content */}
