@@ -11,7 +11,7 @@ export const MOCK_SERVICES = [
     status: "Available",
     requirements: ["Requirement 1", "Requirement 2", "Requirement 3"],
     machines: ["Machine 1", "Machine 2", "Machine 3"],
-    projects: ["/project1.png", "/project2.png", "/project3.png"]
+    projects: ["/project-1.png", "/project-1.png", "/project-1.png"]
   },
   {
     id: "2",
