@@ -11,6 +11,8 @@ import { PriceTile } from "@/components/services/price-tile";
 import Link from "next/link";
 import { useForm } from "@tanstack/react-form";
 import { GeneralInfoForm } from "../../../../../components/services/forms/general-info-form";
+import { PricingForm } from "@/components/services/forms/pricing-form";
+import { RequirementsForm } from "@/components/services/forms/requirements-form";
 
 
 export interface AddServiceFromValues {
@@ -25,6 +27,7 @@ export interface AddServiceFromValues {
     requirements: string[];
     projects: string[];
 }
+
 
 export default function AddServicePage() {
     const params = useParams();
@@ -49,6 +52,8 @@ export default function AddServicePage() {
         }
     });
 
+    
+
     useEffect(() => {
         const handleScroll = () => {
         // If user scrolls down more than 10px, show the line
@@ -65,7 +70,8 @@ export default function AddServicePage() {
     //   if (!service) return <div className="p-20 text-center">Service not found</div>;
 
     return (
-        <main className="container mx-auto p-8 max-w-6xl p-10 overflow-hidden">
+        
+        <main className="container mx-auto max-w-6xl p-10 overflow-hidden">
         
             {/* Top Navigation & Actions */}
             <header className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${isScrolled ? 'border-b border-gray-200' : 'border-b-0'}`}>
@@ -91,6 +97,8 @@ export default function AddServicePage() {
                 {/* Left Content */}
                 <div className="lg:col-span-5 space-y-4">
                     <GeneralInfoForm form={form} />
+                    <PricingForm form={form} />
+                    <RequirementsForm form={form} />
                 </div>
             </div>
             

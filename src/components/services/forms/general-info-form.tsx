@@ -27,7 +27,7 @@ import {
 import { AddServiceFromValues } from "@/app/(private)/dashboard/services/add-service/page"
 
 interface GeneralInfoFormProps {
-    form: FormApi<AddServiceFromValues>;
+    form: any;
 }
 
 export function GeneralInfoForm( { form }: GeneralInfoFormProps ) {
@@ -44,7 +44,7 @@ export function GeneralInfoForm( { form }: GeneralInfoFormProps ) {
         <FieldGroup>
             <form.Field
                 name="title"
-                children={(field) => {
+                children={(field:any) => {
                 const isInvalid =
                     field.state.meta.isTouched && !field.state.meta.isValid
                 return (
@@ -69,7 +69,7 @@ export function GeneralInfoForm( { form }: GeneralInfoFormProps ) {
             />
             <form.Field
                 name="description"
-                children={(field) => {
+                children={(field:any) => {
                 const isInvalid =
                     field.state.meta.isTouched && !field.state.meta.isValid
                 return (
