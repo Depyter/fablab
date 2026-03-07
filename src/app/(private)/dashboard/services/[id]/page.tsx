@@ -32,7 +32,7 @@ export default function ServiceDetailsPage() {
 
   return (
     <main className="">
-      <div className="container mx-auto p-8 max-w-6xl p-10">
+      <div className="container mx-auto max-w-6xl p-10">
         {/* Top Navigation & Actions */}
         <header className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${isScrolled ? 'border-b border-gray-200' : 'border-b-0'}`}>
           <div className="flex items-center gap-4">
@@ -66,7 +66,7 @@ export default function ServiceDetailsPage() {
               <PriceTile label="UP Rate" price={service.discountedPrice} unit={service.unit} icon={<CirclePercent className="h-6 w-6 text-gray-200" />} />
             </div>
 
-            <div className="border border-gray-200 rounded-xl p-8 relative min-h-[500px]">
+            <div className="border border-gray-200 rounded-xl p-8 relative min-h-125">
               <div className="absolute top-6 right-8 flex items-center gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Status</span>
                 <Badge className="bg-[#F4FBF9] text-chart-6 border-none px-4 py-1 font-semibold">
@@ -106,6 +106,13 @@ export default function ServiceDetailsPage() {
               <img src={project} alt={""} className="w-full h-full object-cover rounded-lg" />
             </div>
           ))}
+
+          {service.projects.length === 0 && (
+            <div className="col-span-full border-dashed border-gray-300 text-center py-10">
+             
+                <p className="text-gray-400">No projects available for this service.</p>
+            </div>
+          )}
         </div>
       </section>
       

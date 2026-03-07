@@ -30,7 +30,7 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { AddServiceFromValues } from "@/app/(private)/dashboard/services/add-service/page"
-import { XIcon } from "lucide-react"
+import { XIcon, CirclePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface RequirementsFormProps {
@@ -49,13 +49,13 @@ export function RequirementsForm( { form }: RequirementsFormProps ) {
             if (lastInput) {
                 lastInput.focus();
             }
-        }, 0);
+        }, 50);
     };
 
     return (
     <Card className="w-full sm:max-w-md">
       <CardHeader>
-        <CardTitle>Requirements</CardTitle>
+        <CardTitle className="font-bold text-lg">Requirements</CardTitle>
         <CardDescription>
           Specify the requirements for your service.
         </CardDescription>
@@ -71,7 +71,7 @@ export function RequirementsForm( { form }: RequirementsFormProps ) {
             return (
                 <FieldSet className="gap-4">
                     <FieldGroup className="gap-4">
-                        {field.state.value.map((_, index) => (
+                        {field.state.value.map((requirement: string, index: number) => (
                             <form.Field
                                 key={index}
                                 name={`${field.name}[${index}]`}
@@ -134,7 +134,10 @@ export function RequirementsForm( { form }: RequirementsFormProps ) {
                             onClick={() => field.pushValue("")}
                             className=""
                         >
-                            Add Requirement
+                            <div className="flex flex-row items-center gap-2">
+                                <CirclePlus className="h-4 w-4 mr-2" />
+                                Add Requirement
+                            </div>
                         </Button>
                 
                 </FieldGroup>

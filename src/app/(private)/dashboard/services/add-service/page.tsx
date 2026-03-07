@@ -13,6 +13,11 @@ import { useForm } from "@tanstack/react-form";
 import { GeneralInfoForm } from "../../../../../components/services/forms/general-info-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
+import { SampleProjectsForm } from "@/components/services/forms/upload-sample-proj-form";
+import { ThumbnailForm } from "@/components/services/forms/upload-thumbnail-form";
+import { MachineSelectForm } from "@/components/services/forms/machine-select-form";
+import { Select } from "radix-ui";
+import { SelectForm } from "@/components/services/forms/select-form";
 
 
 export interface AddServiceFromValues {
@@ -32,6 +37,20 @@ export interface AddServiceFromValues {
 export default function AddServicePage() {
     const params = useParams();
     const [isScrolled, setIsScrolled] = useState(false);
+
+    // sample select machine options
+    const machineOptions = [
+        { label: "Machine 1", value: "machine-1" },
+        { label: "Machine 2", value: "machine-2" },
+        { label: "Machine 3", value: "machine-3" },
+    ];
+
+    // sample select status options
+    const statusOptions = [
+        { label: "Available", value: "available" },
+        { label: "Unavailable", value: "unavailable" },
+        { label: "Maintenance", value: "maintenance" },
+    ];
 
     // form
     const form = useForm({
@@ -71,7 +90,7 @@ export default function AddServicePage() {
 
     return (
         
-        <main className="container mx-auto max-w-6xl p-10 overflow-hidden">
+        <main className="container mx-auto max-w-6xl p-10 ">
         
             {/* Top Navigation & Actions */}
             <header className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${isScrolled ? 'border-b border-gray-200' : 'border-b-0'}`}>
@@ -93,12 +112,20 @@ export default function AddServicePage() {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">   
+            <div className="grid grid-cols-1 lg:grid-cols-8 gap-5">   
                 {/* Left Content */}
-                <div className="lg:col-span-5 space-y-4">
+                <div className="lg:col-span-5 space-y-5">
                     <GeneralInfoForm form={form} />
                     <PricingForm form={form} />
                     <RequirementsForm form={form} />
+                    <SampleProjectsForm form={form} />
+                </div>
+
+                {/* Right Content */}
+                <div className="lg:col-span-3 space-y-4">
+                    <ThumbnailForm form={form} />
+                    <MachineSelectForm form={form} options={machineOptions} />
+                    <SelectForm form={form} title="Status" options={statusOptions} fieldName="status" />
                 </div>
             </div>
             

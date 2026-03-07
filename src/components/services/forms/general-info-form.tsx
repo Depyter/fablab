@@ -34,7 +34,7 @@ export function GeneralInfoForm( { form }: GeneralInfoFormProps ) {
   return (
     <Card className="w-full sm:max-w-md">
       <CardHeader>
-        <CardTitle>General Information</CardTitle>
+        <CardTitle className="font-bold text-lg">General Information</CardTitle>
         <CardDescription>
           Provide details about your service.
         </CardDescription>

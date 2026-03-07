@@ -34,7 +34,7 @@ export function PricingForm( { form }: PricingFormProps ) {
   return (
     <Card className="w-full sm:max-w-md">
       <CardHeader>
-        <CardTitle>Pricing</CardTitle>
+        <CardTitle className="font-bold text-lg">Pricing</CardTitle>
         <CardDescription>
             Set the pricing details for your service.
         </CardDescription>
@@ -51,7 +51,7 @@ export function PricingForm( { form }: PricingFormProps ) {
                 return (
                     <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>Regular Price</FieldLabel>
-                      <InputGroup className="flex items-center border border-input transition-shadow has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gray-300 has-[:focus-visible]:border-gray-400 data-[invalid]:border-destructive"> 
+                      <InputGroup className="flex items-center border border-input transition-shadow has-focus-visible-ring-3 has-focus-visible-ring-gray-300 has-focus-visible-border-gray-400 data-invalid-border-destructive"> 
                         <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                             <InputGroupText>₱</InputGroupText>
                         </InputGroupAddon>
@@ -82,7 +82,7 @@ export function PricingForm( { form }: PricingFormProps ) {
                 return (
                     <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>UP Rate</FieldLabel>
-                      <InputGroup className="flex items-center border border-input transition-shadow has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gray-300 has-[:focus-visible]:border-gray-400 data-[invalid]:border-destructive"> 
+                      <InputGroup className="flex items-center border border-input transition-shadow has-focus-visible-ring-3 has-focus-visible-ring-gray-300 has-focus-visible-border-gray-400 data-invalid-border-destructive"> 
                         <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                             <InputGroupText>₱</InputGroupText>
                         </InputGroupAddon>
