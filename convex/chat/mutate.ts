@@ -1,6 +1,5 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { authComponent } from "../auth";
 
 export const sendMessage = mutation({
   args: {
@@ -10,14 +9,14 @@ export const sendMessage = mutation({
   },
   handler: async (ctx, args) => {
     // do an auth check
-    const betterAuthUser = await authComponent.getAuthUser(ctx);
+    const user = await ctx.auth.getUserIdentity();
 
-    if (!betterAuthUser) throw new Error("Unauthorized");
+    if (!user || !user?.name) throw new Error("Unauthorized");
 
     const message = await ctx.db.insert("messages", {
       content: args.content,
       file: args.file,
-      sender: betterAuthUser.name,
+      sender: user.name,
       room: args.room,
     });
 
@@ -25,22 +24,4 @@ export const sendMessage = mutation({
       lastMessageId: message,
     });
   },
-});
-
-export const createRoom = mutation({
-  args: {
-    name: v.string(),
-    participants: v.array(v.string()),
-    color: v.string(),
-  },
-  handler: async (ctx, args) => {},
-});
-
-export const updateRoom = mutation({
-  args: {
-    name: v.string(),
-    participants: v.array(v.string()),
-    color: v.string(),
-  },
-  handler: async (ctx, args) => {},
 });

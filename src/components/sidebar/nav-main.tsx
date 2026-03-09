@@ -32,9 +32,8 @@ export function NavMain({
     }[];
   }[];
 }) {
-
   const pathname = usePathname();
-  
+
   return (
     <SidebarGroup>
       {/*<SidebarGroupLabel>Platform</SidebarGroupLabel>*/}
@@ -59,7 +58,14 @@ export function NavMain({
                   <SidebarMenuSub>
                     {item.items?.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild className={pathname === subItem.url ? "bg-sidebar-accent text-primary font-bold" : "hover:bg-primary-muted"}>
+                        <SidebarMenuSubButton
+                          asChild
+                          className={
+                            pathname === subItem.url
+                              ? "bg-sidebar-accent text-primary font-bold"
+                              : "hover:bg-primary-muted"
+                          }
+                        >
                           <a href={subItem.url}>
                             <span>{subItem.title}</span>
                           </a>
@@ -72,7 +78,15 @@ export function NavMain({
             </Collapsible>
           ) : (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild tooltip={item.title} className={pathname === item.url ? "bg-sidebar-accent text-primary font-bold" : "hover:bg-primary-muted"}>
+              <SidebarMenuButton
+                asChild
+                tooltip={item.title}
+                className={
+                  pathname === item.url
+                    ? "bg-sidebar-accent text-primary font-bold"
+                    : "hover:bg-primary-muted"
+                }
+              >
                 <a href={item.url}>
                   {item.icon}
                   <span>{item.title}</span>
