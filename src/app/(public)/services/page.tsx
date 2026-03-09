@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ServiceCard } from "@/components/services/service-card";
 import { CardButton } from "@/components/services/card-button";
 import { union } from "better-auth";
 import { MOCK_SERVICES } from "@/lib/mock-data";
+import { ServiceCardClient } from "@/components/services/service-card-client";
 
 export default function ServicesPage() {
   const services = useQuery(api.services.query.getServices);
@@ -101,15 +101,11 @@ export default function ServicesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {mockServiceList.map((service) => (
-          <ServiceCard
+          <ServiceCardClient
             key={service.id}
             id={service.id}
-            imageSrc={service.images[0] || "/fablab_mural.png"}
+            imageSrc={"/laser-cutting.jpg"}
             title={service.title}
-            description={service.description}
-            regularPrice={service.regularPrice}
-            discountedPrice={service.discountedPrice}
-            unit={service.unit}
           />
         ))}
         
