@@ -37,7 +37,7 @@ export function ServiceCardClient({
         </div>
         {/* on card hover */}
         <div className="absolute inset-0 flex items-end justify-center pb-6 opacity-0 transition-all duration-300 group-hover:opacity-100 translate-y-2 group-hover:translate-y-4">
-          <Link href={`/dashboard/services/${id}`} className="w-full px-4">
+          <Link href={`/services/${id}`} className="w-full px-4">
             <Button className="w-full bg-primary text-white hover:bg-primary-muted hover:text-chart-2 rounded-full shadow-sm font-semibold">
               {buttonText}
             </Button>
