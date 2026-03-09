@@ -8,9 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link  from "next/link";
 
 interface ServiceCardProps {
   // required
+  id: number | string;
   imageSrc: string;
   title: string;
   description: string;
@@ -28,13 +30,13 @@ interface ServiceCardProps {
     | "outline"
     | "ghost"
     | "link";
-  onButtonClick?: () => void;
   buttonText?: string;
   showBadge?: boolean;
   className?: string;
 }
 
 export function ServiceCard({
+  id,
   imageSrc,
   title,
   description,
@@ -43,7 +45,6 @@ export function ServiceCard({
   imageAlt = "Service image",
   badgeText = "Featured",
   badgeVariant = "secondary",
-  onButtonClick,
   buttonText = "View Service",
   showBadge = true,
   className = "",
@@ -87,9 +88,11 @@ export function ServiceCard({
 
       <div className="flex-1/2" />
       <CardFooter>
-        <Button className="w-full" onClick={onButtonClick}>
-          {buttonText}
-        </Button>
+        <Link href={`/dashboard/services/${id}`} className="w-full">
+          <Button className="w-full" >
+            {buttonText}
+          </Button>
+        </Link>
       </CardFooter>
     </Card>
   );

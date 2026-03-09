@@ -104,7 +104,7 @@ export default function AddServicePage() {
                 </div>
                 <div className="flex gap-3">
                     <Button variant="outline" className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg">
-                        Remove
+                        Discard
                     </Button>
                     <Button className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg" onClick={() => form.handleSubmit()}>
                         Add Service
