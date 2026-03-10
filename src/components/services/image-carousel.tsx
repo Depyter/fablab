@@ -10,6 +10,7 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import Image from "next/image";
 
 interface ServiceGalleryProps {
   images: string[];
@@ -45,7 +46,13 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
             <CarouselItem key={index}>
               <Card className="border-none shadow-none">
                 <CardContent className="flex aspect-[4/3] items-center justify-center p-0 overflow-hidden rounded-2xl border">
-                  <img src={src} className="w-full h-full object-cover" alt="" />
+                  <Image
+                    src={src}
+                    className="w-full h-full object-cover"
+                    alt=""
+                    width={640}
+                    height={480}
+                  />
                 </CardContent>
               </Card>
             </CarouselItem>
@@ -56,23 +63,29 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
       </Carousel>
 
       {/* Sliding Thumbnail Track */}
-      <Carousel 
-        setApi={setThumbApi} 
-        opts={{ containScroll: "keepSnaps", dragFree: true }} 
+      <Carousel
+        setApi={setThumbApi}
+        opts={{ containScroll: "keepSnaps", dragFree: true }}
         className="w-full "
       >
         <CarouselContent className="-ml-3">
           {images.map((src, index) => (
-            <CarouselItem key={index} className="pl-3 basis-1/2 lg:basis-1/3"> 
+            <CarouselItem key={index} className="pl-3 basis-1/2 lg:basis-1/3">
               <button
                 onClick={() => mainApi?.scrollTo(index)}
                 className={`w-full aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200 ${
-                  current === index 
-                    ? "border-[#1A8A7E] ring-2 ring-[#1A8A7E]/20 opacity-100" 
+                  current === index
+                    ? "border-[#1A8A7E] ring-2 ring-[#1A8A7E]/20 opacity-100"
                     : "border-transparent opacity-50 hover:opacity-100"
                 }`}
               >
-                <img src={src} className="w-full h-full object-cover" alt="" />
+                <Image
+                  src={src}
+                  className="w-full h-full object-cover"
+                  alt=""
+                  width={96}
+                  height={96}
+                />
               </button>
             </CarouselItem>
           ))}

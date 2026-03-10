@@ -5,17 +5,11 @@ import { api } from "@/../convex/_generated/api";
 import {
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ServiceCard } from "@/components/services/service-card";
 import { CardButton } from "@/components/services/card-button";
-import { union } from "better-auth";
-import { useRouter } from "next/navigation";
 import { MOCK_SERVICES } from "@/lib/mock-data";
 
 export default function ServicesPage() {

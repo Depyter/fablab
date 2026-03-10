@@ -1,57 +1,40 @@
 "use client";
 
-import * as React from "react";
-import { UploadCloudIcon, XIcon, ImagePlusIcon } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { FileUpload } from "@/components/file-upload";
 
-interface SampleProjectsFormProps {
-  form: any;
-}
+// interface SampleProjectsFormProps {
+//   form: any;
+// }
 
-export function SampleProjectsForm({ form }: SampleProjectsFormProps) {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+export function SampleProjectsForm() {
+  // const handleFileChange = (
+  //   event: React.ChangeEvent<HTMLInputElement>,
+  //   field: any,
+  // ) => {
+  //   const files = event.target.files;
+  //   if (!files || files.length === 0) return;
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    field: any
-  ) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  //   Array.from(files).forEach((file) => {
+  //     if (file.size > 5 * 1024 * 1024) {
+  //       alert(`${file.name} is too large. Max size is 5MB.`);
+  //       return;
+  //     }
+  //     const imageUrl = URL.createObjectURL(file);
+  //     field.pushValue(imageUrl);
+  //   });
 
-    Array.from(files).forEach((file) => {
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`${file.name} is too large. Max size is 5MB.`);
-        return;
-      }
-      const imageUrl = URL.createObjectURL(file);
-      field.pushValue(imageUrl);
-    });
-
-    event.target.value = "";
-  };
+  //   event.target.value = "";
+  // };
 
   return (
+    <FileUpload accept="image/png, image/jpeg, image/jpg" />
 
-    <FileUpload
-      accept="image/png, image/jpeg, image/jpg"
-    />
-    
     // <Card className="w-full sm:max-w-md border-none shadow-none p-8">
     //   <CardHeader className="px-0">
     //     <CardTitle className="font-bold text-lg">Sample Projects</CardTitle>
     //   </CardHeader>
     //   <CardContent className="px-0">
-        
-        
+
     //     <form.Field
     //       name="projects"
     //       mode="array"

@@ -8,7 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Link  from "next/link";
+import Image from "next/image";
+import Link from "next/link";
 
 interface ServiceCardProps {
   // required
@@ -53,9 +54,11 @@ export function ServiceCard({
   return (
     <Card className={`relative mx-auto w-full max-w-sm pt-0 ${className}`}>
       <div className="absolute inset-0 z-30 aspect-video bg-black/35" />
-      <img
+      <Image
         src={imageSrc}
         alt={imageAlt}
+        width={640}
+        height={480}
         className="relative z-20 aspect-video w-full object-cover brightness-60 grayscale dark:brightness-40"
       />
       <CardAction
@@ -89,9 +92,7 @@ export function ServiceCard({
       <div className="flex-1/2" />
       <CardFooter>
         <Link href={`/dashboard/services/${id}`} className="w-full">
-          <Button className="w-full" >
-            {buttonText}
-          </Button>
+          <Button className="w-full">{buttonText}</Button>
         </Link>
       </CardFooter>
     </Card>

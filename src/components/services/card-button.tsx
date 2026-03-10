@@ -1,25 +1,18 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import {
   Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 import { CirclePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function CardButton() {
-
   const router = useRouter();
 
   const handleClick = () => {
     router.push("/dashboard/services/add-service");
-  }
-  
+  };
+
   return (
     <Card
       className="bg-transparent relative mx-auto w-full max-w-sm pt-0 border border-primary border-2 hover:bg-primary-muted items-center justify-center"

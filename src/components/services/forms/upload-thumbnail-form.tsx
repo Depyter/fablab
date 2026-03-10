@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { PlusIcon, XIcon, ImagePlusIcon, CirclePlus, UploadCloudIcon } from "lucide-react";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  XIcon,
+  ImagePlusIcon,
+  CirclePlus,
+  UploadCloudIcon,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface ThumbnailFormProps {
   form: any;
@@ -18,7 +18,10 @@ interface ThumbnailFormProps {
 export function ThumbnailForm({ form }: ThumbnailFormProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: any,
+  ) => {
     const files = e.target.files;
     if (files) {
       Array.from(files).forEach((file) => {
@@ -54,12 +57,14 @@ export function ThumbnailForm({ form }: ThumbnailFormProps) {
 
                 {!hasImages ? (
                   /* --- EMPTY --- */
-                  <div
-                    className="w-full aspect-video p-5 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-[#9D174D] hover:bg-[#9D174D]/5 transition-all"
-                  >
+                  <div className="w-full aspect-video p-5 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-[#9D174D] hover:bg-[#9D174D]/5 transition-all">
                     <ImagePlusIcon className="h-10 w-10 text-[#9D174D] mb-2" />
-                    <p className="text-sm font-semibold text-[#9D174D]">Drop your images here</p>
-                    <p className="text-xs text-gray-400">PNG or JPG. max(5MB)</p>
+                    <p className="text-sm font-semibold text-[#9D174D]">
+                      Drop your images here
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      PNG or JPG. max(5MB)
+                    </p>
                     <Button
                       type="button"
                       className="bg-[#9D174D] hover:bg-[#83103F] rounded-xl px-8 flex gap-2 font-medium cursor-pointer mt-3"
@@ -74,7 +79,13 @@ export function ThumbnailForm({ form }: ThumbnailFormProps) {
                   <div className="flex flex-col gap-4">
                     {/* Large Main Image */}
                     <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                      <img src={mainImage} alt="Main" className="object-cover w-full h-full" />
+                      <Image
+                        src={mainImage}
+                        alt="Main"
+                        className="object-cover w-full h-full"
+                        width={640}
+                        height={360}
+                      />
                       <button
                         type="button"
                         onClick={() => field.removeValue(0)}
@@ -87,8 +98,17 @@ export function ThumbnailForm({ form }: ThumbnailFormProps) {
                     {/* Grid for remaining images + Plus Button */}
                     <div className="flex flex-wrap gap-4">
                       {extraImages.map((imgUrl: string, index: number) => (
-                        <div key={index + 1} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                          <img src={imgUrl} alt={`Thumb ${index + 1}`} className="object-cover w-full h-full" />
+                        <div
+                          key={index + 1}
+                          className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
+                        >
+                          <Image
+                            src={imgUrl}
+                            alt={`Thumb ${index + 1}`}
+                            width={96}
+                            height={96}
+                            className="object-cover w-full h-full"
+                          />
                           <button
                             type="button"
                             onClick={() => field.removeValue(index + 1)}
@@ -98,7 +118,7 @@ export function ThumbnailForm({ form }: ThumbnailFormProps) {
                           </button>
                         </div>
                       ))}
-                      
+
                       <div
                         className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#9D174D] hover:bg-[#9D174D]/5 transition-all"
                         onClick={() => fileInputRef.current?.click()}

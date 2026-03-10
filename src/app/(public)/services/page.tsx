@@ -5,15 +5,10 @@ import { api } from "@/../convex/_generated/api";
 import {
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
 import { Skeleton } from "@/components/ui/skeleton";
-import { CardButton } from "@/components/services/card-button";
-import { union } from "better-auth";
 import { MOCK_SERVICES } from "@/lib/mock-data";
 import { ServiceCardClient } from "@/components/services/service-card-client";
 
@@ -56,7 +51,7 @@ export default function ServicesPage() {
 
   if (services === undefined) {
     return (
-      <div className="container mx-auto p-6 space-y-4">
+      <div className="container mx-auto p-6 space-y-3">
         <h1 className="text-3xl font-bold mb-6">Available Services</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
@@ -91,7 +86,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Available Services</h1>
         <p className="text-muted-foreground mt-2">
@@ -108,7 +103,6 @@ export default function ServicesPage() {
             title={service.title}
           />
         ))}
-        
       </div>
     </div>
   );
