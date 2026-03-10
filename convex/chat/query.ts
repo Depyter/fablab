@@ -2,6 +2,13 @@ import { paginationOptsValidator } from "convex/server";
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 
+export const getRoom = query({
+  args: { roomId: v.id("rooms") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.roomId);
+  },
+});
+
 // Use paginated query
 export const getRoomMessages = query({
   args: { paginationOpts: paginationOptsValidator, room: v.id("rooms") },
