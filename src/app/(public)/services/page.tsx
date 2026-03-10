@@ -16,39 +16,6 @@ export default function ServicesPage() {
   const services = useQuery(api.services.query.getServices);
   const mockServiceList = MOCK_SERVICES; // Replace with actual data when available
 
-  // const mockServiceList = [
-  //   {
-  //     id: 1,
-  //     imageSrc: "/fablab_mural.png",
-  //     title: "3D Printing Service",
-  //     description:
-  //       "Professional 3D printing service offering FDM and resin printing in various materials. Perfect for prototyping, product development, custom parts, and creative projects. ",
-  //     regularPrice: 3,
-  //     discountedPrice: 2,
-  //     unit: "min",
-  //   },
-  //   {
-  //     id: 2,
-  //     imageSrc: "/fablab_mural.png",
-  //     title: "Laser Cutting Service",
-  //     description:
-  //       "Precision laser cutting service for various materials including wood, acrylic, and fabric. Ideal for detailed designs and custom projects.",
-  //     regularPrice: 20,
-  //     discountedPrice: 15,
-  //     unit: "min",
-  //   },
-  //   {
-  //     id: 3,
-  //     imageSrc: "/fablab_mural.png",
-  //     title: "Large CNC Service",
-  //     description:
-  //       "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
-  //     regularPrice: 420,
-  //     discountedPrice: 360,
-  //     unit: "hr",
-  //   },
-  // ];
-
   if (services === undefined) {
     return (
       <div className="container mx-auto p-6 space-y-3">

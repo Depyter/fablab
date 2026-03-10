@@ -38,6 +38,7 @@ export interface UploadedFile {
 }
 
 interface FileUploadProps {
+  title: string;
   onUploadComplete?: (file: UploadedFile) => void;
   onUploadError?: (error: Error, file: File) => void;
   onFilesChange?: (files: UploadedFile[]) => void;
@@ -92,6 +93,7 @@ const formatFileSize = (bytes: number) => {
 };
 
 export function FileUpload({
+  title,
   onUploadComplete,
   onUploadError,
   onFilesChange,
@@ -374,7 +376,7 @@ export function FileUpload({
           className="w-full"
         >
           <Upload className="mr-2 h-4 w-4" />
-          Upload Files
+          <p className="font-bold text-lg">{title}</p>
         </Button>
         <input
           ref={fileInputRef}
@@ -546,7 +548,7 @@ export function FileUpload({
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader>
-        <CardTitle>Upload Files</CardTitle>
+        <CardTitle className="font-bold text-lg">{title}</CardTitle>
         <CardDescription>
           Drag and drop or click to upload. Max {maxFileSizeMB}MB per file.
         </CardDescription>
