@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavUser } from "@/components/sidebar/nav-user";
-import { TeamSwitcher } from "@/components/sidebar/team-switcher";
+import { FablabHeader } from "@/components/sidebar/fablab-display";
 import {
   Sidebar,
   SidebarContent,
@@ -12,14 +12,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import {
-  GalleryVerticalEndIcon,
-  AudioLinesIcon,
-  TerminalIcon,
-  SettingsIcon,
-  MessageSquareIcon,
-  FileTextIcon,
-} from "lucide-react";
+import { SettingsIcon, MessageSquareIcon, FileTextIcon } from "lucide-react";
 
 // This is sample data.
 const data = {
@@ -28,23 +21,7 @@ const data = {
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: <GalleryVerticalEndIcon />,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: <AudioLinesIcon />,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: <TerminalIcon />,
-      plan: "Free",
-    },
-  ],
+
   navMain: [
     {
       title: "Messages",
@@ -105,7 +82,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="bg-transparent hover:bg-primary-muted"
     >
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <FablabHeader />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
