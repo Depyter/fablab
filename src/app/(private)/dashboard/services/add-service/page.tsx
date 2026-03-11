@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,9 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
-import { SampleProjectsForm } from "@/components/services/forms/upload-sample-proj-form";
-import { ThumbnailForm } from "@/components/services/forms/upload-thumbnail-form";
 import { MachineSelectForm } from "@/components/services/forms/machine-select-form";
 import { SelectForm } from "@/components/services/forms/select-form";
+import { FileUpload } from "@/components/file-upload";
 import {
   addServiceFormOpts,
   type AddServiceFormValues,
@@ -38,7 +37,20 @@ export default function AddServicePage() {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [samplesUploading, setSamplesUploading] = useState(false);
+  const hasUploadsInProgress = thumbnailUploading || samplesUploading;
+
   const addService = useMutation(api.services.mutate.addService);
+
+  const handleThumbnailUploading = useCallback(
+    (isUploading: boolean) => setThumbnailUploading(isUploading),
+    [],
+  );
+  const handleSamplesUploading = useCallback(
+    (isUploading: boolean) => setSamplesUploading(isUploading),
+    [],
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -118,10 +130,14 @@ export default function AddServicePage() {
               <Button
                 type="button"
                 className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
-                disabled={!canSubmit || isSubmitting}
+                disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
                 onClick={() => form.handleSubmit()}
               >
-                {isSubmitting ? "Saving..." : "Add Service"}
+                {isSubmitting
+                  ? "Saving..."
+                  : hasUploadsInProgress
+                    ? "Uploading..."
+                    : "Add Service"}
               </Button>
             )}
           />
@@ -134,12 +150,54 @@ export default function AddServicePage() {
           <GeneralInfoForm form={form} />
           <PricingForm form={form} />
           <RequirementsForm form={form} />
-          <SampleProjectsForm form={form} />
+
+          {/* Sample Projects — inlined to pass onUploadingChange */}
+          <form.Field
+            name="samples"
+            children={(field) => (
+              <FileUpload
+                title="Sample Projects"
+                accept="image/png, image/jpeg, image/jpg"
+                onFilesChange={(files) =>
+                  field.handleChange(files.map((f) => f.storageId))
+                }
+                onUploadingChange={handleSamplesUploading}
+              />
+            )}
+          />
         </div>
 
         {/* Right Content */}
         <div className="lg:col-span-3 space-y-4">
-          <ThumbnailForm form={form} />
+          {/* Thumbnail — inlined to pass onUploadingChange */}
+          <form.Field
+            name="images"
+            validators={{
+              onSubmit: ({ value }) =>
+                value.length === 0
+                  ? "At least one thumbnail is required"
+                  : undefined,
+            }}
+            children={(field) => (
+              <>
+                <FileUpload
+                  title="Thumbnail"
+                  accept="image/png, image/jpeg, image/jpg"
+                  maxFiles={1}
+                  onFilesChange={(files) =>
+                    field.handleChange(files.map((f) => f.storageId))
+                  }
+                  onUploadingChange={handleThumbnailUploading}
+                />
+                {field.state.meta.errors.length > 0 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {field.state.meta.errors[0]?.toString()}
+                  </p>
+                )}
+              </>
+            )}
+          />
+
           <MachineSelectForm options={machineOptions} />
           <form.Field
             name="status"

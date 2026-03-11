@@ -43,6 +43,8 @@ interface FileUploadProps {
   onUploadComplete?: (file: UploadedFile) => void;
   onUploadError?: (error: Error, file: File) => void;
   onFilesChange?: (files: UploadedFile[]) => void;
+  /** Called whenever the in-progress upload state changes. `true` means at least one upload is still pending/uploading. */
+  onUploadingChange?: (isUploading: boolean) => void;
   maxFiles?: number;
   maxFileSizeMB?: number;
   accept?: string;
@@ -98,6 +100,7 @@ export function FileUpload({
   onUploadComplete,
   onUploadError,
   onFilesChange,
+  onUploadingChange,
   maxFiles = 10,
   maxFileSizeMB = 100,
   accept,
@@ -136,6 +139,18 @@ export function FileUpload({
   }, []);
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+  // Stable ref for onUploadingChange — same pattern as onFilesChange.
+  const onUploadingChangeRef = useRef(onUploadingChange);
+  onUploadingChangeRef.current = onUploadingChange;
+
+  // Notify parent whenever the set of in-progress uploads changes.
+  useEffect(() => {
+    const isUploading = uploadingFiles.some(
+      (f) => f.status === "uploading" || f.status === "pending",
+    );
+    onUploadingChangeRef.current?.(isUploading);
+  }, [uploadingFiles]);
 
   // Keep a stable ref to the latest onFilesChange so the effect below never
   // needs it in its dependency array (avoids re-running on every render when
