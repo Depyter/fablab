@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { FileIcon, Loader2, X } from "lucide-react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -9,6 +9,73 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FileUpload, type UploadedFile } from "@/components/file-upload";
+
+// ---------------------------------------------------------------------------
+// File attachment renderer
+// ---------------------------------------------------------------------------
+
+interface FileAttachmentProps {
+  fileUrl: string;
+  fileType: string | null;
+  isCurrentUser: boolean;
+}
+
+function FileAttachment({
+  fileUrl,
+  fileType,
+  isCurrentUser,
+}: FileAttachmentProps) {
+  if (fileType?.startsWith("image/")) {
+    return (
+      <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+        <img
+          src={fileUrl}
+          alt="Image attachment"
+          className="mt-1 max-w-full rounded-md object-cover"
+          style={{ maxHeight: "240px" }}
+        />
+      </a>
+    );
+  }
+
+  if (fileType?.startsWith("video/")) {
+    return (
+      <video
+        src={fileUrl}
+        controls
+        className="mt-1 max-w-full rounded-md"
+        style={{ maxHeight: "240px" }}
+      />
+    );
+  }
+
+  // Generic file fallback
+  const fileName = fileUrl.split("/").pop()?.split("?")[0] ?? "attachment";
+  return (
+    <a
+      href={fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-opacity hover:opacity-80",
+        isCurrentUser
+          ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
+          : "border-border bg-background text-foreground",
+      )}
+    >
+      <FileIcon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{fileName}</span>
+    </a>
+  );
+}
+
+interface PendingAttachment {
+  storageId: string;
+  fileName: string;
+  fileType: string;
+  previewUrl?: string;
+}
 
 interface ChatInterfaceProps {
   roomId: Id<"rooms">;
@@ -17,6 +84,11 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
+  const [pendingAttachment, setPendingAttachment] =
+    useState<PendingAttachment | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  // Increment to reset the FileUpload component after a message is sent
+  const [fileUploadKey, setFileUploadKey] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef(0);
@@ -85,16 +157,26 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    const hasText = input.trim();
+    const hasFile = !!pendingAttachment;
+    if (!hasText && !hasFile) return;
 
     const content = input;
+    const attachment = pendingAttachment;
     setInput("");
+    setPendingAttachment(null);
+    setFileUploadKey((k) => k + 1);
 
     try {
-      await sendMessage({ content, room: roomId });
+      await sendMessage({
+        content: content.trim() || "",
+        file: attachment?.storageId as Id<"_storage"> | undefined,
+        room: roomId,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
       setInput(content);
+      setPendingAttachment(attachment);
     }
   };
 
@@ -105,7 +187,23 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
     }
   };
 
+  const handleUploadComplete = (file: UploadedFile) => {
+    setPendingAttachment({
+      storageId: file.storageId,
+      fileName: file.fileName,
+      fileType: file.fileType,
+      previewUrl: file.url,
+    });
+  };
+
+  const clearAttachment = () => {
+    setPendingAttachment(null);
+    setFileUploadKey((k) => k + 1);
+  };
+
   const isLoading = status === "LoadingFirstPage";
+  const canSend =
+    !isLoading && !isUploading && (!!input.trim() || !!pendingAttachment);
   // Query returns newest-first (desc); reverse so oldest renders at the top
   const sortedMessages = [...messages].reverse();
 
@@ -168,7 +266,20 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
                         {message.sender}
                       </p>
                     )}
-                    <p className="wrap-break-word">{message.content}</p>
+                    {message.content && (
+                      <p className="wrap-break-word">{message.content}</p>
+                    )}
+                    {message.fileUrl && (
+                      <FileAttachment
+                        fileUrl={message.fileUrl}
+                        fileType={
+                          "fileType" in message
+                            ? (message.fileType as string | null)
+                            : null
+                        }
+                        isCurrentUser={isCurrentUser}
+                      />
+                    )}
                     <span
                       className={cn(
                         "text-xs mt-1 block",
@@ -194,8 +305,77 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
       </div>
 
       {/* Input Area */}
-      <div className="border-t p-4 bg-background">
+      <div className="border-t p-4 bg-background space-y-2">
+        {/* Uploading indicator */}
+        {isUploading && !pendingAttachment && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted text-sm w-fit">
+            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-muted-foreground" />
+            <span className="text-muted-foreground text-xs">Uploading…</span>
+          </div>
+        )}
+
+        {/* Pending attachment preview — only shown once upload is complete */}
+        {pendingAttachment && (
+          <div className="relative w-fit max-w-xs rounded-lg overflow-hidden border bg-muted">
+            {/* Remove button — always top-right */}
+            <button
+              type="button"
+              onClick={clearAttachment}
+              aria-label="Remove attachment"
+              className="absolute top-1.5 right-1.5 z-10 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Image preview */}
+            {pendingAttachment.fileType.startsWith("image/") &&
+            pendingAttachment.previewUrl ? (
+              <img
+                src={pendingAttachment.previewUrl}
+                alt={pendingAttachment.fileName}
+                className="block max-h-48 max-w-xs object-contain"
+              />
+            ) : pendingAttachment.fileType.startsWith("video/") &&
+              pendingAttachment.previewUrl ? (
+              /* Video preview */
+              <video
+                src={pendingAttachment.previewUrl}
+                controls
+                className="block max-h-48 max-w-xs"
+              />
+            ) : (
+              /* Generic file card */
+              <div className="flex items-center gap-3 px-3 py-3 pr-8">
+                <div className="h-10 w-10 rounded bg-muted-foreground/20 flex items-center justify-center shrink-0">
+                  <FileIcon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <span className="truncate max-w-48 text-xs">
+                  {pendingAttachment.fileName}
+                </span>
+              </div>
+            )}
+
+            {/* Filename caption under image/video */}
+            {(pendingAttachment.fileType.startsWith("image/") ||
+              pendingAttachment.fileType.startsWith("video/")) && (
+              <div className="px-2 py-1 text-xs text-muted-foreground truncate">
+                {pendingAttachment.fileName}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-2">
+          <FileUpload
+            key={fileUploadKey}
+            title="Attach file"
+            variant="inline"
+            multiple={false}
+            maxFiles={1}
+            disabled={isLoading}
+            onUploadComplete={handleUploadComplete}
+            onUploadingChange={setIsUploading}
+          />
           <Input
             placeholder="Type your message..."
             value={input}
@@ -204,11 +384,7 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
             disabled={isLoading}
             className="flex-1"
           />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-          >
+          <Button onClick={handleSendMessage} disabled={!canSend} size="icon">
             <Send className="h-4 w-4" />
           </Button>
         </div>
