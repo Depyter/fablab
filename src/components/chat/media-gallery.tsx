@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { X, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
@@ -98,11 +99,20 @@ function MediaLightbox({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <img
+              <Image
                 key={f.fileUrl}
                 src={f.fileUrl}
                 alt={`Media ${current + 1} of ${count}`}
-                className="max-h-full max-w-full object-contain rounded-sm"
+                width={0}
+                height={0}
+                sizes="100vw"
+                className="rounded-sm"
+                style={{
+                  width: "auto",
+                  height: "auto",
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                }}
                 onClick={(e) => e.stopPropagation()}
               />
             )}
@@ -213,11 +223,19 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
               </div>
             </div>
           ) : (
-            <img
+            <Image
               src={f.fileUrl}
               alt="Image attachment"
-              className="max-w-full rounded-md object-cover hover:opacity-95 transition-opacity"
-              style={{ maxHeight: "240px" }}
+              width={0}
+              height={0}
+              sizes="(max-width: 1024px) 320px, 448px"
+              className="rounded-md hover:opacity-95 transition-opacity"
+              style={{
+                width: "100%",
+                height: "auto",
+                maxHeight: "240px",
+                objectFit: "cover",
+              }}
             />
           )}
         </button>
@@ -269,6 +287,7 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                   )}
                 </div>
               ) : (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={f.fileUrl}
                   alt={`Image ${i + 1}`}
