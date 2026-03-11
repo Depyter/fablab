@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import {
   Card,
   CardContent,
@@ -120,9 +120,10 @@ export function FileUpload({
   // Kept in a ref so we can revoke on removal / unmount without causing re-renders.
   const previewUrlMapRef = useRef<Map<File, string>>(new Map());
 
-  // Returns (and lazily creates) an object URL for the given image File.
+  // Returns (and lazily creates) an object URL for the given image or video File.
   const getFilePreviewUrl = useCallback((file: File): string | undefined => {
-    if (!file.type.startsWith("image/")) return undefined;
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/"))
+      return undefined;
     if (!previewUrlMapRef.current.has(file)) {
       previewUrlMapRef.current.set(file, URL.createObjectURL(file));
     }
@@ -295,6 +296,11 @@ export function FileUpload({
         return;
       }
 
+      // Eagerly create preview object URLs so they are available when
+      // onUploadComplete fires (previously this happened lazily via the
+      // upload-progress badge render, which no longer exists in inline mode).
+      fileArray.forEach((file) => getFilePreviewUrl(file));
+
       // Add files to uploading list
       const newUploadingFiles: UploadingFile[] = fileArray.map((file) => ({
         file,
@@ -317,6 +323,7 @@ export function FileUpload({
       maxFiles,
       autoUpload,
       uploadFile,
+      getFilePreviewUrl,
     ],
   );
 
@@ -484,7 +491,7 @@ export function FileUpload({
 
   if (variant === "inline") {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("flex items-center", className)}>
         <Button
           type="button"
           variant="ghost"
@@ -504,28 +511,6 @@ export function FileUpload({
           disabled={disabled}
           className="hidden"
         />
-        {uploadingFiles.length > 0 && (
-          <div className="flex items-center gap-2">
-            {uploadingFiles.map((file, index) => (
-              <Badge key={index} variant="secondary" className="gap-1">
-                {file.status === "uploading" && (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                )}
-                {file.status === "success" && (
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                )}
-                {file.status === "error" && (
-                  <AlertCircle className="h-3 w-3 text-destructive" />
-                )}
-                <span className="max-w-25 truncate">{file.file.name}</span>
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => removeUploadingFile(index)}
-                />
-              </Badge>
-            ))}
-          </div>
-        )}
       </div>
     );
   }

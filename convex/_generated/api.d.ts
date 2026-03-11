@@ -11,11 +11,12 @@
 import type * as auth from "../auth.js";
 import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
+import type * as cron from "../cron.js";
 import type * as files from "../files.js";
+import type * as helper from "../helper.js";
 import type * as http from "../http.js";
 import type * as projects_mutate from "../projects/mutate.js";
 import type * as projects_query from "../projects/query.js";
-import type * as services_helper from "../helper.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
 import type * as test_helper from "../test/helper.js";
@@ -31,11 +32,12 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   "chat/mutate": typeof chat_mutate;
   "chat/query": typeof chat_query;
+  cron: typeof cron;
   files: typeof files;
+  helper: typeof helper;
   http: typeof http;
   "projects/mutate": typeof projects_mutate;
   "projects/query": typeof projects_query;
-  "services/helper": typeof services_helper;
   "services/mutate": typeof services_mutate;
   "services/query": typeof services_query;
   "test/helper": typeof test_helper;

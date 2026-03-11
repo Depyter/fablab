@@ -19,7 +19,25 @@ export const getRoomMessages = query({
       .order("desc")
       .paginate(args.paginationOpts);
 
-    return messages;
+    return {
+      ...messages,
+      page: await Promise.all(
+        messages.page.map(async (message) => {
+          if (!message.file) {
+            return { ...message, fileUrl: null, fileType: null };
+          }
+          const [fileUrl, fileMeta] = await Promise.all([
+            ctx.storage.getUrl(message.file),
+            ctx.db.system.get(message.file),
+          ]);
+          return {
+            ...message,
+            fileUrl,
+            fileType: fileMeta?.contentType ?? null,
+          };
+        }),
+      ),
+    };
   },
 });
 
