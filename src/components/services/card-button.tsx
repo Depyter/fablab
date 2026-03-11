@@ -1,24 +1,30 @@
-import { Card } from "@/components/ui/card";
+"use client";
 
+import { Card } from "@/components/ui/card";
 import { CirclePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function CardButton() {
   const router = useRouter();
 
-  const handleClick = () => {
-    router.push("/dashboard/services/add-service");
-  };
-
   return (
     <Card
-      className="bg-transparent relative mx-auto w-full max-w-sm pt-0 border border-primary border-2 hover:bg-primary-muted items-center justify-center"
-      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push("/dashboard/services/add-service")}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push("/dashboard/services/add-service");
+        }
+      }}
+      className="relative mx-auto w-full max-w-sm cursor-pointer border-2 border-dashed border-primary bg-transparent transition-all duration-200 hover:bg-primary/5 hover:border-primary/80 hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 min-h-[420px] flex flex-col items-center justify-center gap-3 select-none group"
     >
-      <div className="flex flex-col items-center justify-center p-4">
-        <CirclePlus className="size-12 text-primary" />
-        <p className="mt-2 text-lg font-semibold text-primary">
-          Add New Service
+      <CirclePlus className="size-10 text-primary transition-transform duration-200 group-hover:scale-110" />
+      <div className="flex flex-col items-center gap-1 text-center px-6">
+        <p className="text-lg font-semibold text-primary">Add New Service</p>
+        <p className="text-sm text-muted-foreground">
+          Click to add a new service to the catalogue
         </p>
       </div>
     </Card>
