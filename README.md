@@ -1,40 +1,134 @@
-# Welcome to your Convex + Next.js app
+# FabLab Management System
 
-This is a [Convex](https://convex.dev/) project created with [`npm create convex`](https://www.npmjs.com/package/create-convex).
+A web application for managing fabrication lab services, project bookings, and client communications. Built for a university FabLab to handle the full lifecycle of a client request — from browsing available services to job completion.
 
-After the initial setup (<2 minutes) you'll have a working full-stack app using:
+## Tech Stack
 
-- Convex as your backend (database, server logic)
-- [React](https://react.dev/) as your frontend (web page interactivity)
-- [Next.js](https://nextjs.org/) for optimized web hosting and page routing
-- [Tailwind](https://tailwindcss.com/) for building great looking accessible UI
+- **[Next.js 16](https://nextjs.org/)** — App Router, SSR, file-based routing
+- **[Convex](https://convex.dev/)** — Backend: real-time database, server functions, and file storage
+- **[Better Auth](https://better-auth.com/) + `@convex-dev/better-auth`** — Authentication (email/password and Google OAuth)
+- **[React 19](https://react.dev/)** — UI
+- **[Tailwind CSS v4](https://tailwindcss.com/)** — Styling
+- **[shadcn/ui](https://ui.shadcn.com/)** — Component library (via Radix UI primitives)
+- **[TanStack Form](https://tanstack.com/form)** — Form state management
+- **[Vitest](https://vitest.dev/)** — Unit testing (with `convex-test`)
+- **[Cloudflare Workers](https://workers.cloudflare.com/)** — Deployment target via `@opennextjs/cloudflare`
 
-## Get started
+## Features
 
-If you just cloned this codebase and didn't use `npm create convex`, run:
+### Implemented
+
+- **Authentication** — Email/password and Google OAuth login; role-based access control (`admin`, `maker`, `client`)
+- **Services** — Public-facing services listing; admin/maker dashboard for creating, editing, and deleting services (with image and sample file uploads)
+- **Projects** — Clients can submit project requests tied to a service; admins and makers can view and manage all projects; clients see only their own
+- **Real-time Chat** — Each project submission automatically creates a dedicated chat room shared between the client and all admins; paginated message history
+- **Role-aware Sidebar** — Navigation adapts dynamically based on the authenticated user's role
+- **File Uploads** — Convex file storage for service images, sample outputs, and project files
+
+### Planned / In Progress
+
+- **Reports** — Overview, analytics, usage, and export (routes scaffolded, not yet implemented)
+- **Inventory** — Machine and material tracking (schema defined, UI not yet built)
+- **Notifications** — Notification system (folder scaffolded, not yet implemented)
+- **Receipts & Payments** — Receipt and payment proof tracking (schema defined, mutations not yet implemented)
+- **Dashboard Overview** — Summary widgets on the main dashboard page (currently placeholder UI)
+
+## Roles
+
+| Role     | Capabilities                                                                     |
+| -------- | -------------------------------------------------------------------------------- |
+| `client` | Browse services, submit project requests, view own projects, access project chat |
+| `maker`  | All client capabilities + manage services, view all projects                     |
+| `admin`  | All maker capabilities + full administrative access                              |
+
+## Project Structure
 
 ```
-npm install
-npm run dev
+src/
+  app/
+    (public)/         # Unauthenticated routes: login, services listing, profile
+    (private)/
+      dashboard/      # Authenticated dashboard
+        (manage)/     # Admin/maker-only: services management, reports
+        chat/         # Real-time messaging
+        projects/     # Project management
+convex/
+  services/           # Service CRUD mutations & queries
+  projects/           # Project creation & listing
+  chat/               # Room and message queries/mutations
+  notification/       # (planned)
+  emails/             # Email helpers
+  schema.ts           # Full database schema
+  auth.ts             # Better Auth configuration
+  files.ts            # File upload/storage helpers
 ```
 
-If you're reading this README on GitHub and want to use this template, run:
+## Getting Started
 
-```
-npm create convex@latest -- -t nextjs
-```
+### Prerequisites
 
-## Learn more
+- [Node.js](https://nodejs.org/) 18+
+- A [Convex](https://dashboard.convex.dev/) account and project
+- (Optional) Google OAuth credentials for social login
 
-To learn more about developing your project with Convex, check out:
+### Installation
 
-- The [Tour of Convex](https://docs.convex.dev/get-started) for a thorough introduction to Convex principles.
-- The rest of [Convex docs](https://docs.convex.dev/) to learn about all Convex features.
-- [Stack](https://stack.convex.dev/) for in-depth articles on advanced topics.
+1. Clone the repository and install dependencies:
 
-## Join the community
+   ```sh
+   bun install
+   ```
 
-Join thousands of developers building full-stack apps with Convex:
+2. Set up your Convex backend. On first run this will prompt you to log in and link a project:
 
-- Join the [Convex Discord community](https://convex.dev/community) to get help in real-time.
-- Follow [Convex on GitHub](https://github.com/get-convex/), star and contribute to the open-source implementation of Convex.
+   ```sh
+   bunx convex dev --until-success
+   ```
+
+3. Copy `.dev.vars.example` to `.dev.vars` (if provided) and fill in the required environment variables:
+
+   ```
+   BETTER_AUTH_SECRET=...
+   GOOGLE_CLIENT_ID=...       # optional, for Google OAuth
+   GOOGLE_CLIENT_SECRET=...   # optional, for Google OAuth
+   ```
+
+4. Start the development server (runs Next.js and Convex concurrently):
+
+   ```sh
+   bun run dev
+   ```
+
+   The app will be available at `http://localhost:3000`.
+
+## Scripts
+
+| Command                 | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `bun run dev`           | Start frontend and Convex backend concurrently    |
+| `bun run build`         | Build the Next.js app                             |
+| `bun run preview`       | Build and preview with Cloudflare Workers locally |
+| `bun run deploy`        | Build and deploy to Cloudflare Workers            |
+| `bun run test`          | Run unit tests (watch mode)                       |
+| `bun run test:once`     | Run unit tests once                               |
+| `bun run test:coverage` | Run tests with coverage report                    |
+| `bun run lint`          | Run ESLint                                        |
+| `bun run format`        | Format all files with Prettier                    |
+
+## Deployment
+
+This project is configured for deployment to **Cloudflare Workers** using [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare).
+
+1. Create the R2 bucket for incremental cache (first time only):
+
+   ```sh
+   bunx wrangler r2 bucket create fablab-opennext-cache
+   ```
+
+2. Deploy:
+
+   ```sh
+   bun run deploy
+   ```
+
+   Environment variables must also be set in the Cloudflare dashboard or via `wrangler secret put`.
