@@ -23,17 +23,26 @@ export const getRoomMessages = query({
       ...messages,
       page: await Promise.all(
         messages.page.map(async (message) => {
-          if (!message.file) {
-            return { ...message, fileUrl: null, fileType: null };
+          if (!message.file || message.file.length === 0) {
+            return { ...message, files: [], fileUrl: null, fileType: null };
           }
-          const [fileUrl, fileMeta] = await Promise.all([
-            ctx.storage.getUrl(message.file),
-            ctx.db.system.get(message.file),
-          ]);
+
+          const filesData = await Promise.all(
+            message.file.map(async (fileId) => {
+              const [url, meta] = await Promise.all([
+                ctx.storage.getUrl(fileId),
+                ctx.db.system.get(fileId),
+              ]);
+              return { fileUrl: url, fileType: meta?.contentType ?? null };
+            }),
+          );
+
           return {
             ...message,
-            fileUrl,
-            fileType: fileMeta?.contentType ?? null,
+            files: filesData,
+            // Legacy single-file fields kept for backward compatibility
+            fileUrl: filesData[0]?.fileUrl ?? null,
+            fileType: filesData[0]?.fileType ?? null,
           };
         }),
       ),

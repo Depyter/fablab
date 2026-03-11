@@ -313,7 +313,6 @@ export function EditServiceClient({
                 <FileUpload
                   title="Thumbnail"
                   accept="image/png, image/jpeg, image/jpg"
-                  maxFiles={1}
                   value={initialUploadedImages}
                   onFilesChange={(files) =>
                     field.handleChange(files.map((f) => f.storageId))
