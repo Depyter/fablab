@@ -35,6 +35,7 @@ export interface UploadedFile {
   fileType: string;
   fileSize: number;
   uploadedAt: Date;
+  url?: string;
 }
 
 interface FileUploadProps {
@@ -112,6 +113,28 @@ export function FileUpload({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Map from File object → object URL (for image previews of in-progress uploads).
+  // Kept in a ref so we can revoke on removal / unmount without causing re-renders.
+  const previewUrlMapRef = useRef<Map<File, string>>(new Map());
+
+  // Returns (and lazily creates) an object URL for the given image File.
+  const getFilePreviewUrl = useCallback((file: File): string | undefined => {
+    if (!file.type.startsWith("image/")) return undefined;
+    if (!previewUrlMapRef.current.has(file)) {
+      previewUrlMapRef.current.set(file, URL.createObjectURL(file));
+    }
+    return previewUrlMapRef.current.get(file);
+  }, []);
+
+  // Revoke all object URLs when the component unmounts.
+  useEffect(() => {
+    const map = previewUrlMapRef.current;
+    return () => {
+      map.forEach((url) => URL.revokeObjectURL(url));
+      map.clear();
+    };
+  }, []);
+
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
 
   // Keep a stable ref to the latest onFilesChange so the effect below never
@@ -181,6 +204,8 @@ export function FileUpload({
           fileType: file.type,
           fileSize: file.size,
           uploadedAt: new Date(),
+          // Carry over the object URL we already created for the upload preview.
+          url: previewUrlMapRef.current.get(file),
         };
 
         // Update status to success
@@ -249,7 +274,7 @@ export function FileUpload({
       const newUploadingFiles: UploadingFile[] = fileArray.map((file) => ({
         file,
         progress: 0,
-        status: autoUpload ? "pending" : "pending",
+        status: "pending" as const,
       }));
 
       setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
@@ -300,6 +325,14 @@ export function FileUpload({
   };
 
   const removeUploadingFile = (index: number) => {
+    const uf = uploadingFiles[index];
+    if (uf) {
+      const url = previewUrlMapRef.current.get(uf.file);
+      if (url) {
+        URL.revokeObjectURL(url);
+        previewUrlMapRef.current.delete(uf.file);
+      }
+    }
     setUploadingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -308,6 +341,14 @@ export function FileUpload({
   };
 
   const clearAll = () => {
+    // Revoke all in-progress preview URLs
+    uploadingFiles.forEach((uf) => {
+      const url = previewUrlMapRef.current.get(uf.file);
+      if (url) {
+        URL.revokeObjectURL(url);
+        previewUrlMapRef.current.delete(uf.file);
+      }
+    });
     setUploadingFiles([]);
     setUploadedFiles([]);
     // onFilesChange is notified via the uploadedFiles useEffect
@@ -319,7 +360,103 @@ export function FileUpload({
     }
   };
 
-  // Render variants
+  // ---------------------------------------------------------------------------
+  // Shared sub-renders
+  // ---------------------------------------------------------------------------
+
+  /** Thumbnail for an in-progress File upload (image or icon). */
+  const renderUploadingThumb = (
+    uf: UploadingFile,
+    size: "sm" | "md" = "md",
+  ) => {
+    const previewUrl = uf.file.type.startsWith("image/")
+      ? getFilePreviewUrl(uf.file)
+      : undefined;
+    const dim = size === "sm" ? "h-10 w-10" : "h-14 w-14";
+
+    if (previewUrl) {
+      return (
+        <div
+          className={`${dim} rounded-md overflow-hidden bg-muted shrink-0 relative`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewUrl}
+            alt={uf.file.name}
+            className="w-full h-full object-cover"
+          />
+          {uf.status === "uploading" && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <Loader2 className="h-3 w-3 animate-spin text-white" />
+            </div>
+          )}
+          {uf.status === "error" && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <AlertCircle className="h-3 w-3 text-destructive" />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const FileIcon = getFileIcon(uf.file.type);
+    return (
+      <div className="shrink-0">
+        {uf.status === "uploading" && (
+          <Loader2
+            className={`${size === "sm" ? "h-5 w-5" : "h-8 w-8"} animate-spin text-primary`}
+          />
+        )}
+        {uf.status === "success" && (
+          <CheckCircle2
+            className={`${size === "sm" ? "h-5 w-5" : "h-8 w-8"} text-green-500`}
+          />
+        )}
+        {uf.status === "error" && (
+          <AlertCircle
+            className={`${size === "sm" ? "h-5 w-5" : "h-8 w-8"} text-destructive`}
+          />
+        )}
+        {uf.status === "pending" && (
+          <FileIcon
+            className={`${size === "sm" ? "h-5 w-5" : "h-8 w-8"} text-muted-foreground`}
+          />
+        )}
+      </div>
+    );
+  };
+
+  /** Thumbnail for a completed / pre-existing UploadedFile (image or icon). */
+  const renderUploadedThumb = (uf: UploadedFile, size: "sm" | "md" = "md") => {
+    const dim = size === "sm" ? "h-10 w-10" : "h-14 w-14";
+
+    if (uf.fileType.startsWith("image/") && uf.url) {
+      return (
+        <div className={`${dim} rounded-md overflow-hidden bg-muted shrink-0`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={uf.url}
+            alt={uf.fileName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      );
+    }
+
+    const FileIcon = getFileIcon(uf.fileType);
+    return (
+      <div className="shrink-0 flex items-center justify-center">
+        <FileIcon
+          className={`${size === "sm" ? "h-5 w-5" : "h-8 w-8"} text-muted-foreground`}
+        />
+      </div>
+    );
+  };
+
+  // ---------------------------------------------------------------------------
+  // Variants
+  // ---------------------------------------------------------------------------
+
   if (variant === "inline") {
     return (
       <div className={cn("flex items-center gap-2", className)}>
@@ -397,15 +534,7 @@ export function FileUpload({
                 key={index}
                 className="flex items-center gap-2 text-sm p-2 rounded border"
               >
-                {file.status === "uploading" && (
-                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                )}
-                {file.status === "success" && (
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                )}
-                {file.status === "error" && (
-                  <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                )}
+                {renderUploadingThumb(file, "sm")}
                 <span className="flex-1 truncate">{file.file.name}</span>
                 <Button
                   variant="ghost"
@@ -422,7 +551,7 @@ export function FileUpload({
                 key={index}
                 className="flex items-center gap-2 text-sm p-2 rounded border bg-muted/50"
               >
-                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                {renderUploadedThumb(file, "sm")}
                 <span className="flex-1 truncate">{file.fileName}</span>
                 <Button
                   variant="ghost"
@@ -475,72 +604,56 @@ export function FileUpload({
 
         {(uploadingFiles.length > 0 || uploadedFiles.length > 0) && (
           <div className="space-y-2">
-            {uploadingFiles.map((file, index) => {
-              const FileIcon = getFileIcon(file.file.type);
-              return (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-2 rounded-lg border bg-card"
-                >
-                  <div className="shrink-0">
-                    {file.status === "uploading" && (
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    )}
-                    {file.status === "success" && (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    )}
-                    {file.status === "error" && (
-                      <AlertCircle className="h-5 w-5 text-destructive" />
-                    )}
-                  </div>
-                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {file.file.name}
-                    </p>
-                    {file.status === "error" && (
-                      <p className="text-xs text-destructive">{file.error}</p>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeUploadingFile(index)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+            {uploadingFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-2 rounded-lg border bg-card"
+              >
+                {renderUploadingThumb(file, "sm")}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {file.file.name}
+                  </p>
+                  {file.status === "error" && (
+                    <p className="text-xs text-destructive">{file.error}</p>
+                  )}
                 </div>
-              );
-            })}
-            {uploadedFiles.map((file, index) => {
-              const FileIcon = getFileIcon(file.fileType);
-              return (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-2 rounded-lg border bg-muted/50"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeUploadingFile(index)}
+                  className="h-7 w-7 p-0"
                 >
-                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {file.fileName}
-                    </p>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            {uploadedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-2 rounded-lg border bg-muted/50"
+              >
+                {renderUploadedThumb(file, "sm")}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {file.fileName}
+                  </p>
+                  {file.fileSize > 0 && (
                     <p className="text-xs text-muted-foreground">
                       {formatFileSize(file.fileSize)}
                     </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeUploadedFile(index)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+                  )}
                 </div>
-              );
-            })}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeUploadedFile(index)}
+                  className="h-7 w-7 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -621,91 +734,71 @@ export function FileUpload({
             </div>
 
             <div className="space-y-2">
-              {uploadingFiles.map((uploadingFile, index) => {
-                const FileIcon = getFileIcon(uploadingFile.file.type);
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                  >
-                    <div className="shrink-0">
-                      {uploadingFile.status === "uploading" && (
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      )}
-                      {uploadingFile.status === "success" && (
-                        <CheckCircle2 className="h-8 w-8 text-green-500" />
-                      )}
-                      {uploadingFile.status === "error" && (
-                        <AlertCircle className="h-8 w-8 text-destructive" />
-                      )}
-                    </div>
+              {uploadingFiles.map((uploadingFile, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                >
+                  {renderUploadingThumb(uploadingFile, "md")}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <p className="text-sm font-medium truncate">
-                          {uploadingFile.file.name}
-                        </p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(uploadingFile.file.size)}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {uploadingFile.file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(uploadingFile.file.size)}
+                    </p>
+                    {uploadingFile.status === "error" && (
+                      <p className="text-xs text-destructive mt-1">
+                        {uploadingFile.error}
                       </p>
-                      {uploadingFile.status === "error" && (
-                        <p className="text-xs text-destructive mt-1">
-                          {uploadingFile.error}
-                        </p>
-                      )}
-                      {uploadingFile.status === "success" && (
-                        <p className="text-xs text-green-600 mt-1">
-                          Upload complete
-                        </p>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeUploadingFile(index)}
-                      className="h-8 w-8 p-0 shrink-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    )}
+                    {uploadingFile.status === "success" && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Upload complete
+                      </p>
+                    )}
                   </div>
-                );
-              })}
 
-              {uploadedFiles.map((uploadedFile, index) => {
-                const FileIcon = getFileIcon(uploadedFile.fileType);
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeUploadingFile(index)}
+                    className="h-8 w-8 p-0 shrink-0"
                   >
-                    <CheckCircle2 className="h-8 w-8 text-green-500 shrink-0" />
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <p className="text-sm font-medium truncate">
-                          {uploadedFile.fileName}
-                        </p>
-                      </div>
+              {uploadedFiles.map((uploadedFile, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50"
+                >
+                  {renderUploadedThumb(uploadedFile, "md")}
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {uploadedFile.fileName}
+                    </p>
+                    {uploadedFile.fileSize > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {formatFileSize(uploadedFile.fileSize)}
                       </p>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeUploadedFile(index)}
-                      className="h-8 w-8 p-0 shrink-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    )}
                   </div>
-                );
-              })}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeUploadedFile(index)}
+                    className="h-8 w-8 p-0 shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
           </div>
         )}
