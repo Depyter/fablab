@@ -1,6 +1,35 @@
-import { mutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { checkAuthority } from "../helper";
+
+// called when user discards current service
+export const deleteOrphanedFiles = mutation({
+  args: {
+    storageIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization) throw new Error("Unauthorized. Cannot delete files.");
+
+    await Promise.all(args.storageIds.map((id) => ctx.storage.delete(id)));
+  },
+});
+
+export const cleanOrphanedFiles = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const orphans = await ctx.db.query("pendingFiles").collect();
+    await Promise.all(
+      orphans.map(async (orphan) => {
+        await ctx.storage.delete(orphan.storageId);
+        await ctx.db.delete(orphan._id);
+      }),
+    );
+  },
+});
 
 export const addService = mutation({
   args: {
@@ -21,6 +50,20 @@ export const addService = mutation({
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
     // properly check if admin user or maker
     if (!authorization) throw new Error("Unauthorized. Cannot add service.");
+
+    await Promise.all(
+      args.images.map(async (image) => {
+        const pending = await ctx.db
+          .query("pendingFiles")
+          .withIndex("by_storageId", (q) => q.eq("storageId", image))
+          .first();
+
+        if (!pending)
+          throw new Error("Already associated with another document");
+
+        await ctx.db.delete(pending._id);
+      }),
+    );
 
     await ctx.db.insert("services", {
       name: args.name,

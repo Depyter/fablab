@@ -102,4 +102,8 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_role", ["role"]),
+
+  pendingFiles: defineTable({
+    storageId: v.id("_storage"),
+  }).index("by_storageId", ["storageId"]),
 });

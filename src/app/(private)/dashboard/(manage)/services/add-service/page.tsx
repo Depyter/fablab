@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,9 @@ export default function AddServicePage() {
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
   const addService = useMutation(api.services.mutate.addService);
+  const deleteOrphanedFiles = useMutation(
+    api.services.mutate.deleteOrphanedFiles,
+  );
 
   const handleThumbnailUploading = useCallback(
     (isUploading: boolean) => setThumbnailUploading(isUploading),
@@ -117,7 +120,17 @@ export default function AddServicePage() {
             type="button"
             variant="outline"
             className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            onClick={() => {
+            onClick={async () => {
+              // Clean up any files already uploaded to storage that won't be
+              // attached to a service since the form is being discarded.
+              const { images, samples } = form.state.values;
+              const orphans = [
+                ...(images as Id<"_storage">[]),
+                ...(samples as Id<"_storage">[]),
+              ];
+              if (orphans.length > 0) {
+                await deleteOrphanedFiles({ storageIds: orphans });
+              }
               form.reset();
               setSubmitError(null);
             }}
