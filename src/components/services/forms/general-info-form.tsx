@@ -28,6 +28,10 @@ export const GeneralInfoForm = withForm({
           <FieldGroup>
             <form.Field
               name="name"
+              validators={{
+                onSubmit: ({ value }) =>
+                  !value.trim() ? "Service name is required" : undefined,
+              }}
               children={(field) => (
                 <Field>
                   <FieldLabel htmlFor="name">Service Name</FieldLabel>
@@ -38,12 +42,21 @@ export const GeneralInfoForm = withForm({
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {field.state.meta.errors[0]?.toString()}
+                    </p>
+                  )}
                 </Field>
               )}
             />
 
             <form.Field
               name="description"
+              validators={{
+                onSubmit: ({ value }) =>
+                  !value.trim() ? "Description is required" : undefined,
+              }}
               children={(field) => (
                 <Field>
                   <FieldLabel htmlFor="description">Description</FieldLabel>
@@ -58,6 +71,11 @@ export const GeneralInfoForm = withForm({
                       onBlur={field.handleBlur}
                     />
                   </InputGroup>
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {field.state.meta.errors[0]?.toString()}
+                    </p>
+                  )}
                 </Field>
               )}
             />
