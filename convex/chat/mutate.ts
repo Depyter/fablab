@@ -4,7 +4,7 @@ import { v } from "convex/values";
 export const sendMessage = mutation({
   args: {
     content: v.string(),
-    file: v.optional(v.id("_storage")),
+    file: v.optional(v.array(v.id("_storage"))),
     room: v.id("rooms"),
   },
   handler: async (ctx, args) => {

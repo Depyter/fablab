@@ -89,7 +89,7 @@ export default defineSchema({
 
   messages: defineTable({
     content: v.string(),
-    file: v.optional(v.id("_storage")),
+    file: v.optional(v.array(v.id("_storage"))),
     sender: v.string(),
     room: v.id("rooms"),
   }).index("by_room", ["room"]),

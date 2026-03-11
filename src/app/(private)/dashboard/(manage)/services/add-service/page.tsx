@@ -196,7 +196,6 @@ export default function AddServicePage() {
                 <FileUpload
                   title="Thumbnail"
                   accept="image/png, image/jpeg, image/jpg"
-                  maxFiles={1}
                   onFilesChange={(files) =>
                     field.handleChange(files.map((f) => f.storageId))
                   }
