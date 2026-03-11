@@ -18,7 +18,7 @@ import {
   FileTextIcon,
   FolderIcon,
 } from "lucide-react";
-import { useQuery } from "convex/react";
+import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 
 type Role = "admin" | "maker" | "client";
@@ -112,8 +112,13 @@ function filterNavItems(items: NavItem[], role: Role): NavItem[] {
     }));
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const profile = useQuery(api.users.getUserProfile);
+export function AppSidebar({
+  preloadedProfile,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  preloadedProfile: Preloaded<typeof api.users.getUserProfile>;
+}) {
+  const profile = usePreloadedQuery(preloadedProfile);
 
   const role: Role = profile?.role ?? "client";
   const navItems = filterNavItems(allNavItems, role);
