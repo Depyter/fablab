@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, Preloaded, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { CirclePercent, PhilippinePeso, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PriceTile } from "@/components/services/price-tile";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
 
@@ -17,7 +19,10 @@ export function ServiceDetailClient({
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
   const service = usePreloadedQuery(preloadedService);
+  const router = useRouter();
+  const deleteService = useMutation(api.services.mutate.deleteService);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -74,12 +79,29 @@ export function ServiceDetailClient({
             <Button
               variant="outline"
               className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
+              disabled={isDeleting}
+              onClick={async () => {
+                if (!service) return;
+                setIsDeleting(true);
+                try {
+                  await deleteService({
+                    service: service._id as Id<"services">,
+                  });
+                  router.push("/dashboard/services");
+                } catch {
+                  setIsDeleting(false);
+                }
+              }}
             >
-              Remove
+              {isDeleting ? "Removing..." : "Remove"}
             </Button>
-            <Button className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg">
-              Edit
-            </Button>
+            <Link
+              href={service ? `/dashboard/services/${service.name}/edit` : "#"}
+            >
+              <Button className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg">
+                Edit
+              </Button>
+            </Link>
           </div>
         </header>
 

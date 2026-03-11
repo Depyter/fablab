@@ -99,6 +99,24 @@ export const addImageToService = mutation({
   },
 });
 
+export const addSampleToService = mutation({
+  args: {
+    service: v.id("services"),
+    sample: v.id("_storage"), // storageID
+  },
+  handler: async (ctx, args) => {
+    // properly check auth roles then addImage
+
+    const service = await ctx.db.get(args.service);
+
+    if (!service) throw new Error("Service does not exist!");
+
+    await ctx.db.patch("services", args.service, {
+      samples: [...service.samples, args.sample],
+    });
+  },
+});
+
 export const deleteService = mutation({
   args: {
     service: v.id("services"),
