@@ -14,10 +14,20 @@ describe("Service functions", () => {
       return storageId;
     });
 
+    const sampleStorageId = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(blob);
+      return storageId;
+    });
+
+    await Promise.all([
+      t.mutation(api.files.trackUpload, { upload: storageId }),
+      t.mutation(api.files.trackUpload, { upload: sampleStorageId }),
+    ]);
+
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [storageId],
-      samples: [storageId],
+      samples: [sampleStorageId],
       regularPrice: 4,
       upPrice: 2,
       unitPrice: "min",
@@ -145,6 +155,11 @@ describe("Service functions", () => {
       const storageId = await ctx.storage.store(blob);
       return storageId;
     });
+
+    await Promise.all([
+      t.mutation(api.files.trackUpload, { upload: storageId }),
+      t.mutation(api.files.trackUpload, { upload: sampleStorageId }),
+    ]);
 
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
