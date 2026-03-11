@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "convex/react";
+import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 
@@ -25,8 +25,14 @@ interface RoomWithLastMessage {
   } | null;
 }
 
-export function ChatSidebar({ className }: { className?: string }) {
-  const rooms = useQuery(api.chat.query.getRooms) as
+export function ChatSidebar({
+  preloadedRooms,
+  className,
+}: {
+  preloadedRooms: Preloaded<typeof api.chat.query.getRooms>;
+  className?: string;
+}) {
+  const rooms = usePreloadedQuery(preloadedRooms) as
     | (RoomWithLastMessage | null)[]
     | undefined;
   const [searchTerm, setSearchTerm] = React.useState("");

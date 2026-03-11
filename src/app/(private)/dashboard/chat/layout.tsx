@@ -1,9 +1,17 @@
+import { preloadAuthQuery } from "@/lib/auth-server";
+import { api } from "@convex/_generated/api";
 import { ChatLayoutClient } from "@/components/chat/chat-layout-client";
 
-export default function ChatLayout({
+export default async function ChatLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <ChatLayoutClient>{children}</ChatLayoutClient>;
+  const preloadedRooms = await preloadAuthQuery(api.chat.query.getRooms, {});
+
+  return (
+    <ChatLayoutClient preloadedRooms={preloadedRooms}>
+      {children}
+    </ChatLayoutClient>
+  );
 }

@@ -1,10 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Preloaded } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 
-export function ChatLayoutClient({ children }: { children: React.ReactNode }) {
+export function ChatLayoutClient({
+  children,
+  preloadedRooms,
+}: {
+  children: React.ReactNode;
+  preloadedRooms: Preloaded<typeof api.chat.query.getRooms>;
+}) {
   const pathname = usePathname();
   const isInConversation = pathname !== "/dashboard/chat";
 
@@ -18,7 +26,7 @@ export function ChatLayoutClient({ children }: { children: React.ReactNode }) {
           isInConversation ? "hidden" : "w-full",
         )}
       >
-        <ChatSidebar className="h-full" />
+        <ChatSidebar preloadedRooms={preloadedRooms} className="h-full" />
       </div>
 
       {/* Chat content panel: hidden on mobile when showing list, flex-1 otherwise */}
