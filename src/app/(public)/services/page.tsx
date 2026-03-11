@@ -2,59 +2,19 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+
 import { Skeleton } from "@/components/ui/skeleton";
-import { ServiceCard } from "@/components/services/service-card";
-import { CardButton } from "@/components/services/card-button";
-import { union } from "better-auth";
+import { MOCK_SERVICES } from "@/lib/mock-data";
+import { ServiceCardClient } from "@/components/services/service-card-client";
 
 export default function ServicesPage() {
   const services = useQuery(api.services.query.getServices);
-
-  const mockServiceList = [
-    {
-      id: 1,
-      imageSrc: "/fablab_mural.png",
-      title: "3D Printing Service",
-      description:
-        "Professional 3D printing service offering FDM and resin printing in various materials. Perfect for prototyping, product development, custom parts, and creative projects. ",
-      regularPrice: 3,
-      discountedPrice: 2,
-      unit: "min",
-    },
-    {
-      id: 2,
-      imageSrc: "/fablab_mural.png",
-      title: "Laser Cutting Service",
-      description:
-        "Precision laser cutting service for various materials including wood, acrylic, and fabric. Ideal for detailed designs and custom projects.",
-      regularPrice: 20,
-      discountedPrice: 15,
-      unit: "min",
-    },
-    {
-      id: 3,
-      imageSrc: "/fablab_mural.png",
-      title: "Large CNC Service",
-      description:
-        "High-quality CNC machining service for large-scale projects. We can handle a variety of materials and provide precise cuts for your custom needs.",
-      regularPrice: 420,
-      discountedPrice: 360,
-      unit: "hr",
-    },
-  ];
+  const mockServiceList = MOCK_SERVICES; // Replace with actual data when available
 
   if (services === undefined) {
     return (
-      <div className="container mx-auto p-6 space-y-4">
+      <div className="container mx-auto p-6 space-y-3">
         <h1 className="text-3xl font-bold mb-6">Available Services</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
@@ -89,7 +49,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Available Services</h1>
         <p className="text-muted-foreground mt-2">
@@ -99,14 +59,11 @@ export default function ServicesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {mockServiceList.map((service) => (
-          <ServiceCard
+          <ServiceCardClient
             key={service.id}
-            imageSrc={service.imageSrc}
+            id={service.id}
+            imageSrc={"/laser-cutting.jpg"}
             title={service.title}
-            description={service.description}
-            regularPrice={service.regularPrice}
-            discountedPrice={service.discountedPrice}
-            unit={service.unit}
           />
         ))}
       </div>
