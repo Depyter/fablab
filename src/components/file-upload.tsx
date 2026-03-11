@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -114,6 +114,23 @@ export function FileUpload({
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
 
+  // Keep a stable ref to the latest onFilesChange so the effect below never
+  // needs it in its dependency array (avoids re-running on every render when
+  // the parent passes an inline arrow function).
+  const onFilesChangeRef = useRef(onFilesChange);
+  onFilesChangeRef.current = onFilesChange;
+
+  // Skip the very first render so we don't call onFilesChange with the initial
+  // empty value and accidentally mark form fields as dirty/touched on mount.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    onFilesChangeRef.current?.(uploadedFiles);
+  }, [uploadedFiles]);
+
   const uploadFile = useCallback(
     async (file: File) => {
       // Check file size
@@ -181,11 +198,7 @@ export function FileUpload({
         );
 
         // Add to uploaded files
-        setUploadedFiles((prev) => {
-          const updated = [...prev, uploadedFile];
-          onFilesChange?.(updated);
-          return updated;
-        });
+        setUploadedFiles((prev) => [...prev, uploadedFile]);
 
         onUploadComplete?.(uploadedFile);
 
@@ -215,13 +228,7 @@ export function FileUpload({
         );
       }
     },
-    [
-      generateUploadUrl,
-      maxFileSizeMB,
-      onUploadComplete,
-      onUploadError,
-      onFilesChange,
-    ],
+    [generateUploadUrl, maxFileSizeMB, onUploadComplete, onUploadError],
   );
 
   const handleFiles = useCallback(
@@ -297,17 +304,13 @@ export function FileUpload({
   };
 
   const removeUploadedFile = (index: number) => {
-    setUploadedFiles((prev) => {
-      const updated = prev.filter((_, i) => i !== index);
-      onFilesChange?.(updated);
-      return updated;
-    });
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const clearAll = () => {
     setUploadingFiles([]);
     setUploadedFiles([]);
-    onFilesChange?.([]);
+    // onFilesChange is notified via the uploadedFiles useEffect
   };
 
   const triggerFileSelect = () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -34,7 +35,9 @@ const statusOptions = [
 ];
 
 export default function AddServicePage() {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const addService = useMutation(api.services.mutate.addService);
 
   useEffect(() => {
@@ -48,19 +51,27 @@ export default function AddServicePage() {
   const form = useAppForm({
     ...addServiceFormOpts,
     onSubmit: async ({ value }) => {
-      await addService({
-        name: value.name,
-        description: value.description,
-        regularPrice: value.regularPrice,
-        upPrice: value.upPrice,
-        unitPrice: value.unitPrice,
-        status: value.status,
-        images: value.images as Id<"_storage">[],
-        samples: value.samples as Id<"_storage">[],
-        requirements: value.requirements.filter((r) => r.trim() !== ""),
-        // type is required by the mutation arg but unused in the insert handler
-        type: "",
-      });
+      setSubmitError(null);
+      try {
+        await addService({
+          name: value.name,
+          description: value.description,
+          regularPrice: value.regularPrice,
+          upPrice: value.upPrice,
+          unitPrice: value.unitPrice,
+          status: value.status,
+          images: value.images as Id<"_storage">[],
+          samples: value.samples as Id<"_storage">[],
+          requirements: value.requirements.filter((r) => r.trim() !== ""),
+        });
+        router.push("/dashboard/services");
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : "Failed to add service. Please try again.",
+        );
+      }
     },
   });
 
@@ -84,12 +95,20 @@ export default function AddServicePage() {
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Add New Service</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          {submitError && (
+            <p className="text-sm text-red-500 max-w-xs text-right">
+              {submitError}
+            </p>
+          )}
           <Button
             type="button"
             variant="outline"
             className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            onClick={() => form.reset()}
+            onClick={() => {
+              form.reset();
+              setSubmitError(null);
+            }}
           >
             Discard
           </Button>
