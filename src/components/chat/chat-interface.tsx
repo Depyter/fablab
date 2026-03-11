@@ -140,6 +140,7 @@ function PendingAttachmentStrip({
           </button>
 
           {attachment.fileType.startsWith("image/") && attachment.previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={attachment.previewUrl}
               alt={attachment.fileName}
