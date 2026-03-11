@@ -20,9 +20,9 @@ export interface AddServiceFromValues {
   unit: string;
   status: string;
   images: string[];
-  machines: number[];
+  machines: number[]; //
   requirements: string[];
-  projects: string[];
+  samples: string[]; // Pictures of sample projects
 }
 
 export default function AddServicePage() {

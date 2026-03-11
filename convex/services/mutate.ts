@@ -6,7 +6,12 @@ export const addService = mutation({
   args: {
     name: v.string(),
     images: v.array(v.id("_storage")), // array of fileids in convex
+    samples: v.array(v.id("_storage")),
     description: v.string(),
+    requirements: v.array(v.string()),
+    regularPrice: v.number(),
+    upPrice: v.number(),
+    unitPrice: v.string(),
     type: v.string(),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
@@ -22,8 +27,12 @@ export const addService = mutation({
       name: args.name,
       images: args.images,
       description: args.description,
-      type: args.type,
+      regularPrice: args.regularPrice,
+      upPrice: args.upPrice,
+      unitPrice: args.unitPrice,
       status: args.status,
+      requirements: args.requirements,
+      samples: args.samples,
     });
   },
 });
@@ -94,6 +103,9 @@ export const deleteService = mutation({
 
     if (!service) throw new Error("Service not found!");
     await Promise.all(service.images.map((image) => ctx.storage.delete(image)));
+    await Promise.all(
+      service.samples.map((image) => ctx.storage.delete(image)),
+    );
     await ctx.db.delete("services", args.service);
   },
 });

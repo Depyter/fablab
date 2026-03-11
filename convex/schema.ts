@@ -6,10 +6,39 @@ export default defineSchema({
   services: defineTable({
     name: v.string(),
     images: v.array(v.id("_storage")), // array of fileids in convex
+    samples: v.array(v.id("_storage")),
+    regularPrice: v.number(),
+    upPrice: v.number(),
+    unitPrice: v.string(),
     description: v.string(),
-    type: v.string(),
+    requirements: v.array(v.string()),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   }),
+
+  machines: defineTable({
+    name: v.string(),
+    description: v.string(),
+    service: v.id("services"),
+    status: v.union(v.literal("Unavailable"), v.literal("Available")),
+  }).index("by_service", ["service"]),
+
+  // To show which machines have jobs
+  jobs: defineTable({
+    machine: v.id("machines"),
+    project: v.id("projects"),
+    start: v.number(),
+    end: v.number(),
+    complexity: v.union(
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low"),
+    ),
+    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+    requester: v.id("userProfile"), // must be admin or maker
+  })
+    .index("by_machine", ["machine"])
+    .index("by_project", ["project"])
+    .index("by_requester", ["requester"]),
 
   projects: defineTable({
     alias: v.string(),
