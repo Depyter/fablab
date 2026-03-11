@@ -1,5 +1,5 @@
 import { UserIdentity } from "convex/server";
-import { QueryCtx, MutationCtx } from "../_generated/server";
+import { QueryCtx, MutationCtx } from "./_generated/server";
 
 type Role = "admin" | "maker" | "client";
 type RoleCombo = Role | Role[];

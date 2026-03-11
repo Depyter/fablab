@@ -1,6 +1,6 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority } from "./helper";
+import { checkAuthority } from "../helper";
 
 export const addService = mutation({
   args: {
@@ -87,7 +87,12 @@ export const addImageToService = mutation({
     image: v.id("_storage"), // storageID
   },
   handler: async (ctx, args) => {
-    // properly check auth roles then addImage
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot add Image to Service.");
 
     const service = await ctx.db.get(args.service);
 
@@ -105,7 +110,12 @@ export const addSampleToService = mutation({
     sample: v.id("_storage"), // storageID
   },
   handler: async (ctx, args) => {
-    // properly check auth roles then addImage
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot add Sample to Service.");
 
     const service = await ctx.db.get(args.service);
 
@@ -145,6 +155,13 @@ export const deleteImageFromService = mutation({
     image: v.id("_storage"),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot delete Image from Service.");
+
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service does not exist!");
@@ -163,6 +180,13 @@ export const deleteSampleFromService = mutation({
     sample: v.id("_storage"),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot delete Sample from Service.");
+
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service does not exist!");
