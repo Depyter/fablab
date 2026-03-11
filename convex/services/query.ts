@@ -18,10 +18,14 @@ export const getServices = query({
 
 export const getService = query({
   args: {
-    service: v.id("services"),
+    name: v.string(),
   },
   handler: async (ctx, args) => {
-    const service = await ctx.db.get(args.service);
+    const service = await ctx.db
+      .query("services")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+
     if (!service) return null;
     const imageUrls = (
       await Promise.all(service.images.map((id) => ctx.storage.getUrl(id)))
