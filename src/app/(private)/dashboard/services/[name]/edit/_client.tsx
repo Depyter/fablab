@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,18 @@ export function EditServiceClient({
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [samplesUploading, setSamplesUploading] = useState(false);
+  const hasUploadsInProgress = thumbnailUploading || samplesUploading;
+
+  const handleThumbnailUploading = useCallback(
+    (isUploading: boolean) => setThumbnailUploading(isUploading),
+    [],
+  );
+  const handleSamplesUploading = useCallback(
+    (isUploading: boolean) => setSamplesUploading(isUploading),
+    [],
+  );
 
   const updateService = useMutation(api.services.mutate.updateService);
   const addImageToService = useMutation(api.services.mutate.addImageToService);
@@ -250,10 +262,14 @@ export function EditServiceClient({
               <Button
                 type="button"
                 className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
-                disabled={!canSubmit || isSubmitting}
+                disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
                 onClick={() => form.handleSubmit()}
               >
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                {isSubmitting
+                  ? "Saving..."
+                  : hasUploadsInProgress
+                    ? "Uploading..."
+                    : "Save Changes"}
               </Button>
             )}
           />
@@ -281,6 +297,7 @@ export function EditServiceClient({
                 onFilesChange={(files) =>
                   field.handleChange(files.map((f) => f.storageId))
                 }
+                onUploadingChange={handleSamplesUploading}
               />
             )}
           />
@@ -301,6 +318,7 @@ export function EditServiceClient({
                   onFilesChange={(files) =>
                     field.handleChange(files.map((f) => f.storageId))
                   }
+                  onUploadingChange={handleThumbnailUploading}
                 />
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-xs text-red-500 mt-1">
