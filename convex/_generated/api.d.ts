@@ -15,7 +15,7 @@ import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as projects_mutate from "../projects/mutate.js";
 import type * as projects_query from "../projects/query.js";
-import type * as services_helper from "../services/helper.js";
+import type * as services_helper from "../helper.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
 import type * as test_helper from "../test/helper.js";

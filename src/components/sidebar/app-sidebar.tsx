@@ -12,69 +12,118 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { SettingsIcon, MessageSquareIcon, FileTextIcon } from "lucide-react";
+import {
+  SettingsIcon,
+  MessageSquareIcon,
+  FileTextIcon,
+  FolderIcon,
+} from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+type Role = "admin" | "maker" | "client";
 
-  navMain: [
-    {
-      title: "Messages",
-      url: "/dashboard/chat",
-      icon: <MessageSquareIcon />,
-    },
-    {
-      title: "Manage",
-      url: "#",
-      icon: <SettingsIcon />,
-      isActive: true,
-      items: [
-        {
-          title: "Projects",
-          url: "#",
-        },
-        {
-          title: "Services",
-          url: "/dashboard/services",
-        },
-        {
-          title: "Inventory",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Reports",
-      url: "#",
-      icon: <FileTextIcon />,
-      items: [
-        {
-          title: "Overview",
-          url: "#",
-        },
-        {
-          title: "Analytics",
-          url: "#",
-        },
-        {
-          title: "Usage",
-          url: "#",
-        },
-        {
-          title: "Export",
-          url: "#",
-        },
-      ],
-    },
-  ],
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ReactNode;
+  roles: Role[];
+  isActive?: boolean;
+  items?: {
+    title: string;
+    url: string;
+    roles: Role[];
+  }[];
 };
 
+const allNavItems: NavItem[] = [
+  {
+    title: "Messages",
+    url: "/dashboard/chat",
+    icon: <MessageSquareIcon />,
+    roles: ["admin", "maker", "client"],
+  },
+  {
+    title: "Projects",
+    url: "/dashboard/projects",
+    icon: <FolderIcon />,
+    roles: ["client"],
+  },
+  {
+    title: "Manage",
+    url: "#",
+    icon: <SettingsIcon />,
+    roles: ["admin", "maker"],
+    isActive: true,
+    items: [
+      {
+        title: "Projects",
+        url: "/dashboard/projects",
+        roles: ["admin", "maker"],
+      },
+      {
+        title: "Services",
+        url: "/dashboard/services",
+        roles: ["admin", "maker"],
+      },
+      {
+        title: "Inventory",
+        url: "#",
+        roles: ["admin", "maker"],
+      },
+    ],
+  },
+  {
+    title: "Reports",
+    url: "#",
+    icon: <FileTextIcon />,
+    roles: ["admin", "maker"],
+    items: [
+      {
+        title: "Overview",
+        url: "#",
+        roles: ["admin", "maker"],
+      },
+      {
+        title: "Analytics",
+        url: "#",
+        roles: ["admin", "maker"],
+      },
+      {
+        title: "Usage",
+        url: "#",
+        roles: ["admin", "maker"],
+      },
+      {
+        title: "Export",
+        url: "#",
+        roles: ["admin", "maker"],
+      },
+    ],
+  },
+];
+
+function filterNavItems(items: NavItem[], role: Role): NavItem[] {
+  return items
+    .filter((item) => item.roles.includes(role))
+    .map((item) => ({
+      ...item,
+      items: item.items?.filter((sub) => sub.roles.includes(role)),
+    }));
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const profile = useQuery(api.users.getUserProfile);
+
+  const role: Role = profile?.role ?? "client";
+  const navItems = filterNavItems(allNavItems, role);
+
+  const user = {
+    name: profile?.name ?? "",
+    email: profile?.email ?? "",
+    avatar: "",
+  };
+
   return (
     <Sidebar
       collapsible="icon"
@@ -85,10 +134,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <FablabHeader />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
