@@ -139,6 +139,7 @@ export function FileUpload({
   }, []);
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const trackUpload = useMutation(api.files.trackUpload);
 
   // Stable ref for onUploadingChange — same pattern as onFilesChange.
   const onUploadingChangeRef = useRef(onUploadingChange);
@@ -213,6 +214,9 @@ export function FileUpload({
 
         const { storageId } = await result.json();
 
+        // Register the upload so the backend can schedule orphan cleanup.
+        await trackUpload({ upload: storageId });
+
         const uploadedFile: UploadedFile = {
           storageId,
           fileName: file.name,
@@ -268,7 +272,13 @@ export function FileUpload({
         );
       }
     },
-    [generateUploadUrl, maxFileSizeMB, onUploadComplete, onUploadError],
+    [
+      generateUploadUrl,
+      trackUpload,
+      maxFileSizeMB,
+      onUploadComplete,
+      onUploadError,
+    ],
   );
 
   const handleFiles = useCallback(
