@@ -12,7 +12,6 @@ export const addService = mutation({
     regularPrice: v.number(),
     upPrice: v.number(),
     unitPrice: v.string(),
-    type: v.string(),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
@@ -41,8 +40,11 @@ export const updateService = mutation({
   args: {
     service: v.id("services"),
     name: v.optional(v.string()),
+    regularPrice: v.optional(v.number()),
+    upPrice: v.optional(v.number()),
+    unitPrice: v.optional(v.string()),
+    requirements: v.optional(v.array(v.string())),
     description: v.optional(v.string()),
-    type: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
     ),
@@ -56,6 +58,10 @@ export const updateService = mutation({
 
     const updates: Partial<{
       name: string;
+      regularPrice: number;
+      upPrice: number;
+      unitPrice: string;
+      requirements: string[];
       description: string;
       type: string;
       status: "Unavailable" | "Available";
@@ -63,8 +69,13 @@ export const updateService = mutation({
 
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
-    if (args.type !== undefined) updates.type = args.type;
     if (args.status !== undefined) updates.status = args.status;
+    if (args.regularPrice !== undefined)
+      updates.regularPrice = args.regularPrice;
+    if (args.upPrice !== undefined) updates.upPrice = args.upPrice;
+    if (args.unitPrice !== undefined) updates.unitPrice = args.unitPrice;
+    if (args.requirements !== undefined)
+      updates.requirements = args.requirements;
 
     await ctx.db.patch("services", args.service, updates);
   },
@@ -110,7 +121,7 @@ export const deleteService = mutation({
   },
 });
 
-export const deleteImageToService = mutation({
+export const deleteImageFromService = mutation({
   args: {
     service: v.id("services"),
     image: v.id("_storage"),
@@ -124,6 +135,24 @@ export const deleteImageToService = mutation({
 
     await ctx.db.patch("services", args.service, {
       images: updatedList,
+    });
+  },
+});
+
+export const deleteSampleFromService = mutation({
+  args: {
+    service: v.id("services"),
+    sample: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const service = await ctx.db.get(args.service);
+
+    if (!service) throw new Error("Service does not exist!");
+    const updatedList = service.samples.filter((id) => id !== args.sample);
+    await ctx.storage.delete(args.sample);
+
+    await ctx.db.patch("services", args.service, {
+      samples: updatedList,
     });
   },
 });

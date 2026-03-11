@@ -34,8 +34,12 @@ export async function setupProject() {
   await tAera.mutation(api.services.mutate.addService, {
     name: "3d printing",
     images: [],
+    samples: [],
+    regularPrice: 2,
+    upPrice: 1,
+    unitPrice: "min",
+    requirements: ["design", "model"],
     description: "std to 3d printed model",
-    type: "prints",
     status: "Available",
   });
 
