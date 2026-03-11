@@ -8,6 +8,16 @@ export default defineConfig([
   ...nextTypescript,
   ...convexPlugin.configs.recommended,
   {
+    rules: {
+      "react/no-children-prop": [
+        true,
+        {
+          allowFunctions: true,
+        },
+      ],
+    },
+  },
+  {
     ignores: [
       ".next/**",
       ".open-next/**",

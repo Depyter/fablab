@@ -11,9 +11,16 @@ import {
 interface SelectFormProps {
   title: string;
   options: { label: string; value: string }[];
+  value: string;
+  onChange: (value: string) => void;
 }
 
-export function SelectForm({ title, options }: SelectFormProps) {
+export function SelectForm({
+  title,
+  options,
+  value,
+  onChange,
+}: SelectFormProps) {
   return (
     <Card className="w-full sm:max-w-3xl">
       <CardHeader>
@@ -22,7 +29,7 @@ export function SelectForm({ title, options }: SelectFormProps) {
       <CardContent>
         <FieldGroup>
           <Field>
-            <Select defaultValue="">
+            <Select value={value} onValueChange={onChange}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={`Select ${title.toLowerCase()}...`} />
               </SelectTrigger>
