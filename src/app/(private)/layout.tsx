@@ -13,6 +13,8 @@ export default async function AuthenticatedLayout({
     redirect("/login");
   }
   return (
-    <ConvexClientProvider expectAuth={true}>{children}</ConvexClientProvider>
+    <ConvexClientProvider initialToken={token} expectAuth={true}>
+      {children}
+    </ConvexClientProvider>
   );
 }

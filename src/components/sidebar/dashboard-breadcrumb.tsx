@@ -40,7 +40,10 @@ export function DashboardBreadcrumb() {
   const pathname = usePathname();
 
   // Strip leading /dashboard/ and split into segments
-  const segments = pathname.replace(/^\/dashboard\/?/, "").split("/").filter(Boolean);
+  const segments = pathname
+    .replace(/^\/dashboard\/?/, "")
+    .split("/")
+    .filter(Boolean);
 
   if (segments.length === 0) {
     return (
