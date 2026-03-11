@@ -1,7 +1,13 @@
 import { LoginForm } from "@/components/login-form";
 import Image from "next/image";
+import { getToken } from "@/lib/auth-server";
+import { redirect } from "next/navigation";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const token = await getToken();
+  if (token) {
+    redirect("/dashboard");
+  }
   return (
     <div className="grid min-h-svh lg:grid-cols-3">
       <div className="flex flex-col gap-4 p-6 md:p-10">
