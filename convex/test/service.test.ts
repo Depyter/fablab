@@ -17,8 +17,12 @@ describe("Service functions", () => {
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [storageId],
+      samples: [storageId],
+      regularPrice: 4,
+      upPrice: 2,
+      unitPrice: "min",
+      requirements: ["design", "model"],
       description: "printing services",
-      type: "printing",
       status: "Available",
     });
 
@@ -28,7 +32,6 @@ describe("Service functions", () => {
       expect(service.length).toBe(1);
       expect(service[0].name).toBe("3d printing");
       expect(service[0].description).toBe("printing services");
-      expect(service[0].type).toBe("printing");
       expect(service[0].status).toBe("Available");
 
       expect(service[0].images.length).toBe(1);
@@ -45,8 +48,12 @@ describe("Service functions", () => {
       await t.mutation(api.services.mutate.addService, {
         name: "3d printing",
         images: [],
+        samples: [],
+        regularPrice: 4,
+        upPrice: 2,
+        unitPrice: "min",
+        requirements: ["design", "model"],
         description: "printing services",
-        type: "printing",
         status: "Available",
       });
     }).rejects.toThrowError("No identity!");
@@ -55,8 +62,12 @@ describe("Service functions", () => {
       await tHarley.mutation(api.services.mutate.addService, {
         name: "3d printing",
         images: [],
+        samples: [],
+        regularPrice: 4,
+        upPrice: 2,
+        unitPrice: "min",
+        requirements: ["design", "model"],
         description: "printing services",
-        type: "printing",
         status: "Available",
       });
     }).rejects.toThrowError("Unauthorized. Cannot add service.");
@@ -68,8 +79,12 @@ describe("Service functions", () => {
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [],
+      samples: [],
+      regularPrice: 4,
+      upPrice: 2,
+      unitPrice: "min",
+      requirements: ["design", "model"],
       description: "printing services",
-      type: "printing",
       status: "Available",
     });
 
@@ -81,7 +96,6 @@ describe("Service functions", () => {
       service: service[0]._id,
       name: "test",
       description: "test",
-      type: "test",
       status: "Unavailable",
     });
 
@@ -91,7 +105,6 @@ describe("Service functions", () => {
       expect(service.length).toBe(1);
       expect(service[0].name).toBe("test");
       expect(service[0].description).toBe("test");
-      expect(service[0].type).toBe("test");
       expect(service[0].status).toBe("Unavailable");
     });
 
@@ -131,8 +144,12 @@ describe("Service functions", () => {
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [storageId],
+      samples: [storageId],
+      regularPrice: 4,
+      upPrice: 2,
+      unitPrice: "min",
+      requirements: ["design", "model"],
       description: "printing services",
-      type: "printing",
       status: "Available",
     });
 
@@ -160,8 +177,12 @@ describe("Service functions", () => {
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [],
+      samples: [],
+      regularPrice: 4,
+      upPrice: 2,
+      unitPrice: "min",
+      requirements: ["design", "model"],
       description: "printing services",
-      type: "printing",
       status: "Available",
     });
 
