@@ -7,16 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupTextarea,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupTextarea } from "@/components/ui/input-group";
 
 export function GeneralInfoForm() {
   return (
@@ -29,14 +22,10 @@ export function GeneralInfoForm() {
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="title">Service Name</FieldLabel>
-            <Input
-              id="title"
-              placeholder="Enter service name..."
-            />
-
+            <Input id="title" placeholder="Enter service name..." />
           </Field>
 
-          <Field >
+          <Field>
             <FieldLabel htmlFor="description">Description</FieldLabel>
             <InputGroup>
               <InputGroupTextarea
@@ -44,11 +33,9 @@ export function GeneralInfoForm() {
                 placeholder="Description of service..."
                 rows={6}
                 className="min-h-24 resize-none"
-  
               />
             </InputGroup>
           </Field>
-    
         </FieldGroup>
       </CardContent>
     </Card>

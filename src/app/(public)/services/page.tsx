@@ -2,11 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { MOCK_SERVICES } from "@/lib/mock-data";

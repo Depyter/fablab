@@ -26,9 +26,7 @@ export function MachineSelectForm({ options }: MachineSelectFormProps) {
   };
 
   const removeMachine = (indexToRemove: number) => {
-    setSelectedMachines(
-      selectedMachines.filter((_, i) => i !== indexToRemove)
-    );
+    setSelectedMachines(selectedMachines.filter((_, i) => i !== indexToRemove));
   };
 
   return (
@@ -47,16 +45,13 @@ export function MachineSelectForm({ options }: MachineSelectFormProps) {
                 className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
               >
                 <span>{label}</span>
-                
+
                 {/* CRUCIAL: Hidden input ensures this value is included in the parent form's submission.
                   Multiple inputs with the same name="machines" create an array in FormData.
                 */}
                 <input type="hidden" name="machines" value={machineValue} />
 
-                <button
-                  type="button"
-                  onClick={() => removeMachine(index)}
-                >
+                <button type="button" onClick={() => removeMachine(index)}>
                   <XIcon className="h-4 w-4 text-gray-500" />
                 </button>
               </div>

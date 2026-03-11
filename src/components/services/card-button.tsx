@@ -1,7 +1,4 @@
-
-import {
-  Card,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 import { CirclePlus } from "lucide-react";
 import { useRouter } from "next/navigation";

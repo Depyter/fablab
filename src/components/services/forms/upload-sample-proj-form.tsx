@@ -27,7 +27,10 @@ export function SampleProjectsForm() {
   // };
 
   return (
-    <FileUpload title="Sample Projects" accept="image/png, image/jpeg, image/jpg" />
+    <FileUpload
+      title="Sample Projects"
+      accept="image/png, image/jpeg, image/jpg"
+    />
 
     // <Card className="w-full sm:max-w-md border-none shadow-none p-8">
     //   <CardHeader className="px-0">

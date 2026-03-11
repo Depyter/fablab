@@ -8,20 +8,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Field, FieldGroup, FieldContent, FieldSet } from "@/components/ui/field";
-import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
+import {
+  Field,
+  FieldGroup,
+  FieldContent,
+  FieldSet,
+} from "@/components/ui/field";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+  InputGroupButton,
+} from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
 import { XIcon, CirclePlus } from "lucide-react";
 
 export function RequirementsForm() {
   const [requirements, setRequirements] = useState<string[]>([""]);
-  
+
   // auto add new field upon pressing enter
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const addRequirement = () => {
     setRequirements([...requirements, ""]);
-    
+
     setTimeout(() => {
       const newIndex = requirements.length; // The index the new item will have
       inputRefs.current[newIndex]?.focus();
@@ -42,7 +52,9 @@ export function RequirementsForm() {
     <Card className="w-full sm:max-w-3xl">
       <CardHeader>
         <CardTitle className="font-bold text-lg">Requirements</CardTitle>
-        <CardDescription>Specify the requirements for your service.</CardDescription>
+        <CardDescription>
+          Specify the requirements for your service.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <FieldSet className="gap-4">
@@ -50,19 +62,19 @@ export function RequirementsForm() {
             {requirements.map((req: string, index: number) => (
               <Field key={index} orientation="horizontal">
                 <FieldContent>
-                  <InputGroup>  
+                  <InputGroup>
                     <InputGroupInput
                       name="requirements"
                       value={req}
-                    
-                      ref={(el) => { inputRefs.current[index] = el; }}
+                      ref={(el) => {
+                        inputRefs.current[index] = el;
+                      }}
                       onChange={(e) => updateRequirement(index, e.target.value)}
                       placeholder="Enter description..."
-                 
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault(); // Stop the form from submitting
-                          addRequirement();   // Add the new field
+                          addRequirement(); // Add the new field
                         }
                       }}
                     />
@@ -82,7 +94,7 @@ export function RequirementsForm() {
                 </FieldContent>
               </Field>
             ))}
-            
+
             <Button
               type="button"
               variant="outline"

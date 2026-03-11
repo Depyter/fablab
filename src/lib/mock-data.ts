@@ -47,5 +47,4 @@ export const MOCK_SERVICES = [
     machines: ["Laser Cutter Pro 400"],
     projects: [],
   },
-
 ];

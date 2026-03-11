@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup } from "@/components/ui/field";
 import {
   Select,
@@ -18,10 +13,7 @@ interface SelectFormProps {
   options: { label: string; value: string }[];
 }
 
-export function SelectForm({
-  title,
-  options,
-}: SelectFormProps) {
+export function SelectForm({ title, options }: SelectFormProps) {
   return (
     <Card className="w-full sm:max-w-3xl">
       <CardHeader>
@@ -30,9 +22,7 @@ export function SelectForm({
       <CardContent>
         <FieldGroup>
           <Field>
-            <Select
-              defaultValue=""
-            >
+            <Select defaultValue="">
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={`Select ${title.toLowerCase()}...`} />
               </SelectTrigger>
