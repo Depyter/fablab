@@ -25,7 +25,9 @@ export function ChatLayoutClient({ children }: { children: React.ReactNode }) {
       <div
         className={cn(
           "flex-1 h-full overflow-hidden min-w-0",
-          !isInConversation ? "hidden md:flex md:items-center md:justify-center" : "flex flex-col",
+          !isInConversation
+            ? "hidden md:flex md:items-center md:justify-center"
+            : "flex flex-col",
         )}
       >
         {children}
