@@ -28,7 +28,6 @@ import { XIcon, CirclePlus } from "lucide-react";
 export const RequirementsForm = withForm({
   ...addServiceFormOpts,
   render: function RequirementsRender({ form }) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     return (

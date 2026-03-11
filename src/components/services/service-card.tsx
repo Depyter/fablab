@@ -13,7 +13,7 @@ import Link from "next/link";
 
 interface ServiceCardProps {
   // required
-  id: number | string;
+  name: string;
   imageSrc: string;
   title: string;
   description: string;
@@ -37,7 +37,7 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({
-  id,
+  name,
   imageSrc,
   title,
   description,
@@ -91,7 +91,7 @@ export function ServiceCard({
 
       <div className="flex-1/2" />
       <CardFooter>
-        <Link href={`/dashboard/services/${id}`} className="w-full">
+        <Link href={`/dashboard/services/${name}`} className="w-full">
           <Button className="w-full">{buttonText}</Button>
         </Link>
       </CardFooter>

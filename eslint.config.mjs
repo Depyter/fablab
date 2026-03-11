@@ -9,12 +9,7 @@ export default defineConfig([
   ...convexPlugin.configs.recommended,
   {
     rules: {
-      "react/no-children-prop": [
-        true,
-        {
-          allowFunctions: true,
-        },
-      ],
+      "react/no-children-prop": "off",
     },
   },
   {

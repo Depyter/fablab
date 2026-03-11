@@ -13,7 +13,7 @@ export default defineSchema({
     description: v.string(),
     requirements: v.array(v.string()),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
-  }),
+  }).index("by_name", ["name"]),
 
   machines: defineTable({
     name: v.string(),
