@@ -1,96 +1,111 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
-} from "@/components/ui/carousel";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface ServiceGalleryProps {
   images: string[];
 }
 
+/**
+ * ServiceGallery
+ * Inspired by Blue Bottle Coffee's product gallery:
+ * - Vertical thumbnail strip on the left (on desktop)
+ * - Large, clean main stage on the right
+ * - No heavy borders or shadow boxes
+ * - Subtle transitions and high-quality "stage" feel
+ */
 export function ServiceGallery({ images }: ServiceGalleryProps) {
-  const [mainApi, setMainApi] = React.useState<CarouselApi>();
-  const [thumbApi, setThumbApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  // Sync Thumbnails when Main Carousel moves
-  React.useEffect(() => {
-    if (!mainApi || !thumbApi) return;
+  const scrollThumbnails = (direction: "up" | "down") => {
+    if (scrollRef.current) {
+      const scrollAmount = 100;
+      scrollRef.current.scrollBy({
+        top: direction === "up" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
-    const onSelect = () => {
-      const selectedIndex = mainApi.selectedScrollSnap();
-      setCurrent(selectedIndex);
-      thumbApi.scrollTo(selectedIndex); // Moves the thumbnail track
-    };
-
-    mainApi.on("select", onSelect);
-    return () => {
-      mainApi.off("select", onSelect);
-    };
-  }, [mainApi, thumbApi]);
+  if (!images || images.length === 0) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Main Large Carousel */}
-      <Carousel setApi={setMainApi} className="w-full">
-        <CarouselContent>
-          {images.map((src, index) => (
-            <CarouselItem key={index}>
-              <Card className="border-none shadow-none">
-                <CardContent className="flex aspect-[4/3] items-center justify-center p-0 overflow-hidden rounded-2xl border">
-                  <Image
-                    src={src}
-                    className="w-full h-full object-cover"
-                    alt=""
-                    width={640}
-                    height={480}
-                  />
-                </CardContent>
-              </Card>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious className="left-2 bg-white/80 border border-chart-4 hover:bg-white rounded-sm" />
-        <CarouselNext className="right-2 bg-white/80 border border-chart-4 hover:bg-white rounded-sm" />
-      </Carousel>
+    <div className="flex flex-col-reverse lg:flex-row gap-6 w-full group/gallery">
+      {/* Vertical Thumbnails (Desktop) / Horizontal (Mobile) */}
+      {images.length > 1 && (
+        <div className="relative flex lg:flex-col items-center gap-2">
+          {/* Scroll Up Button (Desktop Only) */}
+          <button
+            onClick={() => scrollThumbnails("up")}
+            className="hidden lg:flex items-center justify-center w-full py-1 text-muted-foreground/40 hover:text-primary transition-colors"
+            aria-label="Scroll thumbnails up"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
 
-      {/* Sliding Thumbnail Track */}
-      <Carousel
-        setApi={setThumbApi}
-        opts={{ containScroll: "keepSnaps", dragFree: true }}
-        className="w-full "
-      >
-        <CarouselContent className="-ml-3">
-          {images.map((src, index) => (
-            <CarouselItem key={index} className="pl-3 basis-1/2 lg:basis-1/3">
+          <div
+            ref={scrollRef}
+            className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto scrollbar-none snap-y snap-mandatory lg:max-h-[450px] pb-2 lg:pb-0"
+          >
+            {images.map((src, index) => (
               <button
-                onClick={() => mainApi?.scrollTo(index)}
-                className={`w-full aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                key={index}
+                onClick={() => setCurrent(index)}
+                className={cn(
+                  "relative shrink-0 aspect-square w-16 lg:w-20 rounded-sm overflow-hidden transition-all duration-300 snap-start",
+                  "bg-sidebar-accent/10 border",
                   current === index
-                    ? "border-[#1A8A7E] ring-2 ring-[#1A8A7E]/20 opacity-100"
-                    : "border-transparent opacity-50 hover:opacity-100"
-                }`}
+                    ? "border-primary/60 opacity-100 shadow-sm"
+                    : "border-transparent opacity-40 hover:opacity-100",
+                )}
               >
                 <Image
                   src={src}
-                  className="w-full h-full object-cover"
-                  alt=""
-                  width={96}
-                  height={96}
+                  alt={`Thumbnail ${index + 1}`}
+                  fill
+                  className="object-contain p-2"
+                  sizes="80px"
                 />
               </button>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
+            ))}
+          </div>
+
+          {/* Scroll Down Button (Desktop Only) */}
+          <button
+            onClick={() => scrollThumbnails("down")}
+            className="hidden lg:flex items-center justify-center w-full py-1 text-muted-foreground/40 hover:text-primary transition-colors"
+            aria-label="Scroll thumbnails down"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Image Stage */}
+      <div className="relative flex-1 aspect-square bg-sidebar-accent/5 rounded-sm overflow-hidden flex items-center justify-center p-8 lg:p-12 border border-sidebar-border/30">
+        <div className="relative w-full h-full">
+          <Image
+            key={images[current]}
+            src={images[current]}
+            alt="Service main view"
+            fill
+            className="object-contain transition-all duration-700 ease-in-out"
+            sizes="(max-width: 1024px) 100vw, 800px"
+            priority
+          />
+        </div>
+
+        {/* Floating Indicator (Desktop only, minimal) */}
+        {images.length > 1 && (
+          <div className="absolute bottom-6 right-8 text-[9px] font-black uppercase tracking-[0.3em] text-foreground/20 select-none">
+            {current + 1} / {images.length}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
