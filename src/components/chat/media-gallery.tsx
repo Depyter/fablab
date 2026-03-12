@@ -11,6 +11,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ModelViewer, is3DModel } from "@/components/3d/modelViewer";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 export interface MediaFile {
   fileUrl: string;
   fileType: string | null;
+  originalName: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +52,8 @@ function MediaLightbox({
     if (e.key === "ArrowRight") next();
     if (e.key === "Escape") onOpenChange(false);
   };
+
+  const is3D = is3DModel(f.fileType, f.originalName);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,7 +93,19 @@ function MediaLightbox({
             className="relative flex-1 flex items-center justify-center min-h-0 px-12 cursor-default"
             onClick={() => onOpenChange(false)}
           >
-            {f.fileType?.startsWith("video/") ? (
+            {is3D ? (
+              <div
+                className="h-full w-4/5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ModelViewer
+                  fileUrl={f.fileUrl}
+                  fileType={f.fileType}
+                  originalName={f.originalName}
+                  className="w-full h-full"
+                />
+              </div>
+            ) : f.fileType?.startsWith("video/") ? (
               <video
                 key={f.fileUrl}
                 src={f.fileUrl}
@@ -200,6 +216,7 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
   // Single media item — full-width thumbnail, click opens lightbox
   if (count === 1) {
     const f = mediaFiles[0];
+    const is3D = is3DModel(f.fileType, f.originalName);
     return (
       <>
         <button
@@ -207,7 +224,14 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
           onClick={() => openAt(0)}
           className="mt-1 block w-full text-left focus:outline-none"
         >
-          {f.fileType?.startsWith("video/") ? (
+          {is3D ? (
+            <div className="rounded-md border bg-muted p-4 text-center hover:bg-muted/80 transition-colors">
+              <div className="text-sm font-medium">3D Model</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {f.originalName || "Model"}
+              </div>
+            </div>
+          ) : f.fileType?.startsWith("video/") ? (
             <div
               className="relative rounded-md overflow-hidden bg-black"
               style={{ maxHeight: "240px" }}
@@ -261,6 +285,7 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
         {visibleFiles.map((f, i) => {
           const isFirstOfThree = count === 3 && i === 0;
           const isLastVisible = i === visibleFiles.length - 1 && remaining > 0;
+          const is3D = is3DModel(f.fileType, f.originalName);
 
           return (
             <button
@@ -272,7 +297,14 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                 isFirstOfThree ? "col-span-2" : "",
               )}
             >
-              {f.fileType?.startsWith("video/") ? (
+              {is3D ? (
+                <div className="w-full h-28 border bg-muted p-2 text-center hover:bg-muted/80 transition-colors">
+                  <div className="text-xs font-medium">3D Model</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {f.originalName || "Model"}
+                  </div>
+                </div>
+              ) : f.fileType?.startsWith("video/") ? (
                 <div className="relative w-full h-28 bg-black">
                   <video
                     src={f.fileUrl}

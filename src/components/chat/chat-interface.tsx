@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FileIcon, Loader2, X, Play } from "lucide-react";
+import {
+  FileIcon,
+  Loader2,
+  X,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { MediaGallery, type MediaFile } from "@/components/chat/media-gallery";
+import { ModelViewer, is3DModel } from "@/components/3d/modelViewer";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -19,6 +27,7 @@ import { FileUpload, type UploadedFile } from "@/components/file-upload";
 interface MessageFile {
   fileUrl: string | null;
   fileType: string | null;
+  originalName: string | null;
 }
 
 // Re-export MediaFile so callers only need one import path if needed.
@@ -37,17 +46,20 @@ interface ChatInterfaceProps {
 }
 
 // ---------------------------------------------------------------------------
-// GenericFileAttachment — single non-media file link
+// GenericFileAttachment — single non-media, non-3D file link
 // ---------------------------------------------------------------------------
 
 function GenericFileAttachment({
   fileUrl,
+  originalName,
   isCurrentUser,
 }: {
   fileUrl: string;
+  originalName: string | null;
   isCurrentUser: boolean;
 }) {
   const fileName =
+    originalName ||
     decodeURIComponent(fileUrl.split("/").pop()?.split("?")[0] ?? "") ||
     "attachment";
   return (
@@ -79,28 +91,38 @@ function MessageAttachments({
   files: MessageFile[];
   isCurrentUser: boolean;
 }) {
-  const mediaFiles = files.filter(
-    (f): f is MediaFile =>
-      !!f.fileUrl &&
-      (!!f.fileType?.startsWith("image/") ||
-        !!f.fileType?.startsWith("video/")),
-  );
-  const nonMediaFiles = files.filter(
+  const mediaFiles: MediaFile[] = files
+    .filter(
+      (f) =>
+        !!f.fileUrl &&
+        (!!f.fileType?.startsWith("image/") ||
+          !!f.fileType?.startsWith("video/") ||
+          is3DModel(f.fileType, f.originalName)),
+    )
+    .map((f) => ({
+      fileUrl: f.fileUrl!,
+      fileType: f.fileType,
+      originalName: f.originalName,
+    }));
+
+  const genericFiles = files.filter(
     (f) =>
       !!f.fileUrl &&
       !f.fileType?.startsWith("image/") &&
-      !f.fileType?.startsWith("video/"),
+      !f.fileType?.startsWith("video/") &&
+      !is3DModel(f.fileType, f.originalName),
   );
 
   return (
     <div className="space-y-1">
       {mediaFiles.length > 0 && <MediaGallery mediaFiles={mediaFiles} />}
-      {nonMediaFiles.map(
+      {genericFiles.map(
         (f, i) =>
           f.fileUrl && (
             <GenericFileAttachment
               key={i}
               fileUrl={f.fileUrl}
+              originalName={f.originalName}
               isCurrentUser={isCurrentUser}
             />
           ),
@@ -271,7 +293,7 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
     try {
       await sendMessage({
         content: content.trim() || "",
-        file:
+        files:
           attachments.length > 0
             ? (attachments.map((a) => a.storageId) as Id<"_storage">[])
             : undefined,
@@ -387,6 +409,10 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
                           fileType:
                             "fileType" in message
                               ? (message.fileType as string | null)
+                              : null,
+                          originalName:
+                            "originalName" in message
+                              ? (message.originalName as string | null)
                               : null,
                         },
                       ]
