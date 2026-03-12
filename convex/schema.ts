@@ -14,6 +14,7 @@ export default defineSchema({
   // Services that the users can see and admin can manage
   services: defineTable({
     name: v.string(),
+    slug: v.string(),
     images: v.array(v.id("_storage")), // array of fileids in convex
     samples: v.array(v.id("_storage")),
     regularPrice: v.number(),
@@ -22,7 +23,7 @@ export default defineSchema({
     description: v.string(),
     requirements: v.array(v.string()),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
-  }).index("by_name", ["name"]),
+  }).index("by_slug", ["slug"]),
 
   machines: defineTable({
     name: v.string(),

@@ -71,3 +71,7 @@ export async function deleteFiles(
     }),
   );
 }
+
+export function slugify(str: string): string {
+  return str.trim().replace(/\s+/g, "-");
+}

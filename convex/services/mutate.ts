@@ -1,6 +1,6 @@
 import { internalMutation, mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority, claimFiles, deleteFiles } from "../helper";
+import { checkAuthority, claimFiles, deleteFiles, slugify } from "../helper";
 
 // called when user discards current service
 export const deleteOrphanedFiles = mutation({
@@ -56,6 +56,7 @@ export const addService = mutation({
 
     await ctx.db.insert("services", {
       name: args.name,
+      slug: slugify(args.name),
       images: args.images,
       description: args.description,
       regularPrice: args.regularPrice,
@@ -93,6 +94,7 @@ export const updateService = mutation({
 
     const updates: Partial<{
       name: string;
+      slug: string;
       regularPrice: number;
       upPrice: number;
       unitPrice: string;
@@ -102,7 +104,10 @@ export const updateService = mutation({
       status: "Unavailable" | "Available";
     }> = {};
 
-    if (args.name !== undefined) updates.name = args.name;
+    if (args.name !== undefined) {
+      updates.name = args.name;
+      updates.slug = slugify(args.name);
+    }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
     if (args.regularPrice !== undefined)

@@ -41,7 +41,7 @@ export function ServicesListClient({
         {services.map((service) => (
           <ServiceCardClient
             key={service._id}
-            name={service.name}
+            slug={service.slug}
             imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
             title={service.name}
           />
