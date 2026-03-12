@@ -1,6 +1,6 @@
 import { internalMutation, mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority } from "../helper";
+import { checkAuthority, claimFiles, deleteFiles } from "../helper";
 
 // called when user discards current service
 export const deleteOrphanedFiles = mutation({
@@ -14,14 +14,17 @@ export const deleteOrphanedFiles = mutation({
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
     if (!authorization) throw new Error("Unauthorized. Cannot delete files.");
 
-    await Promise.all(args.storageIds.map((id) => ctx.storage.delete(id)));
+    deleteFiles(ctx, args.storageIds);
   },
 });
 
 export const cleanOrphanedFiles = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const orphans = await ctx.db.query("pendingFiles").collect();
+    const orphans = await ctx.db
+      .query("files")
+      .withIndex("status", (q) => q.eq("status", "orphaned"))
+      .collect();
     await Promise.all(
       orphans.map(async (orphan) => {
         await ctx.storage.delete(orphan.storageId);
@@ -51,20 +54,6 @@ export const addService = mutation({
     // properly check if admin user or maker
     if (!authorization) throw new Error("Unauthorized. Cannot add service.");
 
-    await Promise.all(
-      args.images.map(async (image) => {
-        const pending = await ctx.db
-          .query("pendingFiles")
-          .withIndex("by_storageId", (q) => q.eq("storageId", image))
-          .first();
-
-        if (!pending)
-          throw new Error("Already associated with another document");
-
-        await ctx.db.delete(pending._id);
-      }),
-    );
-
     await ctx.db.insert("services", {
       name: args.name,
       images: args.images,
@@ -76,6 +65,9 @@ export const addService = mutation({
       requirements: args.requirements,
       samples: args.samples,
     });
+
+    if (args.images.length > 0) claimFiles(ctx, args.images);
+    if (args.samples.length > 0) claimFiles(ctx, args.samples);
   },
 });
 
@@ -144,6 +136,8 @@ export const addImageToService = mutation({
     await ctx.db.patch("services", args.service, {
       images: [...service.images, args.image],
     });
+
+    claimFiles(ctx, [args.image]);
   },
 });
 
@@ -167,6 +161,8 @@ export const addSampleToService = mutation({
     await ctx.db.patch("services", args.service, {
       samples: [...service.samples, args.sample],
     });
+
+    claimFiles(ctx, [args.sample]);
   },
 });
 
@@ -209,11 +205,12 @@ export const deleteImageFromService = mutation({
 
     if (!service) throw new Error("Service does not exist!");
     const updatedList = service.images.filter((id) => id !== args.image);
-    await ctx.storage.delete(args.image);
 
     await ctx.db.patch("services", args.service, {
       images: updatedList,
     });
+
+    deleteFiles(ctx, [args.image]);
   },
 });
 
@@ -234,10 +231,11 @@ export const deleteSampleFromService = mutation({
 
     if (!service) throw new Error("Service does not exist!");
     const updatedList = service.samples.filter((id) => id !== args.sample);
-    await ctx.storage.delete(args.sample);
 
     await ctx.db.patch("services", args.service, {
       samples: updatedList,
     });
+
+    deleteFiles(ctx, [args.sample]);
   },
 });

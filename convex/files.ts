@@ -14,11 +14,16 @@ export const generateUploadUrl = mutation({
 
 export const trackUpload = mutation({
   args: {
+    originalName: v.string(),
     upload: v.id("_storage"),
+    type: v.string(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("pendingFiles", {
+    await ctx.db.insert("files", {
+      originalName: args.originalName,
       storageId: args.upload,
+      type: args.type,
+      status: "orphaned",
     });
   },
 });

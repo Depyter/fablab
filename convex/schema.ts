@@ -2,6 +2,15 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  files: defineTable({
+    originalName: v.string(),
+    storageId: v.id("_storage"),
+    type: v.string(),
+    status: v.union(v.literal("claimed"), v.literal("orphaned")),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("status", ["status"]),
+
   // Services that the users can see and admin can manage
   services: defineTable({
     name: v.string(),
@@ -102,8 +111,4 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_role", ["role"]),
-
-  pendingFiles: defineTable({
-    storageId: v.id("_storage"),
-  }).index("by_storageId", ["storageId"]),
 });
