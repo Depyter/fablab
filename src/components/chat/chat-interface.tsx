@@ -1,22 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {
-  FileIcon,
-  Loader2,
-  X,
-  Play,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Loader2, X, Play, Send } from "lucide-react";
 import { MediaGallery, type MediaFile } from "@/components/chat/media-gallery";
-import { ModelViewer, is3DModel } from "@/components/3d/modelViewer";
+import { is3DModel } from "@/components/3d/modelViewer";
+import {
+  FileAttachmentCard,
+  FileAttachmentThumbnail,
+} from "@/components/chat/file-attachment";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FileUpload, type UploadedFile } from "@/components/file-upload";
 
@@ -46,37 +42,56 @@ interface ChatInterfaceProps {
 }
 
 // ---------------------------------------------------------------------------
-// GenericFileAttachment — single non-media, non-3D file link
+// FileGallery — gallery for generic file attachments (PDF, docs, etc.)
 // ---------------------------------------------------------------------------
 
-function GenericFileAttachment({
-  fileUrl,
-  originalName,
+function FileGallery({
+  files,
   isCurrentUser,
 }: {
-  fileUrl: string;
-  originalName: string | null;
+  files: MessageFile[];
   isCurrentUser: boolean;
 }) {
-  const fileName =
-    originalName ||
-    decodeURIComponent(fileUrl.split("/").pop()?.split("?")[0] ?? "") ||
-    "attachment";
+  if (files.length === 0) return null;
+
+  if (files.length === 1) {
+    const f = files[0];
+    const fileName =
+      f.originalName ||
+      decodeURIComponent(f.fileUrl!.split("/").pop()?.split("?")[0] ?? "") ||
+      "attachment";
+    return (
+      <FileAttachmentCard
+        href={f.fileUrl!}
+        fileName={fileName}
+        fileType={f.fileType}
+        isCurrentUser={isCurrentUser}
+        className="mt-1"
+      />
+    );
+  }
+
+  // Multiple files — vertical stack of cards
   return (
-    <a
-      href={fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-opacity hover:opacity-80",
-        isCurrentUser
-          ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
-          : "border-border bg-background text-foreground",
-      )}
-    >
-      <FileIcon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{fileName}</span>
-    </a>
+    <div className="mt-1 space-y-1">
+      {files.map((f, i) => {
+        const fileName =
+          f.originalName ||
+          decodeURIComponent(
+            f.fileUrl!.split("/").pop()?.split("?")[0] ?? "",
+          ) ||
+          "attachment";
+        return (
+          <FileAttachmentCard
+            key={i}
+            href={f.fileUrl!}
+            fileName={fileName}
+            fileType={f.fileType}
+            isCurrentUser={isCurrentUser}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -115,18 +130,10 @@ function MessageAttachments({
 
   return (
     <div className="space-y-1">
-      {mediaFiles.length > 0 && <MediaGallery mediaFiles={mediaFiles} />}
-      {genericFiles.map(
-        (f, i) =>
-          f.fileUrl && (
-            <GenericFileAttachment
-              key={i}
-              fileUrl={f.fileUrl}
-              originalName={f.originalName}
-              isCurrentUser={isCurrentUser}
-            />
-          ),
+      {mediaFiles.length > 0 && (
+        <MediaGallery mediaFiles={mediaFiles} isCurrentUser={isCurrentUser} />
       )}
+      <FileGallery files={genericFiles} isCurrentUser={isCurrentUser} />
     </div>
   );
 }
@@ -166,7 +173,12 @@ function PendingAttachmentStrip({
             <img
               src={attachment.previewUrl}
               alt={attachment.fileName}
-              className="w-full h-full object-cover"
+              className={cn(
+                "w-full h-full",
+                attachment.fileType === "image/svg+xml"
+                  ? "object-contain"
+                  : "object-cover",
+              )}
             />
           ) : attachment.fileType.startsWith("video/") &&
             attachment.previewUrl ? (
@@ -182,12 +194,11 @@ function PendingAttachmentStrip({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-1 px-1">
-              <FileIcon className="h-5 w-5 text-muted-foreground" />
-              <span className="text-xs text-center truncate w-full text-muted-foreground px-1 leading-tight">
-                {attachment.fileName}
-              </span>
-            </div>
+            <FileAttachmentThumbnail
+              fileName={attachment.fileName}
+              fileType={attachment.fileType}
+              isCurrentUser={false}
+            />
           )}
         </div>
       ))}

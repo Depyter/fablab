@@ -29,9 +29,8 @@ export const getRoomMessages = query({
 
           const filesData = await Promise.all(
             message.file.map(async (fileId) => {
-              const [url, meta, fileRecord] = await Promise.all([
+              const [url, fileRecord] = await Promise.all([
                 ctx.storage.getUrl(fileId),
-                ctx.db.system.get(fileId),
                 ctx.db
                   .query("files")
                   .withIndex("by_storageId", (q) => q.eq("storageId", fileId))
@@ -39,7 +38,7 @@ export const getRoomMessages = query({
               ]);
               return {
                 fileUrl: url,
-                fileType: fileRecord?.type ?? meta?.contentType ?? null,
+                fileType: fileRecord?.type ?? null,
                 originalName: fileRecord?.originalName ?? null,
               };
             }),
