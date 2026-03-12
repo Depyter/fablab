@@ -1,372 +1,36 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Loader2, X, Play, Send } from "lucide-react";
-import { MediaGallery, type MediaFile } from "@/components/chat/media-gallery";
-import { is3DModel } from "@/components/3d/modelViewer";
-import {
-  FileAttachmentCard,
-  FileAttachmentThumbnail,
-} from "@/components/chat/file-attachment";
-import { usePaginatedQuery, useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
+import { Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { FileUpload, type UploadedFile } from "@/components/file-upload";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface MessageFile {
-  fileUrl: string | null;
-  fileType: string | null;
-  originalName: string | null;
-}
-
-// Re-export MediaFile so callers only need one import path if needed.
-export type { MediaFile };
-
-interface PendingAttachment {
-  storageId: string;
-  fileName: string;
-  fileType: string;
-  previewUrl?: string;
-}
-
-interface ChatInterfaceProps {
-  roomId: Id<"rooms">;
-  currentUserName: string;
-}
-
-// ---------------------------------------------------------------------------
-// FileGallery — gallery for generic file attachments (PDF, docs, etc.)
-// ---------------------------------------------------------------------------
-
-function FileGallery({
-  files,
-  isCurrentUser,
-}: {
-  files: MessageFile[];
-  isCurrentUser: boolean;
-}) {
-  if (files.length === 0) return null;
-
-  if (files.length === 1) {
-    const f = files[0];
-    const fileName =
-      f.originalName ||
-      decodeURIComponent(f.fileUrl!.split("/").pop()?.split("?")[0] ?? "") ||
-      "attachment";
-    return (
-      <FileAttachmentCard
-        href={f.fileUrl!}
-        fileName={fileName}
-        fileType={f.fileType}
-        isCurrentUser={isCurrentUser}
-        className="mt-1"
-      />
-    );
-  }
-
-  // Multiple files — vertical stack of cards
-  return (
-    <div className="mt-1 space-y-1">
-      {files.map((f, i) => {
-        const fileName =
-          f.originalName ||
-          decodeURIComponent(
-            f.fileUrl!.split("/").pop()?.split("?")[0] ?? "",
-          ) ||
-          "attachment";
-        return (
-          <FileAttachmentCard
-            key={i}
-            href={f.fileUrl!}
-            fileName={fileName}
-            fileType={f.fileType}
-            isCurrentUser={isCurrentUser}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// MessageAttachments — top-level renderer for a message's file array
-// ---------------------------------------------------------------------------
-
-function MessageAttachments({
-  files,
-  isCurrentUser,
-}: {
-  files: MessageFile[];
-  isCurrentUser: boolean;
-}) {
-  const mediaFiles: MediaFile[] = files
-    .filter(
-      (f) =>
-        !!f.fileUrl &&
-        (!!f.fileType?.startsWith("image/") ||
-          !!f.fileType?.startsWith("video/") ||
-          is3DModel(f.fileType, f.originalName)),
-    )
-    .map((f) => ({
-      fileUrl: f.fileUrl!,
-      fileType: f.fileType,
-      originalName: f.originalName,
-    }));
-
-  const genericFiles = files.filter(
-    (f) =>
-      !!f.fileUrl &&
-      !f.fileType?.startsWith("image/") &&
-      !f.fileType?.startsWith("video/") &&
-      !is3DModel(f.fileType, f.originalName),
-  );
-
-  return (
-    <div className="space-y-1">
-      {mediaFiles.length > 0 && (
-        <MediaGallery mediaFiles={mediaFiles} isCurrentUser={isCurrentUser} />
-      )}
-      <FileGallery files={genericFiles} isCurrentUser={isCurrentUser} />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PendingAttachmentStrip — thumbnail strip shown above the input
-// ---------------------------------------------------------------------------
-
-function PendingAttachmentStrip({
-  attachments,
-  onRemove,
-}: {
-  attachments: PendingAttachment[];
-  onRemove: (index: number) => void;
-}) {
-  if (attachments.length === 0) return null;
-
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5">
-      {attachments.map((attachment, i) => (
-        <div
-          key={`${attachment.storageId}-${i}`}
-          className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border bg-muted"
-        >
-          {/* Remove button */}
-          <button
-            type="button"
-            onClick={() => onRemove(i)}
-            aria-label={`Remove ${attachment.fileName}`}
-            className="absolute top-0.5 right-0.5 z-10 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
-          >
-            <X className="h-3 w-3" />
-          </button>
-
-          {attachment.fileType.startsWith("image/") && attachment.previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={attachment.previewUrl}
-              alt={attachment.fileName}
-              className={cn(
-                "w-full h-full",
-                attachment.fileType === "image/svg+xml"
-                  ? "object-contain"
-                  : "object-cover",
-              )}
-            />
-          ) : attachment.fileType.startsWith("video/") &&
-            attachment.previewUrl ? (
-            <div className="relative w-full h-full bg-black">
-              <video
-                src={attachment.previewUrl}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="rounded-full bg-black/50 p-1">
-                  <Play className="h-3.5 w-3.5 text-white fill-white" />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <FileAttachmentThumbnail
-              fileName={attachment.fileName}
-              fileType={attachment.fileType}
-              isCurrentUser={false}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ChatInterface
-// ---------------------------------------------------------------------------
+import { FileUpload } from "@/components/file-upload";
+import { useChat } from "./use-chat";
+import { MessageAttachments } from "./parts/message-attachments";
+import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
+import { ChatInterfaceProps, MessageFile } from "./types";
 
 export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
-  const [input, setInput] = useState("");
-  const [pendingAttachments, setPendingAttachments] = useState<
-    PendingAttachment[]
-  >([]);
-  const [isUploading, setIsUploading] = useState(false);
-  // Increment to remount FileUpload (resets its internal state)
-  const [fileUploadKey, setFileUploadKey] = useState(0);
-  // Pre-populated files passed to the remounted FileUpload so existing
-  // attachments survive when a single file is removed from the strip.
-  const [fileUploadInitialFiles, setFileUploadInitialFiles] = useState<
-    UploadedFile[]
-  >([]);
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const prevScrollHeightRef = useRef(0);
-  const isLoadingMoreRef = useRef(false);
-  const isNearBottomRef = useRef(true);
-  const initialScrollDoneRef = useRef(false);
-
   const {
-    results: messages,
+    input,
+    setInput,
+    messages,
     status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.chat.query.getRoomMessages,
-    { room: roomId },
-    { initialNumItems: 50 },
-  );
-
-  const sendMessage = useMutation(api.chat.mutate.sendMessage);
-
-  // Scroll handling
-  const handleScroll = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
-
-    if (
-      scrollTop < 100 &&
-      status === "CanLoadMore" &&
-      !isLoadingMoreRef.current
-    ) {
-      isLoadingMoreRef.current = true;
-      prevScrollHeightRef.current = scrollHeight;
-      loadMore(50);
-    }
-  };
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    if (!initialScrollDoneRef.current && messages.length > 0) {
-      bottomRef.current?.scrollIntoView();
-      initialScrollDoneRef.current = true;
-      return;
-    }
-
-    if (isLoadingMoreRef.current) {
-      const newScrollHeight = container.scrollHeight;
-      container.scrollTop += newScrollHeight - prevScrollHeightRef.current;
-      isLoadingMoreRef.current = false;
-      return;
-    }
-
-    if (isNearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
-  // -------------------------------------------------------------------------
-  // Sending
-  // -------------------------------------------------------------------------
-
-  const handleSendMessage = async () => {
-    const hasText = input.trim();
-    const hasFiles = pendingAttachments.length > 0;
-    if (!hasText && !hasFiles) return;
-
-    const content = input;
-    const attachments = [...pendingAttachments];
-
-    setInput("");
-    setPendingAttachments([]);
-    setFileUploadInitialFiles([]);
-    setFileUploadKey((k) => k + 1);
-
-    try {
-      await sendMessage({
-        content: content.trim() || "",
-        files:
-          attachments.length > 0
-            ? (attachments.map((a) => a.storageId) as Id<"_storage">[])
-            : undefined,
-        room: roomId,
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      // Restore text; files need to be re-attached (they were already uploaded)
-      setInput(content);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // -------------------------------------------------------------------------
-  // Attachment management
-  // -------------------------------------------------------------------------
-
-  const handleFilesChange = (files: UploadedFile[]) => {
-    setPendingAttachments(
-      files.map((f) => ({
-        storageId: f.storageId,
-        fileName: f.fileName,
-        fileType: f.fileType,
-        previewUrl: f.url,
-      })),
-    );
-  };
-
-  /** Remove a single attachment by index. Re-mounts FileUpload with the rest. */
-  const removeAttachment = (index: number) => {
-    const remaining = pendingAttachments.filter((_, i) => i !== index);
-    const remainingAsUploadedFiles: UploadedFile[] = remaining.map((a) => ({
-      storageId: a.storageId,
-      fileName: a.fileName,
-      fileType: a.fileType,
-      fileSize: 0,
-      uploadedAt: new Date(),
-      url: a.previewUrl,
-    }));
-    // Update pending state first (FileUpload won't call onFilesChange on mount
-    // due to its isFirstRender guard, so we set it manually here)
-    setPendingAttachments(remaining);
-    setFileUploadInitialFiles(remainingAsUploadedFiles);
-    setFileUploadKey((k) => k + 1);
-  };
-
-  // -------------------------------------------------------------------------
-  // Derived state
-  // -------------------------------------------------------------------------
-
-  const isLoading = status === "LoadingFirstPage";
-  const canSend =
-    !isLoading &&
-    !isUploading &&
-    (!!input.trim() || pendingAttachments.length > 0);
-  const sortedMessages = [...messages].reverse();
+    isLoading,
+    canSend,
+    isUploading,
+    setIsUploading,
+    pendingAttachments,
+    fileUploadKey,
+    fileUploadInitialFiles,
+    scrollContainerRef,
+    bottomRef,
+    handleScroll,
+    handleSendMessage,
+    handleKeyPress,
+    handleFilesChange,
+    removeAttachment,
+  } = useChat({ roomId });
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -382,7 +46,7 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
           <div className="flex justify-center items-center h-full">
             <p className="text-muted-foreground">Loading messages...</p>
           </div>
-        ) : sortedMessages.length === 0 ? (
+        ) : messages.length === 0 ? (
           <div className="flex justify-center items-center h-full">
             <p className="text-muted-foreground">
               No messages yet. Start the conversation!
@@ -405,7 +69,7 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
               </div>
             )}
 
-            {sortedMessages.map((message) => {
+            {messages.map((message) => {
               const isCurrentUser = message.sender === currentUserName;
 
               // Normalise files: prefer the resolved `files` array returned by
