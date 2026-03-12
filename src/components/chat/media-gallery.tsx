@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { X, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Play, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import {
   Dialog,
   DialogPortal,
@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ModelViewer, is3DModel } from "@/components/3d/modelViewer";
+import {
+  FileAttachmentCard,
+  FileAttachmentThumbnail,
+} from "@/components/chat/file-attachment";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,6 +58,22 @@ function MediaLightbox({
   };
 
   const is3D = is3DModel(f.fileType, f.originalName);
+
+  const downloadCurrent = async () => {
+    try {
+      const response = await fetch(f.fileUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = f.originalName || "download";
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      // Fallback: open in new tab if fetch fails
+      window.open(f.fileUrl, "_blank");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,6 +134,15 @@ function MediaLightbox({
                 className="max-h-full max-w-full rounded-sm"
                 onClick={(e) => e.stopPropagation()}
               />
+            ) : f.fileType === "image/svg+xml" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={f.fileUrl}
+                src={f.fileUrl}
+                alt={`Media ${current + 1} of ${count}`}
+                className="rounded-sm max-w-full max-h-full object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
             ) : (
               <Image
                 key={f.fileUrl}
@@ -128,6 +157,7 @@ function MediaLightbox({
                   height: "auto",
                   maxWidth: "100%",
                   maxHeight: "100%",
+                  objectFit: "cover",
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -166,9 +196,22 @@ function MediaLightbox({
 
           {/* Bottom counter + dot-strip — always visible */}
           <div className="flex flex-col items-center gap-1.5 py-3 shrink-0">
-            <span className="text-xs text-white/40 tabular-nums select-none">
-              {current + 1} / {count}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-white/40 tabular-nums select-none">
+                {current + 1} / {count}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadCurrent();
+                }}
+                aria-label="Download"
+                className="rounded-full p-1.5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            </div>
             {count > 1 && (
               <div className="flex gap-1.5">
                 {mediaFiles.map((_, i) => (
@@ -201,7 +244,13 @@ function MediaLightbox({
 // MediaGallery — renders 1-N image/video thumbnails with lightbox on click
 // ---------------------------------------------------------------------------
 
-export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
+export function MediaGallery({
+  mediaFiles,
+  isCurrentUser,
+}: {
+  mediaFiles: MediaFile[];
+  isCurrentUser: boolean;
+}) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxCurrent, setLightboxCurrent] = useState(0);
 
@@ -225,12 +274,12 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
           className="mt-1 block w-full text-left focus:outline-none"
         >
           {is3D ? (
-            <div className="rounded-md border bg-muted p-4 text-center hover:bg-muted/80 transition-colors">
-              <div className="text-sm font-medium">3D Model</div>
-              <div className="text-xs text-muted-foreground truncate">
-                {f.originalName || "Model"}
-              </div>
-            </div>
+            <FileAttachmentCard
+              fileName={f.originalName || "Model"}
+              fileType={f.fileType}
+              isCurrentUser={isCurrentUser}
+              className="mt-1"
+            />
           ) : f.fileType?.startsWith("video/") ? (
             <div
               className="relative rounded-md overflow-hidden bg-black"
@@ -246,6 +295,13 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                 </div>
               </div>
             </div>
+          ) : f.fileType === "image/svg+xml" ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={f.fileUrl}
+              alt="SVG attachment"
+              className="rounded-md hover:opacity-95 transition-opacity max-w-full max-h-60 object-contain"
+            />
           ) : (
             <Image
               src={f.fileUrl}
@@ -257,6 +313,7 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
               style={{
                 width: "100%",
                 height: "auto",
+                maxWidth: "100%",
                 maxHeight: "240px",
                 objectFit: "cover",
               }}
@@ -298,12 +355,12 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
               )}
             >
               {is3D ? (
-                <div className="w-full h-28 border bg-muted p-2 text-center hover:bg-muted/80 transition-colors">
-                  <div className="text-xs font-medium">3D Model</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {f.originalName || "Model"}
-                  </div>
-                </div>
+                <FileAttachmentThumbnail
+                  fileName={f.originalName || "Model"}
+                  fileType={f.fileType}
+                  isCurrentUser={isCurrentUser}
+                  className="h-28"
+                />
               ) : f.fileType?.startsWith("video/") ? (
                 <div className="relative w-full h-28 bg-black">
                   <video
@@ -318,14 +375,26 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                     </div>
                   )}
                 </div>
+              ) : f.fileType === "image/svg+xml" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={f.fileUrl}
+                  alt={`SVG ${i + 1}`}
+                  className={cn(
+                    "w-full hover:brightness-90 transition-[filter]",
+                    isFirstOfThree ? "h-36" : "h-28",
+                    "object-contain",
+                  )}
+                />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={f.fileUrl}
                   alt={`Image ${i + 1}`}
                   className={cn(
-                    "w-full object-cover hover:brightness-90 transition-[filter]",
+                    "w-full hover:brightness-90 transition-[filter]",
                     isFirstOfThree ? "h-36" : "h-28",
+                    "object-cover",
                   )}
                 />
               )}
