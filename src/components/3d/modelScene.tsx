@@ -81,8 +81,6 @@ function STLModel({
     geometry.computeBoundingBox();
     const bb = geometry.boundingBox!;
 
-    // After rotation [-PI/2, 0, 0]:
-    //   new_x = old_x, new_y = old_z, new_z = -old_y
     const px = -(bb.min.x + bb.max.x) / 2;
     const py = -bb.min.z;
     const pz = (bb.min.y + bb.max.y) / 2;
@@ -101,7 +99,7 @@ function STLModel({
   useEffect(() => {
     onGridConfig(gridConfig);
     onZoomConfig(zoomConfig);
-  }, [gridConfig, onGridConfig, onZoomConfig]);
+  }, [gridConfig, zoomConfig, onGridConfig, onZoomConfig]);
 
   return (
     <mesh
