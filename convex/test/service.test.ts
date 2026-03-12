@@ -20,8 +20,16 @@ describe("Service functions", () => {
     });
 
     await Promise.all([
-      t.mutation(api.files.trackUpload, { upload: storageId }),
-      t.mutation(api.files.trackUpload, { upload: sampleStorageId }),
+      t.mutation(api.files.trackUpload, {
+        upload: storageId,
+        type: "image",
+        originalName: "test",
+      }),
+      t.mutation(api.files.trackUpload, {
+        upload: sampleStorageId,
+        type: "image",
+        originalName: "test",
+      }),
     ]);
 
     await tAera.mutation(api.services.mutate.addService, {
@@ -157,8 +165,16 @@ describe("Service functions", () => {
     });
 
     await Promise.all([
-      t.mutation(api.files.trackUpload, { upload: storageId }),
-      t.mutation(api.files.trackUpload, { upload: sampleStorageId }),
+      t.mutation(api.files.trackUpload, {
+        upload: storageId,
+        type: "image",
+        originalName: "test",
+      }),
+      t.mutation(api.files.trackUpload, {
+        upload: sampleStorageId,
+        type: "image",
+        originalName: "test",
+      }),
     ]);
 
     await tAera.mutation(api.services.mutate.addService, {
