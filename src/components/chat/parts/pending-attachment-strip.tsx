@@ -21,18 +21,18 @@ export function PendingAttachmentStrip({
   if (attachments.length === 0) return null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5">
+    <div className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none">
       {attachments.map((attachment, i) => (
         <div
           key={`${attachment.storageId}-${i}`}
-          className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border bg-muted"
+          className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-primary/10 bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/20"
         >
           {/* Remove button */}
           <button
             type="button"
             onClick={() => onRemove(i)}
             aria-label={`Remove ${attachment.fileName}`}
-            className="absolute top-0.5 right-0.5 z-10 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
+            className="absolute top-1 right-1 z-10 rounded-full bg-primary/90 p-1 text-primary-foreground hover:bg-primary transition-all shadow-md active:scale-95"
           >
             <X className="h-3 w-3" />
           </button>
@@ -45,7 +45,7 @@ export function PendingAttachmentStrip({
               className={cn(
                 "w-full h-full",
                 attachment.fileType === "image/svg+xml"
-                  ? "object-contain"
+                  ? "object-contain p-2"
                   : "object-cover",
               )}
             />
@@ -54,20 +54,22 @@ export function PendingAttachmentStrip({
             <div className="relative w-full h-full bg-black">
               <video
                 src={attachment.previewUrl}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover opacity-80"
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="rounded-full bg-black/50 p-1">
+                <div className="rounded-full bg-primary/40 p-1.5 backdrop-blur-sm">
                   <Play className="h-3.5 w-3.5 text-white fill-white" />
                 </div>
               </div>
             </div>
           ) : (
-            <FileAttachmentThumbnail
-              fileName={attachment.fileName}
-              fileType={attachment.fileType}
-              isCurrentUser={false}
-            />
+            <div className="w-full h-full flex items-center justify-center bg-primary-muted/30">
+              <FileAttachmentThumbnail
+                fileName={attachment.fileName}
+                fileType={attachment.fileType}
+                isCurrentUser={false}
+              />
+            </div>
           )}
         </div>
       ))}

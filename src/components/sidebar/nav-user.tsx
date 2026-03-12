@@ -22,6 +22,7 @@ import {
   BellIcon,
   LogOutIcon,
 } from "lucide-react";
+import { UserProfileDialog } from "@/components/profile/profile-card";
 
 function getInitials(name: string): string {
   return name
@@ -77,29 +78,36 @@ export function NavUser({
           >
             {/* User identity header */}
             <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-primary font-semibold text-xs">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs text-sidebar-foreground/60">
-                    {user.email}
-                  </span>
-                </div>
-              </div>
+              <UserProfileDialog>
+                <button className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm hover:bg-sidebar-accent transition-colors rounded-t-lg">
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-primary font-semibold text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate text-xs text-sidebar-foreground/60">
+                      {user.email}
+                    </span>
+                  </div>
+                </button>
+              </UserProfileDialog>
             </DropdownMenuLabel>
 
             <DropdownMenuSeparator className="bg-sidebar-border" />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-foreground">
-                <BadgeCheckIcon className="size-4 text-sidebar-primary" />
-                Account
-              </DropdownMenuItem>
+              <UserProfileDialog>
+                <DropdownMenuItem
+                  className="gap-2 cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-foreground"
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <BadgeCheckIcon className="size-4 text-sidebar-primary" />
+                  Account
+                </DropdownMenuItem>
+              </UserProfileDialog>
               <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-foreground">
                 <BellIcon className="size-4 text-sidebar-primary" />
                 Notifications
