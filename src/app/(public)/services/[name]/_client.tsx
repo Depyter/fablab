@@ -10,6 +10,7 @@ import { PriceTile } from "@/components/services/price-tile";
 import Link from "next/link";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
+import { BookingDialog } from "@/components/booking/dialog-form";
 
 export function ServiceDetailClient({
   preloadedService,
@@ -71,6 +72,10 @@ export function ServiceDetailClient({
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">{service.name}</h1>
           </div>
+
+          {/* <div className="flex gap-3">
+            <BookingDialog serviceName={service.name} requirements={service.requirements}/>
+          </div>  */}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -100,12 +105,12 @@ export function ServiceDetailClient({
               />
             </div>
 
-            <div className="border border-gray-200 rounded-xl p-8 relative min-h-125">
+            <div className="border border-gray-200 rounded-xl p-8 relative ">
               <div className="absolute top-6 right-8 flex items-center gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
                   Status
                 </span>
-                <Badge className="bg-[#F4FBF9] text-chart-6 border-none px-4 py-1 font-semibold">
+                <Badge className="bg-[#F4FBF9] text-chart-6 border-none px-4 py-1 font-semibold h-10 rounded-lg">
                   {service.status}
                 </Badge>
               </div>
@@ -132,6 +137,9 @@ export function ServiceDetailClient({
                 )}
               </section>
             </div>
+            <div className="flex gap-3 w-full">
+              <BookingDialog serviceName={service.name} requirements={service.requirements}/>
+            </div> 
           </div>
         </div>
       </div>
