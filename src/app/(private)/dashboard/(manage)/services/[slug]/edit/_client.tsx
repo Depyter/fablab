@@ -279,12 +279,9 @@ export function EditServiceClient({
       <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
         {/* Left column */}
         <div className="lg:col-span-5 space-y-5">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <GeneralInfoForm form={form as any} />
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <PricingForm form={form as any} />
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <RequirementsForm form={form as any} />
+          <GeneralInfoForm form={form} />
+          <PricingForm form={form} />
+          <RequirementsForm form={form} />
 
           {/* Sample projects — inlined so we can pass initial files */}
           <form.Field

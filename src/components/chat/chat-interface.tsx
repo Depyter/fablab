@@ -1,339 +1,39 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { FileIcon, Loader2, X, Play } from "lucide-react";
-import { MediaGallery, type MediaFile } from "@/components/chat/media-gallery";
-import { usePaginatedQuery, useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
+import { useState } from "react";
+import { Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FileUpload, type UploadedFile } from "@/components/file-upload";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface MessageFile {
-  fileUrl: string | null;
-  fileType: string | null;
-}
-
-// Re-export MediaFile so callers only need one import path if needed.
-export type { MediaFile };
-
-interface PendingAttachment {
-  storageId: string;
-  fileName: string;
-  fileType: string;
-  previewUrl?: string;
-}
-
-interface ChatInterfaceProps {
-  roomId: Id<"rooms">;
-  currentUserName: string;
-}
-
-// ---------------------------------------------------------------------------
-// GenericFileAttachment — single non-media file link
-// ---------------------------------------------------------------------------
-
-function GenericFileAttachment({
-  fileUrl,
-  isCurrentUser,
-}: {
-  fileUrl: string;
-  isCurrentUser: boolean;
-}) {
-  const fileName =
-    decodeURIComponent(fileUrl.split("/").pop()?.split("?")[0] ?? "") ||
-    "attachment";
-  return (
-    <a
-      href={fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        "mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-opacity hover:opacity-80",
-        isCurrentUser
-          ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
-          : "border-border bg-background text-foreground",
-      )}
-    >
-      <FileIcon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{fileName}</span>
-    </a>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// MessageAttachments — top-level renderer for a message's file array
-// ---------------------------------------------------------------------------
-
-function MessageAttachments({
-  files,
-  isCurrentUser,
-}: {
-  files: MessageFile[];
-  isCurrentUser: boolean;
-}) {
-  const mediaFiles = files.filter(
-    (f): f is MediaFile =>
-      !!f.fileUrl &&
-      (!!f.fileType?.startsWith("image/") ||
-        !!f.fileType?.startsWith("video/")),
-  );
-  const nonMediaFiles = files.filter(
-    (f) =>
-      !!f.fileUrl &&
-      !f.fileType?.startsWith("image/") &&
-      !f.fileType?.startsWith("video/"),
-  );
-
-  return (
-    <div className="space-y-1">
-      {mediaFiles.length > 0 && <MediaGallery mediaFiles={mediaFiles} />}
-      {nonMediaFiles.map(
-        (f, i) =>
-          f.fileUrl && (
-            <GenericFileAttachment
-              key={i}
-              fileUrl={f.fileUrl}
-              isCurrentUser={isCurrentUser}
-            />
-          ),
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PendingAttachmentStrip — thumbnail strip shown above the input
-// ---------------------------------------------------------------------------
-
-function PendingAttachmentStrip({
-  attachments,
-  onRemove,
-}: {
-  attachments: PendingAttachment[];
-  onRemove: (index: number) => void;
-}) {
-  if (attachments.length === 0) return null;
-
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5">
-      {attachments.map((attachment, i) => (
-        <div
-          key={`${attachment.storageId}-${i}`}
-          className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border bg-muted"
-        >
-          {/* Remove button */}
-          <button
-            type="button"
-            onClick={() => onRemove(i)}
-            aria-label={`Remove ${attachment.fileName}`}
-            className="absolute top-0.5 right-0.5 z-10 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
-          >
-            <X className="h-3 w-3" />
-          </button>
-
-          {attachment.fileType.startsWith("image/") && attachment.previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={attachment.previewUrl}
-              alt={attachment.fileName}
-              className="w-full h-full object-cover"
-            />
-          ) : attachment.fileType.startsWith("video/") &&
-            attachment.previewUrl ? (
-            <div className="relative w-full h-full bg-black">
-              <video
-                src={attachment.previewUrl}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="rounded-full bg-black/50 p-1">
-                  <Play className="h-3.5 w-3.5 text-white fill-white" />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-1 px-1">
-              <FileIcon className="h-5 w-5 text-muted-foreground" />
-              <span className="text-xs text-center truncate w-full text-muted-foreground px-1 leading-tight">
-                {attachment.fileName}
-              </span>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ChatInterface
-// ---------------------------------------------------------------------------
+import { FileUpload } from "@/components/file-upload";
+import { useChat } from "./use-chat";
+import { MessageAttachments } from "./parts/message-attachments";
+import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
+import { ChatInterfaceProps, MessageFile } from "./types";
 
 export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
-  const [input, setInput] = useState("");
-  const [pendingAttachments, setPendingAttachments] = useState<
-    PendingAttachment[]
-  >([]);
-  const [isUploading, setIsUploading] = useState(false);
-  // Increment to remount FileUpload (resets its internal state)
-  const [fileUploadKey, setFileUploadKey] = useState(0);
-  // Pre-populated files passed to the remounted FileUpload so existing
-  // attachments survive when a single file is removed from the strip.
-  const [fileUploadInitialFiles, setFileUploadInitialFiles] = useState<
-    UploadedFile[]
-  >([]);
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const prevScrollHeightRef = useRef(0);
-  const isLoadingMoreRef = useRef(false);
-  const isNearBottomRef = useRef(true);
-  const initialScrollDoneRef = useRef(false);
+  const [showTimeId, setShowTimeId] = useState<string | null>(null);
 
   const {
-    results: messages,
+    input,
+    setInput,
+    messages,
     status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.chat.query.getRoomMessages,
-    { room: roomId },
-    { initialNumItems: 50 },
-  );
-
-  const sendMessage = useMutation(api.chat.mutate.sendMessage);
-
-  // Scroll handling
-  const handleScroll = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
-
-    if (
-      scrollTop < 100 &&
-      status === "CanLoadMore" &&
-      !isLoadingMoreRef.current
-    ) {
-      isLoadingMoreRef.current = true;
-      prevScrollHeightRef.current = scrollHeight;
-      loadMore(50);
-    }
-  };
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    if (!initialScrollDoneRef.current && messages.length > 0) {
-      bottomRef.current?.scrollIntoView();
-      initialScrollDoneRef.current = true;
-      return;
-    }
-
-    if (isLoadingMoreRef.current) {
-      const newScrollHeight = container.scrollHeight;
-      container.scrollTop += newScrollHeight - prevScrollHeightRef.current;
-      isLoadingMoreRef.current = false;
-      return;
-    }
-
-    if (isNearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
-  // -------------------------------------------------------------------------
-  // Sending
-  // -------------------------------------------------------------------------
-
-  const handleSendMessage = async () => {
-    const hasText = input.trim();
-    const hasFiles = pendingAttachments.length > 0;
-    if (!hasText && !hasFiles) return;
-
-    const content = input;
-    const attachments = [...pendingAttachments];
-
-    setInput("");
-    setPendingAttachments([]);
-    setFileUploadInitialFiles([]);
-    setFileUploadKey((k) => k + 1);
-
-    try {
-      await sendMessage({
-        content: content.trim() || "",
-        file:
-          attachments.length > 0
-            ? (attachments.map((a) => a.storageId) as Id<"_storage">[])
-            : undefined,
-        room: roomId,
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      // Restore text; files need to be re-attached (they were already uploaded)
-      setInput(content);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // -------------------------------------------------------------------------
-  // Attachment management
-  // -------------------------------------------------------------------------
-
-  const handleFilesChange = (files: UploadedFile[]) => {
-    setPendingAttachments(
-      files.map((f) => ({
-        storageId: f.storageId,
-        fileName: f.fileName,
-        fileType: f.fileType,
-        previewUrl: f.url,
-      })),
-    );
-  };
-
-  /** Remove a single attachment by index. Re-mounts FileUpload with the rest. */
-  const removeAttachment = (index: number) => {
-    const remaining = pendingAttachments.filter((_, i) => i !== index);
-    const remainingAsUploadedFiles: UploadedFile[] = remaining.map((a) => ({
-      storageId: a.storageId,
-      fileName: a.fileName,
-      fileType: a.fileType,
-      fileSize: 0,
-      uploadedAt: new Date(),
-      url: a.previewUrl,
-    }));
-    // Update pending state first (FileUpload won't call onFilesChange on mount
-    // due to its isFirstRender guard, so we set it manually here)
-    setPendingAttachments(remaining);
-    setFileUploadInitialFiles(remainingAsUploadedFiles);
-    setFileUploadKey((k) => k + 1);
-  };
-
-  // -------------------------------------------------------------------------
-  // Derived state
-  // -------------------------------------------------------------------------
-
-  const isLoading = status === "LoadingFirstPage";
-  const canSend =
-    !isLoading &&
-    !isUploading &&
-    (!!input.trim() || pendingAttachments.length > 0);
-  const sortedMessages = [...messages].reverse();
+    isLoading,
+    canSend,
+    isUploading,
+    setIsUploading,
+    pendingAttachments,
+    fileUploadKey,
+    fileUploadInitialFiles,
+    scrollContainerRef,
+    bottomRef,
+    handleScroll,
+    handleSendMessage,
+    handleKeyPress,
+    handleFilesChange,
+    removeAttachment,
+  } = useChat({ roomId });
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -347,36 +47,41 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
       >
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
-            <p className="text-muted-foreground">Loading messages...</p>
+            <p className="text-muted-foreground text-sm">Loading messages...</p>
           </div>
-        ) : sortedMessages.length === 0 ? (
-          <div className="flex justify-center items-center h-full">
-            <p className="text-muted-foreground">
+        ) : messages.length === 0 ? (
+          <div className="flex justify-center items-center h-full text-center p-8">
+            <p className="text-muted-foreground text-sm max-w-[240px]">
               No messages yet. Start the conversation!
             </p>
           </div>
         ) : (
           <>
             {status === "LoadingMore" && (
-              <div className="sticky top-0 z-10 flex items-center justify-center gap-2 rounded-full bg-muted/90 px-4 py-1.5 text-sm text-muted-foreground shadow backdrop-blur-sm mx-auto w-fit">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <div className="sticky top-0 z-10 flex items-center justify-center gap-2 rounded-full bg-muted/90 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground shadow backdrop-blur-sm mx-auto w-fit">
+                <Loader2 className="h-3 w-3 animate-spin" />
                 Loading older messages…
               </div>
             )}
 
             {status === "Exhausted" && (
               <div className="flex justify-center py-2">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
                   Beginning of conversation
                 </p>
               </div>
             )}
 
-            {sortedMessages.map((message) => {
+            {messages.map((message, index) => {
               const isCurrentUser = message.sender === currentUserName;
 
-              // Normalise files: prefer the resolved `files` array returned by
-              // the updated query; fall back to the legacy single-file fields.
+              // Separator logic (1hr gap)
+              const prevMessage = messages[index - 1];
+              const showSeparator =
+                prevMessage &&
+                message._creationTime - prevMessage._creationTime >
+                  60 * 60 * 1000;
+
               const messageFiles: MessageFile[] =
                 "files" in message && Array.isArray(message.files)
                   ? (message.files as MessageFile[])
@@ -384,66 +89,95 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
                     ? [
                         {
                           fileUrl: message.fileUrl,
-                          fileType:
-                            "fileType" in message
-                              ? (message.fileType as string | null)
-                              : null,
+                          fileType: message.fileType || null,
+                          originalName: message.originalName || null,
                         },
                       ]
                     : [];
 
               return (
-                <div
-                  key={message._id}
-                  className={cn(
-                    "flex",
-                    isCurrentUser ? "justify-end" : "justify-start",
+                <div key={message._id} className="space-y-1">
+                  {showSeparator && (
+                    <div className="flex items-center gap-4 my-8">
+                      <div className="h-px flex-1 bg-border/60" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 whitespace-nowrap">
+                        {new Date(message._creationTime).toLocaleDateString(
+                          [],
+                          {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </span>
+                      <div className="h-px flex-1 bg-border/60" />
+                    </div>
                   )}
-                >
+
                   <div
                     className={cn(
-                      "max-w-xs lg:max-w-md px-4 py-2 rounded-lg text-sm",
-                      isCurrentUser
-                        ? "bg-primary text-primary-foreground rounded-br-none"
-                        : "bg-muted text-foreground rounded-bl-none",
+                      "flex flex-col",
+                      isCurrentUser ? "items-end" : "items-start",
                     )}
                   >
-                    {!isCurrentUser && (
-                      <p className="text-xs font-semibold mb-1 opacity-70">
-                        {message.sender}
-                      </p>
-                    )}
-
-                    {message.content && (
-                      <p className="wrap-break-word">{message.content}</p>
-                    )}
-
-                    {messageFiles.length > 0 && (
-                      <MessageAttachments
-                        files={messageFiles}
-                        isCurrentUser={isCurrentUser}
-                      />
-                    )}
-
-                    <span
+                    <div
+                      onClick={() =>
+                        setShowTimeId(
+                          showTimeId === message._id ? null : message._id,
+                        )
+                      }
                       className={cn(
-                        "text-xs mt-1 block",
+                        "max-w-xs lg:max-w-md px-4 py-2 rounded-2xl text-sm shadow-sm cursor-pointer ",
                         isCurrentUser
-                          ? "text-primary-foreground/70"
-                          : "text-foreground/70",
+                          ? "bg-primary text-primary-foreground rounded-br-none"
+                          : "bg-secondary text-secondary-foreground rounded-bl-none",
                       )}
                     >
-                      {new Date(message._creationTime).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                      {!isCurrentUser && (
+                        <p className="text-[11px] font-bold mb-1 opacity-70 uppercase tracking-tight">
+                          {message.sender}
+                        </p>
+                      )}
+
+                      {message.content && (
+                        <p className="whitespace-pre-wrap break-words leading-relaxed">
+                          {message.content}
+                        </p>
+                      )}
+
+                      {messageFiles.length > 0 && (
+                        <div className="mt-2">
+                          <MessageAttachments
+                            files={messageFiles}
+                            isCurrentUser={isCurrentUser}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {showTimeId === message._id && (
+                      <span
+                        className={cn(
+                          "text-[10px] mt-1 font-bold uppercase tracking-widest text-muted-foreground/60 px-1",
+                          isCurrentUser ? "text-right" : "text-left",
+                        )}
+                      >
+                        {new Date(message._creationTime).toLocaleTimeString(
+                          [],
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
             })}
 
-            <div ref={bottomRef} />
+            <div ref={bottomRef} className="h-2" />
           </>
         )}
       </div>
@@ -451,51 +185,72 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
       {/* ------------------------------------------------------------------ */}
       {/* Input area                                                           */}
       {/* ------------------------------------------------------------------ */}
-      <div className="border-t p-4 bg-background space-y-2">
-        {/* Uploading indicator (while no file has completed yet) */}
+      <div className="border-t p-4 bg-background/95 backdrop-blur-md space-y-3">
         {isUploading && pendingAttachments.length === 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted text-sm w-fit">
-            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-muted-foreground" />
-            <span className="text-muted-foreground text-xs">Uploading…</span>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary-muted text-sm w-fit border border-primary/10">
+            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-primary" />
+            <span className="text-primary text-xs font-semibold">
+              Uploading…
+            </span>
           </div>
         )}
 
-        {/* Pending attachment thumbnail strip */}
         <PendingAttachmentStrip
           attachments={pendingAttachments}
           onRemove={removeAttachment}
         />
 
-        {/* Uploading-more badge — shown while additional files are in flight */}
         {isUploading && pendingAttachments.length > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-primary/60 px-1">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Uploading…
+            Uploading more…
           </div>
         )}
 
-        <div className="flex gap-2">
-          <FileUpload
-            key={fileUploadKey}
-            title="Attach files"
-            variant="inline"
-            multiple={true}
-            maxFiles={10}
-            disabled={isLoading}
-            value={fileUploadInitialFiles}
-            onFilesChange={handleFilesChange}
-            onUploadingChange={setIsUploading}
-          />
-          <Input
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button onClick={handleSendMessage} disabled={!canSend} size="icon">
-            <Send className="h-4 w-4" />
+        <div className="flex items-end gap-3 max-w-6xl mx-auto">
+          <div className="flex items-center">
+            <FileUpload
+              key={fileUploadKey}
+              title="Attach files"
+              variant="inline"
+              multiple={true}
+              maxFiles={10}
+              disabled={isLoading}
+              value={fileUploadInitialFiles}
+              onFilesChange={handleFilesChange}
+              onUploadingChange={setIsUploading}
+            />
+          </div>
+
+          <div className="relative flex-1 group">
+            <Input
+              placeholder="Type your message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={isLoading}
+              className={cn(
+                "w-full min-h-[44px] px-4 py-2",
+                "bg-sidebar-accent/50 border-sidebar-border/50 shadow-none",
+                "focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-sidebar-accent",
+                "transition-all duration-200 placeholder:text-muted-foreground/50",
+                "rounded-xl font-sans",
+              )}
+            />
+          </div>
+
+          <Button
+            onClick={handleSendMessage}
+            disabled={!canSend}
+            size="icon"
+            className={cn(
+              "rounded-xl h-11 w-11 shrink-0 transition-all duration-200 shadow-sm",
+              canSend
+                ? "bg-primary text-primary-foreground hover:shadow-md hover:scale-[1.02]"
+                : "bg-gray-300 text-black",
+            )}
+          >
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>

@@ -15,17 +15,19 @@ export function DashboardHeader() {
   return (
     <header
       className={cn(
-        "flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
+        "flex h-14 shrink-0 items-center gap-2 bg-background/80 backdrop-blur-md border-b border-sidebar-border/50 sticky top-0 z-30 transition-all ease-in-out",
         isInChatConversation && "hidden md:flex",
       )}
     >
-      <div className="flex items-center gap-2 px-4">
-        <SidebarTrigger className="-ml-1" />
+      <div className="flex items-center gap-2 px-4 w-full">
+        <SidebarTrigger className="-ml-1 text-sidebar-foreground/50 hover:text-primary transition-colors" />
         <Separator
           orientation="vertical"
-          className="mr-2 data-vertical:h-4 data-vertical:self-auto"
+          className="mx-2 h-4 bg-sidebar-border/60"
         />
-        <DashboardBreadcrumb />
+        <div className="flex-1 overflow-hidden">
+          <DashboardBreadcrumb />
+        </div>
       </div>
     </header>
   );

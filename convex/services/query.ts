@@ -18,12 +18,12 @@ export const getServices = query({
 
 export const getService = query({
   args: {
-    name: v.string(),
+    slug: v.string(),
   },
   handler: async (ctx, args) => {
     const service = await ctx.db
       .query("services")
-      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
 
     if (!service) return null;

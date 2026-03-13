@@ -1,4 +1,4 @@
-import { preloadQuery } from "convex/nextjs";
+import { preloadAuthQuery } from "@/lib/auth-server";
 import { api } from "@/../convex/_generated/api";
 import { notFound } from "next/navigation";
 import { preloadedQueryResult } from "convex/nextjs";
@@ -7,16 +7,15 @@ import { ServiceDetailClient } from "./_client";
 export default async function ServiceDetailsPage({
   params,
 }: {
-  params: Promise<{ name: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { name } = await params;
+  const { slug } = await params;
 
-  const preloadedService = await preloadQuery(api.services.query.getService, {
-    name: name,
-  });
+  const preloadedService = await preloadAuthQuery(
+    api.services.query.getService,
+    { slug: slug },
+  );
 
-  // Peek at the result server-side so we can 404 immediately
-  // instead of shipping a loading skeleton that resolves to "not found"
   const service = preloadedQueryResult(preloadedService);
   if (service === null) {
     notFound();
