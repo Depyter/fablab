@@ -71,19 +71,10 @@ export function NavMain({
                           : "text-sidebar-foreground/70 hover:text-primary",
                       )}
                     >
-                      <div
-                        className={cn(
-                          "flex size-7 items-center justify-center shrink-0 transition-colors",
-                          isParentActive
-                            ? "text-primary"
-                            : "text-sidebar-foreground/40 group-hover/collapsible:text-primary",
-                        )}
-                      >
-                        {item.icon}
-                      </div>
+                      {item.icon}
                       <span
                         className={cn(
-                          "font-medium tracking-tight",
+                          "truncate tracking-tight",
                           isParentActive ? "font-semibold" : "font-medium",
                         )}
                       >
@@ -120,7 +111,7 @@ export function NavMain({
                                 )}
                                 <span
                                   className={cn(
-                                    "text-sm tracking-tight",
+                                    "text-sm tracking-tight truncate",
                                     isSubActive
                                       ? "font-semibold"
                                       : "font-normal",
@@ -158,19 +149,10 @@ export function NavMain({
                 )}
               >
                 <a href={item.url}>
-                  <div
-                    className={cn(
-                      "flex size-7 items-center justify-center shrink-0 transition-colors",
-                      isActive
-                        ? "text-primary"
-                        : "text-sidebar-foreground/40 group-hover:text-primary",
-                    )}
-                  >
-                    {item.icon}
-                  </div>
+                  {item.icon}
                   <span
                     className={cn(
-                      "font-medium tracking-tight",
+                      "truncate tracking-tight",
                       isActive ? "font-semibold" : "font-medium",
                     )}
                   >
