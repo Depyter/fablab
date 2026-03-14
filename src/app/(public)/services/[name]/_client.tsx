@@ -138,8 +138,11 @@ export function ServiceDetailClient({
               </section>
             </div>
             <div className="flex gap-3 w-full">
-              <BookingDialog serviceName={service.name} requirements={service.requirements}/>
-            </div> 
+              <BookingDialog
+                serviceName={service.name}
+                requirements={service.requirements}
+              />
+            </div>
           </div>
         </div>
       </div>
