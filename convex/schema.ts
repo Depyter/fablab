@@ -25,30 +25,21 @@ export default defineSchema({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   }).index("by_slug", ["slug"]),
 
-  machines: defineTable({
+  resources: defineTable({
     name: v.string(),
     description: v.string(),
     service: v.id("services"),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   }).index("by_service", ["service"]),
 
-  // To show which machines have jobs
-  jobs: defineTable({
-    machine: v.id("machines"),
+  resourceUsage: defineTable({
+    resource: v.id("resources"),
     project: v.id("projects"),
-    start: v.number(),
-    end: v.number(),
-    complexity: v.union(
-      v.literal("high"),
-      v.literal("medium"),
-      v.literal("low"),
-    ),
-    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-    requester: v.id("userProfile"), // must be admin or maker
-  })
-    .index("by_machine", ["machine"])
-    .index("by_project", ["project"])
-    .index("by_requester", ["requester"]),
+    maker: v.id("userProfile"),
+    startTime: v.number(),
+    endTime: v.number(),
+    date: v.number(),
+  }).index("by_date_resource_startTime", ["date", "resource", "startTime"]),
 
   projects: defineTable({
     alias: v.string(),
