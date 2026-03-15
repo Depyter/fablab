@@ -8,7 +8,6 @@ import {
   Plus,
   Calendar as CalendarIcon,
   MoreHorizontal,
-  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -43,11 +41,6 @@ const PROJECTS = [
   { id: "6", name: "Woodworking Bench" },
 ];
 
-/**
- * Mock Bookings with explicit ranges.
- * If a booking is 7 to 11, it should occupy 4 slots: 7, 8, 9, 10.
- * It "ends" at the start of the 11th hour.
- */
 const MOCK_DATE = startOfToday();
 
 const BOOKINGS = [
@@ -57,7 +50,7 @@ const BOOKINGS = [
     userName: "Renata",
     date: MOCK_DATE,
     startTime: 7,
-    endTime: 9, // 2 hours (7-8, 8-9)
+    endTime: 9,
     title: "Enclosure Cut",
     color:
       "bg-[var(--chart-1)]/20 border-[var(--chart-1)] text-[var(--chart-1)]",
@@ -68,7 +61,7 @@ const BOOKINGS = [
     userName: "Renata",
     date: MOCK_DATE,
     startTime: 9,
-    endTime: 10, // 1 hour (9-10)
+    endTime: 10,
     title: "Spare Parts",
     color:
       "bg-[var(--chart-1)]/20 border-[var(--chart-1)] text-[var(--chart-1)]",
@@ -79,7 +72,7 @@ const BOOKINGS = [
     userName: "Jauhari",
     date: MOCK_DATE,
     startTime: 11,
-    endTime: 13, // 2 hours (11-12, 12-1)
+    endTime: 13,
     title: "Art Project",
     color:
       "bg-[var(--chart-2)]/20 border-[var(--chart-2)] text-[var(--chart-2)]",
@@ -123,7 +116,7 @@ const BOOKINGS = [
     userName: "Damar",
     date: MOCK_DATE,
     startTime: 7,
-    endTime: 11, // 4 hours (7-8, 8-9, 9-10, 10-11)
+    endTime: 11,
     title: "Cabinet Parts",
     color:
       "bg-[var(--chart-4)]/20 border-[var(--chart-4)] text-[var(--chart-4)]",
@@ -133,7 +126,7 @@ const BOOKINGS = [
 // Hours from 07:00 to 22:00
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
 
-export default function ProjectCalendarPage() {
+export function ProjectCalendarView() {
   const [date, setDate] = React.useState<Date>(startOfToday());
 
   const handlePrevDay = () => setDate((prev) => subDays(prev, 1));
@@ -145,36 +138,8 @@ export default function ProjectCalendarPage() {
   }, [date]);
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex flex-col gap-4 p-6 border-b sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bookings</h1>
-          <p className="text-muted-foreground text-sm">
-            Manage and monitor project schedules.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative w-full max-w-50">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8 w-full h-9"
-            />
-          </div>
-          <Button
-            variant="default"
-            size="sm"
-            className="gap-1 bg-primary hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" />
-            Add Booking
-          </Button>
-        </div>
-      </div>
-
-      {/* Navigation Toolbar */}
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Date Navigation Toolbar */}
       <div className="flex items-center justify-between px-6 py-4 border-b bg-muted/30">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
@@ -270,14 +235,12 @@ export default function ProjectCalendarPage() {
                   </TableCell>
 
                   {HOURS.map((hour, index) => {
-                    // Check if a booking starts exactly at this hour
                     const booking = filteredBookings.find(
                       (b) => b.projectId === project.id && b.startTime === hour,
                     );
 
                     if (booking) {
                       const duration = booking.endTime - booking.startTime;
-                      // colSpan covers the current cell plus (duration - 1) subsequent cells
                       const clampedColSpan = Math.min(
                         duration,
                         HOURS.length - index,
@@ -331,7 +294,6 @@ export default function ProjectCalendarPage() {
                       );
                     }
 
-                    // Check if this hour is covered by a booking starting earlier
                     const isCovered = filteredBookings.some(
                       (b) =>
                         b.projectId === project.id &&
@@ -341,7 +303,6 @@ export default function ProjectCalendarPage() {
 
                     if (isCovered) return null;
 
-                    // Render an empty slot with an "Add" action
                     return (
                       <TableCell
                         key={`${project.id}-${hour}`}

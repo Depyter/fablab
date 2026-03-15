@@ -4,18 +4,22 @@ import { Card } from "@/components/ui/card";
 import { CirclePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export function CardButton() {
+interface CardButtonProps {
+  path : string;
+}
+
+export function CardButton({path}: CardButtonProps) {
   const router = useRouter();
 
   return (
     <Card
       role="button"
       tabIndex={0}
-      onClick={() => router.push("/dashboard/services/add-service")}
+      onClick={() => router.push(path)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          router.push("/dashboard/services/add-service");
+          router.push(path);
         }
       }}
       className="relative mx-auto w-full max-w-sm cursor-pointer border-2 border-dashed border-primary bg-transparent transition-all duration-200 hover:bg-primary/5 hover:border-primary/80 hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 min-h-[420px] flex flex-col items-center justify-center gap-3 select-none group"

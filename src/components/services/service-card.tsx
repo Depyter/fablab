@@ -91,7 +91,7 @@ export function ServiceCard({
 
       <div className="flex-1/2" />
       <CardFooter>
-        <Link href={`/dashboard/services/${slug}`} className="w-full">
+        <Link href={`/dashboard/services/${slug}/edit`} className="w-full">
           <Button className="w-full">{buttonText}</Button>
         </Link>
       </CardFooter>
