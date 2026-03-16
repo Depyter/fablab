@@ -67,7 +67,7 @@ const allNavItems: NavItem[] = [
       },
       {
         title: "Inventory",
-        url: "#",
+        url: "/dashboard/inventory",
         roles: ["admin", "maker"],
       },
     ],
