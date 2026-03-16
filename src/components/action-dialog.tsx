@@ -13,20 +13,25 @@ import { FieldGroup } from "@/components/ui/field"
 
 interface ActionDialogProps{
   onConfirm: () => void;
+  title: string;
+  description: string;
+  baseActionText?: string;
+  confirmButtonText?: string;
+  cancelButtonText?: string;
 }
 
-export function ActionDialog({onConfirm}:ActionDialogProps) {
+export function ActionDialog({onConfirm, title, description, baseActionText, confirmButtonText, cancelButtonText}:ActionDialogProps) {
   return (
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline" className="rounded-lg">Back</Button>
+          <Button variant="outline" className="rounded-lg px-10">{baseActionText || "Back"}</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-sm rounded-xl" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Cancel Project Request?</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
-                Are you sure you want to cancel this request?
+                {description}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -35,9 +40,9 @@ export function ActionDialog({onConfirm}:ActionDialogProps) {
           <DialogFooter>
             
             <DialogClose>
-              <Button variant="outline" className="rounded-lg">Go Back</Button>
+              <Button variant="outline" className="rounded-lg">{cancelButtonText || "Go Back"}</Button>
             </DialogClose>
-            <Button type="submit" onClick={onConfirm} className="rounded-lg">Cancel Request</Button>
+            <Button type="submit" onClick={onConfirm} className="rounded-lg">{confirmButtonText || "Cancel Request"}</Button>
           </DialogFooter>
         </DialogContent>
       </form>

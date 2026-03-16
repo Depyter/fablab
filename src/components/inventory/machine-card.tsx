@@ -9,8 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { stat } from "fs";
-// import Image from "next/image";
-import Link from "next/link";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { MachineDetails } from "@/components/inventory/machine-details";
 
 interface MachineCardProps {
   // required
@@ -76,9 +77,14 @@ export function MachineCard({
 
       <div className="flex-1/2" />
       <CardFooter>
-        <Link href={`/dashboard/(manage)/inventory/machines/${machineName}`} className="w-full">
-          <Button className="w-full">{buttonText}</Button>
-        </Link>
+        <Dialog>
+          <DialogTrigger asChild>
+              <Button variant="outline" className="rounded-full px-10 bg-primary hover:bg-primary/80 hover:text-white text-white w-full">View Details</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-sm lg:max-w-3xl rounded-xl p-10">
+              <MachineDetails />
+          </DialogContent>
+        </Dialog>
       </CardFooter>
     </Card>
   );

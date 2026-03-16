@@ -42,7 +42,7 @@ export function MachinesListView() {
               />
             ))}
 
-            <CardButton path="/dashboard/inventory/add-machine" title="Add Machine" description="Register a new machine in the inventory" />
+            {/* <CardButton path="/dashboard/inventory/add-machine" title="Add Machine" description="Register a new machine in the inventory" /> */}
           </div>
           
         </div>
