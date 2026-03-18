@@ -13,15 +13,27 @@ import { FieldGroup } from "@/components/ui/field";
 
 interface ActionDialogProps {
   onConfirm: () => void;
+  title: string;
+  description: string;
+  baseActionText?: string;
+  confirmButtonText?: string;
+  cancelButtonText?: string;
 }
 
-export function ActionDialog({ onConfirm }: ActionDialogProps) {
+export function ActionDialog({
+  onConfirm,
+  title,
+  description,
+  baseActionText,
+  confirmButtonText,
+  cancelButtonText,
+}: ActionDialogProps) {
   return (
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline" className="rounded-lg">
-            Back
+          <Button variant="outline" className="rounded-lg px-10">
+            {baseActionText || "Back"}
           </Button>
         </DialogTrigger>
         <DialogContent
@@ -29,20 +41,18 @@ export function ActionDialog({ onConfirm }: ActionDialogProps) {
           showCloseButton={false}
         >
           <DialogHeader>
-            <DialogTitle>Cancel Project Request?</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this request?
-            </DialogDescription>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
           <FieldGroup></FieldGroup>
           <DialogFooter>
             <DialogClose>
               <Button variant="outline" className="rounded-lg">
-                Go Back
+                {cancelButtonText || "Go Back"}
               </Button>
             </DialogClose>
             <Button type="submit" onClick={onConfirm} className="rounded-lg">
-              Cancel Request
+              {confirmButtonText || "Cancel Request"}
             </Button>
           </DialogFooter>
         </DialogContent>

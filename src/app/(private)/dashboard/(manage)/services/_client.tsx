@@ -3,7 +3,7 @@
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
-import { CardButton } from "@/components/services/card-button";
+import { CardButton } from "@/components/card-button";
 import { PackageOpen } from "lucide-react";
 
 export function ServicesListClient({
@@ -36,7 +36,7 @@ export function ServicesListClient({
               available for clients to browse and request.
             </p>
           </div>
-          <CardButton />
+          <CardButton path="/dashboard/services/add-service" title="Add Service" description="Click to add a new service to the catalogue" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -52,7 +52,7 @@ export function ServicesListClient({
               unit={service.unitPrice}
             />
           ))}
-          <CardButton />
+          <CardButton path="/dashboard/services/add-service" title="Add Service" description="Click to add a new service to the catalogue" />
         </div>
       )}
     </div>

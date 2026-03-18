@@ -16,8 +16,6 @@ import {
   Plus,
   Calendar as CalendarIcon,
   MoreHorizontal,
-  Search,
-  Filter,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,7 +27,6 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -146,7 +143,7 @@ const MOCK_QUERY_RESULTS: MachineUsage[] = [
 
 type ViewFilter = "all" | "confirmed";
 
-export default function ProjectCalendarPage() {
+export function ProjectCalendarView() {
   const [date, setDate] = React.useState<Date>(startOfToday());
   const [viewFilter, setViewFilter] = React.useState<ViewFilter>("all");
 

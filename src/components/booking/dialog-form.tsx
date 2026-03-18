@@ -21,7 +21,7 @@ import { Textarea } from "../ui/textarea";
 import { FileUpload } from "../file-upload";
 import { useState } from "react";
 import { EstimateProjectDetails } from "./estimate-dialog";
-import { ActionDialog } from "./action-dialog";
+import { ActionDialog } from "../action-dialog";
 
 interface BookingDialog {
   serviceName: string;
@@ -174,7 +174,11 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
 
             <FieldSeparator className="mb-4" />
             <DialogFooter>
-              <ActionDialog onConfirm={handleConfirmCancel} />
+              <ActionDialog
+                onConfirm={handleConfirmCancel}
+                title="Cancel Project Request?"
+                description="Are you sure you want to cancel this request?"
+              />
 
               <Button type="submit" className="rounded-lg">
                 Review & Estimate
