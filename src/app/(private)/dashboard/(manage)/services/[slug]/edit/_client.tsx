@@ -17,6 +17,8 @@ import { MachineSelectForm } from "@/components/services/forms/machine-select-fo
 import { SelectForm } from "@/components/services/forms/select-form";
 import { FileUpload, type UploadedFile } from "@/components/file-upload";
 import type { AddServiceFormValues } from "@/types/add-service";
+import { ActionDialog } from "@/components/action-dialog";
+import { toast } from "sonner";
 
 const machineOptions = [
   { label: "Machine 1", value: "machine-1" },
@@ -195,6 +197,11 @@ export function EditServiceClient({
     },
   });
 
+  const handleDeleteService = async () => {
+      toast.success("Service deleted successfully!", { position: "top-center" });
+      router.push("/dashboard/services");
+  };
+
   // Guard against the service being deleted while the user is on this page.
   if (service === null) {
     return (
@@ -226,7 +233,7 @@ export function EditServiceClient({
         }`}
       >
         <div className="flex items-center gap-4">
-          <Link href={`/dashboard/services/${service.name}`}>
+          <Link href={`/dashboard/services/`}>
             <Button
               variant="outline"
               size="icon"
@@ -245,17 +252,27 @@ export function EditServiceClient({
               {submitError}
             </p>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            onClick={() => {
+        <ActionDialog
+            onConfirm={handleDeleteService}
+            title="Delete Service?"
+            description="Are you sure you want to delete this service? This action cannot be undone."
+            baseActionText="Delete"
+            confirmButtonText="Confirm Delete"
+            className="bg-red-500 text-white hover:bg-red-600 px-6 font-medium rounded-lg"
+          />
+
+          <ActionDialog
+            onConfirm={() => {
               form.reset();
               setSubmitError(null);
             }}
-          >
-            Discard
-          </Button>
+            title="Discard Changes?"
+            description="Are you sure you want to discard all changes?"
+            baseActionText="Discard"
+            confirmButtonText="Confirm"
+            className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
+          />
+        
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (

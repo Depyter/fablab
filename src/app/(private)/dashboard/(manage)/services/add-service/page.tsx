@@ -20,6 +20,8 @@ import {
   type AddServiceFormValues,
 } from "@/types/add-service";
 
+import { toast } from "sonner";
+
 // sample select machine options
 const machineOptions = [
   { label: "Machine 1", value: "machine-1" },
@@ -86,6 +88,7 @@ export default function AddServicePage() {
             ? error.message
             : "Failed to add service. Please try again.",
         );
+          
       }
     },
   });
@@ -140,6 +143,7 @@ export default function AddServicePage() {
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
+
               <Button
                 type="button"
                 className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"

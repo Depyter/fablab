@@ -18,14 +18,15 @@ interface ActionDialogProps{
   baseActionText?: string;
   confirmButtonText?: string;
   cancelButtonText?: string;
+  className?: string;
 }
 
-export function ActionDialog({onConfirm, title, description, baseActionText, confirmButtonText, cancelButtonText}:ActionDialogProps) {
+export function ActionDialog({onConfirm, title, description, baseActionText, confirmButtonText, cancelButtonText, className}:ActionDialogProps) {
   return (
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline" className="rounded-lg px-10">{baseActionText || "Back"}</Button>
+          <Button variant="outline" className={`rounded-lg px-10 ${className}`}>{baseActionText || "Back"}</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-sm rounded-xl" showCloseButton={false}>
           <DialogHeader>

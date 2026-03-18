@@ -45,12 +45,7 @@ export function MachineCard({
     status,
     buttonText = "View Details",
     showBadge = true,
-    badgeVariant = status === "completed"
-      ? "outline"
-      : status === "active"
-        ? "secondary"
-        : "destructive",
-
+    badgeVariant = "default",
     className = "",
 }: MachineCardProps) {
 
@@ -63,7 +58,7 @@ export function MachineCard({
         className={"absolute inset-0 z-40 p-4 flex items-start justify-end"}
       >
         {showBadge && (
-          <Badge  variant={badgeVariant} className="h-8 rounded-lg h-8">
+          <Badge  variant={badgeVariant} className="h-8 rounded-lg">
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
         )}

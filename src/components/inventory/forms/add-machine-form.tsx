@@ -23,6 +23,7 @@ import { FileUpload } from "@/components/file-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "radix-ui";
 import { ActionDialog } from "@/components/action-dialog";
+import { toast } from "sonner";
 
 export function AddMachineForm() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -30,7 +31,16 @@ export function AddMachineForm() {
     console.log("Mock Saving Machine...");
     // Simulate network request
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    // In a real app, you'd likely close the dialog here
+    // toast.success("Machine added successfully!", {position: "top-center"});
+    toast.promise(
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+      {
+        loading: "Adding machine...",
+        success: "Machine added successfully!",
+        error: "Failed to add machine. Please try again.",
+        position: "top-center",
+      }
+    );
   };
 
   return (
@@ -141,10 +151,12 @@ export function AddMachineForm() {
             baseActionText="Cancel"
             confirmButtonText="Confirm"      
           />
+
           <Button
             type="submit"
             form="add-machine-form" // Associate with the form
             className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
+            
           >
             Add Machine
           </Button>

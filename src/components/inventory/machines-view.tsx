@@ -39,6 +39,11 @@ export function MachinesListView() {
                 specifications={machine.specs}
                 serviceName={machine.service}
                 status={machine.status}
+                badgeVariant={machine.status === "available"
+                  ? "secondary"
+                  : machine.status === "maintenance"
+                    ? "destructive"
+                    : "outline"}
               />
             ))}
 
