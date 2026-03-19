@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
-import { api } from "@/../convex/_generated/api";
+import { usePreloadedQuery, Preloaded, useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { CirclePercent, PhilippinePeso, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PriceTile } from "@/components/services/price-tile";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
-import { BookingDialog } from "@/components/booking/dialog-form";
 
 export function ServiceDetailClient({
   preloadedService,
@@ -18,7 +19,10 @@ export function ServiceDetailClient({
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
   const service = usePreloadedQuery(preloadedService);
+  const router = useRouter();
+  const deleteService = useMutation(api.services.mutate.deleteService);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,12 +33,11 @@ export function ServiceDetailClient({
   }, []);
 
   // Service can become null if it gets deleted while the user is viewing it.
-  // In that case, show a graceful fallback instead of crashing.
   if (service === null) {
     return (
       <main className="container mx-auto max-w-6xl p-10">
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/services">
+          <Link href="/dashboard/services">
             <Button
               variant="outline"
               size="icon"
@@ -54,14 +57,14 @@ export function ServiceDetailClient({
   return (
     <main className="">
       <div className="container mx-auto max-w-6xl p-10">
-        {/* Top Navigation */}
+        {/* Top Navigation & Actions */}
         <header
           className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${
             isScrolled ? "border-b border-gray-200" : "border-b-0"
           }`}
         >
           <div className="flex items-center gap-4">
-            <Link href="/services">
+            <Link href="/dashboard/services">
               <Button
                 variant="outline"
                 size="icon"
@@ -72,10 +75,34 @@ export function ServiceDetailClient({
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">{service.name}</h1>
           </div>
-
-          {/* <div className="flex gap-3">
-            <BookingDialog serviceName={service.name} requirements={service.requirements}/>
-          </div>  */}
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
+              disabled={isDeleting}
+              onClick={async () => {
+                if (!service) return;
+                setIsDeleting(true);
+                try {
+                  await deleteService({
+                    service: service._id as Id<"services">,
+                  });
+                  router.push("/dashboard/services");
+                } catch {
+                  setIsDeleting(false);
+                }
+              }}
+            >
+              {isDeleting ? "Removing..." : "Remove"}
+            </Button>
+            <Link
+              href={service ? `/dashboard/services/${service.name}/edit` : "#"}
+            >
+              <Button className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg">
+                Edit
+              </Button>
+            </Link>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -105,12 +132,12 @@ export function ServiceDetailClient({
               />
             </div>
 
-            <div className="border border-gray-200 rounded-xl p-8 relative ">
+            <div className="border border-gray-200 rounded-xl p-8 relative min-h-125">
               <div className="absolute top-6 right-8 flex items-center gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
                   Status
                 </span>
-                <Badge className="bg-[#F4FBF9] text-chart-6 border-none px-4 py-1 font-semibold h-10 rounded-lg">
+                <Badge className="bg-[#F4FBF9] text-chart-6 border-none px-4 py-1 font-semibold">
                   {service.status}
                 </Badge>
               </div>
@@ -137,9 +164,6 @@ export function ServiceDetailClient({
                 )}
               </section>
             </div>
-            <div className="flex gap-3 w-full">
-              <BookingDialog serviceName={service.name} requirements={service.requirements}/>
-            </div> 
           </div>
         </div>
       </div>

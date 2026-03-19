@@ -81,14 +81,15 @@ export default function AddServicePage() {
           samples: value.samples as Id<"_storage">[],
           requirements: value.requirements.filter((r) => r.trim() !== ""),
         });
-        router.push("/dashboard/services");
+        toast.success("Service added successfully!");
+        setTimeout(() => router.push("/dashboard/services"), 1000);
       } catch (error) {
         setSubmitError(
           error instanceof Error
             ? error.message
             : "Failed to add service. Please try again.",
         );
-          
+        toast.error("Failed to add service. Please try again.");
       }
     },
   });

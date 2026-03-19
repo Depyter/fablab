@@ -38,10 +38,12 @@ export function EditServiceClient({
 }) {
   const service = usePreloadedQuery(preloadedService);
   const router = useRouter();
+  const deleteService = useMutation(api.services.mutate.deleteService);
   const [isScrolled, setIsScrolled] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
   const handleThumbnailUploading = useCallback(
@@ -186,7 +188,7 @@ export function EditServiceClient({
         ]);
 
         // Navigate to the (possibly renamed) service detail page.
-        router.push(`/dashboard/services/${value.name}`);
+        router.push(`/dashboard/services/`);
       } catch (error) {
         setSubmitError(
           error instanceof Error
@@ -198,8 +200,25 @@ export function EditServiceClient({
   });
 
   const handleDeleteService = async () => {
-      toast.success("Service deleted successfully!", { position: "top-center" });
-      router.push("/dashboard/services");
+     
+      if (!service) return;
+        setIsDeleting(true);
+      try {
+        await deleteService({
+          service: service._id as Id<"services">,
+        });
+        toast.promise<{name: string}>(
+          () => new Promise((resolve) => setTimeout(() => resolve({name: service.name}), 1000)),
+          {
+            loading: "Deleting service...",
+            success: (data) => `Service "${data.name}" deleted successfully!`,
+            error: "Failed to delete service. Please try again.",
+          }
+        )
+        router.push("/dashboard/services");
+      } catch {
+        setIsDeleting(false);
+      }
   };
 
   // Guard against the service being deleted while the user is on this page.
@@ -256,9 +275,9 @@ export function EditServiceClient({
             onConfirm={handleDeleteService}
             title="Delete Service?"
             description="Are you sure you want to delete this service? This action cannot be undone."
-            baseActionText="Delete"
+            baseActionText="Remove"
             confirmButtonText="Confirm Delete"
-            className="bg-red-500 text-white hover:bg-red-600 px-6 font-medium rounded-lg"
+            className="bg-red-500 text-white hover:bg-red-600 hover:text-white px-6 font-medium rounded-lg"
           />
 
           <ActionDialog

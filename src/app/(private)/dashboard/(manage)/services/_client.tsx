@@ -5,6 +5,7 @@ import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
 import { CardButton } from "@/components/card-button";
 import { PackageOpen } from "lucide-react";
+import { toast } from "sonner";
 
 export function ServicesListClient({
   preloadedServices,

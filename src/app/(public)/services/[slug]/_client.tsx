@@ -14,6 +14,7 @@ import Link from "next/link";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { BookingDialog } from "@/components/booking/dialog-form";
 
 /**
  * ServiceDetailClient
@@ -137,8 +138,14 @@ export function ServiceDetailClient({
                       </span>
                     </p>
                   </div>
+
+                  
                 </div>
+                
               </div>
+              <div className="flex gap-3 mt-10 w-full">
+                <BookingDialog serviceName={service.name} requirements={service.requirements}/>
+              </div> 
             </div>
           </div>
         </div>
