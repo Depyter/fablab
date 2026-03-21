@@ -14,62 +14,58 @@ import Link from "next/link";
 
 interface ProjectCardProps {
   // required
-//   slug: string;
-//   imageSrc: string;
-    clientName: string;
-    serviceName: string;
-    title: string;
-    description: string;
+  //   slug: string;
+  //   imageSrc: string;
+  clientName: string;
+  serviceName: string;
+  title: string;
+  description: string;
 
-    bookingDate: number;
-    estimatedPrice: number;
-    status: string;
+  bookingDate: number;
+  estimatedPrice: number;
+  status: string;
 
-    bookingTime?: number;
-    buttonText?: string;
-    showBadge?: boolean;
-    badgeVariant?:
+  bookingTime?: number;
+  buttonText?: string;
+  showBadge?: boolean;
+  badgeVariant?:
     | "default"
     | "secondary"
     | "destructive"
     | "outline"
     | "ghost"
     | "link";
-    className?: string;
+  className?: string;
 }
 
 export function ProjectCard({
-//   slug,
-//   imageSrc,
-    title,
-    description,
-    clientName,
-    serviceName,
-    bookingDate,
-    bookingTime,
-    estimatedPrice,
-    status,
-    buttonText = "View Details",
-    showBadge = true,
-    badgeVariant = status === "completed"
-      ? "outline"
-      : status === "active"
-        ? "secondary"
-        : "destructive",
+  //   slug,
+  //   imageSrc,
+  title,
+  description,
+  clientName,
+  serviceName,
+  bookingDate,
+  bookingTime,
+  estimatedPrice,
+  status,
+  buttonText = "View Details",
+  showBadge = true,
+  badgeVariant = status === "completed"
+    ? "outline"
+    : status === "active"
+      ? "secondary"
+      : "destructive",
 
-    className = "",
+  className = "",
 }: ProjectCardProps) {
-
- 
   return (
     <Card className={`relative mx-auto w-full max-w-sm pt-5 ${className}`}>
-     
-      
       <CardAction
         className={"absolute inset-0 z-40 p-4 flex items-start justify-end"}
       >
         {showBadge && (
-          <Badge  variant={badgeVariant} className="h-8 rounded-lg h-8">
+          <Badge variant={badgeVariant} className="h-8 rounded-lg h-8">
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
         )}
@@ -78,28 +74,28 @@ export function ProjectCard({
         <CardTitle className="font-bold text-xl">{title}</CardTitle>
         <CardDescription>
           {serviceName} for {clientName}
-
           <div className="h-2" />
           <div className="mt-2 flex flex-col items-start gap-1 text-chart-6">
-            
             <div className="text-sm">
               <span className="font-medium text-gray-900">Booking Date: </span>
               {new Date(bookingDate).toLocaleDateString()}
 
               {bookingTime && (
-                
                 <span className="ml-2 text-gray-500">
-                  at {new Date(bookingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  at{" "}
+                  {new Date(bookingTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
-
               )}
             </div>
             <div className="text-sm">
-              <span className="font-medium text-gray-900">Estimated Price: </span>
+              <span className="font-medium text-gray-900">
+                Estimated Price:{" "}
+              </span>
               ₱ {estimatedPrice.toFixed(2)}
             </div>
-            
-
           </div>
         </CardDescription>
       </CardHeader>

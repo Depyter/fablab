@@ -20,7 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/file-upload";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Dialog } from "radix-ui";
 import { ActionDialog } from "@/components/action-dialog";
 
@@ -38,29 +44,43 @@ export function AddMachineForm() {
       <header className="sticky top-0 bg-white z-50 p-4 border-b">
         <h2 className="text-2xl font-bold text-gray-900">Add New Machine</h2>
       </header>
-      
-      <form id="add-machine-form" onSubmit={handleSubmit} className="flex-grow no-scrollbar overflow-y-auto p-6 space-y-6">
+
+      <form
+        id="add-machine-form"
+        onSubmit={handleSubmit}
+        className="flex-grow no-scrollbar overflow-y-auto p-6 space-y-6"
+      >
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-4">
             <FieldSet>
               <Card>
                 <CardHeader>
                   <CardTitle className="font-bold text-lg">
-                      General Information
+                    General Information
                   </CardTitle>
-                  <CardDescription>Provide details about your service.</CardDescription>
+                  <CardDescription>
+                    Provide details about your service.
+                  </CardDescription>
                 </CardHeader>
 
                 <CardContent>
-                    <FieldGroup className="mt-4 space-y-4">
+                  <FieldGroup className="mt-4 space-y-4">
                     <Field>
-                      <FieldLabel htmlFor="machine-name">Machine Name</FieldLabel>
-                      <Input id="machine-name" placeholder="e.g. Prusa MK4" required />
+                      <FieldLabel htmlFor="machine-name">
+                        Machine Name
+                      </FieldLabel>
+                      <Input
+                        id="machine-name"
+                        placeholder="e.g. Prusa MK4"
+                        required
+                      />
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="machine-description">Description</FieldLabel>
-                      <Textarea 
-                        id="machine-description" 
+                      <FieldLabel htmlFor="machine-description">
+                        Description
+                      </FieldLabel>
+                      <Textarea
+                        id="machine-description"
                         placeholder="Describe the machine..."
                         className="resize-height w-full"
                         rows={4}
@@ -70,7 +90,6 @@ export function AddMachineForm() {
                   </FieldGroup>
                 </CardContent>
               </Card>
-              
             </FieldSet>
           </div>
 
@@ -86,9 +105,7 @@ export function AddMachineForm() {
             <FieldSet>
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-bold text-lg">
-                      Details
-                  </CardTitle>
+                  <CardTitle className="font-bold text-lg">Details</CardTitle>
                 </CardHeader>
 
                 <CardContent>
@@ -101,9 +118,13 @@ export function AddMachineForm() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="3D Printer">3D Printer</SelectItem>
+                            <SelectItem value="3D Printer">
+                              3D Printer
+                            </SelectItem>
                             <SelectItem value="CNC Mill">CNC Mill</SelectItem>
-                            <SelectItem value="Laser Cutter">Laser Cutter</SelectItem>
+                            <SelectItem value="Laser Cutter">
+                              Laser Cutter
+                            </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -117,8 +138,12 @@ export function AddMachineForm() {
                         <SelectContent>
                           <SelectGroup>
                             <SelectItem value="Available">Available</SelectItem>
-                            <SelectItem value="Unavailable">Unavailable</SelectItem>
-                            <SelectItem value="Under Maintenance">Under Maintenance</SelectItem>
+                            <SelectItem value="Unavailable">
+                              Unavailable
+                            </SelectItem>
+                            <SelectItem value="Under Maintenance">
+                              Under Maintenance
+                            </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -126,8 +151,6 @@ export function AddMachineForm() {
                   </FieldGroup>
                 </CardContent>
               </Card>
-              
-             
             </FieldSet>
           </div>
         </div>
@@ -139,7 +162,7 @@ export function AddMachineForm() {
             title="Cancel Machine Addition?"
             description="Are you sure you want to cancel adding this machine?"
             baseActionText="Cancel"
-            confirmButtonText="Confirm"      
+            confirmButtonText="Confirm"
           />
           <Button
             type="submit"
