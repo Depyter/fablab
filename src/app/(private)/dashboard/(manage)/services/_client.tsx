@@ -37,7 +37,11 @@ export function ServicesListClient({
               available for clients to browse and request.
             </p>
           </div>
-          <CardButton path="/dashboard/services/add-service" title="Add Service" description="Click to add a new service to the catalogue" />
+          <CardButton
+            path="/dashboard/services/add-service"
+            title="Add Service"
+            description="Click to add a new service to the catalogue"
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -53,7 +57,11 @@ export function ServicesListClient({
               unit={service.unitPrice}
             />
           ))}
-          <CardButton path="/dashboard/services/add-service" title="Add Service" description="Click to add a new service to the catalogue" />
+          <CardButton
+            path="/dashboard/services/add-service"
+            title="Add Service"
+            description="Click to add a new service to the catalogue"
+          />
         </div>
       )}
     </div>

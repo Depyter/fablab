@@ -5,12 +5,12 @@ import { CirclePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface CardButtonProps {
-  path : string;
+  path: string;
   title: string;
   description: string;
 }
 
-export function CardButton({path, title, description}: CardButtonProps) {
+export function CardButton({ path, title, description }: CardButtonProps) {
   const router = useRouter();
 
   return (
@@ -29,9 +29,7 @@ export function CardButton({path, title, description}: CardButtonProps) {
       <CirclePlus className="size-10 text-primary transition-transform duration-200 group-hover:scale-110" />
       <div className="flex flex-col items-center gap-1 text-center px-6">
         <p className="text-lg font-semibold text-primary">{title}</p>
-        <p className="text-sm text-muted-foreground">
-          {description}
-        </p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </Card>
   );

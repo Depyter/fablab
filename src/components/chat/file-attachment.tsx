@@ -10,6 +10,7 @@ import {
   FileImage,
   FileVideo,
   Box,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -164,9 +165,7 @@ export function getFileInfo(
 }
 
 // ---------------------------------------------------------------------------
-// FileAttachmentCard — horizontal card used for file attachments and 3D model
-// single-item view. Renders as an <a> when `href` is provided, or a <div>
-// when used as a clickable button wrapper (e.g. inside a <button>).
+// FileAttachmentCard — following Shadcn UI Kit Chat styles
 // ---------------------------------------------------------------------------
 
 interface FileAttachmentCardProps {
@@ -191,38 +190,68 @@ export function FileAttachmentCard({
     <>
       <div
         className={cn(
-          "shrink-0 rounded-md p-2",
-          isCurrentUser ? "bg-primary-foreground/15" : bgClass,
+          "shrink-0 rounded-lg p-2.5 flex items-center justify-center transition-colors",
+          isCurrentUser ? "bg-white/10" : bgClass,
         )}
       >
         <Icon
-          className={cn(
-            "h-7 w-7",
-            isCurrentUser ? "text-primary-foreground" : colorClass,
-          )}
+          className={cn("h-5 w-5", isCurrentUser ? "text-white" : colorClass)}
         />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate leading-tight">{fileName}</p>
-        <p
-          className={cn(
-            "text-xs mt-0.5 uppercase",
-            isCurrentUser
-              ? "text-primary-foreground/60"
-              : "text-muted-foreground",
-          )}
-        >
-          {label}
+      <div className="min-w-0 flex-1 flex flex-col justify-center">
+        <p className="text-sm font-bold truncate leading-tight mb-0.5">
+          {fileName}
         </p>
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "text-[10px] font-black uppercase tracking-widest opacity-60",
+              isCurrentUser ? "text-white/80" : "text-muted-foreground",
+            )}
+          >
+            {label}
+          </span>
+          <div
+            className={cn(
+              "h-1 w-1 rounded-full opacity-30",
+              isCurrentUser ? "bg-white" : "bg-black",
+            )}
+          />
+          <span
+            className={cn(
+              "text-[10px] font-bold opacity-40",
+              isCurrentUser ? "text-white" : "text-black",
+            )}
+          >
+            ATTACHMENT
+          </span>
+        </div>
       </div>
+      {href && (
+        <div className="shrink-0 pl-2">
+          <div
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              isCurrentUser ? "hover:bg-white/10" : "hover:bg-black/5",
+            )}
+          >
+            <Download
+              className={cn(
+                "h-4 w-4 opacity-50",
+                isCurrentUser ? "text-white" : "text-muted-foreground",
+              )}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 
   const sharedClassName = cn(
-    "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-opacity hover:opacity-80",
+    "group flex items-center gap-4 rounded-2xl border px-3 py-2.5 transition-all duration-200",
     isCurrentUser
-      ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
-      : "border-border bg-muted/40 text-foreground",
+      ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
+      : "border-border/50 bg-secondary/50 text-foreground hover:bg-secondary/80",
     className,
   );
 
@@ -243,8 +272,7 @@ export function FileAttachmentCard({
 }
 
 // ---------------------------------------------------------------------------
-// FileAttachmentThumbnail — compact square thumbnail used inside the media
-// grid for 3D models (and potentially other non-visual file types).
+// FileAttachmentThumbnail — compact version used for non-media grid items
 // ---------------------------------------------------------------------------
 
 interface FileAttachmentThumbnailProps {
@@ -265,39 +293,36 @@ export function FileAttachmentThumbnail({
   return (
     <div
       className={cn(
-        "w-full h-full border flex flex-col items-center justify-center p-2 text-center transition-colors hover:bg-muted/80",
+        "w-full h-full border-0 flex flex-col items-center justify-center p-3 text-center transition-all duration-200",
         isCurrentUser
-          ? "bg-primary-foreground/10 text-primary-foreground"
-          : "bg-muted text-foreground",
+          ? "bg-white/5 text-white hover:bg-white/10"
+          : "bg-muted/50 text-foreground hover:bg-muted/80",
         className,
       )}
     >
       <div
         className={cn(
-          "rounded-md p-1.5 mb-1",
-          isCurrentUser ? "bg-primary-foreground/15" : bgClass,
+          "rounded-xl p-2.5 mb-2 shadow-sm",
+          isCurrentUser ? "bg-white/10" : bgClass,
         )}
       >
         <Icon
-          className={cn(
-            "h-5 w-5",
-            isCurrentUser ? "text-primary-foreground" : colorClass,
-          )}
+          className={cn("h-6 w-6", isCurrentUser ? "text-white" : colorClass)}
         />
       </div>
-      <p className="text-xs font-medium truncate w-full leading-tight">
-        {fileName}
-      </p>
-      <p
-        className={cn(
-          "text-xs mt-0.5 uppercase",
-          isCurrentUser
-            ? "text-primary-foreground/60"
-            : "text-muted-foreground",
-        )}
-      >
-        {label}
-      </p>
+      <div className="w-full space-y-0.5">
+        <p className="text-xs font-bold truncate leading-tight w-full px-1">
+          {fileName}
+        </p>
+        <p
+          className={cn(
+            "text-[9px] font-black uppercase tracking-widest opacity-40",
+            isCurrentUser ? "text-white/80" : "text-muted-foreground",
+          )}
+        >
+          {label}
+        </p>
+      </div>
     </div>
   );
 }

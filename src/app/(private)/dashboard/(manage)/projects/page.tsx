@@ -1,6 +1,13 @@
 "use client";
 
-import { PackageOpen, Plus, Search, Calendar, LayoutGrid, List } from "lucide-react";
+import {
+  PackageOpen,
+  Plus,
+  Search,
+  Calendar,
+  LayoutGrid,
+  List,
+} from "lucide-react";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectCalendarView } from "@/components/projects/project-calendar-view";
 import { Button } from "@/components/ui/button";

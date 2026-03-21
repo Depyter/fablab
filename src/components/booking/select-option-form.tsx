@@ -4,9 +4,8 @@ import {
   FieldDescription,
   FieldLabel,
   FieldTitle,
-} from "@/components/ui/field"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-
+} from "@/components/ui/field";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export function RadioGroupChoiceCard() {
   return (
@@ -26,12 +25,13 @@ export function RadioGroupChoiceCard() {
         <Field orientation="horizontal">
           <FieldContent>
             <FieldTitle>Buy From Fablab</FieldTitle>
-            <FieldDescription>For client with no on hand materials.</FieldDescription>
+            <FieldDescription>
+              For client with no on hand materials.
+            </FieldDescription>
           </FieldContent>
           <RadioGroupItem value="pro" id="pro-plan" />
         </Field>
       </FieldLabel>
-      
     </RadioGroup>
-  )
+  );
 }

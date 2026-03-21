@@ -15,25 +15,24 @@ import { MachineDetails } from "@/components/inventory/machine-details";
 
 interface MachineCardProps {
   // required
-//   slug: string;
-//   imageSrc: string;
-    
-    machineName: string;
-    specifications: string;
-    status: string;
-    serviceName: string;
+  //   slug: string;
+  //   imageSrc: string;
 
-   
-    buttonText?: string;
-    showBadge?: boolean;
-    badgeVariant?:
+  machineName: string;
+  specifications: string;
+  status: string;
+  serviceName: string;
+
+  buttonText?: string;
+  showBadge?: boolean;
+  badgeVariant?:
     | "default"
     | "secondary"
     | "destructive"
     | "outline"
     | "ghost"
     | "link";
-    className?: string;
+  className?: string;
 }
 
 export function MachineCard({
@@ -48,12 +47,8 @@ export function MachineCard({
     badgeVariant = "default",
     className = "",
 }: MachineCardProps) {
-
- 
   return (
     <Card className={`relative mx-auto w-full max-w-sm pt-5 ${className}`}>
-     
-      
       <CardAction
         className={"absolute inset-0 z-40 p-4 flex items-start justify-end"}
       >
@@ -65,19 +60,22 @@ export function MachineCard({
       </CardAction>
       <CardHeader>
         <CardTitle className="font-bold text-xl">{machineName}</CardTitle>
-        <CardDescription>
-          {specifications}
-        </CardDescription>
+        <CardDescription>{specifications}</CardDescription>
       </CardHeader>
 
       <div className="flex-1/2" />
       <CardFooter>
         <Dialog>
           <DialogTrigger asChild>
-              <Button variant="outline" className="rounded-full px-10 bg-primary hover:bg-primary/80 hover:text-white text-white w-full">View Details</Button>
+            <Button
+              variant="outline"
+              className="rounded-full px-10 bg-primary hover:bg-primary/80 hover:text-white text-white w-full"
+            >
+              View Details
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-sm lg:max-w-3xl rounded-xl p-10">
-              <MachineDetails />
+            <MachineDetails />
           </DialogContent>
         </Dialog>
       </CardFooter>

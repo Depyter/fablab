@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,12 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card";
 
 import { InfoIcon, ChevronLeft } from "lucide-react"
 
@@ -27,7 +24,7 @@ import { EstimateProjectDetails } from "./estimate-dialog"
 import { ActionDialog } from "../action-dialog"
 import { DateTimePicker } from "./date-time-picker"
 
-interface BookingDialog{
+interface BookingDialog {
   serviceName: string;
   requirements: string[];
 }
@@ -250,5 +247,5 @@ export function BookingDialog({serviceName, requirements}:BookingDialog) {
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

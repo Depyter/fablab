@@ -1,10 +1,9 @@
 "use client";
 
-import { Car, Search, } from "lucide-react";
+import { Car, Search } from "lucide-react";
 import { MachineCard } from "@/components/inventory/machine-card";
 import { Input } from "@/components/ui/input";
 import { CardButton } from "../card-button";
-
 
 const machines = [
   {
@@ -24,11 +23,19 @@ const machines = [
 ];
 
 export function MachinesListView() {
- 
-
   return (
     <div className="flex flex-col h-full bg-background">
-        
+      <div className="p-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {machines.map((machine) => (
+            <MachineCard
+              key={machine.machineId}
+              machineName={machine.name}
+              specifications={machine.specs}
+              serviceName={machine.service}
+              status={machine.status}
+            />
+          ))}
 
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -51,7 +58,7 @@ export function MachinesListView() {
           </div>
           
         </div>
-        
+      </div>
     </div>
   );
 }

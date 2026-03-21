@@ -102,6 +102,18 @@ function MediaLightbox({
                 <X className="h-6 w-6" />
               </button>
             </DialogClose>
+            <div className="flex flex-col items-end gap-0.5">
+              {f.originalName && (
+                <span className="text-sm font-medium text-white/90 truncate max-w-xs">
+                  {f.originalName}
+                </span>
+              )}
+              {f.fileType && (
+                <span className="text-xs text-white/40 uppercase tracking-widest">
+                  {f.fileType.split("/").pop()}
+                </span>
+              )}
+            </div>
           </div>
 
           <div
