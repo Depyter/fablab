@@ -8,8 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { stat } from "fs";
-// import Image from "next/image";
 import Link from "next/link";
 
 interface ProjectCardProps {

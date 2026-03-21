@@ -34,11 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  UsageTable,
-  type Machine,
-  type MachineUsage,
-} from "../../../../../../components/scheduling/usage-table/usage-table";
+import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
 
 // --- Mock Data Mocking the Joined Convex Query Results ---
 // This data structure mimics what query.ts returns: usage joined with project, maker, and machine.
@@ -172,14 +168,7 @@ export function ProjectCalendarView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative w-full max-w-50">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search machines..."
-              className="pl-8 w-full h-9"
-            />
-          </div>
+          <div className="relative w-full max-w-50"></div>
           <Button variant="default" size="sm" className="gap-1">
             <Plus className="h-4 w-4" />
             Add Usage
@@ -243,7 +232,6 @@ export function ProjectCalendarView() {
         <div className="flex items-center gap-3 self-end md:self-auto">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Filter className="h-3 w-3" />
               View:
             </span>
             <Select

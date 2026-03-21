@@ -142,6 +142,7 @@ function MediaLightbox({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : f.fileType === "image/svg+xml" ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 key={f.fileUrl}
                 src={f.fileUrl}
@@ -299,6 +300,7 @@ export function MediaGallery({
               </div>
             </div>
           ) : f.fileType === "image/svg+xml" ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={f.fileUrl}
               alt="SVG attachment"
@@ -378,6 +380,7 @@ export function MediaGallery({
                   )}
                 </div>
               ) : f.fileType === "image/svg+xml" ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={f.fileUrl}
                   alt={`SVG ${i + 1}`}
@@ -388,6 +391,7 @@ export function MediaGallery({
                   )}
                 />
               ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={f.fileUrl}
                   alt={`Image ${i + 1}`}

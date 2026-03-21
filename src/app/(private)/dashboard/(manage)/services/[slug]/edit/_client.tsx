@@ -200,25 +200,27 @@ export function EditServiceClient({
   });
 
   const handleDeleteService = async () => {
-     
-      if (!service) return;
-        setIsDeleting(true);
-      try {
-        await deleteService({
-          service: service._id as Id<"services">,
-        });
-        toast.promise<{name: string}>(
-          () => new Promise((resolve) => setTimeout(() => resolve({name: service.name}), 1000)),
-          {
-            loading: "Deleting service...",
-            success: (data) => `Service "${data.name}" deleted successfully!`,
-            error: "Failed to delete service. Please try again.",
-          }
-        )
-        router.push("/dashboard/services");
-      } catch {
-        setIsDeleting(false);
-      }
+    if (!service) return;
+    setIsDeleting(true);
+    try {
+      await deleteService({
+        service: service._id as Id<"services">,
+      });
+      toast.promise<{ name: string }>(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ name: service.name }), 1000),
+          ),
+        {
+          loading: "Deleting service...",
+          success: (data) => `Service "${data.name}" deleted successfully!`,
+          error: "Failed to delete service. Please try again.",
+        },
+      );
+      router.push("/dashboard/services");
+    } catch {
+      setIsDeleting(false);
+    }
   };
 
   // Guard against the service being deleted while the user is on this page.
@@ -271,7 +273,7 @@ export function EditServiceClient({
               {submitError}
             </p>
           )}
-        <ActionDialog
+          <ActionDialog
             onConfirm={handleDeleteService}
             title="Delete Service?"
             description="Are you sure you want to delete this service? This action cannot be undone."
@@ -291,7 +293,7 @@ export function EditServiceClient({
             confirmButtonText="Confirm"
             className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
           />
-        
+
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (

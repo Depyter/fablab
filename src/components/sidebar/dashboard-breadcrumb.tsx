@@ -12,7 +12,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { cn } from "@/lib/utils";
 
 const SECTION_LABELS: Record<string, string> = {
   chat: "Messages",

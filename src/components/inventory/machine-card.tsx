@@ -8,9 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { stat } from "fs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MachineDetails } from "@/components/inventory/machine-details";
 
 interface MachineCardProps {
@@ -36,16 +34,15 @@ interface MachineCardProps {
 }
 
 export function MachineCard({
-//   slug,
-//   imageSrc,
-    machineName,
-    specifications,
-    
-    status,
-    buttonText = "View Details",
-    showBadge = true,
-    badgeVariant = "default",
-    className = "",
+  //   slug,
+  //   imageSrc,
+  machineName,
+  specifications,
+
+  status,
+  showBadge = true,
+  badgeVariant = "default",
+  className = "",
 }: MachineCardProps) {
   return (
     <Card className={`relative mx-auto w-full max-w-sm pt-5 ${className}`}>
@@ -53,7 +50,7 @@ export function MachineCard({
         className={"absolute inset-0 z-40 p-4 flex items-start justify-end"}
       >
         {showBadge && (
-          <Badge  variant={badgeVariant} className="h-8 rounded-lg">
+          <Badge variant={badgeVariant} className="h-8 rounded-lg">
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
         )}

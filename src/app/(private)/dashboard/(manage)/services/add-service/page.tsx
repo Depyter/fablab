@@ -144,7 +144,6 @@ export default function AddServicePage() {
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
-
               <Button
                 type="button"
                 className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"

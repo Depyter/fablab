@@ -34,29 +34,17 @@ export function MachinesListView() {
               specifications={machine.specs}
               serviceName={machine.service}
               status={machine.status}
-            />
-          ))}
-
-        <div className="p-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {machines.map((machine) => (
-              <MachineCard
-                key={machine.machineId}
-                machineName={machine.name}
-                specifications={machine.specs}
-                serviceName={machine.service}
-                status={machine.status}
-                badgeVariant={machine.status === "available"
+              badgeVariant={
+                machine.status === "available"
                   ? "secondary"
                   : machine.status === "maintenance"
                     ? "destructive"
-                    : "outline"}
-              />
-            ))}
+                    : "outline"
+              }
+            />
+          ))}
 
-            {/* <CardButton path="/dashboard/inventory/add-machine" title="Add Machine" description="Register a new machine in the inventory" /> */}
-          </div>
-          
+          {/* <CardButton path="/dashboard/inventory/add-machine" title="Add Machine" description="Register a new machine in the inventory" /> */}
         </div>
       </div>
     </div>

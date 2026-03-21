@@ -3,14 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -27,7 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Dialog } from "radix-ui";
 import { ActionDialog } from "@/components/action-dialog";
 import { toast } from "sonner";
 
@@ -38,15 +30,12 @@ export function AddMachineForm() {
     // Simulate network request
     await new Promise((resolve) => setTimeout(resolve, 1000));
     // toast.success("Machine added successfully!", {position: "top-center"});
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1000)),
-      {
-        loading: "Adding machine...",
-        success: "Machine added successfully!",
-        error: "Failed to add machine. Please try again.",
-        position: "top-center",
-      }
-    );
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: "Adding machine...",
+      success: "Machine added successfully!",
+      error: "Failed to add machine. Please try again.",
+      position: "top-center",
+    });
   };
 
   return (
@@ -179,7 +168,6 @@ export function AddMachineForm() {
             type="submit"
             form="add-machine-form" // Associate with the form
             className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
-            
           >
             Add Machine
           </Button>
