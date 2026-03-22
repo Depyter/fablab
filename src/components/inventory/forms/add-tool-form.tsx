@@ -1,10 +1,11 @@
 "use client";
 
-export function AddToolForm() {
-  return (
-    <div>
-      <h3 className="font-medium text-lg mb-4">Add New Tool</h3>
-      <p>Tool form will be here.</p>
-    </div>
-  );
+import { InventoryItemForm } from "./inventory-item-form";
+
+interface AddToolFormProps {
+  onSuccess?: () => void;
+}
+
+export function AddToolForm({ onSuccess }: AddToolFormProps) {
+  return <InventoryItemForm itemType="tool" mode="add" onSuccess={onSuccess} />;
 }

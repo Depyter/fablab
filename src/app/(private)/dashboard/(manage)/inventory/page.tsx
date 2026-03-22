@@ -4,8 +4,8 @@ import { InventoryTab } from "@/components/inventory/tabs";
 import { Button } from "@/components/ui/button";
 import { AddRoomForm } from "@/components/inventory/forms/add-room-form";
 import { AddToolForm } from "@/components/inventory/forms/add-tool-form";
-
 import { AddMachineForm } from "@/components/inventory/forms/add-machine-form";
+import { AddMiscForm } from "@/components/inventory/forms/add-misc-form";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -51,7 +51,7 @@ export default function InventoryPage() {
                   </DropdownMenuItem>
                 </DialogTrigger>
                 <DialogContent
-                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-10"
+                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
                   showCloseButton={false}
                 >
                   <AddMachineForm />
@@ -63,7 +63,10 @@ export default function InventoryPage() {
                     Add tool
                   </DropdownMenuItem>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-sm rounded-xl">
+                <DialogContent
+                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+                  showCloseButton={false}
+                >
                   <AddToolForm />
                 </DialogContent>
               </Dialog>
@@ -73,8 +76,24 @@ export default function InventoryPage() {
                     Add room
                   </DropdownMenuItem>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-sm rounded-xl">
+                <DialogContent
+                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+                  showCloseButton={false}
+                >
                   <AddRoomForm />
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    Add misc item
+                  </DropdownMenuItem>
+                </DialogTrigger>
+                <DialogContent
+                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+                  showCloseButton={false}
+                >
+                  <AddMiscForm />
                 </DialogContent>
               </Dialog>
             </DropdownMenuContent>

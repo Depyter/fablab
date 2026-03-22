@@ -1,10 +1,11 @@
 "use client";
 
-export function AddRoomForm() {
-  return (
-    <div>
-      <h3 className="font-medium text-lg mb-4">Add New Room</h3>
-      <p>Room form will be here.</p>
-    </div>
-  );
+import { InventoryItemForm } from "./inventory-item-form";
+
+interface AddRoomFormProps {
+  onSuccess?: () => void;
+}
+
+export function AddRoomForm({ onSuccess }: AddRoomFormProps) {
+  return <InventoryItemForm itemType="room" mode="add" onSuccess={onSuccess} />;
 }
