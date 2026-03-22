@@ -9,7 +9,7 @@ import { AddRoomForm } from "@/components/inventory/forms/add-room-form";
 import { AddToolForm } from "@/components/inventory/forms/add-tool-form";
 import { AddMachineForm } from "@/components/inventory/forms/add-machine-form";
 import { AddMiscForm } from "@/components/inventory/forms/add-misc-form";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,60 +57,57 @@ export function InventoryClient({ preloadedResources }: InventoryClientProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center">
-              <Dialog open={machineOpen} onOpenChange={setMachineOpen}>
-                <DialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Add machine
-                  </DropdownMenuItem>
-                </DialogTrigger>
-                <DialogContent
-                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-                  showCloseButton={false}
-                >
-                  <AddMachineForm onSuccess={() => setMachineOpen(false)} />
-                </DialogContent>
-              </Dialog>
-              <Dialog open={toolOpen} onOpenChange={setToolOpen}>
-                <DialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Add tool
-                  </DropdownMenuItem>
-                </DialogTrigger>
-                <DialogContent
-                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-                  showCloseButton={false}
-                >
-                  <AddToolForm onSuccess={() => setToolOpen(false)} />
-                </DialogContent>
-              </Dialog>
-              <Dialog open={roomOpen} onOpenChange={setRoomOpen}>
-                <DialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Add room
-                  </DropdownMenuItem>
-                </DialogTrigger>
-                <DialogContent
-                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-                  showCloseButton={false}
-                >
-                  <AddRoomForm onSuccess={() => setRoomOpen(false)} />
-                </DialogContent>
-              </Dialog>
-              <Dialog open={miscOpen} onOpenChange={setMiscOpen}>
-                <DialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Add misc item
-                  </DropdownMenuItem>
-                </DialogTrigger>
-                <DialogContent
-                  className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-                  showCloseButton={false}
-                >
-                  <AddMiscForm onSuccess={() => setMiscOpen(false)} />
-                </DialogContent>
-              </Dialog>
+              <DropdownMenuItem onSelect={() => setMachineOpen(true)}>
+                Add machine
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setToolOpen(true)}>
+                Add tool
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setRoomOpen(true)}>
+                Add room
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
+                Add misc item
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Dialogs rendered outside DropdownMenu to prevent unmounting/hydration issues */}
+          <Dialog open={machineOpen} onOpenChange={setMachineOpen}>
+            <DialogContent
+              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+              showCloseButton={false}
+            >
+              <AddMachineForm onSuccess={() => setMachineOpen(false)} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={toolOpen} onOpenChange={setToolOpen}>
+            <DialogContent
+              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+              showCloseButton={false}
+            >
+              <AddToolForm onSuccess={() => setToolOpen(false)} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={roomOpen} onOpenChange={setRoomOpen}>
+            <DialogContent
+              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+              showCloseButton={false}
+            >
+              <AddRoomForm onSuccess={() => setRoomOpen(false)} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={miscOpen} onOpenChange={setMiscOpen}>
+            <DialogContent
+              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+              showCloseButton={false}
+            >
+              <AddMiscForm onSuccess={() => setMiscOpen(false)} />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
       <InventoryTab items={resources ?? []} />
