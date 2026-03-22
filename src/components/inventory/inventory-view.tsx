@@ -23,7 +23,7 @@ export function InventoryListView({ items }: InventoryListViewProps) {
       <div className="p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map((item) => (
-            <InventoryCard key={item.id} item={item} />
+            <InventoryCard key={item._id} item={item} />
           ))}
         </div>
       </div>

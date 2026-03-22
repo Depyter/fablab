@@ -1,3 +1,5 @@
+import { useState } from "react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,13 +17,14 @@ import {
 } from "@/components/inventory/forms/inventory-item-form";
 
 export interface InventoryItem {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   type: string;
-  status: string;
-  itemType: InventoryItemType;
-  thumbnail?: string[];
+  category: InventoryItemType;
+  status: "Available" | "Unavailable" | "Under Maintenance";
+  images: string[];
+  imageUrls: string[];
 }
 
 interface InventoryCardProps {
@@ -43,6 +46,8 @@ export function InventoryCard({
   showBadge = true,
   className = "",
 }: InventoryCardProps) {
+  const [open, setOpen] = useState(false);
+
   return (
     <Card
       className={`relative mx-auto w-full max-w-sm pt-5 flex flex-col ${className}`}
@@ -61,6 +66,18 @@ export function InventoryCard({
           </Badge>
         )}
       </CardAction>
+
+      {item.imageUrls && item.imageUrls.length > 0 && (
+        <div className="px-6 mb-4 h-40 w-full relative">
+          <Image
+            src={item.imageUrls[0]}
+            alt={item.name}
+            fill
+            className="object-cover rounded-lg border"
+          />
+        </div>
+      )}
+
       <CardHeader>
         <CardTitle className="font-bold text-xl">{item.name}</CardTitle>
         <CardDescription className="line-clamp-2">
@@ -71,7 +88,7 @@ export function InventoryCard({
       <div className="grow" />
 
       <CardFooter>
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button
               variant="outline"
@@ -82,15 +99,17 @@ export function InventoryCard({
           </DialogTrigger>
           <DialogContent className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden">
             <InventoryItemForm
-              itemType={item.itemType}
+              itemType={item.category}
               mode="edit"
               initialValues={{
+                _id: item._id,
                 name: item.name,
                 description: item.description,
                 type: item.type,
                 status: item.status,
-                thumbnail: item.thumbnail ?? [],
+                thumbnail: item.images,
               }}
+              onSuccess={() => setOpen(false)}
             />
           </DialogContent>
         </Dialog>
