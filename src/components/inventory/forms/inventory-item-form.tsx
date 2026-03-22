@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/file-upload/file-upload";
+import type { UploadedFile } from "@/components/file-upload/types";
 import {
   Card,
   CardContent,
@@ -91,6 +92,7 @@ interface InventoryItemFormProps {
   itemType: InventoryItemType;
   mode?: "add" | "edit";
   initialValues?: Partial<InventoryItemFormValues> & { _id?: string };
+  initialImages?: UploadedFile[];
   onSuccess?: () => void;
 }
 
@@ -98,6 +100,7 @@ export function InventoryItemForm({
   itemType,
   mode = "add",
   initialValues,
+  initialImages = [],
   onSuccess,
 }: InventoryItemFormProps) {
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
@@ -107,6 +110,12 @@ export function InventoryItemForm({
   const addResource = useMutation(api.resource.mutate.addResource);
   const updateResource = useMutation(api.resource.mutate.updateResource);
   const deleteResource = useMutation(api.resource.mutate.deleteResource);
+  const addImageToResource = useMutation(
+    api.resource.mutate.addImageToResource,
+  );
+  const deleteImageFromResource = useMutation(
+    api.resource.mutate.deleteImageFromResource,
+  );
 
   const handleThumbnailUploading = useCallback(
     (isUploading: boolean) => setThumbnailUploading(isUploading),
@@ -258,9 +267,28 @@ export function InventoryItemForm({
               name="thumbnail"
               children={(field) => (
                 <FileUpload
-                  title="Thumbnail"
+                  title="Images"
                   accept="image/png, image/jpeg, image/jpg"
-                  multiple={false}
+                  multiple={true}
+                  value={initialImages}
+                  onAddFile={
+                    isEdit
+                      ? (file) =>
+                          addImageToResource({
+                            resource: initialValues?._id as Id<"resources">,
+                            image: file.storageId as Id<"_storage">,
+                          })
+                      : undefined
+                  }
+                  onRemoveFile={
+                    isEdit
+                      ? (file) =>
+                          deleteImageFromResource({
+                            resource: initialValues?._id as Id<"resources">,
+                            image: file.storageId as Id<"_storage">,
+                          })
+                      : undefined
+                  }
                   onFilesChange={(files) =>
                     field.handleChange(files.map((f) => f.storageId))
                   }

@@ -73,11 +73,6 @@ export function EditServiceClient({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Snapshot the service's initial storage IDs once on mount so we can diff
-  // them against the form state at submit time.
-  const [originalImages] = useState<string[]>(() => service?.images ?? []);
-  const [originalSamples] = useState<string[]>(() => service?.samples ?? []);
-
   // Convert existing storage IDs into UploadedFile entries so FileUpload can
   // render them as "already uploaded" items.
   const [initialUploadedImages] = useState<UploadedFile[]>(() =>
@@ -134,58 +129,6 @@ export function EditServiceClient({
           status: value.status,
           requirements: value.requirements.filter((r) => r.trim() !== ""),
         });
-
-        // 2. Diff images and call dedicated mutations.
-        const originalImageSet = new Set(originalImages);
-        const newImageSet = new Set(value.images);
-
-        const imagesToRemove = originalImages.filter(
-          (id) => !newImageSet.has(id),
-        );
-        const imagesToAdd = value.images.filter(
-          (id) => !originalImageSet.has(id),
-        );
-
-        await Promise.all([
-          ...imagesToRemove.map((image) =>
-            deleteImageFromService({
-              service: service._id as Id<"services">,
-              image: image as Id<"_storage">,
-            }),
-          ),
-          ...imagesToAdd.map((image) =>
-            addImageToService({
-              service: service._id as Id<"services">,
-              image: image as Id<"_storage">,
-            }),
-          ),
-        ]);
-
-        // 3. Diff samples and call dedicated mutations.
-        const originalSampleSet = new Set(originalSamples);
-        const newSampleSet = new Set(value.samples);
-
-        const samplesToRemove = originalSamples.filter(
-          (id) => !newSampleSet.has(id),
-        );
-        const samplesToAdd = value.samples.filter(
-          (id) => !originalSampleSet.has(id),
-        );
-
-        await Promise.all([
-          ...samplesToRemove.map((sample) =>
-            deleteSampleFromService({
-              service: service._id as Id<"services">,
-              sample: sample as Id<"_storage">,
-            }),
-          ),
-          ...samplesToAdd.map((sample) =>
-            addSampleToService({
-              service: service._id as Id<"services">,
-              sample: sample as Id<"_storage">,
-            }),
-          ),
-        ]);
 
         // Navigate to the (possibly renamed) service detail page.
         router.push(`/dashboard/services/`);
@@ -329,6 +272,18 @@ export function EditServiceClient({
                 title="Sample Projects"
                 accept="image/png, image/jpeg, image/jpg"
                 value={initialUploadedSamples}
+                onAddFile={(file) =>
+                  addSampleToService({
+                    service: service._id as Id<"services">,
+                    sample: file.storageId as Id<"_storage">,
+                  })
+                }
+                onRemoveFile={(file) =>
+                  deleteSampleFromService({
+                    service: service._id as Id<"services">,
+                    sample: file.storageId as Id<"_storage">,
+                  })
+                }
                 onFilesChange={(files) =>
                   field.handleChange(files.map((f) => f.storageId))
                 }
@@ -349,6 +304,18 @@ export function EditServiceClient({
                   title="Thumbnail"
                   accept="image/png, image/jpeg, image/jpg"
                   value={initialUploadedImages}
+                  onAddFile={(file) =>
+                    addImageToService({
+                      service: service._id as Id<"services">,
+                      image: file.storageId as Id<"_storage">,
+                    })
+                  }
+                  onRemoveFile={(file) =>
+                    deleteImageFromService({
+                      service: service._id as Id<"services">,
+                      image: file.storageId as Id<"_storage">,
+                    })
+                  }
                   onFilesChange={(files) =>
                     field.handleChange(files.map((f) => f.storageId))
                   }

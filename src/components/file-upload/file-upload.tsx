@@ -119,9 +119,11 @@ function UploadedThumb({ uf, size }: { uf: UploadedFile; size: "sm" | "md" }) {
 
 export function FileUpload({
   title,
+  onAddFile,
   onUploadComplete,
   onUploadError,
   onFilesChange,
+  onRemoveFile,
   onUploadingChange,
   maxFiles = 10,
   maxFileSizeMB = 100,
@@ -153,9 +155,11 @@ export function FileUpload({
     disabled,
     autoUpload,
     value,
+    onAddFile,
     onUploadComplete,
     onUploadError,
     onFilesChange,
+    onRemoveFile,
     onUploadingChange,
   });
 

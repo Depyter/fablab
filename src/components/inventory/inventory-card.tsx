@@ -109,6 +109,14 @@ export function InventoryCard({
                 status: item.status,
                 thumbnail: item.images,
               }}
+              initialImages={item.images?.map((id, i) => ({
+                storageId: id,
+                fileName: `Image ${i + 1}`,
+                fileType: "image/jpeg",
+                fileSize: 0,
+                uploadedAt: new Date(),
+                url: item.imageUrls?.[i],
+              }))}
               onSuccess={() => setOpen(false)}
             />
           </DialogContent>

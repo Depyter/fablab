@@ -1,6 +1,6 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority, claimFiles } from "../helper";
+import { checkAuthority, claimFiles, deleteFiles } from "../helper";
 
 export const addResource = mutation({
   args: {
@@ -54,14 +54,102 @@ export const updateResource = mutation({
       ),
     ),
   },
-  handler: async (ctx, args) => {},
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot update resource.");
+
+    const updates: Partial<{
+      name: string;
+      type: string;
+      description: string;
+      status: "Unavailable" | "Available" | "Under Maintenance";
+    }> = {};
+
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.type !== undefined) updates.type = args.type;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.status !== undefined) updates.status = args.status;
+
+    await ctx.db.patch(args.id, updates);
+  },
 });
 
 export const deleteResource = mutation({
   args: {
     id: v.id("resources"),
   },
-  handler: async (ctx, args) => {},
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot delete resource.");
+
+    const resource = await ctx.db.get(args.id);
+    if (!resource) throw new Error("Resource not found!");
+
+    if (resource.images) {
+      await deleteFiles(ctx, resource.images);
+    }
+
+    await ctx.db.delete(args.id);
+  },
+});
+
+export const addImageToResource = mutation({
+  args: {
+    resource: v.id("resources"),
+    image: v.id("_storage"), // storageID
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot add Image to Resource.");
+
+    const resource = await ctx.db.get(args.resource);
+
+    if (!resource) throw new Error("Resource does not exist!");
+
+    await ctx.db.patch(args.resource, {
+      images: [...resource.images, args.image],
+    });
+
+    claimFiles(ctx, [args.image]);
+  },
+});
+
+export const deleteImageFromResource = mutation({
+  args: {
+    resource: v.id("resources"),
+    image: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot delete Image from Resource.");
+
+    const resource = await ctx.db.get(args.resource);
+
+    if (!resource) throw new Error("Resource does not exist!");
+    const updatedList = resource.images.filter((id) => id !== args.image);
+
+    await ctx.db.patch(args.resource, {
+      images: updatedList,
+    });
+
+    deleteFiles(ctx, [args.image]);
+  },
 });
 
 export const addUsage = mutation({

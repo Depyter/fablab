@@ -11,9 +11,11 @@ export interface UseFileUploadOptions {
   disabled?: boolean;
   autoUpload?: boolean;
   value?: UploadedFile[];
+  onAddFile?: (file: UploadedFile) => void;
   onUploadComplete?: (file: UploadedFile) => void;
   onUploadError?: (error: Error, file: File) => void;
   onFilesChange?: (files: UploadedFile[]) => void;
+  onRemoveFile?: (file: UploadedFile) => void;
   onUploadingChange?: (isUploading: boolean) => void;
 }
 
@@ -40,9 +42,11 @@ export function useFileUpload({
   disabled = false,
   autoUpload = true,
   value = [],
+  onAddFile,
   onUploadComplete,
   onUploadError,
   onFilesChange,
+  onRemoveFile,
   onUploadingChange,
 }: UseFileUploadOptions = {}): UseFileUploadReturn {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
@@ -160,6 +164,7 @@ export function useFileUpload({
         );
 
         setUploadedFiles((prev) => [...prev, uploadedFile]);
+        onAddFile?.(uploadedFile);
         onUploadComplete?.(uploadedFile);
 
         setTimeout(() => {
@@ -187,6 +192,7 @@ export function useFileUpload({
       generateUploadUrl,
       trackUpload,
       maxFileSizeMB,
+      onAddFile,
       onUploadComplete,
       onUploadError,
     ],
@@ -278,9 +284,18 @@ export function useFileUpload({
     });
   }, []);
 
-  const removeUploadedFile = useCallback((index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  const removeUploadedFile = useCallback(
+    (index: number) => {
+      setUploadedFiles((prev) => {
+        const fileToRemove = prev[index];
+        if (fileToRemove) {
+          onRemoveFile?.(fileToRemove);
+        }
+        return prev.filter((_, i) => i !== index);
+      });
+    },
+    [onRemoveFile],
+  );
 
   const clearAll = useCallback(() => {
     setUploadingFiles((prev) => {
@@ -293,8 +308,11 @@ export function useFileUpload({
       });
       return [];
     });
-    setUploadedFiles([]);
-  }, []);
+    setUploadedFiles((prev) => {
+      prev.forEach((file) => onRemoveFile?.(file));
+      return [];
+    });
+  }, [onRemoveFile]);
 
   const triggerFileSelect = useCallback(() => {
     if (!disabled) fileInputRef.current?.click();
