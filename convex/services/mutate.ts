@@ -185,10 +185,8 @@ export const deleteService = mutation({
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service not found!");
-    await Promise.all(service.images.map((image) => ctx.storage.delete(image)));
-    await Promise.all(
-      service.samples.map((image) => ctx.storage.delete(image)),
-    );
+    await deleteFiles(ctx, service.images);
+    await deleteFiles(ctx, service.samples);
     await ctx.db.delete("services", args.service);
   },
 });

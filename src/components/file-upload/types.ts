@@ -17,9 +17,11 @@ export interface UploadingFile {
 
 export interface FileUploadProps {
   title: string;
+  onAddFile?: (file: UploadedFile) => void;
   onUploadComplete?: (file: UploadedFile) => void;
   onUploadError?: (error: Error, file: File) => void;
   onFilesChange?: (files: UploadedFile[]) => void;
+  onRemoveFile?: (file: UploadedFile) => void;
   /** Called whenever the in-progress upload state changes. `true` means at least one upload is still pending/uploading. */
   onUploadingChange?: (isUploading: boolean) => void;
   maxFiles?: number;
