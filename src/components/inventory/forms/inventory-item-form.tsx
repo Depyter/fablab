@@ -25,6 +25,9 @@ import { ActionDialog } from "@/components/action-dialog";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { Id } from "@convex/_generated/dataModel";
 
 export type InventoryItemType = "machine" | "tool" | "room" | "misc";
 
@@ -32,7 +35,7 @@ export type InventoryItemFormValues = {
   name: string;
   description: string;
   type: string;
-  status: string;
+  status: "Available" | "Unavailable" | "Under Maintenance";
   thumbnail: string[]; // storage IDs
 };
 
@@ -87,7 +90,7 @@ const ITEM_CONFIG: Record<
 interface InventoryItemFormProps {
   itemType: InventoryItemType;
   mode?: "add" | "edit";
-  initialValues?: Partial<InventoryItemFormValues>;
+  initialValues?: Partial<InventoryItemFormValues> & { _id?: string };
   onSuccess?: () => void;
 }
 
@@ -100,6 +103,10 @@ export function InventoryItemForm({
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const config = useMemo(() => ITEM_CONFIG[itemType], [itemType]);
   const isEdit = mode === "edit";
+
+  const addResource = useMutation(api.resource.mutate.addResource);
+  const updateResource = useMutation(api.resource.mutate.updateResource);
+  const deleteResource = useMutation(api.resource.mutate.deleteResource);
 
   const handleThumbnailUploading = useCallback(
     (isUploading: boolean) => setThumbnailUploading(isUploading),
@@ -115,19 +122,54 @@ export function InventoryItemForm({
       thumbnail: initialValues?.thumbnail ?? ([] as string[]),
     } as InventoryItemFormValues,
     onSubmit: async ({ value }) => {
-      const actionLabel = isEdit ? "Updating" : "Adding";
-      console.log(`${actionLabel} ${config.title}...`, value);
+      const actionPromise = isEdit
+        ? updateResource({
+            id: initialValues?._id as Id<"resources">,
+            name: value.name,
+            description: value.description,
+            category: itemType,
+            type: value.type,
+            images: value.thumbnail as Id<"_storage">[],
+            status: value.status,
+          })
+        : addResource({
+            name: value.name,
+            description: value.description,
+            category: itemType,
+            type: value.type,
+            images: value.thumbnail as Id<"_storage">[],
+            status: value.status,
+          });
 
-      toast.promise(new Promise((resolve) => setTimeout(resolve, 2000)), {
-        loading: `${actionLabel} ${config.title.toLowerCase()}...`,
-        success: `${config.title} ${isEdit ? "updated" : "added"} successfully!`,
-        error: `Failed to ${isEdit ? "update" : "add"} ${config.title.toLowerCase()}. Please try again.`,
+      toast.promise(actionPromise, {
+        loading: `${isEdit ? "Updating" : "Adding"} ${config.title.toLowerCase()}...`,
+        success: () => {
+          onSuccess?.();
+          return `${config.title} ${isEdit ? "updated" : "added"} successfully!`;
+        },
+        error: (err) =>
+          `Failed to ${isEdit ? "update" : "add"} ${config.title.toLowerCase()}: ${err instanceof Error ? err.message : "Please try again."}`,
         position: "top-center",
       });
-
-      onSuccess?.();
     },
   });
+
+  const handleDelete = async () => {
+    if (!initialValues?._id) return;
+
+    toast.promise(
+      deleteResource({ id: initialValues._id as Id<"resources"> }),
+      {
+        loading: `Deleting ${config.title.toLowerCase()}...`,
+        success: () => {
+          onSuccess?.();
+          return `${config.title} deleted successfully!`;
+        },
+        error: "Failed to delete item. Please try again.",
+        position: "top-center",
+      },
+    );
+  };
 
   return (
     <div className="flex flex-col h-full max-h-[80vh] bg-background">
@@ -274,7 +316,11 @@ export function InventoryItemForm({
                           <FieldLabel htmlFor={field.name}>Status</FieldLabel>
                           <Select
                             value={field.state.value}
-                            onValueChange={field.handleChange}
+                            onValueChange={(val) =>
+                              field.handleChange(
+                                val as InventoryItemFormValues["status"],
+                              )
+                            }
                           >
                             <SelectTrigger id={field.name}>
                               <SelectValue placeholder="Select status" />
@@ -304,36 +350,54 @@ export function InventoryItemForm({
         </div>
       </form>
       <footer className="sticky bottom-0 bg-white z-10 p-4 border-t">
-        <div className="flex justify-end gap-3">
-          <ActionDialog
-            onConfirm={() => form.reset()}
-            title={`Cancel ${config.title} ${isEdit ? "Edit" : "Addition"}?`}
-            description={`Are you sure you want to cancel ${isEdit ? "editing" : "adding"} this ${config.title.toLowerCase()}?`}
-            baseActionText="Cancel"
-            confirmButtonText="Confirm"
-          />
+        <div className="flex justify-between items-center gap-3">
+          {isEdit ? (
+            <ActionDialog
+              onConfirm={handleDelete}
+              title={`Delete ${config.title}?`}
+              description={`Are you sure you want to delete this ${config.title.toLowerCase()}? This action cannot be undone.`}
+              baseActionText="Delete"
+              confirmButtonText="Confirm Delete"
+              className="bg-red-500 text-white hover:bg-red-600 hover:text-white px-10 font-medium rounded-lg"
+            />
+          ) : (
+            <div />
+          )}
 
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
-              <Button
-                type="submit"
-                form="inventory-item-form"
-                disabled={!canSubmit || isSubmitting || thumbnailUploading}
-                className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
-              >
-                {isSubmitting
-                  ? isEdit
-                    ? "Saving..."
-                    : "Adding..."
-                  : thumbnailUploading
-                    ? "Uploading..."
-                    : isEdit
-                      ? "Update"
-                      : `Add ${config.title}`}
-              </Button>
-            )}
-          />
+          <div className="flex gap-3">
+            <ActionDialog
+              onConfirm={() => {
+                form.reset();
+                onSuccess?.(); // Close dialog on discard
+              }}
+              title={`Discard ${isEdit ? "Edit" : "Addition"}?`}
+              description={`Are you sure you want to discard your changes?`}
+              baseActionText="Cancel"
+              confirmButtonText="Confirm"
+            />
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  form="inventory-item-form"
+                  disabled={!canSubmit || isSubmitting || thumbnailUploading}
+                  className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
+                >
+                  {isSubmitting
+                    ? isEdit
+                      ? "Saving..."
+                      : "Adding..."
+                    : thumbnailUploading
+                      ? "Uploading..."
+                      : isEdit
+                        ? "Update"
+                        : `Add ${config.title}`}
+                </Button>
+              )}
+            />
+          </div>
         </div>
       </footer>
     </div>
