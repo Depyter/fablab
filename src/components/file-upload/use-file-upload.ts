@@ -284,18 +284,36 @@ export function useFileUpload({
     });
   }, []);
 
-  const removeUploadedFile = useCallback(
-    (index: number) => {
-      setUploadedFiles((prev) => {
-        const fileToRemove = prev[index];
-        if (fileToRemove) {
-          onRemoveFile?.(fileToRemove);
+  const previousUploadedFilesRef = useRef<UploadedFile[]>(value);
+  // Keep track of files being deleted to prevent double-invocation of onRemoveFile
+  const deletingFileIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const previousFiles = previousUploadedFilesRef.current;
+    const currentFiles = uploadedFiles;
+
+    const removedFiles = previousFiles.filter(
+      (prevFile) =>
+        !currentFiles.some(
+          (currFile) => currFile.storageId === prevFile.storageId,
+        ),
+    );
+
+    if (removedFiles.length > 0 && onRemoveFile) {
+      removedFiles.forEach((file) => {
+        if (!deletingFileIdsRef.current.has(file.storageId)) {
+          deletingFileIdsRef.current.add(file.storageId);
+          onRemoveFile(file);
         }
-        return prev.filter((_, i) => i !== index);
       });
-    },
-    [onRemoveFile],
-  );
+    }
+
+    previousUploadedFilesRef.current = currentFiles;
+  }, [uploadedFiles, onRemoveFile]);
+
+  const removeUploadedFile = useCallback((index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const clearAll = useCallback(() => {
     setUploadingFiles((prev) => {
@@ -308,11 +326,8 @@ export function useFileUpload({
       });
       return [];
     });
-    setUploadedFiles((prev) => {
-      prev.forEach((file) => onRemoveFile?.(file));
-      return [];
-    });
-  }, [onRemoveFile]);
+    setUploadedFiles([]);
+  }, []);
 
   const triggerFileSelect = useCallback(() => {
     if (!disabled) fileInputRef.current?.click();
