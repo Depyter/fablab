@@ -19,10 +19,19 @@ import {
 } from "@/components/ui/input-group";
 import { format } from "date-fns";
 
-export function DateTimePicker() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [startTime, setStartTime] = React.useState("10:30");
-  const [endTime, setEndTime] = React.useState("12:30");
+export interface DateTimePickerValue {
+  date: Date | undefined;
+  startTime: string;
+  endTime: string;
+}
+
+export interface DateTimePickerProps {
+  value: DateTimePickerValue;
+  onChange: (value: DateTimePickerValue) => void;
+}
+
+export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
+  const { date, startTime, endTime } = value;
 
   const bookedDates = Array.from(
     { length: 15 },
@@ -30,18 +39,7 @@ export function DateTimePicker() {
   );
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    if (!selectedDate) return;
-
-    const [startHours, startMinutes] = startTime.split(":").map(Number);
-    const [endHours, endMinutes] = endTime.split(":").map(Number);
-
-    const newStartDate = new Date(selectedDate);
-    newStartDate.setHours(startHours, startMinutes, 0, 0);
-
-    const newEndDate = new Date(selectedDate);
-    newEndDate.setHours(endHours, endMinutes, 0, 0);
-
-    setDate(selectedDate);
+    onChange({ ...value, date: selectedDate });
   };
 
   const formatDateTime = (d: Date, time: string) => {
@@ -82,7 +80,7 @@ export function DateTimePicker() {
             <Calendar
               mode="single"
               selected={date}
-              onSelect={setDate}
+              onSelect={handleDateSelect}
               disabled={bookedDates}
               modifiers={{
                 booked: bookedDates,
@@ -102,7 +100,7 @@ export function DateTimePicker() {
             id="time-from"
             type="time"
             value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
+            onChange={(e) => onChange({ ...value, startTime: e.target.value })}
             className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
           />
           <InputGroupAddon>
@@ -117,7 +115,7 @@ export function DateTimePicker() {
             id="time-to"
             type="time"
             value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
+            onChange={(e) => onChange({ ...value, endTime: e.target.value })}
             className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
           />
           <InputGroupAddon>
