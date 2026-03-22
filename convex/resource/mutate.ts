@@ -1,28 +1,67 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority } from "../helper";
+import { checkAuthority, claimFiles } from "../helper";
 
-export const addMachine = mutation({
+export const addResource = mutation({
   args: {
     name: v.string(),
+    category: v.union(
+      v.literal("room"),
+      v.literal("machine"),
+      v.literal("tool"),
+      v.literal("misc"),
+    ),
+    type: v.string(),
+    images: v.array(v.id("_storage")),
     description: v.string(),
-    service: v.id("services"),
-    status: v.union(v.literal("Unavailable"), v.literal("Available")),
+    status: v.union(
+      v.literal("Unavailable"),
+      v.literal("Available"),
+      v.literal("Under Maintenance"),
+    ),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("No identity!");
 
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot add machine.");
+    if (!authorization) throw new Error("Unauthorized. Cannot add resource.");
 
     await ctx.db.insert("resources", {
       name: args.name,
+      category: args.category,
+      type: args.type,
+      images: args.images,
       description: args.description,
-      service: args.service,
       status: args.status,
     });
+
+    claimFiles(ctx, args.images);
   },
+});
+
+export const updateResource = mutation({
+  args: {
+    id: v.id("resources"),
+    name: v.string(),
+    type: v.string(),
+    description: v.optional(v.string()),
+    status: v.optional(
+      v.union(
+        v.literal("Unavailable"),
+        v.literal("Available"),
+        v.literal("Under Maintenance"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {},
+});
+
+export const deleteResource = mutation({
+  args: {
+    id: v.id("resources"),
+  },
+  handler: async (ctx, args) => {},
 });
 
 export const addUsage = mutation({

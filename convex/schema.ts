@@ -27,10 +27,21 @@ export default defineSchema({
 
   resources: defineTable({
     name: v.string(),
+    category: v.union(
+      v.literal("room"),
+      v.literal("machine"),
+      v.literal("tool"),
+      v.literal("misc"),
+    ),
+    type: v.string(),
+    images: v.array(v.id("_storage")),
     description: v.string(),
-    service: v.id("services"),
-    status: v.union(v.literal("Unavailable"), v.literal("Available")),
-  }).index("by_service", ["service"]),
+    status: v.union(
+      v.literal("Unavailable"),
+      v.literal("Available"),
+      v.literal("Under Maintenance"),
+    ),
+  }).index("by_category", ["category"]),
 
   resourceUsage: defineTable({
     resource: v.id("resources"),

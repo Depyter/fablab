@@ -127,9 +127,7 @@ export function InventoryItemForm({
             id: initialValues?._id as Id<"resources">,
             name: value.name,
             description: value.description,
-            category: itemType,
             type: value.type,
-            images: value.thumbnail as Id<"_storage">[],
             status: value.status,
           })
         : addResource({
