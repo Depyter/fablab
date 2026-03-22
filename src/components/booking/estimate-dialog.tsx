@@ -10,13 +10,29 @@ import { Card } from "@/components/ui/card";
 
 import { FieldSeparator } from "@/components/ui/field";
 
+export type BookingFormValues = {
+  serviceType: "self-service" | "full-service";
+  name: string;
+  description: string;
+  notes: string;
+  material: string;
+  dateTime: {
+    date: Date | undefined;
+    startTime: string;
+    endTime: string;
+  };
+  files: string[]; // storage IDs
+};
+
 interface EstimateProjectDetailsProps {
   serviceName: string;
+  data: BookingFormValues;
   onBack: () => void;
 }
 
 export function EstimateProjectDetails({
   serviceName,
+  data,
   onBack,
 }: EstimateProjectDetailsProps) {
   return (
@@ -45,6 +61,12 @@ export function EstimateProjectDetails({
                   <p className="text-gray-600">Service</p>
                   <p className="font-medium">{serviceName}</p>
                 </div>
+                <div>
+                  <p className="text-gray-600">Type</p>
+                  <p className="font-medium capitalize">
+                    {data.serviceType?.replace("-", " ")}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -56,19 +78,29 @@ export function EstimateProjectDetails({
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-gray-600">Project Name</p>
-                  <p className="font-medium"></p>
+                  <p className="font-medium">{data.name}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-gray-600">Material</p>
-                    <p className="font-medium"></p>
+                    <p className="font-medium">
+                      {data.material === "plus"
+                        ? "Provide Materials"
+                        : "Buy From Fablab"}
+                    </p>
                   </div>
                 </div>
 
                 <div>
                   <p className="text-gray-600">Description</p>
-                  <p className="font-medium"></p>
+                  <p className="font-medium">{data.description}</p>
                 </div>
+                {data.notes && (
+                  <div>
+                    <p className="text-gray-600">Notes</p>
+                    <p className="font-medium">{data.notes}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -77,12 +109,23 @@ export function EstimateProjectDetails({
               <h3 className="font-semibold text-gray-900 mb-4">
                 Uploaded Files
               </h3>
-              <div className="flex items-center bg-gray-50 p-3 rounded">
-                <div>
-                  <p className="font-medium text-sm">miming-model.stl</p>
-                  <p className="text-xs text-gray-500">2.3 MB</p>
+              {data.files.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {data.files.map((fileId, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center bg-gray-50 p-3 rounded"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">File {i + 1}</p>
+                        <p className="text-xs text-gray-500">{fileId}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500">No files uploaded.</p>
+              )}
             </div>
 
             {/* Pricing */}

@@ -7,9 +7,21 @@ import {
 } from "@/components/ui/field";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-export function RadioGroupChoiceCard() {
+interface RadioGroupChoiceCardProps {
+  value: string;
+  onValueChange: (value: string) => void;
+}
+
+export function RadioGroupChoiceCard({
+  value,
+  onValueChange,
+}: RadioGroupChoiceCardProps) {
   return (
-    <RadioGroup defaultValue="plus" className="max-w-full">
+    <RadioGroup
+      value={value}
+      onValueChange={onValueChange}
+      className="max-w-full"
+    >
       <FieldLabel htmlFor="plus-plan">
         <Field orientation="horizontal">
           <FieldContent>

@@ -20,9 +20,11 @@ import { RadioGroupChoiceCard } from "./select-option-form";
 import { Textarea } from "../ui/textarea";
 import { FileUpload } from "../file-upload";
 import { useState } from "react";
-import { EstimateProjectDetails } from "./estimate-dialog";
+import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { ActionDialog } from "../action-dialog";
 import { DateTimePicker } from "./date-time-picker";
+import { useAppForm } from "@/lib/form-context";
+import { UploadedFile } from "../file-upload/types";
 
 interface BookingDialog {
   serviceName: string;
@@ -30,12 +32,40 @@ interface BookingDialog {
 }
 
 type Step = 1 | 2 | 3;
-type ServiceType = "self-service" | "full-service";
+
+interface LocalBookingFormValues extends Omit<
+  BookingFormValues,
+  "files" | "material"
+> {
+  files: UploadedFile[];
+  material: "plus" | "pro";
+}
 
 export function BookingDialog({ serviceName, requirements }: BookingDialog) {
   const [step, setStep] = useState<Step>(1);
-  const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  const form = useAppForm({
+    defaultValues: {
+      serviceType: "self-service",
+      name: "",
+      description: "",
+      notes: "",
+      material: "plus",
+      dateTime: {
+        date: new Date(),
+        startTime: "10:30",
+        endTime: "12:30",
+      },
+      files: [],
+    } as LocalBookingFormValues,
+    onSubmit: async ({ value }) => {
+      // Handle submission logic here
+      console.log("Submitting booking:", value);
+      // TODO: Connect to convex mutation
+      handleOpenChange(false);
+    },
+  });
 
   const is3DPrinting = serviceName.toLowerCase().includes("3d printing");
 
@@ -56,7 +86,7 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
       // Reset state on close
       setTimeout(() => {
         setStep(1);
-        setServiceType(null);
+        form.reset();
       }, 300);
     }
   };
@@ -82,7 +112,7 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
               <Card
                 className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted hover:border border-primary cursor-pointer"
                 onClick={() => {
-                  setServiceType("self-service");
+                  form.setFieldValue("serviceType", "self-service");
                   handleNextStep();
                 }}
               >
@@ -94,7 +124,7 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
               <Card
                 className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted hover:border border-primary cursor-pointer"
                 onClick={() => {
-                  setServiceType("full-service");
+                  form.setFieldValue("serviceType", "full-service");
                   handleNextStep();
                 }}
               >
@@ -127,68 +157,118 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
                   <p>Tell us about your project.</p>
                 </div>
 
-                <Field>
-                  <Label htmlFor="name-1">Project Name</Label>
-                  <Input
-                    id="name-1"
-                    name="name"
-                    defaultValue=""
-                    aria-required="true"
-                    className="rounded-lg"
-                    placeholder="e.g. Custom Cup"
-                  />
-                </Field>
-                <Field>
-                  <Label htmlFor="description-1">Project Description</Label>
-                  <Textarea
-                    id="description-1"
-                    name="username"
-                    defaultValue=""
-                    aria-required="true"
-                    className="rounded-lg"
-                    placeholder="Describe your project, intended use, or any specific details..."
-                  />
-                </Field>
+                <form.Field
+                  name="name"
+                  children={(field) => (
+                    <Field>
+                      <Label htmlFor="name-1">Project Name</Label>
+                      <Input
+                        id="name-1"
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        aria-required="true"
+                        className="rounded-lg"
+                        placeholder="e.g. Custom Cup"
+                      />
+                    </Field>
+                  )}
+                />
+
+                <form.Field
+                  name="description"
+                  children={(field) => (
+                    <Field>
+                      <Label htmlFor="description-1">Project Description</Label>
+                      <Textarea
+                        id="description-1"
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        aria-required="true"
+                        className="rounded-lg"
+                        placeholder="Describe your project, intended use, or any specific details..."
+                      />
+                    </Field>
+                  )}
+                />
 
                 <FieldSeparator />
 
-                <Field>
-                  <Label htmlFor="notes-1">Special Requirements or Notes</Label>
-                  <Textarea
-                    id="notes-1"
-                    name="username"
-                    defaultValue=""
-                    aria-required="false"
-                    className="rounded-lg"
-                    placeholder="Color preferences, finish requirements, dimensional tolerances..."
-                  />
-                </Field>
-                <Field>
-                  <Label htmlFor="material-1">Material Preference</Label>
-                  <RadioGroupChoiceCard />
-                </Field>
-
-                <FieldSeparator />
-
-                {is3DPrinting ? (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <Label className="font-bold text-lg">Deadline</Label>
-                      <p>Set deadline of your project.</p>
-                    </div>
-                    <DateTimePicker />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <Label className="font-bold text-lg">
-                        Booking Date & Time
+                <form.Field
+                  name="notes"
+                  children={(field) => (
+                    <Field>
+                      <Label htmlFor="notes-1">
+                        Special Requirements or Notes
                       </Label>
-                      <p>Set the date and time for your booking.</p>
-                    </div>
-                    <DateTimePicker />
-                  </>
-                )}
+                      <Textarea
+                        id="notes-1"
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        aria-required="false"
+                        className="rounded-lg"
+                        placeholder="Color preferences, finish requirements, dimensional tolerances..."
+                      />
+                    </Field>
+                  )}
+                />
+
+                <form.Field
+                  name="material"
+                  children={(field) => (
+                    <Field>
+                      <Label htmlFor="material-1">Material Preference</Label>
+                      <RadioGroupChoiceCard
+                        value={field.state.value}
+                        onValueChange={(val) =>
+                          field.handleChange(val as "plus" | "pro")
+                        }
+                      />
+                    </Field>
+                  )}
+                />
+
+                <FieldSeparator />
+
+                <form.Field
+                  name="dateTime"
+                  children={(field) => (
+                    <>
+                      {is3DPrinting ? (
+                        <>
+                          <div className="flex flex-col gap-2">
+                            <Label className="font-bold text-lg">
+                              Deadline
+                            </Label>
+                            <p>Set deadline of your project.</p>
+                          </div>
+                          <DateTimePicker
+                            value={field.state.value}
+                            onChange={field.handleChange}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex flex-col gap-2">
+                            <Label className="font-bold text-lg">
+                              Booking Date & Time
+                            </Label>
+                            <p>Set the date and time for your booking.</p>
+                          </div>
+                          <DateTimePicker
+                            value={field.state.value}
+                            onChange={field.handleChange}
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
+                />
 
                 {/* <Card className="border border-chart-6 bg-secondary-muted rounded-lg">
                   <CardContent>
@@ -214,7 +294,16 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
 
                 <FieldSeparator />
 
-                <FileUpload title="Upload Your Files" />
+                <form.Field
+                  name="files"
+                  children={(field) => (
+                    <FileUpload
+                      title="Upload Your Files"
+                      value={field.state.value}
+                      onFilesChange={field.handleChange}
+                    />
+                  )}
+                />
 
                 <Card className="border border-gray-200 bg-gray-50 rounded-lg">
                   <CardContent>
@@ -256,10 +345,22 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
         );
       case 3:
         return (
-          <EstimateProjectDetails
-            serviceName={serviceName}
-            onBack={handlePrevStep}
-          />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
+            }}
+          >
+            <EstimateProjectDetails
+              serviceName={serviceName}
+              data={{
+                ...form.state.values,
+                files: form.state.values.files.map((f) => f.storageId),
+              }}
+              onBack={handlePrevStep}
+            />
+          </form>
         );
       default:
         return null;
