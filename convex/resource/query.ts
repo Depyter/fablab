@@ -1,8 +1,35 @@
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
+import { query } from "../_generated/server";
 import { checkAuthority } from "../helper";
 
-export const getBookings = mutation({
+export const getResources = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) return null;
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization) return null;
+
+    const resources = await ctx.db.query("resources").collect();
+
+    return await Promise.all(
+      resources.map(async (resource) => {
+        const imageUrls = await Promise.all(
+          resource.images.map(async (id) => {
+            return await ctx.storage.getUrl(id);
+          }),
+        );
+        return {
+          ...resource,
+          imageUrls: imageUrls.filter((url): url is string => url !== null),
+        };
+      }),
+    );
+  },
+});
+
+export const getBookings = query({
   args: {
     date: v.number(),
   },
@@ -12,7 +39,7 @@ export const getBookings = mutation({
 
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
     if (!authorization)
-      throw new Error("Unauthorized. Cannot see machine usage.");
+      throw new Error("Unauthorized. Cannot see resource usage.");
 
     const machineUsages = await ctx.db
       .query("resourceUsage")
