@@ -169,7 +169,7 @@ export default function ProjectsList() {
                     {new Date(project.bookingDate).toLocaleDateString()}
                   </span>
                   <span className="text-sm font-medium">
-                    ${project.estimatedPrice.toFixed(2)}
+                    ₱{project.estimatedPrice.toFixed(2)}
                   </span>
                   <span
                     className={cn(
