@@ -89,7 +89,7 @@ export const createProject = mutation({
     }
 
     // create initial system message
-    await ctx.db.insert("messages", {
+    return await ctx.db.insert("messages", {
       room: room,
       content: `Generated room for project: ${defaultAlias}`,
       sender: "System",
