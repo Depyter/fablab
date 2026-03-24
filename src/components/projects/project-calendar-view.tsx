@@ -1,14 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import {
   format,
   addDays,
   subDays,
   startOfToday,
   isSameDay,
-  getUnixTime,
-  fromUnixTime,
+  startOfDay,
 } from "date-fns";
 import {
   ChevronLeft,
@@ -34,133 +35,110 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
 
-// --- Mock Data Mocking the Joined Convex Query Results ---
-// This data structure mimics what query.ts returns: usage joined with project, maker, and machine.
-
-const MOCK_MACHINES: Machine[] = [
-  {
-    id: "m1",
-    name: "Laser Cutter 1",
-    status: "Available",
-    description: "High-precision CO2 laser",
-  },
-  {
-    id: "m2",
-    name: "3D Printer A (Prusa)",
-    status: "Available",
-    description: "FDM 3D Printer",
-  },
-  {
-    id: "m3",
-    name: "CNC Router",
-    status: "Available",
-    description: "Large format wood router",
-  },
-  {
-    id: "m4",
-    name: "Vinyl Cutter",
-    status: "Unavailable",
-    description: "Roland GS-24",
-  },
-  {
-    id: "m5",
-    name: "Electronics Lab",
-    status: "Available",
-    description: "Soldering and testing station",
-  },
-];
-
-const TODAY_UNIX = getUnixTime(startOfToday());
-
-const MOCK_QUERY_RESULTS: MachineUsage[] = [
-  {
-    id: "usage_1",
-    machineId: "m1",
-    projectId: "proj_1",
-    projectAlias: "Enclosure Cut",
-    projectStatus: "approved",
-    makerName: "Renata Robinson",
-    date: TODAY_UNIX,
-    startTime: 9,
-    endTime: 11,
-    color: "bg-blue-500/10 border-blue-500 text-blue-700",
-  },
-  {
-    id: "usage_2",
-    machineId: "m1",
-    projectId: "proj_pending_1",
-    projectAlias: "Experimental Spare Parts",
-    projectStatus: "pending",
-    makerName: "Renata Robinson",
-    date: TODAY_UNIX,
-    startTime: 11.5,
-    endTime: 12.5,
-    color: "bg-amber-500/10 border-amber-500 text-amber-700",
-  },
-  {
-    id: "usage_3",
-    machineId: "m2",
-    projectId: "proj_2",
-    projectAlias: "Prototype v1",
-    projectStatus: "approved",
-    makerName: "Marcel Doe",
-    date: TODAY_UNIX,
-    startTime: 10,
-    endTime: 14,
-    color: "bg-emerald-500/10 border-emerald-500 text-emerald-700",
-  },
-  {
-    id: "usage_4",
-    machineId: "m3",
-    projectId: "proj_3",
-    projectAlias: "Cabinet Parts",
-    projectStatus: "approved",
-    makerName: "Damar Smith",
-    date: TODAY_UNIX,
-    startTime: 9,
-    endTime: 13.5,
-    color: "bg-purple-500/10 border-purple-500 text-purple-700",
-  },
-  {
-    id: "usage_5",
-    machineId: "m2",
-    projectId: "proj_pending_2",
-    projectAlias: "Research Model B",
-    projectStatus: "pending",
-    makerName: "Anita P",
-    date: TODAY_UNIX,
-    startTime: 14.5,
-    endTime: 16.5,
-    color: "bg-rose-500/10 border-rose-500 text-rose-700",
-  },
-];
-
 type ViewFilter = "all" | "confirmed";
+
+function getSnappedDecimalHours(ms: number, ceil = false) {
+  const d = new Date(ms);
+  const decimal = d.getHours() + d.getMinutes() / 60;
+  return ceil ? Math.ceil(decimal * 2) / 2 : Math.floor(decimal * 2) / 2;
+}
 
 export function ProjectCalendarView() {
   const [date, setDate] = React.useState<Date>(startOfToday());
   const [viewFilter, setViewFilter] = React.useState<ViewFilter>("all");
+  const [activeTab, setActiveTab] = React.useState<string>("resources");
+
+  const services = useQuery(api.services.query.getServices) || [];
+  const resources = useQuery(api.resource.query.getResources) || [];
+  const bookings =
+    useQuery(api.resource.query.getBookings, {
+      date: startOfDay(date).getTime(),
+    }) || [];
 
   const handlePrevDay = () => setDate((prev) => subDays(prev, 1));
   const handleNextDay = () => setDate((prev) => addDays(prev, 1));
   const handleToday = () => setDate(startOfToday());
 
-  const filteredUsages = React.useMemo(() => {
-    return MOCK_QUERY_RESULTS.filter((u) => {
-      const usageDate = fromUnixTime(u.date);
-      const isDateMatch = isSameDay(usageDate, date);
-      const isStatusMatch =
-        viewFilter === "all" || u.projectStatus === "approved";
-      return isDateMatch && isStatusMatch;
+  // ----- Resources Table Data (Machine Schedule) -----
+  const { resourceMachines, resourceUsages } = React.useMemo(() => {
+    const machines: Machine[] = resources.map((r) => ({
+      id: r._id,
+      name: r.name,
+      status: r.status === "Unavailable" ? "Unavailable" : "Available",
+      description: r.description || `${r.category} resource`,
+    }));
+
+    const usages: MachineUsage[] = bookings
+      .filter((b) => b.resource)
+      .map((b) => ({
+        id: b._id,
+        machineId: b.resource!._id,
+        projectId: b.project?._id || "",
+        projectAlias: b.project?.name || "Unknown Project",
+        projectStatus: b.project?.status || "pending",
+        makerName: b.maker?.name || "Unknown Maker",
+        date: b.date,
+        startTime: getSnappedDecimalHours(b.startTime, false),
+        endTime: getSnappedDecimalHours(b.endTime, true),
+        color: "bg-blue-500/10 border-blue-500 text-blue-700",
+      }));
+
+    return { resourceMachines: machines, resourceUsages: usages };
+  }, [resources, bookings]);
+
+  // ----- Services Table Data (Project Booking Times) -----
+  const { serviceMachines, serviceUsages } = React.useMemo(() => {
+    const machines: Machine[] = services.map((s) => ({
+      id: s._id,
+      name: s.name,
+      status: s.status === "Unavailable" ? "Unavailable" : "Available",
+      description: "Service Booking Queue",
+    }));
+
+    const usages: MachineUsage[] = bookings
+      .filter((b) => b.service)
+      .map((b) => ({
+        id: b._id,
+        machineId: b.service!._id,
+        projectId: b.project?._id || "",
+        projectAlias: b.project?.name || "Unknown Project",
+        projectStatus: b.project?.status || "pending",
+        makerName: b.maker?.name || "Unknown Maker",
+        date: b.date,
+        startTime: getSnappedDecimalHours(b.startTime, false),
+        endTime: getSnappedDecimalHours(b.endTime, true),
+        color: "bg-purple-500/10 border-purple-500 text-purple-700",
+      }));
+
+    return { serviceMachines: machines, serviceUsages: usages };
+  }, [services, bookings]);
+
+  // Apply Date and Status filters
+  const filteredResourceUsages = React.useMemo(() => {
+    return resourceUsages.filter((u) => {
+      const isDateMatch = isSameDay(new Date(u.date), date);
+      return (
+        isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
+      );
     });
-  }, [date, viewFilter]);
+  }, [resourceUsages, date, viewFilter]);
+
+  const filteredServiceUsages = React.useMemo(() => {
+    return serviceUsages.filter((u) => {
+      const isDateMatch = isSameDay(new Date(u.date), date);
+      return (
+        isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
+      );
+    });
+  }, [serviceUsages, date, viewFilter]);
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 p-6 border-b sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 p-6 border-b sm:flex-row sm:items-center sm:justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Machine Usage</h1>
           <p className="text-muted-foreground text-sm">
@@ -177,7 +155,7 @@ export function ProjectCalendarView() {
       </div>
 
       {/* Navigation & Filters Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b bg-muted/30 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b bg-muted/30 gap-4 shrink-0">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1">
             <Button
@@ -265,8 +243,40 @@ export function ProjectCalendarView() {
         </div>
       </div>
 
-      {/* Usage Table Component */}
-      <UsageTable machines={MOCK_MACHINES} usages={filteredUsages} />
+      <div className="flex-1 flex flex-col overflow-hidden p-6 pt-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-2 shrink-0">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="resources">Machine Schedule</TabsTrigger>
+              <TabsTrigger value="services">Service Bookings</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent
+            value="resources"
+            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0 pt-2"
+          >
+            <UsageTable
+              machines={resourceMachines}
+              usages={filteredResourceUsages}
+            />
+          </TabsContent>
+
+          <TabsContent
+            value="services"
+            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0 pt-2"
+          >
+            <UsageTable
+              machines={serviceMachines}
+              usages={filteredServiceUsages}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
