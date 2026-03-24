@@ -8,7 +8,6 @@ export const createProject = mutation({
     description: v.string(),
     serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
-    userId: v.id("userProfile"),
     service: v.id("services"),
     pricing: v.union(v.literal("normal"), v.literal("UP")),
     files: v.optional(v.array(v.string())),
@@ -89,10 +88,16 @@ export const createProject = mutation({
     }
 
     // create initial system message
-    return await ctx.db.insert("messages", {
+    const message = await ctx.db.insert("messages", {
       room: room,
       content: `Generated room for project: ${defaultAlias}`,
       sender: "System",
     });
+
+    await ctx.db.patch("rooms", room, {
+      lastMessageId: message,
+    });
+
+    return room;
   },
 });
