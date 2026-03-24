@@ -44,8 +44,8 @@ export function getFileInfo(
   )
     return {
       Icon: Box,
-      colorClass: "text-cyan-500",
-      bgClass: "bg-cyan-500/10",
+      colorClass: "text-zinc-800 dark:text-zinc-200",
+      bgClass: "bg-zinc-800/10 dark:bg-zinc-200/10",
       label: ext.toUpperCase() || "3D",
     };
 

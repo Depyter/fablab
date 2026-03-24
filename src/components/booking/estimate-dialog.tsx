@@ -132,14 +132,21 @@ export function EstimateProjectDetails({
                 Uploaded Files
               </h3>
               {data.files.length > 0 ? (
-                <MediaGallery
-                  mediaFiles={data.files.map((f) => ({
-                    fileUrl: f.url || "",
-                    fileType: f.fileType,
-                    originalName: f.fileName,
-                  }))}
-                  isCurrentUser={true}
-                />
+                <div className="flex flex-col gap-2">
+                  {data.files.map((f, i) => (
+                    <MediaGallery
+                      key={i}
+                      mediaFiles={[
+                        {
+                          fileUrl: f.url || "",
+                          fileType: f.fileType,
+                          originalName: f.fileName,
+                        },
+                      ]}
+                      isCurrentUser={false}
+                    />
+                  ))}
+                </div>
               ) : (
                 <p className="text-sm text-gray-500">No files uploaded.</p>
               )}
