@@ -30,7 +30,7 @@ export function RadioGroupChoiceCard({
               For client with their own materials.
             </FieldDescription>
           </FieldContent>
-          <RadioGroupItem value="plus" id="plus-plan" />
+          <RadioGroupItem value="provide-own" id="plus-plan" />
         </Field>
       </FieldLabel>
       <FieldLabel htmlFor="pro-plan">
@@ -41,7 +41,7 @@ export function RadioGroupChoiceCard({
               For client with no on hand materials.
             </FieldDescription>
           </FieldContent>
-          <RadioGroupItem value="pro" id="pro-plan" />
+          <RadioGroupItem value="buy-from-lab" id="pro-plan" />
         </Field>
       </FieldLabel>
     </RadioGroup>

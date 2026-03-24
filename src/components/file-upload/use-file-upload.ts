@@ -59,8 +59,6 @@ export function useFileUpload({
   const previewUrlMapRef = useRef<Map<File, string>>(new Map());
 
   const getFilePreviewUrl = useCallback((file: File): string | undefined => {
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/"))
-      return undefined;
     if (!previewUrlMapRef.current.has(file)) {
       previewUrlMapRef.current.set(file, URL.createObjectURL(file));
     }

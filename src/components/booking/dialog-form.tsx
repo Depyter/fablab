@@ -11,7 +11,7 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 
-import { InfoIcon, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -19,14 +19,20 @@ import { Label } from "@/components/ui/label";
 import { RadioGroupChoiceCard } from "./select-option-form";
 import { Textarea } from "../ui/textarea";
 import { FileUpload } from "../file-upload";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { ActionDialog } from "../action-dialog";
 import { DateTimePicker } from "./date-time-picker";
+import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { UploadedFile } from "../file-upload/types";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { Id } from "@convex/_generated/dataModel";
 
 interface BookingDialog {
+  serviceId: Id<"services">;
   serviceName: string;
   requirements: string[];
 }
@@ -38,12 +44,23 @@ interface LocalBookingFormValues extends Omit<
   "files" | "material"
 > {
   files: UploadedFile[];
-  material: "plus" | "pro";
+  material: "provide-own" | "buy-from-lab";
 }
 
-export function BookingDialog({ serviceName, requirements }: BookingDialog) {
+export function BookingDialog({
+  serviceId,
+  serviceName,
+  requirements,
+}: BookingDialog) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [isOpen, setIsOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const createProject = useMutation(api.projects.mutate.createProject);
+
+  const handleUploadingChange = useCallback((uploading: boolean) => {
+    setIsUploading(uploading);
+  }, []);
 
   const form = useAppForm({
     defaultValues: {
@@ -51,7 +68,7 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
       name: "",
       description: "",
       notes: "",
-      material: "plus",
+      material: "provide-own",
       dateTime: {
         date: new Date(),
         startTime: "10:30",
@@ -60,10 +77,48 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
       files: [],
     } as LocalBookingFormValues,
     onSubmit: async ({ value }) => {
-      // Handle submission logic here
-      console.log("Submitting booking:", value);
-      // TODO: Connect to convex mutation
-      handleOpenChange(false);
+      if (!value.dateTime.date) {
+        toast.error("Please select a date.");
+        return;
+      }
+
+      try {
+        const [startHours, startMinutes] = value.dateTime.startTime
+          .split(":")
+          .map(Number);
+        const [endHours, endMinutes] = value.dateTime.endTime
+          .split(":")
+          .map(Number);
+
+        const startDate = new Date(value.dateTime.date);
+        startDate.setHours(startHours, startMinutes, 0, 0);
+
+        const endDate = new Date(value.dateTime.date);
+        endDate.setHours(endHours, endMinutes, 0, 0);
+
+        const roomId = await createProject({
+          name: value.name,
+          description: value.description,
+          serviceType: value.serviceType,
+          material: value.material,
+          service: serviceId,
+          pricing: "normal", // default for now
+          notes: value.notes,
+          files: value.files.map((f) => f.storageId),
+          booking: {
+            date: value.dateTime.date.getTime(),
+            startTime: startDate.getTime(),
+            endTime: endDate.getTime(),
+          },
+        });
+
+        toast.success("Booking request created successfully!");
+        router.push(`/dashboard/chat/${roomId}`);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create booking.",
+        );
+      }
     },
   });
 
@@ -96,9 +151,9 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
   };
 
   const renderStepContent = () => {
-    switch (step) {
-      case 1:
-        return (
+    return (
+      <>
+        {step === 1 && (
           <>
             <DialogHeader>
               <DialogTitle className="text-2xl font-extrabold">
@@ -137,140 +192,144 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
               </Card>
             </div>
           </>
-        );
-      case 2:
-        return (
-          <form onSubmit={handleNextStep}>
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-extrabold">
-                Book {serviceName}
-              </DialogTitle>
-              <DialogDescription>
-                Provide necessary information for your project request.
-              </DialogDescription>
-            </DialogHeader>
-            <FieldSeparator className="mb-2 mt-4" />
-            <div className="-mx-4 no-scrollbar max-h-[60vh] overflow-y-auto px-4 py-4">
-              <FieldGroup>
-                <div className="flex flex-col gap-2">
-                  <Label className="font-bold text-lg">Project Details</Label>
-                  <p>Tell us about your project.</p>
-                </div>
+        )}
 
-                <form.Field
-                  name="name"
-                  children={(field) => (
-                    <Field>
-                      <Label htmlFor="name-1">Project Name</Label>
-                      <Input
-                        id="name-1"
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        aria-required="true"
-                        className="rounded-lg"
-                        placeholder="e.g. Custom Cup"
-                      />
-                    </Field>
-                  )}
-                />
+        <form
+          onSubmit={handleNextStep}
+          className={step === 2 ? "block" : "hidden"}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-extrabold">
+              Book {serviceName}
+            </DialogTitle>
+            <DialogDescription>
+              Provide necessary information for your project request.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldSeparator className="mb-2 mt-4" />
+          <div className="-mx-4 no-scrollbar max-h-[60vh] overflow-y-auto px-4 py-4">
+            <FieldGroup>
+              <div className="flex flex-col gap-2">
+                <Label className="font-bold text-lg">Project Details</Label>
+                <p>Tell us about your project.</p>
+              </div>
 
-                <form.Field
-                  name="description"
-                  children={(field) => (
-                    <Field>
-                      <Label htmlFor="description-1">Project Description</Label>
-                      <Textarea
-                        id="description-1"
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        aria-required="true"
-                        className="rounded-lg"
-                        placeholder="Describe your project, intended use, or any specific details..."
-                      />
-                    </Field>
-                  )}
-                />
+              <form.Field
+                name="name"
+                children={(field) => (
+                  <Field>
+                    <Label htmlFor="name-1">Project Name</Label>
+                    <Input
+                      id="name-1"
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      aria-required="true"
+                      required
+                      className="rounded-lg"
+                      placeholder="e.g. Custom Cup"
+                    />
+                  </Field>
+                )}
+              />
 
-                <FieldSeparator />
+              <form.Field
+                name="description"
+                children={(field) => (
+                  <Field>
+                    <Label htmlFor="description-1">Project Description</Label>
+                    <Textarea
+                      id="description-1"
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      aria-required="true"
+                      required
+                      className="rounded-lg"
+                      placeholder="Describe your project, intended use, or any specific details..."
+                    />
+                  </Field>
+                )}
+              />
 
-                <form.Field
-                  name="notes"
-                  children={(field) => (
-                    <Field>
-                      <Label htmlFor="notes-1">
-                        Special Requirements or Notes
-                      </Label>
-                      <Textarea
-                        id="notes-1"
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        aria-required="false"
-                        className="rounded-lg"
-                        placeholder="Color preferences, finish requirements, dimensional tolerances..."
-                      />
-                    </Field>
-                  )}
-                />
+              <FieldSeparator />
 
-                <form.Field
-                  name="material"
-                  children={(field) => (
-                    <Field>
-                      <Label htmlFor="material-1">Material Preference</Label>
-                      <RadioGroupChoiceCard
-                        value={field.state.value}
-                        onValueChange={(val) =>
-                          field.handleChange(val as "plus" | "pro")
-                        }
-                      />
-                    </Field>
-                  )}
-                />
+              <form.Field
+                name="notes"
+                children={(field) => (
+                  <Field>
+                    <Label htmlFor="notes-1">
+                      Special Requirements or Notes
+                    </Label>
+                    <Textarea
+                      id="notes-1"
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      aria-required="false"
+                      className="rounded-lg"
+                      placeholder="Color preferences, finish requirements, dimensional tolerances..."
+                    />
+                  </Field>
+                )}
+              />
 
-                <FieldSeparator />
+              <form.Field
+                name="material"
+                children={(field) => (
+                  <Field>
+                    <Label htmlFor="material-1">Material Preference</Label>
+                    <RadioGroupChoiceCard
+                      value={field.state.value}
+                      onValueChange={(val) =>
+                        field.handleChange(
+                          val as "provide-own" | "buy-from-lab",
+                        )
+                      }
+                    />
+                  </Field>
+                )}
+              />
 
-                <form.Field
-                  name="dateTime"
-                  children={(field) => (
-                    <>
-                      {is3DPrinting ? (
-                        <>
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-bold text-lg">
-                              Deadline
-                            </Label>
-                            <p>Set deadline of your project.</p>
-                          </div>
-                          <DateTimePicker
-                            value={field.state.value}
-                            onChange={field.handleChange}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-bold text-lg">
-                              Booking Date & Time
-                            </Label>
-                            <p>Set the date and time for your booking.</p>
-                          </div>
-                          <DateTimePicker
-                            value={field.state.value}
-                            onChange={field.handleChange}
-                          />
-                        </>
-                      )}
-                    </>
-                  )}
-                />
+              <FieldSeparator />
 
-                {/* <Card className="border border-chart-6 bg-secondary-muted rounded-lg">
+              <form.Field
+                name="dateTime"
+                children={(field) => (
+                  <>
+                    {is3DPrinting ? (
+                      <>
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-bold text-lg">Deadline</Label>
+                          <p>Set deadline of your project.</p>
+                        </div>
+                        <DateTimePicker
+                          value={field.state.value}
+                          onChange={field.handleChange}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-bold text-lg">
+                            Booking Date & Time
+                          </Label>
+                          <p>Set the date and time for your booking.</p>
+                        </div>
+                        <DateTimePicker
+                          value={field.state.value}
+                          onChange={field.handleChange}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              />
+
+              {/* <Card className="border border-chart-6 bg-secondary-muted rounded-lg">
                   <CardContent>
                     <div className="flex flex-col gap-2 text-chart-6">
                       <div className="flex flex-row items-center gap-2">
@@ -292,59 +351,59 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
                   </CardContent>
                 </Card> */}
 
-                <FieldSeparator />
+              <FieldSeparator />
 
-                <form.Field
-                  name="files"
-                  children={(field) => (
-                    <FileUpload
-                      title="Upload Your Files"
-                      value={field.state.value}
-                      onFilesChange={field.handleChange}
-                    />
-                  )}
-                />
+              <form.Field
+                name="files"
+                children={(field) => (
+                  <FileUpload
+                    title="Upload Your Files"
+                    value={field.state.value}
+                    onFilesChange={field.handleChange}
+                    onUploadingChange={handleUploadingChange}
+                  />
+                )}
+              />
 
-                <Card className="border border-gray-200 bg-gray-50 rounded-lg">
-                  <CardContent>
-                    <div className="flex flex-col gap-2 text-gray-500">
-                      <div className="flex flex-row items-center gap-2">
-                        <p className="">File Guidelines</p>
-                      </div>
-                      {requirements.length > 0 ? (
-                        <ul className="list-disc list-insidetext-sm space-y-2 mx-4">
-                          {requirements.map((req, i) => (
-                            <li key={i}>{req}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-gray-400 text-sm">
-                          No requirements listed.
-                        </p>
-                      )}
+              <Card className="border border-gray-200 bg-gray-50 rounded-lg">
+                <CardContent>
+                  <div className="flex flex-col gap-2 text-gray-500">
+                    <div className="flex flex-row items-center gap-2">
+                      <p className="">File Guidelines</p>
                     </div>
-                  </CardContent>
-                </Card>
-              </FieldGroup>
-            </div>
-            <FieldSeparator className="mb-4 mt-2" />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevStep}
-                className="rounded-lg"
-              >
-                <ChevronLeft className="h-4 w-4 mr-2" /> Back
-              </Button>
-              <Button type="submit" className="rounded-lg">
-                Review & Estimate
-              </Button>
-            </DialogFooter>
-          </form>
-        );
-      case 3:
-        return (
+                    {requirements.length > 0 ? (
+                      <ul className="list-disc list-insidetext-sm space-y-2 mx-4">
+                        {requirements.map((req, i) => (
+                          <li key={i}>{req}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        No requirements listed.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </FieldGroup>
+          </div>
+          <FieldSeparator className="mb-4 mt-2" />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevStep}
+              className="rounded-lg"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" /> Back
+            </Button>
+            <Button type="submit" className="rounded-lg" disabled={isUploading}>
+              {isUploading ? "Uploading..." : "Review & Estimate"}
+            </Button>
+          </DialogFooter>
+        </form>
+
+        {step === 3 && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -352,19 +411,25 @@ export function BookingDialog({ serviceName, requirements }: BookingDialog) {
               form.handleSubmit();
             }}
           >
-            <EstimateProjectDetails
-              serviceName={serviceName}
-              data={{
-                ...form.state.values,
-                files: form.state.values.files.map((f) => f.storageId),
-              }}
-              onBack={handlePrevStep}
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <EstimateProjectDetails
+                  serviceName={serviceName}
+                  data={{
+                    ...form.state.values,
+                    files: form.state.values.files,
+                  }}
+                  isSubmitting={isSubmitting}
+                  canSubmit={canSubmit}
+                  onBack={handlePrevStep}
+                />
+              )}
             />
           </form>
-        );
-      default:
-        return null;
-    }
+        )}
+      </>
+    );
   };
 
   return (
