@@ -87,6 +87,27 @@ const formatDecimalTime = (decimalHour: number) => {
   );
 };
 
+function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
+  const sorted = [...usages].sort((a, b) => a.startTime - b.startTime);
+  const tracks: MachineUsage[][] = [];
+
+  for (const usage of sorted) {
+    let placed = false;
+    for (const track of tracks) {
+      const lastUsage = track[track.length - 1];
+      if (usage.startTime >= lastUsage.endTime) {
+        track.push(usage);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      tracks.push([usage]);
+    }
+  }
+  return tracks.length > 0 ? tracks : [[]];
+}
+
 export function UsageTable({ machines, usages }: UsageTableProps) {
   return (
     <div className="flex-1 p-4 md:p-6 overflow-hidden flex flex-col">
@@ -109,126 +130,142 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {machines.map((machine) => (
-              <TableRow
-                key={machine.id}
-                className="hover:bg-transparent h-28 max-h-28 overflow-hidden"
-              >
-                <TableCell className="sticky left-0 z-20 bg-background border-b border-r font-semibold shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs whitespace-normal break-words p-3 h-28 max-h-28 overflow-hidden">
-                  <div className="flex flex-col gap-1">
-                    <span className="leading-tight">{machine.name}</span>
-                    <span
-                      className={cn(
-                        "text-[10px] font-normal px-2 py-0.5 rounded-full w-fit",
-                        machine.status === "Available"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-red-100 text-red-700",
-                      )}
+            {machines.map((machine) => {
+              const machineUsages = usages.filter(
+                (u) => u.machineId === machine.id,
+              );
+              const tracks = computeTracks(machineUsages);
+
+              return (
+                <React.Fragment key={machine.id}>
+                  {tracks.map((track, trackIdx) => (
+                    <TableRow
+                      key={`${machine.id}-track-${trackIdx}`}
+                      className="hover:bg-transparent h-28 max-h-28 overflow-hidden"
                     >
-                      {machine.status}
-                    </span>
-                  </div>
-                </TableCell>
-
-                {SLOTS.map((slot, index) => {
-                  const usage = usages.find(
-                    (u) => u.machineId === machine.id && u.startTime === slot,
-                  );
-
-                  if (usage) {
-                    const durationInSlots =
-                      (usage.endTime - usage.startTime) / 0.5;
-                    const clampedColSpan = Math.min(
-                      durationInSlots,
-                      SLOTS.length - index,
-                    );
-
-                    const isPending = usage.projectStatus === "pending";
-
-                    return (
-                      <TableCell
-                        key={`${machine.id}-${slot}`}
-                        className="p-1.5 border-b border-r bg-muted/5 align-top h-28 max-h-28 overflow-hidden"
-                        colSpan={clampedColSpan}
-                      >
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Card
+                      {trackIdx === 0 && (
+                        <TableCell
+                          rowSpan={tracks.length}
+                          className="sticky left-0 z-20 bg-background border-b border-r font-semibold shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs whitespace-normal break-words p-3 h-28 max-h-28 overflow-hidden"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <span className="leading-tight">
+                              {machine.name}
+                            </span>
+                            <span
                               className={cn(
-                                "h-full border shadow-sm rounded-lg p-2 flex flex-col justify-between overflow-hidden transition-all cursor-pointer hover:ring-2 hover:ring-primary/20",
-                                usage.color ||
-                                  "bg-blue-500/10 border-blue-500 text-blue-700",
-                                isPending &&
-                                  "border-dashed border-2 opacity-80",
+                                "text-[10px] font-normal px-2 py-0.5 rounded-full w-fit",
+                                machine.status === "Available"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-red-100 text-red-700",
                               )}
                             >
-                              <div className="flex flex-col gap-0.5">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[8px] font-black tracking-widest opacity-60 uppercase flex items-center gap-1">
-                                    <Hash className="h-1.5 w-1.5" />
-                                    PRJ-{usage.projectId.slice(-4)}
-                                  </span>
-                                  {isPending ? (
-                                    <Timer className="h-2.5 w-2.5 text-amber-500" />
-                                  ) : (
-                                    <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
-                                  )}
-                                </div>
-                                <span className="font-bold text-xs leading-tight line-clamp-2 whitespace-normal break-words text-left">
-                                  {usage.projectAlias}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-1">
-                                <span className="text-[9px] font-semibold whitespace-nowrap px-1 py-0.5 rounded bg-background/50">
-                                  {formatDecimalTime(usage.startTime)} -{" "}
-                                  {formatDecimalTime(usage.endTime)}
-                                </span>
-                                <Avatar className="h-5 w-5 border border-background ring-1 ring-black/5">
-                                  <AvatarFallback className="text-[9px] font-bold bg-background">
-                                    {usage.makerName[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </div>
-                            </Card>
-                          </DialogTrigger>
-                          <UsageDetailsDialog usage={usage} machine={machine} />
-                        </Dialog>
-                      </TableCell>
-                    );
-                  }
+                              {machine.status}
+                            </span>
+                          </div>
+                        </TableCell>
+                      )}
 
-                  const isCovered = usages.some(
-                    (u) =>
-                      u.machineId === machine.id &&
-                      slot > u.startTime &&
-                      slot < u.endTime,
-                  );
+                      {SLOTS.map((slot, index) => {
+                        const usage = track.find((u) => u.startTime === slot);
 
-                  if (isCovered) return null;
+                        if (usage) {
+                          const durationInSlots =
+                            (usage.endTime - usage.startTime) / 0.5;
+                          const clampedColSpan = Math.min(
+                            durationInSlots,
+                            SLOTS.length - index,
+                          );
 
-                  return (
-                    <TableCell
-                      key={`${machine.id}-${slot}`}
-                      className="group relative p-2 border-b border-r h-28 max-h-28 overflow-hidden transition-colors hover:bg-muted/10"
-                    >
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 absolute inset-2 h-auto text-[10px] font-semibold text-muted-foreground gap-1 border-dashed border-2 hover:bg-background hover:text-primary transition-all duration-200"
+                          const isPending = usage.projectStatus === "pending";
+
+                          return (
+                            <TableCell
+                              key={`${machine.id}-track-${trackIdx}-${slot}`}
+                              className="p-1.5 border-b border-r bg-muted/5 align-top h-28 max-h-28 overflow-hidden"
+                              colSpan={clampedColSpan}
+                            >
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Card
+                                    className={cn(
+                                      "h-full border shadow-sm rounded-lg p-2 flex flex-col justify-between overflow-hidden transition-all cursor-pointer hover:ring-2 hover:ring-primary/20",
+                                      usage.color ||
+                                        "bg-blue-500/10 border-blue-500 text-blue-700",
+                                      isPending &&
+                                        "border-dashed border-2 opacity-80",
+                                    )}
+                                  >
+                                    <div className="flex flex-col gap-0.5">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[8px] font-black tracking-widest opacity-60 uppercase flex items-center gap-1">
+                                          <Hash className="h-1.5 w-1.5" />
+                                          PRJ-{usage.projectId.slice(-4)}
+                                        </span>
+                                        {isPending ? (
+                                          <Timer className="h-2.5 w-2.5 text-amber-500" />
+                                        ) : (
+                                          <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
+                                        )}
+                                      </div>
+                                      <span className="font-bold text-xs leading-tight line-clamp-2 whitespace-normal break-words text-left">
+                                        {usage.projectAlias}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between gap-1">
+                                      <span className="text-[9px] font-semibold whitespace-nowrap px-1 py-0.5 rounded bg-background/50">
+                                        {formatDecimalTime(usage.startTime)} -{" "}
+                                        {formatDecimalTime(usage.endTime)}
+                                      </span>
+                                      <Avatar className="h-5 w-5 border border-background ring-1 ring-black/5">
+                                        <AvatarFallback className="text-[9px] font-bold bg-background">
+                                          {usage.makerName[0]}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </div>
+                                  </Card>
+                                </DialogTrigger>
+                                <UsageDetailsDialog
+                                  usage={usage}
+                                  machine={machine}
+                                />
+                              </Dialog>
+                            </TableCell>
+                          );
+                        }
+
+                        const isCovered = track.some(
+                          (u) => slot > u.startTime && slot < u.endTime,
+                        );
+
+                        if (isCovered) return null;
+
+                        return (
+                          <TableCell
+                            key={`${machine.id}-track-${trackIdx}-${slot}`}
+                            className="group relative p-2 border-b border-r h-28 max-h-28 overflow-hidden transition-colors hover:bg-muted/10"
                           >
-                            <Plus className="h-3 w-3" />
-                            Add Usage
-                          </Button>
-                        </DialogTrigger>
-                        <AddUsageDialog machine={machine} slot={slot} />
-                      </Dialog>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="opacity-0 group-hover:opacity-100 absolute inset-2 h-auto text-[10px] font-semibold text-muted-foreground gap-1 border-dashed border-2 hover:bg-background hover:text-primary transition-all duration-200"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  Add Usage
+                                </Button>
+                              </DialogTrigger>
+                              <AddUsageDialog machine={machine} slot={slot} />
+                            </Dialog>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </React.Fragment>
+              );
+            })}
           </TableBody>
         </table>
       </div>
