@@ -41,20 +41,25 @@ export const getBookings = query({
     if (!authorization)
       throw new Error("Unauthorized. Cannot see resource usage.");
 
+    const nextDay = args.date + 24 * 60 * 60 * 1000;
+
     const machineUsages = await ctx.db
       .query("resourceUsage")
-      .withIndex("by_date_resource_startTime", (q) => q.eq("date", args.date))
+      .withIndex("by_date_resource_startTime", (q) =>
+        q.gte("date", args.date).lt("date", nextDay),
+      )
       .collect();
 
     return await Promise.all(
       machineUsages.map(async (usage) => {
-        const [project, maker, resource] = await Promise.all([
+        const [project, maker, resource, service] = await Promise.all([
           ctx.db.get(usage.project),
           usage.maker ? ctx.db.get(usage.maker) : undefined,
           usage.resource ? ctx.db.get(usage.resource) : undefined,
+          ctx.db.get(usage.service),
         ]);
 
-        return { ...usage, project, maker, resource };
+        return { ...usage, project, maker, resource, service };
       }),
     );
   },
