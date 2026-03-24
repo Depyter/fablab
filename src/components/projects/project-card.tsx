@@ -68,7 +68,7 @@ export function ProjectCard({
           </Badge>
         )}
       </CardAction>
-      <CardHeader>
+      <CardHeader className="px-8 pt-0">
         <CardTitle className="font-bold text-xl">{title}</CardTitle>
         <CardDescription>
           {serviceName} for {clientName}
