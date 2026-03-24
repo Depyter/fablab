@@ -74,7 +74,7 @@ describe("Service functions", () => {
         description: "printing services",
         status: "Available",
       });
-    }).rejects.toThrowError("No identity!");
+    }).rejects.toThrow("No identity!");
 
     await expect(async () => {
       await tHarley.mutation(api.services.mutate.addService, {
@@ -88,7 +88,7 @@ describe("Service functions", () => {
         description: "printing services",
         status: "Available",
       });
-    }).rejects.toThrowError("Unauthorized. Cannot add service.");
+    }).rejects.toThrow("Unauthorized. Cannot add service.");
   });
 
   test("Update Service (Admin/Maker)", async () => {
@@ -233,6 +233,6 @@ describe("Service functions", () => {
       await tHarley.mutation(api.services.mutate.deleteService, {
         service: service[0]._id,
       });
-    }).rejects.toThrowError("Unauthorized. Cannot delete service.");
+    }).rejects.toThrow("Unauthorized. Cannot delete service.");
   });
 });
