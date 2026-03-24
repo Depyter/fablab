@@ -9,6 +9,8 @@ import {
 import { Card } from "@/components/ui/card";
 
 import { FieldSeparator } from "@/components/ui/field";
+import { MediaGallery } from "../chat/media-gallery";
+import { UploadedFile } from "../file-upload/types";
 
 export type BookingFormValues = {
   serviceType: "self-service" | "full-service";
@@ -21,18 +23,22 @@ export type BookingFormValues = {
     startTime: string;
     endTime: string;
   };
-  files: string[]; // storage IDs
+  files: UploadedFile[];
 };
 
 interface EstimateProjectDetailsProps {
   serviceName: string;
   data: BookingFormValues;
+  isSubmitting?: boolean;
+  canSubmit?: boolean;
   onBack: () => void;
 }
 
 export function EstimateProjectDetails({
   serviceName,
   data,
+  isSubmitting,
+  canSubmit,
   onBack,
 }: EstimateProjectDetailsProps) {
   return (
@@ -75,6 +81,22 @@ export function EstimateProjectDetails({
               <h3 className="font-semibold text-gray-900 mb-4">
                 Project Information
               </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div>
+                  <p className="text-gray-600">Date</p>
+                  <p className="font-medium">
+                    {data.dateTime.date
+                      ? data.dateTime.date.toLocaleDateString()
+                      : "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Time</p>
+                  <p className="font-medium">
+                    {data.dateTime.startTime} - {data.dateTime.endTime}
+                  </p>
+                </div>
+              </div>
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-gray-600">Project Name</p>
@@ -84,7 +106,7 @@ export function EstimateProjectDetails({
                   <div>
                     <p className="text-gray-600">Material</p>
                     <p className="font-medium">
-                      {data.material === "plus"
+                      {data.material === "provide-own"
                         ? "Provide Materials"
                         : "Buy From Fablab"}
                     </p>
@@ -110,19 +132,14 @@ export function EstimateProjectDetails({
                 Uploaded Files
               </h3>
               {data.files.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {data.files.map((fileId, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center bg-gray-50 p-3 rounded"
-                    >
-                      <div>
-                        <p className="font-medium text-sm">File {i + 1}</p>
-                        <p className="text-xs text-gray-500">{fileId}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <MediaGallery
+                  mediaFiles={data.files.map((f) => ({
+                    fileUrl: f.url || "",
+                    fileType: f.fileType,
+                    originalName: f.fileName,
+                  }))}
+                  isCurrentUser={true}
+                />
               ) : (
                 <p className="text-sm text-gray-500">No files uploaded.</p>
               )}
@@ -162,6 +179,7 @@ export function EstimateProjectDetails({
             <input
               type="checkbox"
               id="terms"
+              required
               className="mt-1 h-4 w-4 text-chart-6 rounded"
             />
             <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
@@ -182,12 +200,21 @@ export function EstimateProjectDetails({
 
       <FieldSeparator className="mb-4" />
       <DialogFooter>
-        <Button variant="outline" className="rounded-lg" onClick={onBack}>
+        <Button
+          variant="outline"
+          className="rounded-lg"
+          onClick={onBack}
+          disabled={isSubmitting}
+        >
           Back
         </Button>
 
-        <Button type="submit" className="rounded-lg">
-          Submit Project Request
+        <Button
+          type="submit"
+          className="rounded-lg"
+          disabled={isSubmitting || canSubmit === false}
+        >
+          {isSubmitting ? "Submitting..." : "Submit Project Request"}
         </Button>
       </DialogFooter>
     </div>

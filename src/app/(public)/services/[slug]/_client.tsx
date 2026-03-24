@@ -142,6 +142,7 @@ export function ServiceDetailClient({
               </div>
               <div className="flex gap-3 mt-10 w-full">
                 <BookingDialog
+                  serviceId={service._id}
                   serviceName={service.name}
                   requirements={service.requirements}
                 />

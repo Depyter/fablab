@@ -88,7 +88,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
               modifiersClassNames={{
                 booked: "[&>button]:line-through",
               }}
-              initialFocus
+              autoFocus
             />
           </PopoverContent>
         </Popover>
