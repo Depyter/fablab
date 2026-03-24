@@ -44,17 +44,20 @@ export default defineSchema({
   }).index("by_category", ["category"]),
 
   resourceUsage: defineTable({
-    resource: v.id("resources"),
+    resource: v.optional(v.id("resources")),
+    service: v.id("services"),
     project: v.id("projects"),
-    maker: v.id("userProfile"),
+    maker: v.optional(v.id("userProfile")),
     startTime: v.number(),
     endTime: v.number(),
     date: v.number(),
   }).index("by_date_resource_startTime", ["date", "resource", "startTime"]),
 
   projects: defineTable({
-    alias: v.string(),
-    // bookingNumber: v.int64(),
+    name: v.string(),
+    description: v.string(),
+    serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
+    material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     userId: v.id("userProfile"),
     service: v.id("services"),
     pricing: v.union(
@@ -67,9 +70,10 @@ export default defineSchema({
       v.literal("approved"),
       v.literal("rejected"),
     ),
+    resources: v.array(v.id("resources")),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())), // storageId given by the frontend
-    specialInstructions: v.string(),
+    notes: v.string(),
   }).index("by_userProfile", ["userId"]),
 
   receipts: defineTable({
@@ -87,7 +91,6 @@ export default defineSchema({
 
   rooms: defineTable({
     name: v.string(),
-    // members: v.union(v.id("roomMembers"), v.null()),
     color: v.string(), // can be a string literal if need be down the road
     lastMessageId: v.optional(v.id("messages")),
   }),
