@@ -50,9 +50,10 @@ export const getBookings = query({
       machineUsages.map(async (usage) => {
         const [project, maker, resource] = await Promise.all([
           ctx.db.get(usage.project),
-          ctx.db.get(usage.maker),
-          ctx.db.get(usage.resource),
+          usage.maker ? ctx.db.get(usage.maker) : undefined,
+          usage.resource ? ctx.db.get(usage.resource) : undefined,
         ]);
+
         return { ...usage, project, maker, resource };
       }),
     );

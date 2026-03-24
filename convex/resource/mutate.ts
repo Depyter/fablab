@@ -152,45 +152,71 @@ export const deleteImageFromResource = mutation({
   },
 });
 
-export const addUsage = mutation({
+export const updateUsage = mutation({
   args: {
-    machine: v.id("resources"),
-    project: v.id("projects"),
-    startTime: v.number(),
-    endTime: v.number(),
-    date: v.number(),
+    id: v.id("resourceUsage"),
+    project: v.optional(v.id("projects")),
+    resource: v.optional(v.id("resources")),
+    service: v.optional(v.id("services")),
+    maker: v.optional(v.id("userProfile")),
+    startTime: v.optional(v.number()),
+    endTime: v.optional(v.number()),
+    date: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("No identity!");
 
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot update usage.");
+    const usage = await ctx.db.get(args.id);
+    if (!usage) throw new Error("Usage not found!");
 
-    const resourceUsage = await ctx.db
-      .query("resourceUsage")
-      .withIndex("by_date_resource_startTime", (q) =>
-        q
-          .eq("date", args.date)
-          .eq("resource", args.machine)
-          .eq("startTime", args.startTime),
-      )
-      .first();
+    const project = await ctx.db.get(args.project ?? usage.project);
+
+    if (!project) throw new Error("Project not found!");
 
     const profile = await ctx.db
       .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", project.userId))
       .first();
 
-    if (!resourceUsage)
-      await ctx.db.insert("resourceUsage", {
-        resource: args.machine,
-        project: args.project,
-        // Enforce that it exists because of previous check
-        maker: profile!._id,
-        startTime: args.startTime,
-        endTime: args.endTime,
-        date: args.date,
-      });
+    const isOwner = user.subject === profile?.userId;
+    const isPrivileged = await checkAuthority(["admin", "maker"], user, ctx);
+
+    if (!isOwner && !isPrivileged) {
+      throw new Error("Unauthorized. Cannot update resource.");
+    }
+
+    if (
+      !isPrivileged &&
+      (args.resource !== undefined ||
+        args.maker !== undefined ||
+        args.project !== undefined)
+    ) {
+      throw new Error("Unauthorized. Cannot modify restricted fields.");
+    }
+
+    const updates: Record<string, string | number> = {};
+
+    if (args.project !== undefined) updates.project = args.project;
+    if (args.resource !== undefined) updates.resource = args.resource;
+    if (args.service !== undefined) updates.service = args.service;
+    if (args.maker !== undefined) updates.maker = args.maker;
+    if (args.startTime !== undefined) updates.startTime = args.startTime;
+    if (args.endTime !== undefined) updates.endTime = args.endTime;
+    if (args.date !== undefined) updates.date = args.date;
+
+    await ctx.db.patch(args.id, updates);
+  },
+});
+
+export const deleteUsage = mutation({
+  args: {},
+  handler: async (ctx, _args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("No identity!");
+
+    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
+    if (!authorization)
+      throw new Error("Unauthorized. Cannot update resource.");
   },
 });
