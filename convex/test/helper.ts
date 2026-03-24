@@ -50,10 +50,19 @@ export async function setupProject() {
   });
 
   await tHarley.mutation(api.projects.mutate.createProject, {
+    name: "test",
     pricing: "UP",
+    description: "hello",
+    serviceType: "self-service",
+    material: "provide-own",
     files: [],
     service: serviceId,
-    specialInstructions: "pls na",
+    notes: "pls na",
+    booking: {
+      startTime: 930,
+      endTime: 1130,
+      date: 2026,
+    },
   });
 
   const { projectId, roomId } = await t.run(async (ctx) => {

@@ -90,9 +90,22 @@ export const getRooms = query({
       ),
     );
 
-    return rooms.map((room, i) => ({
-      ...room,
-      lastMessage: lastMessages[i] ?? null,
-    }));
+    const results = rooms
+      .map((room, i) => {
+        if (!room) return null;
+        return {
+          ...room,
+          lastMessage: lastMessages[i] ?? null,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    results.sort((a, b) => {
+      const timeA = a.lastMessage?._creationTime ?? a._creationTime;
+      const timeB = b.lastMessage?._creationTime ?? b._creationTime;
+      return timeB - timeA;
+    });
+
+    return results;
   },
 });
