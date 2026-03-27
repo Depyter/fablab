@@ -28,9 +28,11 @@ function ChatRoomBreadcrumb({ roomId }: { roomId: string }) {
 
   return (
     <>
-      <BreadcrumbSeparator />
+      <BreadcrumbSeparator className="text-sidebar-foreground/20" />
       <BreadcrumbItem>
-        <BreadcrumbPage>{room?.name ?? "..."}</BreadcrumbPage>
+        <BreadcrumbPage className="font-bold text-foreground truncate max-w-[150px] md:max-w-[300px]">
+          {room?.name ?? "..."}
+        </BreadcrumbPage>
       </BreadcrumbItem>
     </>
   );
@@ -50,7 +52,9 @@ export function DashboardBreadcrumb() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+            <BreadcrumbPage className="font-bold text-foreground tracking-tight">
+              Dashboard
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -65,16 +69,27 @@ export function DashboardBreadcrumb() {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem className="hidden md:block">
-          <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+          <BreadcrumbLink
+            href="/dashboard"
+            className="text-xs uppercase tracking-widest font-bold text-sidebar-foreground/40 hover:text-primary transition-colors"
+          >
+            Dashboard
+          </BreadcrumbLink>
         </BreadcrumbItem>
-        <BreadcrumbSeparator className="hidden md:block" />
+        <BreadcrumbSeparator className="hidden md:block text-sidebar-foreground/20" />
+
         <BreadcrumbItem>
           {slug ? (
-            <BreadcrumbLink href={`/dashboard/${section}`}>
+            <BreadcrumbLink
+              href={`/dashboard/${section}`}
+              className="text-xs uppercase tracking-widest font-bold text-sidebar-foreground/40 hover:text-primary transition-colors"
+            >
               {sectionLabel}
             </BreadcrumbLink>
           ) : (
-            <BreadcrumbPage>{sectionLabel}</BreadcrumbPage>
+            <BreadcrumbPage className="font-bold text-foreground tracking-tight">
+              {sectionLabel}
+            </BreadcrumbPage>
           )}
         </BreadcrumbItem>
 
@@ -84,9 +99,11 @@ export function DashboardBreadcrumb() {
         {/* Generic sub-page fallback */}
         {section !== "chat" && slug && (
           <>
-            <BreadcrumbSeparator />
+            <BreadcrumbSeparator className="text-sidebar-foreground/20" />
             <BreadcrumbItem>
-              <BreadcrumbPage className="capitalize">{slug}</BreadcrumbPage>
+              <BreadcrumbPage className="font-bold text-foreground capitalize tracking-tight">
+                {slug.replace(/-/g, " ")}
+              </BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}

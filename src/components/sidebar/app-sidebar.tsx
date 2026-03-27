@@ -54,7 +54,6 @@ const allNavItems: NavItem[] = [
     url: "#",
     icon: <SettingsIcon />,
     roles: ["admin", "maker"],
-    isActive: true,
     items: [
       {
         title: "Projects",
@@ -68,7 +67,7 @@ const allNavItems: NavItem[] = [
       },
       {
         title: "Inventory",
-        url: "#",
+        url: "/dashboard/inventory",
         roles: ["admin", "maker"],
       },
     ],
@@ -130,11 +129,7 @@ export function AppSidebar({
   };
 
   return (
-    <Sidebar
-      collapsible="icon"
-      {...props}
-      className="bg-transparent hover:bg-primary-muted"
-    >
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <FablabHeader />
       </SidebarHeader>

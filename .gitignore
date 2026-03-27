@@ -47,6 +47,3 @@ next-env.d.ts
 
 # wrangler preview
 .wrangler
-
-# convex
-_generated

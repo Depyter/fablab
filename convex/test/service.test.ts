@@ -20,8 +20,16 @@ describe("Service functions", () => {
     });
 
     await Promise.all([
-      t.mutation(api.files.trackUpload, { upload: storageId }),
-      t.mutation(api.files.trackUpload, { upload: sampleStorageId }),
+      t.mutation(api.files.trackUpload, {
+        upload: storageId,
+        type: "image",
+        originalName: "test",
+      }),
+      t.mutation(api.files.trackUpload, {
+        upload: sampleStorageId,
+        type: "image",
+        originalName: "test",
+      }),
     ]);
 
     await tAera.mutation(api.services.mutate.addService, {
@@ -66,7 +74,7 @@ describe("Service functions", () => {
         description: "printing services",
         status: "Available",
       });
-    }).rejects.toThrowError("No identity!");
+    }).rejects.toThrow("No identity!");
 
     await expect(async () => {
       await tHarley.mutation(api.services.mutate.addService, {
@@ -80,7 +88,7 @@ describe("Service functions", () => {
         description: "printing services",
         status: "Available",
       });
-    }).rejects.toThrowError("Unauthorized. Cannot add service.");
+    }).rejects.toThrow("Unauthorized. Cannot add service.");
   });
 
   test("Update Service (Admin/Maker)", async () => {
@@ -125,6 +133,12 @@ describe("Service functions", () => {
       return storageId;
     });
 
+    await t.mutation(api.files.trackUpload, {
+      upload: storageId,
+      type: "image",
+      originalName: "test",
+    });
+
     await tAera.mutation(api.services.mutate.addImageToService, {
       service: service[0]._id,
       image: storageId,
@@ -157,8 +171,16 @@ describe("Service functions", () => {
     });
 
     await Promise.all([
-      t.mutation(api.files.trackUpload, { upload: storageId }),
-      t.mutation(api.files.trackUpload, { upload: sampleStorageId }),
+      t.mutation(api.files.trackUpload, {
+        upload: storageId,
+        type: "image",
+        originalName: "test",
+      }),
+      t.mutation(api.files.trackUpload, {
+        upload: sampleStorageId,
+        type: "image",
+        originalName: "test",
+      }),
     ]);
 
     await tAera.mutation(api.services.mutate.addService, {
@@ -217,6 +239,6 @@ describe("Service functions", () => {
       await tHarley.mutation(api.services.mutate.deleteService, {
         service: service[0]._id,
       });
-    }).rejects.toThrowError("Unauthorized. Cannot delete service.");
+    }).rejects.toThrow("Unauthorized. Cannot delete service.");
   });
 });

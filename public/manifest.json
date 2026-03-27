@@ -1,0 +1,30 @@
+{
+  "name": "IskoLab",
+  "short_name": "IskoLab",
+  "description": "FabLab management and collaboration platform for creators.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#9d1f74",
+  "dir": "ltr",
+  "lang": "en",
+  "id": "fablabapp",
+  "icons": [
+    {
+      "src": "/fablab.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/fablab.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["productivity", "education", "utilities"]
+}

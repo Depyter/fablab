@@ -2,38 +2,68 @@
 
 A web application for managing fabrication lab services, project bookings, and client communications. Built for a university FabLab to handle the full lifecycle of a client request — from browsing available services to job completion.
 
-## Tech Stack
+## 💻 Tech Stack
 
-- **[Next.js 16](https://nextjs.org/)** — App Router, SSR, file-based routing
-- **[Convex](https://convex.dev/)** — Backend: real-time database, server functions, and file storage
-- **[Better Auth](https://better-auth.com/) + `@convex-dev/better-auth`** — Authentication (email/password and Google OAuth)
-- **[React 19](https://react.dev/)** — UI
-- **[Tailwind CSS v4](https://tailwindcss.com/)** — Styling
-- **[shadcn/ui](https://ui.shadcn.com/)** — Component library (via Radix UI primitives)
-- **[TanStack Form](https://tanstack.com/form)** — Form state management
-- **[Vitest](https://vitest.dev/)** — Unit testing (with `convex-test`)
-- **[Cloudflare Workers](https://workers.cloudflare.com/)** — Deployment target via `@opennextjs/cloudflare`
+### Frontend & UI
 
-## Features
+- **[Next.js 16](https://nextjs.org/)** — App Router, SSR, and file-based routing
+- **[React 19](https://react.dev/)** — Core UI library
+- **[Tailwind CSS v4](https://tailwindcss.com/)** — Utility-first styling
+- **[shadcn/ui](https://ui.shadcn.com/)** — Accessible component library (via Radix UI primitives)
+- **[TanStack Form](https://tanstack.com/form)** — Type-safe form state management
+- **[Threejs](https://threejs.org)** — Render 3d models using Javascript
 
-### Implemented
+### Backend & Data
 
-- **Authentication** — Email/password and Google OAuth login; role-based access control (`admin`, `maker`, `client`)
-- **Services** — Public-facing services listing; admin/maker dashboard for creating, editing, and deleting services (with image and sample file uploads)
-- **Projects** — Clients can submit project requests tied to a service; admins and makers can view and manage all projects; clients see only their own
-- **Real-time Chat** — Each project submission automatically creates a dedicated chat room shared between the client and all admins; paginated message history
-- **Role-aware Sidebar** — Navigation adapts dynamically based on the authenticated user's role
-- **File Uploads** — Convex file storage for service images, sample outputs, and project files
+- **[Convex](https://convex.dev/)** — Real-time database, server functions, and file storage
 
-### Planned / In Progress
+### Authentication
 
-- **Reports** — Overview, analytics, usage, and export (routes scaffolded, not yet implemented)
-- **Inventory** — Machine and material tracking (schema defined, UI not yet built)
-- **Notifications** — Notification system (folder scaffolded, not yet implemented)
-- **Receipts & Payments** — Receipt and payment proof tracking (schema defined, mutations not yet implemented)
-- **Dashboard Overview** — Summary widgets on the main dashboard page (currently placeholder UI)
+- **[Better Auth](https://better-auth.com/)** — Identity management (email/password and Google OAuth) with `@convex-dev/better-auth` integration
 
-## Roles
+### Infrastructure & Deployment
+
+- **[Cloudflare Workers](https://workers.cloudflare.com/)** — Edge deployment target via `@opennextjs/cloudflare`
+
+### Testing & QA
+
+- **[Vitest](https://vitest.dev/)** — Unit testing suite with `convex-test`
+
+---
+
+## 🗺️ Roadmap
+
+### Phase 1: Core Foundation & Access (Completed)
+
+- [x] **Authentication Setup** — Email/password and Google OAuth login.
+- [x] **Role-Based Access Control** — Distinct roles for `admin`, `maker`, and `client`.
+- [x] **Role-Aware Navigation** — Sidebar adapts dynamically based on the authenticated user's permissions.
+
+### Phase 2: Services & Project Lifecycle (Completed)
+
+- [x] **Service Management** — Public listings; admin/maker dashboard for CRUD operations with image/file uploads.
+- [x] **Project Requests** — Clients can submit jobs tied to specific services.
+- [x] **File Storage** — Convex file storage integration for service images, sample outputs, and project files.
+- [x] **Real-Time Communication** — Dedicated, auto-generated chat rooms for every project with paginated message history.
+
+### Phase 3: Operations & Dashboarding (In Progress)
+
+- [ ] **Dashboard Overview** — Replace placeholder UI with interactive summary widgets on the main dashboard.
+- [ ] **Project Management** — Project tracking (Schema defined, UI pending).
+- [ ] **Inventory Management** — Machine and material tracking (Schema defined, UI pending).
+- [ ] **Receipts & Payments** — Proof of payment tracking and receipt generation (Schema defined, mutations pending).
+
+### Phase 4: Analytics, Notifications & QA (Planned)
+
+- [ ] **Reporting System** — Overview, analytics, usage statistics, and data export.
+- [ ] **In-App Notifications** — Robust notification center for project updates and chat pings.
+- [ ] **PWA Push Notifications** — Native-feeling alerts for the Progressive Web App.
+- [ ] **Observability** — User behavior tracking and analytics integration via PostHog.
+- [ ] **End-to-End Testing** — Automated UI and flow testing using Playwright.
+
+---
+
+## 👥 Roles & Permissions
 
 | Role     | Capabilities                                                                     |
 | -------- | -------------------------------------------------------------------------------- |
@@ -41,9 +71,11 @@ A web application for managing fabrication lab services, project bookings, and c
 | `maker`  | All client capabilities + manage services, view all projects                     |
 | `admin`  | All maker capabilities + full administrative access                              |
 
-## Project Structure
+---
 
-```
+## 📂 Project Structure
+
+```text
 src/
   app/
     (public)/         # Unauthenticated routes: login, services listing, profile
@@ -63,11 +95,14 @@ convex/
   files.ts            # File upload/storage helpers
 ```
 
-## Getting Started
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
+- [Bun](https://bun.sh/) installed locally
 - A [Convex](https://dashboard.convex.dev/) account and project
 - (Optional) Google OAuth credentials for social login
 
@@ -75,33 +110,35 @@ convex/
 
 1. Clone the repository and install dependencies:
 
-   ```sh
-   bun install
-   ```
+```sh
+bun install
+```
 
-2. Set up your Convex backend. On first run this will prompt you to log in and link a project:
+2. Set up your Convex backend. On the first run, this will prompt you to log in and link a project:
 
-   ```sh
-   bunx convex dev --until-success
-   ```
+```sh
+bunx convex dev --until-success
+```
 
 3. Copy `.dev.vars.example` to `.dev.vars` (if provided) and fill in the required environment variables:
 
-   ```
-   BETTER_AUTH_SECRET=...
-   GOOGLE_CLIENT_ID=...       # optional, for Google OAuth
-   GOOGLE_CLIENT_SECRET=...   # optional, for Google OAuth
-   ```
+```env
+BETTER_AUTH_SECRET=...
+GOOGLE_CLIENT_ID=...       # optional, for Google OAuth
+GOOGLE_CLIENT_SECRET=...   # optional, for Google OAuth
+```
 
 4. Start the development server (runs Next.js and Convex concurrently):
 
-   ```sh
-   bun run dev
-   ```
+```sh
+bun run dev
+```
 
-   The app will be available at `http://localhost:3000`.
+The app will be available at `http://localhost:3000`.
 
-## Scripts
+---
+
+## 📜 Scripts
 
 | Command                 | Description                                       |
 | ----------------------- | ------------------------------------------------- |
@@ -115,20 +152,22 @@ convex/
 | `bun run lint`          | Run ESLint                                        |
 | `bun run format`        | Format all files with Prettier                    |
 
-## Deployment
+---
+
+## ☁️ Deployment
 
 This project is configured for deployment to **Cloudflare Workers** using [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare).
 
 1. Create the R2 bucket for incremental cache (first time only):
 
-   ```sh
-   bunx wrangler r2 bucket create fablab-opennext-cache
-   ```
+```sh
+bunx wrangler r2 bucket create fablab-opennext-cache
+```
 
 2. Deploy:
 
-   ```sh
-   bun run deploy
-   ```
+```sh
+bun run deploy
+```
 
-   Environment variables must also be set in the Cloudflare dashboard or via `wrangler secret put`.
+_Note: Environment variables must also be set in the Cloudflare dashboard or via `wrangler secret put` before deploying._

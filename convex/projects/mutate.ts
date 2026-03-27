@@ -4,14 +4,20 @@ import { mutation } from "../_generated/server";
 // Initialize a project
 export const createProject = mutation({
   args: {
-    pricing: v.union(
-      v.literal("normal"),
-      v.literal("UP"),
-      v.literal("Special"),
-    ),
-    files: v.optional(v.array(v.string())),
+    name: v.string(),
+    description: v.string(),
+    serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
+    material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     service: v.id("services"),
-    specialInstructions: v.string(),
+    pricing: v.union(v.literal("normal"), v.literal("UP")),
+    files: v.optional(v.array(v.string())),
+    notes: v.string(),
+
+    booking: v.object({
+      startTime: v.number(),
+      endTime: v.number(),
+      date: v.number(),
+    }),
   },
   handler: async (ctx, args) => {
     // assume user has already logged in
@@ -33,14 +39,27 @@ export const createProject = mutation({
     const defaultAlias = `${service.name} - ${userProfile.name}`;
 
     // create project
-    await ctx.db.insert("projects", {
-      alias: defaultAlias,
+    const project = await ctx.db.insert("projects", {
+      name: defaultAlias,
+      description: args.description,
+      serviceType: args.serviceType,
+      material: args.material,
       userId: userProfile._id,
       service: args.service,
       pricing: args.pricing,
       status: "pending",
+      resources: [],
       files: args.files,
-      specialInstructions: args.specialInstructions,
+      notes: args.notes,
+    });
+
+    // create proposed usage
+    await ctx.db.insert("resourceUsage", {
+      service: args.service,
+      project: project,
+      startTime: args.booking.startTime,
+      endTime: args.booking.endTime,
+      date: args.booking.date,
     });
 
     // create associated chat
@@ -69,10 +88,16 @@ export const createProject = mutation({
     }
 
     // create initial system message
-    await ctx.db.insert("messages", {
+    const message = await ctx.db.insert("messages", {
       room: room,
       content: `Generated room for project: ${defaultAlias}`,
       sender: "System",
     });
+
+    await ctx.db.patch("rooms", room, {
+      lastMessageId: message,
+    });
+
+    return room;
   },
 });

@@ -2,9 +2,19 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  files: defineTable({
+    originalName: v.string(),
+    storageId: v.id("_storage"),
+    type: v.string(),
+    status: v.union(v.literal("claimed"), v.literal("orphaned")),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("status", ["status"]),
+
   // Services that the users can see and admin can manage
   services: defineTable({
     name: v.string(),
+    slug: v.string(),
     images: v.array(v.id("_storage")), // array of fileids in convex
     samples: v.array(v.id("_storage")),
     regularPrice: v.number(),
@@ -13,36 +23,41 @@ export default defineSchema({
     description: v.string(),
     requirements: v.array(v.string()),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
-  }).index("by_name", ["name"]),
+  }).index("by_slug", ["slug"]),
 
-  machines: defineTable({
+  resources: defineTable({
     name: v.string(),
-    description: v.string(),
-    service: v.id("services"),
-    status: v.union(v.literal("Unavailable"), v.literal("Available")),
-  }).index("by_service", ["service"]),
-
-  // To show which machines have jobs
-  jobs: defineTable({
-    machine: v.id("machines"),
-    project: v.id("projects"),
-    start: v.number(),
-    end: v.number(),
-    complexity: v.union(
-      v.literal("high"),
-      v.literal("medium"),
-      v.literal("low"),
+    category: v.union(
+      v.literal("room"),
+      v.literal("machine"),
+      v.literal("tool"),
+      v.literal("misc"),
     ),
-    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-    requester: v.id("userProfile"), // must be admin or maker
-  })
-    .index("by_machine", ["machine"])
-    .index("by_project", ["project"])
-    .index("by_requester", ["requester"]),
+    type: v.string(),
+    images: v.array(v.id("_storage")),
+    description: v.string(),
+    status: v.union(
+      v.literal("Unavailable"),
+      v.literal("Available"),
+      v.literal("Under Maintenance"),
+    ),
+  }).index("by_category", ["category"]),
+
+  resourceUsage: defineTable({
+    resource: v.optional(v.id("resources")),
+    service: v.id("services"),
+    project: v.id("projects"),
+    maker: v.optional(v.id("userProfile")),
+    startTime: v.number(),
+    endTime: v.number(),
+    date: v.number(),
+  }).index("by_date_resource_startTime", ["date", "resource", "startTime"]),
 
   projects: defineTable({
-    alias: v.string(),
-    // bookingNumber: v.int64(),
+    name: v.string(),
+    description: v.string(),
+    serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
+    material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     userId: v.id("userProfile"),
     service: v.id("services"),
     pricing: v.union(
@@ -55,9 +70,10 @@ export default defineSchema({
       v.literal("approved"),
       v.literal("rejected"),
     ),
+    resources: v.array(v.id("resources")),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())), // storageId given by the frontend
-    specialInstructions: v.string(),
+    notes: v.string(),
   }).index("by_userProfile", ["userId"]),
 
   receipts: defineTable({
@@ -75,7 +91,6 @@ export default defineSchema({
 
   rooms: defineTable({
     name: v.string(),
-    // members: v.union(v.id("roomMembers"), v.null()),
     color: v.string(), // can be a string literal if need be down the road
     lastMessageId: v.optional(v.id("messages")),
   }),
@@ -102,8 +117,4 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_role", ["role"]),
-
-  pendingFiles: defineTable({
-    storageId: v.id("_storage"),
-  }).index("by_storageId", ["storageId"]),
 });

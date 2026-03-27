@@ -25,7 +25,7 @@ describe("Project and Chat functionality", () => {
       // Check if project was added
       const project = await ctx.db.query("projects").collect();
       expect(project.length).toBe(1);
-      expect(project[0].alias).toBe("3d printing - Harley");
+      expect(project[0].name).toBe("3d printing - Harley");
       expect(project[0].status).toBe("pending");
       expect(project[0].userId).toBe(userHarley!._id);
 
@@ -33,7 +33,6 @@ describe("Project and Chat functionality", () => {
       const room = await ctx.db.query("rooms").collect();
       expect(room.length).toBe(1);
       expect(room[0].color).toBe("yellow");
-      expect(room[0].lastMessageId).toBe(undefined);
       expect(room[0].name).toBe("3d printing - Harley");
 
       // check room members

@@ -21,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${robotoMono.variable}`}>
-      <body className="font-mono antialiased">{children}</body>
+    <html lang="en" className={`${robotoMono.variable} h-full`}>
+      <body className="font-mono antialiased h-full">{children}</body>
     </html>
   );
 }

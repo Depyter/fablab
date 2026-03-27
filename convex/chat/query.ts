@@ -29,11 +29,18 @@ export const getRoomMessages = query({
 
           const filesData = await Promise.all(
             message.file.map(async (fileId) => {
-              const [url, meta] = await Promise.all([
+              const [url, fileRecord] = await Promise.all([
                 ctx.storage.getUrl(fileId),
-                ctx.db.system.get(fileId),
+                ctx.db
+                  .query("files")
+                  .withIndex("by_storageId", (q) => q.eq("storageId", fileId))
+                  .first(),
               ]);
-              return { fileUrl: url, fileType: meta?.contentType ?? null };
+              return {
+                fileUrl: url,
+                fileType: fileRecord?.type ?? null,
+                originalName: fileRecord?.originalName ?? null,
+              };
             }),
           );
 
@@ -43,6 +50,7 @@ export const getRoomMessages = query({
             // Legacy single-file fields kept for backward compatibility
             fileUrl: filesData[0]?.fileUrl ?? null,
             fileType: filesData[0]?.fileType ?? null,
+            originalName: filesData[0]?.originalName ?? null,
           };
         }),
       ),
@@ -82,9 +90,22 @@ export const getRooms = query({
       ),
     );
 
-    return rooms.map((room, i) => ({
-      ...room,
-      lastMessage: lastMessages[i] ?? null,
-    }));
+    const results = rooms
+      .map((room, i) => {
+        if (!room) return null;
+        return {
+          ...room,
+          lastMessage: lastMessages[i] ?? null,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    results.sort((a, b) => {
+      const timeA = a.lastMessage?._creationTime ?? a._creationTime;
+      const timeB = b.lastMessage?._creationTime ?? b._creationTime;
+      return timeB - timeA;
+    });
+
+    return results;
   },
 });

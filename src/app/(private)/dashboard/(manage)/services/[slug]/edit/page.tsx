@@ -7,13 +7,13 @@ import { EditServiceClient } from "./_client";
 export default async function EditServicePage({
   params,
 }: {
-  params: Promise<{ name: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { name } = await params;
+  const { slug } = await params;
 
   const preloadedService = await preloadAuthQuery(
     api.services.query.getService,
-    { name },
+    { slug },
   );
 
   const service = preloadedQueryResult(preloadedService);
