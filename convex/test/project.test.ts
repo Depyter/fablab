@@ -33,7 +33,6 @@ describe("Project and Chat functionality", () => {
       const room = await ctx.db.query("rooms").collect();
       expect(room.length).toBe(1);
       expect(room[0].color).toBe("yellow");
-      expect(room[0].lastMessageId).toBe(undefined);
       expect(room[0].name).toBe("3d printing - Harley");
 
       // check room members

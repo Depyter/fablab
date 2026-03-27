@@ -133,6 +133,12 @@ describe("Service functions", () => {
       return storageId;
     });
 
+    await t.mutation(api.files.trackUpload, {
+      upload: storageId,
+      type: "image",
+      originalName: "test",
+    });
+
     await tAera.mutation(api.services.mutate.addImageToService, {
       service: service[0]._id,
       image: storageId,
