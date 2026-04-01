@@ -1,0 +1,64 @@
+version: 2
+updates:
+  # --------------------------------------------------
+  # 1. CI / GitHub Actions Dependencies
+  # --------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 3 # Wait 3 days to ensure actions are stable
+    groups:
+      # Group all CI action bumps into one PR
+      github-actions:
+        patterns:
+          - "*"
+
+  # --------------------------------------------------
+  # 2. Next.js / Application Dependencies (Bun Native)
+  # --------------------------------------------------
+  - package-ecosystem: "bun" # Natively targets your bun.lock / bun.lockb
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 3 # Wait 3 days after an npm package is published (prevents 0-day supply chain attacks)
+
+    # --------------------------------------------------
+    # Grouping Strategy for Next.js
+    # --------------------------------------------------
+    groups:
+      # 1. Next & React Core: Group these together!
+      # Next.js App Router relies heavily on specific React versions.
+      next-and-react:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+          - "eslint-config-next"
+
+      # 2. Linter & Formatting Tools
+      linters:
+        patterns:
+          - "eslint*"
+          - "prettier*"
+          - "typescript"
+
+      # 3. Everything Else
+      other-dependencies:
+        patterns:
+          - "*"
+        # Exclude the ones already handled by the groups above
+        exclude-patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+          - "eslint*"
+          - "prettier*"
+          - "typescript"
