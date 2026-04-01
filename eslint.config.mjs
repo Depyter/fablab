@@ -10,6 +10,24 @@ export default defineConfig([
   {
     rules: {
       "react/no-children-prop": "off",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/_generated/server"],
+              importNames: ["query", "mutation", "action"],
+              message: "Use helper.ts for query, mutation, or action",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["convex/helper.ts"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
   {

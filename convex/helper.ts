@@ -1,6 +1,11 @@
 import { UserIdentity } from "convex/server";
-import { QueryCtx, MutationCtx } from "./_generated/server";
+import { QueryCtx, MutationCtx, query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import {
+  customQuery,
+  customMutation,
+} from "convex-helpers/server/customFunctions";
+import { ConvexError } from "convex/values";
 
 type Role = "admin" | "maker" | "client";
 type RoleCombo = Role | Role[];
@@ -75,3 +80,50 @@ export async function deleteFiles(
 export function slugify(str: string): string {
   return str.trim().replace(/\s+/g, "-");
 }
+
+export async function ensureAuthentication(ctx: QueryCtx | MutationCtx) {
+  const user = await ctx.auth.getUserIdentity();
+  if (!user) {
+    throw new ConvexError("Unauthenticated call");
+  }
+  return user;
+}
+
+export const authQuery = customQuery(query, {
+  args: {},
+  input: async (ctx, args, opts: { role?: RoleCombo } = {}) => {
+    const user = await ensureAuthentication(ctx);
+
+    if (opts.role) {
+      const isAuthorized = await checkAuthority(opts.role, user, ctx);
+      if (!isAuthorized) {
+        throw new ConvexError(
+          "Unauthorized: You do not have the correct permissions to query.",
+        );
+      }
+    }
+
+    return { ctx: { user }, args: {} };
+  },
+});
+
+export const authMutation = customMutation(mutation, {
+  args: {},
+  input: async (ctx, args, opts: { role?: RoleCombo } = {}) => {
+    const user = await ensureAuthentication(ctx);
+
+    if (opts.role) {
+      const isAuthorized = await checkAuthority(opts.role, user, ctx);
+      if (!isAuthorized) {
+        throw new ConvexError(
+          "Unauthorized: You do not the correct permissions to mutate.",
+        );
+      }
+    }
+
+    return { ctx: { user }, args: {} };
+  },
+});
+
+export const publicQuery = query;
+export const publicMutation = mutation;
