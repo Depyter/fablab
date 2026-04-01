@@ -1,28 +1,23 @@
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { authQuery } from "./helper";
 
-export const getUserProfile = query({
+export const getUserProfile = authQuery({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
     return ctx.db
       .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
       .first();
   },
 });
 
-export const getRole = query({
+export const getRole = authQuery({
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
     const profile = await ctx.db
       .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
       .first();
 
     if (!profile) throw new Error("User profile not found");

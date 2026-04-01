@@ -1,7 +1,7 @@
-import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { publicQuery } from "../helper";
 
-export const getServices = query({
+export const getServices = publicQuery({
   args: {},
   handler: async (ctx) => {
     const services = await ctx.db.query("services").collect();
@@ -16,7 +16,7 @@ export const getServices = query({
   },
 });
 
-export const getService = query({
+export const getService = publicQuery({
   args: {
     slug: v.string(),
   },

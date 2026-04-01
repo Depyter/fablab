@@ -1,18 +1,15 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { authMutation, publicMutation } from "./helper";
 
 // The file size is not limited, but upload POST request has a 2 minute timeout.
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = authMutation({
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
     return await ctx.storage.generateUploadUrl();
   },
 });
 
-export const trackUpload = mutation({
+export const trackUpload = authMutation({
   args: {
     originalName: v.string(),
     upload: v.id("_storage"),

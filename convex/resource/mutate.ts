@@ -1,8 +1,14 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority, claimFiles, deleteFiles } from "../helper";
+import {
+  authMutation,
+  checkAuthority,
+  claimFiles,
+  deleteFiles,
+} from "../helper";
 
-export const addResource = mutation({
+export const addResource = authMutation({
+  role: ["admin", "maker"],
   args: {
     name: v.string(),
     category: v.union(
@@ -21,12 +27,6 @@ export const addResource = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot add resource.");
-
     await ctx.db.insert("resources", {
       name: args.name,
       category: args.category,
@@ -40,7 +40,8 @@ export const addResource = mutation({
   },
 });
 
-export const updateResource = mutation({
+export const updateResource = authMutation({
+  role: ["admin", "maker"],
   args: {
     id: v.id("resources"),
     name: v.string(),
@@ -55,13 +56,6 @@ export const updateResource = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot update resource.");
-
     const updates: Partial<{
       name: string;
       type: string;
@@ -78,18 +72,12 @@ export const updateResource = mutation({
   },
 });
 
-export const deleteResource = mutation({
+export const deleteResource = authMutation({
+  role: ["admin", "maker"],
   args: {
     id: v.id("resources"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot delete resource.");
-
     const resource = await ctx.db.get(args.id);
     if (!resource) throw new Error("Resource not found!");
 
@@ -101,19 +89,13 @@ export const deleteResource = mutation({
   },
 });
 
-export const addImageToResource = mutation({
+export const addImageToResource = authMutation({
+  role: ["admin", "maker"],
   args: {
     resource: v.id("resources"),
     image: v.id("_storage"), // storageID
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot add Image to Resource.");
-
     const resource = await ctx.db.get(args.resource);
 
     if (!resource) throw new Error("Resource does not exist!");
@@ -126,19 +108,13 @@ export const addImageToResource = mutation({
   },
 });
 
-export const deleteImageFromResource = mutation({
+export const deleteImageFromResource = authMutation({
+  role: ["admin", "maker"],
   args: {
     resource: v.id("resources"),
     image: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot delete Image from Resource.");
-
     const resource = await ctx.db.get(args.resource);
 
     if (!resource) throw new Error("Resource does not exist!");
@@ -152,6 +128,7 @@ export const deleteImageFromResource = mutation({
   },
 });
 
+// TODO: Modify to allow user owner
 export const updateUsage = mutation({
   args: {
     id: v.id("resourceUsage"),
@@ -209,6 +186,7 @@ export const updateUsage = mutation({
   },
 });
 
+// TODO: IMPLEMENT THIS
 export const deleteUsage = mutation({
   args: {},
   handler: async (ctx, _args) => {
