@@ -99,8 +99,8 @@ export default defineSchema({
     roomId: v.id("rooms"),
     participantId: v.id("userProfile"),
   })
-    .index("by_roomId", ["roomId"])
-    .index("by_participantId", ["participantId"]),
+    .index("by_participantId", ["participantId"])
+    .index("by_roomId_participantId", ["roomId", "participantId"]),
 
   messages: defineTable({
     content: v.string(),

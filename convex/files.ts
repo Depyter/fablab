@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { authMutation, publicMutation } from "./helper";
+import { authMutation } from "./helper";
 
 // The file size is not limited, but upload POST request has a 2 minute timeout.
 export const generateUploadUrl = authMutation({
