@@ -1,16 +1,18 @@
 import { paginationOptsValidator } from "convex/server";
-import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { authQuery } from "../helper";
 
-export const getRoom = query({
+// TODO: PROPERLY IMPLEMENT ROOM MEMBERSHIP CHECKS
+export const getRoom = authQuery({
   args: { roomId: v.id("rooms") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.roomId);
   },
 });
 
+// TODO: PROPERLY IMPLEMENT ROOM CHECKS
 // Use paginated query
-export const getRoomMessages = query({
+export const getRoomMessages = authQuery({
   args: { paginationOpts: paginationOptsValidator, room: v.id("rooms") },
   handler: async (ctx, args) => {
     const messages = await ctx.db
@@ -58,15 +60,12 @@ export const getRoomMessages = query({
   },
 });
 
-export const getRooms = query({
+export const getRooms = authQuery({
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("Unauthorized");
-
     const userProfile = await ctx.db
       .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
       .first();
 
     if (!userProfile) throw new Error("User profile does not exist!!");

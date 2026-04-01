@@ -1,16 +1,10 @@
 import { v } from "convex/values";
-import { query } from "../_generated/server";
-import { checkAuthority } from "../helper";
+import { authQuery } from "../helper";
 
-export const getResources = query({
+export const getResources = authQuery({
+  role: ["admin", "maker"],
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) return null;
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) return null;
-
     const resources = await ctx.db.query("resources").collect();
 
     return await Promise.all(
@@ -29,18 +23,12 @@ export const getResources = query({
   },
 });
 
-export const getBookings = query({
+export const getBookings = authQuery({
+  role: ["admin", "maker"],
   args: {
     date: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot see resource usage.");
-
     const nextDay = args.date + 24 * 60 * 60 * 1000;
 
     const machineUsages = await ctx.db

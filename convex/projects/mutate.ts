@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
+import { authMutation } from "../helper";
 
 // Initialize a project
-export const createProject = mutation({
+export const createProject = authMutation({
   args: {
     name: v.string(),
     description: v.string(),

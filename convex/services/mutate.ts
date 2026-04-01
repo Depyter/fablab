@@ -1,19 +1,20 @@
-import { internalMutation, mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import { checkAuthority, claimFiles, deleteFiles, slugify } from "../helper";
+import {
+  authMutation,
+  checkAuthority,
+  claimFiles,
+  deleteFiles,
+  slugify,
+} from "../helper";
 
 // called when user discards current service
-export const deleteOrphanedFiles = mutation({
+export const deleteOrphanedFiles = authMutation({
+  role: ["admin", "maker"],
   args: {
     storageIds: v.array(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot delete files.");
-
     deleteFiles(ctx, args.storageIds);
   },
 });
@@ -34,7 +35,8 @@ export const cleanOrphanedFiles = internalMutation({
   },
 });
 
-export const addService = mutation({
+export const addService = authMutation({
+  role: ["admin", "maker"],
   args: {
     name: v.string(),
     images: v.array(v.id("_storage")), // array of fileids in convex
@@ -47,13 +49,6 @@ export const addService = mutation({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    // properly check if admin user or maker
-    if (!authorization) throw new Error("Unauthorized. Cannot add service.");
-
     await ctx.db.insert("services", {
       name: args.name,
       slug: slugify(args.name),
@@ -72,7 +67,8 @@ export const addService = mutation({
   },
 });
 
-export const updateService = mutation({
+export const updateService = authMutation({
+  role: ["admin", "maker"],
   args: {
     service: v.id("services"),
     name: v.optional(v.string()),
@@ -121,19 +117,13 @@ export const updateService = mutation({
   },
 });
 
-export const addImageToService = mutation({
+export const addImageToService = authMutation({
+  role: ["admin", "maker"],
   args: {
     service: v.id("services"),
     image: v.id("_storage"), // storageID
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot add Image to Service.");
-
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service does not exist!");
@@ -146,19 +136,13 @@ export const addImageToService = mutation({
   },
 });
 
-export const addSampleToService = mutation({
+export const addSampleToService = authMutation({
+  role: ["admin", "maker"],
   args: {
     service: v.id("services"),
     sample: v.id("_storage"), // storageID
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot add Sample to Service.");
-
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service does not exist!");
@@ -171,17 +155,12 @@ export const addSampleToService = mutation({
   },
 });
 
-export const deleteService = mutation({
+export const deleteService = authMutation({
+  role: ["admin", "maker"],
   args: {
     service: v.id("services"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot delete service.");
-
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service not found!");
@@ -191,19 +170,13 @@ export const deleteService = mutation({
   },
 });
 
-export const deleteImageFromService = mutation({
+export const deleteImageFromService = authMutation({
+  role: ["admin", "maker"],
   args: {
     service: v.id("services"),
     image: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot delete Image from Service.");
-
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service does not exist!");
@@ -217,19 +190,13 @@ export const deleteImageFromService = mutation({
   },
 });
 
-export const deleteSampleFromService = mutation({
+export const deleteSampleFromService = authMutation({
+  role: ["admin", "maker"],
   args: {
     service: v.id("services"),
     sample: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot delete Sample from Service.");
-
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new Error("Service does not exist!");
