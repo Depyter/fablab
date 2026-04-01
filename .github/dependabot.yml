@@ -38,14 +38,14 @@ updates:
           - "next"
           - "react"
           - "react-dom"
-          - "@types/react"
-          - "@types/react-dom"
-          - "eslint-config-next"
+          - "@types/react*"
 
       # 2. Linter & Formatting Tools
       linters:
         patterns:
           - "eslint*"
+          - "@typescript-eslint/*"
+          - "@convex-dev/eslint-plugin"
           - "prettier*"
           - "typescript"
 
@@ -60,5 +60,7 @@ updates:
           - "react-dom"
           - "@types/react*"
           - "eslint*"
+          - "@typescript-eslint/*"
+          - "@convex-dev/eslint-plugin"
           - "prettier*"
           - "typescript"
