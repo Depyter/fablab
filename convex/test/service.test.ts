@@ -20,12 +20,12 @@ describe("Service functions", () => {
     });
 
     await Promise.all([
-      t.mutation(api.files.trackUpload, {
+      tAera.mutation(api.files.trackUpload, {
         upload: storageId,
         type: "image",
         originalName: "test",
       }),
-      t.mutation(api.files.trackUpload, {
+      tAera.mutation(api.files.trackUpload, {
         upload: sampleStorageId,
         type: "image",
         originalName: "test",
@@ -74,7 +74,7 @@ describe("Service functions", () => {
         description: "printing services",
         status: "Available",
       });
-    }).rejects.toThrow("No identity!");
+    }).rejects.toThrow("Unauthenticated call");
 
     await expect(async () => {
       await tHarley.mutation(api.services.mutate.addService, {
@@ -88,7 +88,9 @@ describe("Service functions", () => {
         description: "printing services",
         status: "Available",
       });
-    }).rejects.toThrow("Unauthorized. Cannot add service.");
+    }).rejects.toThrow(
+      "Unauthorized: You do not the correct permissions to mutate.",
+    );
   });
 
   test("Update Service (Admin/Maker)", async () => {
@@ -133,7 +135,7 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await t.mutation(api.files.trackUpload, {
+    await tAera.mutation(api.files.trackUpload, {
       upload: storageId,
       type: "image",
       originalName: "test",
@@ -171,12 +173,12 @@ describe("Service functions", () => {
     });
 
     await Promise.all([
-      t.mutation(api.files.trackUpload, {
+      tAera.mutation(api.files.trackUpload, {
         upload: storageId,
         type: "image",
         originalName: "test",
       }),
-      t.mutation(api.files.trackUpload, {
+      tAera.mutation(api.files.trackUpload, {
         upload: sampleStorageId,
         type: "image",
         originalName: "test",
@@ -239,6 +241,8 @@ describe("Service functions", () => {
       await tHarley.mutation(api.services.mutate.deleteService, {
         service: service[0]._id,
       });
-    }).rejects.toThrow("Unauthorized. Cannot delete service.");
+    }).rejects.toThrow(
+      "Unauthorized: You do not the correct permissions to mutate.",
+    );
   });
 });
