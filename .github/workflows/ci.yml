@@ -32,6 +32,8 @@ jobs:
   convex-deploy:
     runs-on: ubuntu-latest
 
+    if: ${{ github.actor != 'dependabot[bot]' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
