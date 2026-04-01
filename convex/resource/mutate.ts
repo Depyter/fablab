@@ -1,4 +1,3 @@
-import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import {
   authMutation,
@@ -128,8 +127,7 @@ export const deleteImageFromResource = authMutation({
   },
 });
 
-// TODO: Modify to allow user owner
-export const updateUsage = mutation({
+export const updateUsage = authMutation({
   args: {
     id: v.id("resourceUsage"),
     project: v.optional(v.id("projects")),
@@ -141,9 +139,6 @@ export const updateUsage = mutation({
     date: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
-
     const usage = await ctx.db.get(args.id);
     if (!usage) throw new Error("Usage not found!");
 
@@ -156,8 +151,12 @@ export const updateUsage = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", project.userId))
       .first();
 
-    const isOwner = user.subject === profile?.userId;
-    const isPrivileged = await checkAuthority(["admin", "maker"], user, ctx);
+    const isOwner = ctx.user.subject === profile?.userId;
+    const isPrivileged = await checkAuthority(
+      ["admin", "maker"],
+      ctx.user,
+      ctx,
+    );
 
     if (!isOwner && !isPrivileged) {
       throw new Error("Unauthorized. Cannot update resource.");
@@ -186,15 +185,18 @@ export const updateUsage = mutation({
   },
 });
 
-// TODO: IMPLEMENT THIS
-export const deleteUsage = mutation({
-  args: {},
-  handler: async (ctx, _args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
+export const deleteUsage = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    usage: v.id("resourceUsage"),
+  },
+  handler: async (ctx, args) => {
+    const usage = await ctx.db.get(args.usage);
+    if (!usage) throw new Error("Usage not found!");
 
-    const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization)
-      throw new Error("Unauthorized. Cannot update resource.");
+    const project = await ctx.db.get(usage.project);
+    if (!project) throw new Error("Project not found!");
+
+    await ctx.db.delete(args.usage);
   },
 });
