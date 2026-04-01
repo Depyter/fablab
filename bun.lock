@@ -18,6 +18,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "convex": "^1.31.7",
+        "convex-helpers": "^0.1.114",
         "convex-test": "^0.0.41",
         "date-fns": "^4.1.0",
         "embla-carousel-react": "^8.6.0",
