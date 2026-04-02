@@ -1,5 +1,5 @@
 import { internalMutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { authQuery } from "./helper";
 
 export const getUserProfile = authQuery({
@@ -20,7 +20,7 @@ export const getRole = authQuery({
       .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
       .first();
 
-    if (!profile) throw new Error("User profile not found");
+    if (!profile) throw new ConvexError("User profile not found");
 
     return profile.role;
   },

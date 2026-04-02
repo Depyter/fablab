@@ -1,4 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
+import { ConvexError } from "convex/values";
 import { authQuery } from "../helper";
 
 export const getProjects = authQuery({
@@ -11,7 +12,7 @@ export const getProjects = authQuery({
       .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
       .first();
 
-    if (!userProfile) throw new Error("User not authorized");
+    if (!userProfile) throw new ConvexError("User not authorized");
 
     const baseQuery = ctx.db.query("projects");
 

@@ -23,7 +23,7 @@ export async function checkAuthority(
     .withIndex("by_userId", (q) => q.eq("userId", user.subject))
     .first();
 
-  if (!profile) throw new Error("User profile not found");
+  if (!profile) throw new ConvexError("User profile not found");
 
   return roles.includes(profile.role);
 }
@@ -46,7 +46,7 @@ export async function claimFiles(
         .first();
 
       if (!trackedFile) {
-        throw new Error(`File ${storageId} does not exist.`);
+        throw new ConvexError(`File ${storageId} does not exist.`);
       }
 
       await ctx.db.patch(trackedFile._id, {
@@ -68,7 +68,7 @@ export async function deleteFiles(
         .first();
 
       if (!trackedFile) {
-        throw new Error(`Tracked file ${storageId} does not exist`);
+        throw new ConvexError(`Tracked file ${storageId} does not exist`);
       }
 
       await ctx.storage.delete(trackedFile.storageId);

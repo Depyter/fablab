@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
 
 export const sendMessage = authMutation({
@@ -8,7 +8,7 @@ export const sendMessage = authMutation({
     room: v.id("rooms"),
   },
   handler: async (ctx, args) => {
-    if (!ctx.user || !ctx.user?.name) throw new Error("Unauthorized");
+    if (!ctx.user || !ctx.user?.name) throw new ConvexError("Unauthorized");
 
     const message = await ctx.db.insert("messages", {
       content: args.content,

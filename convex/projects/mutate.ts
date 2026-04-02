@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { authMutation } from "../helper";
 
 // Initialize a project
@@ -22,18 +22,18 @@ export const createProject = authMutation({
   handler: async (ctx, args) => {
     // assume user has already logged in
     const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new ConvexError("Unauthorized");
 
     const userProfile = await ctx.db
       .query("userProfile")
       .withIndex("by_userId", (q) => q.eq("userId", user.subject))
       .first();
 
-    if (!userProfile) throw new Error("User not authorized");
+    if (!userProfile) throw new ConvexError("User not authorized");
 
     // get service name for alias
     const service = await ctx.db.get(args.service);
-    if (!service) throw new Error("Service not found");
+    if (!service) throw new ConvexError("Service not found!");
 
     // create default alias: [service name] - [user name]
     const defaultAlias = `${service.name} - ${userProfile.name}`;

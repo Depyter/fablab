@@ -1,5 +1,5 @@
 import { internalMutation } from "../_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import {
   authMutation,
   checkAuthority,
@@ -83,10 +83,11 @@ export const updateService = authMutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
+    if (!user) throw new ConvexError("No identity!");
 
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot add service.");
+    if (!authorization)
+      throw new ConvexError("Unauthorized. Cannot add service.");
 
     const updates: Partial<{
       name: string;
@@ -126,7 +127,7 @@ export const addImageToService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
 
     await ctx.db.patch("services", args.service, {
       images: [...service.images, args.image],
@@ -145,7 +146,7 @@ export const addSampleToService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
 
     await ctx.db.patch("services", args.service, {
       samples: [...service.samples, args.sample],
@@ -163,7 +164,7 @@ export const deleteService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service not found!");
+    if (!service) throw new ConvexError("Service not found!");
     await deleteFiles(ctx, service.images);
     await deleteFiles(ctx, service.samples);
     await ctx.db.delete("services", args.service);
@@ -179,7 +180,7 @@ export const deleteImageFromService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
     const updatedList = service.images.filter((id) => id !== args.image);
 
     await ctx.db.patch("services", args.service, {
@@ -199,7 +200,7 @@ export const deleteSampleFromService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
     const updatedList = service.samples.filter((id) => id !== args.sample);
 
     await ctx.db.patch("services", args.service, {

@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import {
   authMutation,
   checkAuthority,
@@ -78,7 +78,7 @@ export const deleteResource = authMutation({
   },
   handler: async (ctx, args) => {
     const resource = await ctx.db.get(args.id);
-    if (!resource) throw new Error("Resource not found!");
+    if (!resource) throw new ConvexError("Resource not found!");
 
     if (resource.images) {
       await deleteFiles(ctx, resource.images);
@@ -97,7 +97,7 @@ export const addImageToResource = authMutation({
   handler: async (ctx, args) => {
     const resource = await ctx.db.get(args.resource);
 
-    if (!resource) throw new Error("Resource does not exist!");
+    if (!resource) throw new ConvexError("Resource does not exist!");
 
     await ctx.db.patch(args.resource, {
       images: [...resource.images, args.image],
@@ -116,7 +116,7 @@ export const deleteImageFromResource = authMutation({
   handler: async (ctx, args) => {
     const resource = await ctx.db.get(args.resource);
 
-    if (!resource) throw new Error("Resource does not exist!");
+    if (!resource) throw new ConvexError("Resource does not exist!");
     const updatedList = resource.images.filter((id) => id !== args.image);
 
     await ctx.db.patch(args.resource, {
@@ -144,7 +144,7 @@ export const updateUsage = authMutation({
 
     const project = await ctx.db.get(args.project ?? usage.project);
 
-    if (!project) throw new Error("Project not found!");
+    if (!project) throw new ConvexError("Project not found!");
 
     const profile = await ctx.db
       .query("userProfile")
@@ -159,7 +159,7 @@ export const updateUsage = authMutation({
     );
 
     if (!isOwner && !isPrivileged) {
-      throw new Error("Unauthorized. Cannot update resource.");
+      throw new ConvexError("Unauthorized. Cannot update resource.");
     }
 
     if (
@@ -168,7 +168,7 @@ export const updateUsage = authMutation({
         args.maker !== undefined ||
         args.project !== undefined)
     ) {
-      throw new Error("Unauthorized. Cannot modify restricted fields.");
+      throw new ConvexError("Unauthorized. Cannot modify restricted fields.");
     }
 
     const updates: Record<string, string | number> = {};
@@ -192,10 +192,10 @@ export const deleteUsage = authMutation({
   },
   handler: async (ctx, args) => {
     const usage = await ctx.db.get(args.usage);
-    if (!usage) throw new Error("Usage not found!");
+    if (!usage) throw new ConvexError("Usage not found!");
 
     const project = await ctx.db.get(usage.project);
-    if (!project) throw new Error("Project not found!");
+    if (!project) throw new ConvexError("Project not found!");
 
     await ctx.db.delete(args.usage);
   },
