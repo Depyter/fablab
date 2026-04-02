@@ -63,77 +63,65 @@ export function ProjectCalendarView() {
   const handleToday = () => setDate(startOfToday());
 
   // ----- Resources Table Data (Machine Schedule) -----
-  const { resourceMachines, resourceUsages } = React.useMemo(() => {
-    const machines: Machine[] = resources.map((r) => ({
-      id: r._id,
-      name: r.name,
-      status: r.status === "Unavailable" ? "Unavailable" : "Available",
-      description: r.description || `${r.category} resource`,
+  const resourceMachines: Machine[] = resources.map((r) => ({
+    id: r._id,
+    name: r.name,
+    status: r.status === "Unavailable" ? "Unavailable" : "Available",
+    description: r.description || `${r.category} resource`,
+  }));
+
+  const resourceUsages: MachineUsage[] = bookings
+    .filter((b) => b.resource)
+    .map((b) => ({
+      id: b._id,
+      machineId: b.resource!._id,
+      projectId: b.project?._id || "",
+      projectAlias: b.project?.name || "Unknown Project",
+      projectStatus: b.project?.status || "pending",
+      makerName: b.maker?.name || "Unknown Maker",
+      date: b.date,
+      startTime: getSnappedDecimalHours(b.startTime, false),
+      endTime: getSnappedDecimalHours(b.endTime, true),
+      color: "bg-blue-500/10 border-blue-500 text-blue-700",
     }));
-
-    const usages: MachineUsage[] = bookings
-      .filter((b) => b.resource)
-      .map((b) => ({
-        id: b._id,
-        machineId: b.resource!._id,
-        projectId: b.project?._id || "",
-        projectAlias: b.project?.name || "Unknown Project",
-        projectStatus: b.project?.status || "pending",
-        makerName: b.maker?.name || "Unknown Maker",
-        date: b.date,
-        startTime: getSnappedDecimalHours(b.startTime, false),
-        endTime: getSnappedDecimalHours(b.endTime, true),
-        color: "bg-blue-500/10 border-blue-500 text-blue-700",
-      }));
-
-    return { resourceMachines: machines, resourceUsages: usages };
-  }, [resources, bookings]);
 
   // ----- Services Table Data (Project Booking Times) -----
-  const { serviceMachines, serviceUsages } = React.useMemo(() => {
-    const machines: Machine[] = services.map((s) => ({
-      id: s._id,
-      name: s.name,
-      status: s.status === "Unavailable" ? "Unavailable" : "Available",
-      description: "Service Booking Queue",
+  const serviceMachines: Machine[] = services.map((s) => ({
+    id: s._id,
+    name: s.name,
+    status: s.status === "Unavailable" ? "Unavailable" : "Available",
+    description: "Service Booking Queue",
+  }));
+
+  const serviceUsages: MachineUsage[] = bookings
+    .filter((b) => b.service)
+    .map((b) => ({
+      id: b._id,
+      machineId: b.service!._id,
+      projectId: b.project?._id || "",
+      projectAlias: b.project?.name || "Unknown Project",
+      projectStatus: b.project?.status || "pending",
+      makerName: b.maker?.name || "Unknown Maker",
+      date: b.date,
+      startTime: getSnappedDecimalHours(b.startTime, false),
+      endTime: getSnappedDecimalHours(b.endTime, true),
+      color: "bg-purple-500/10 border-purple-500 text-purple-700",
     }));
 
-    const usages: MachineUsage[] = bookings
-      .filter((b) => b.service)
-      .map((b) => ({
-        id: b._id,
-        machineId: b.service!._id,
-        projectId: b.project?._id || "",
-        projectAlias: b.project?.name || "Unknown Project",
-        projectStatus: b.project?.status || "pending",
-        makerName: b.maker?.name || "Unknown Maker",
-        date: b.date,
-        startTime: getSnappedDecimalHours(b.startTime, false),
-        endTime: getSnappedDecimalHours(b.endTime, true),
-        color: "bg-purple-500/10 border-purple-500 text-purple-700",
-      }));
-
-    return { serviceMachines: machines, serviceUsages: usages };
-  }, [services, bookings]);
-
   // Apply Date and Status filters
-  const filteredResourceUsages = React.useMemo(() => {
-    return resourceUsages.filter((u) => {
-      const isDateMatch = isSameDay(new Date(u.date), date);
-      return (
-        isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
-      );
-    });
-  }, [resourceUsages, date, viewFilter]);
+  const filteredResourceUsages = resourceUsages.filter((u) => {
+    const isDateMatch = isSameDay(new Date(u.date), date);
+    return (
+      isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
+    );
+  });
 
-  const filteredServiceUsages = React.useMemo(() => {
-    return serviceUsages.filter((u) => {
-      const isDateMatch = isSameDay(new Date(u.date), date);
-      return (
-        isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
-      );
-    });
-  }, [serviceUsages, date, viewFilter]);
+  const filteredServiceUsages = serviceUsages.filter((u) => {
+    const isDateMatch = isSameDay(new Date(u.date), date);
+    return (
+      isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
+    );
+  });
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">

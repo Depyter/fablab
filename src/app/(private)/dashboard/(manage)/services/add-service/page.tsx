@@ -15,10 +15,7 @@ import { RequirementsForm } from "@/components/services/forms/requirements-form"
 import { MachineSelectForm } from "@/components/services/forms/machine-select-form";
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
-import {
-  addServiceFormOpts,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import { addServiceFormOpts } from "@/types/add-service";
 
 import { toast } from "sonner";
 

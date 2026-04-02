@@ -43,7 +43,7 @@ export function EditServiceClient({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
   const handleThumbnailUploading = useCallback(
@@ -144,7 +144,6 @@ export function EditServiceClient({
 
   const handleDeleteService = async () => {
     if (!service) return;
-    setIsDeleting(true);
     try {
       await deleteService({
         service: service._id as Id<"services">,
@@ -162,7 +161,7 @@ export function EditServiceClient({
       );
       router.push("/dashboard/services");
     } catch {
-      setIsDeleting(false);
+      // Handle error silently
     }
   };
 
