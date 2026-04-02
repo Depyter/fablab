@@ -268,72 +268,38 @@ export function InventoryItemForm({
           </div>
 
           <div className="space-y-4">
-            <FieldSet>
-              <FormSection
-                title="Details"
-                className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
-              >
-                <form.Field
-                  name="type"
-                  children={(field) => (
-                    <Field>
-                      <FieldLabel htmlFor={field.name}>
-                        {config.typeLabel}
-                      </FieldLabel>
-                      <Select
-                        value={field.state.value}
-                        onValueChange={field.handleChange}
-                      >
-                        <SelectTrigger id={field.name}>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {config.typeOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  )}
-                />
-
-                <form.Field
-                  name="status"
-                  children={(field) => (
-                    <Field>
-                      <FieldLabel htmlFor={field.name}>Status</FieldLabel>
-                      <Select
-                        value={field.state.value}
-                        onValueChange={(val) =>
-                          field.handleChange(
-                            val as InventoryItemFormValues["status"],
-                          )
-                        }
-                      >
-                        <SelectTrigger id={field.name}>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="Available">Available</SelectItem>
-                            <SelectItem value="Unavailable">
-                              Unavailable
-                            </SelectItem>
-                            <SelectItem value="Under Maintenance">
-                              Under Maintenance
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  )}
-                />
-              </FormSection>
-            </FieldSet>
+            <FormSection
+              title="Details"
+              className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <form.AppField
+                name="type"
+                children={(field) => (
+                  <field.SelectInput
+                    label={config.typeLabel}
+                    placeholder="Select type"
+                    options={config.typeOptions}
+                  />
+                )}
+              />
+              <form.AppField
+                name="status"
+                children={(field) => (
+                  <field.SelectInput
+                    label="Status"
+                    placeholder="Select status"
+                    options={[
+                      { label: "Available", value: "Available" },
+                      { label: "Unavailable", value: "Unavailable" },
+                      {
+                        label: "Under Maintenance",
+                        value: "Under Maintenance",
+                      },
+                    ]}
+                  />
+                )}
+              />
+            </FormSection>
           </div>
         </div>
       </form>

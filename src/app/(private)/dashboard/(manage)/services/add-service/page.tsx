@@ -13,7 +13,7 @@ import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
 import { MachineSelectForm } from "@/components/services/forms/machine-select-form";
-import { SelectForm } from "@/components/services/forms/select-form";
+import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
 import {
   addServiceFormOpts,
@@ -215,17 +215,18 @@ export default function AddServicePage() {
           />
 
           <MachineSelectForm options={machineOptions} />
-          <form.Field
+          <form.AppField
             name="status"
             children={(field) => (
-              <SelectForm
-                title="Status"
-                options={statusOptions}
-                value={field.state.value}
-                onChange={(val) =>
-                  field.handleChange(val as AddServiceFormValues["status"])
-                }
-              />
+              <div className="w-full sm:max-w-3xl">
+                <FormSection title="Status">
+                  <field.SelectInput
+                    label="Status"
+                    placeholder="Select status..."
+                    options={statusOptions}
+                  />
+                </FormSection>
+              </div>
             )}
           />
         </div>

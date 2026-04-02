@@ -2,6 +2,14 @@ import { createFormHook, createFormHookContexts } from "@tanstack/react-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
@@ -58,6 +66,42 @@ export const { useAppForm, withForm } = createFormHook({
             rows={props.rows}
             className={props.className}
           />
+          {field.state.meta.errors?.length > 0 && (
+            <FieldError
+              errors={field.state.meta.errors.map((err) => ({
+                message: err?.toString() ?? "Invalid value",
+              }))}
+            />
+          )}
+        </Field>
+      );
+    },
+    SelectInput: (props: {
+      label: string;
+      placeholder?: string;
+      options: { label: string; value: string }[];
+    }) => {
+      const field = useFieldContext<string>();
+      return (
+        <Field>
+          <FieldLabel htmlFor={field.name}>{props.label}</FieldLabel>
+          <Select
+            value={field.state.value}
+            onValueChange={(val) => field.handleChange(val)}
+          >
+            <SelectTrigger id={field.name}>
+              <SelectValue placeholder={props.placeholder || "Select..."} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {props.options.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           {field.state.meta.errors?.length > 0 && (
             <FieldError
               errors={field.state.meta.errors.map((err) => ({
