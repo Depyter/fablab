@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
+import { ResourceStatus, ServiceStatus } from "@convex/constants";
 
 type ViewFilter = "all" | "confirmed";
 
@@ -66,7 +67,10 @@ export function ProjectCalendarView() {
   const resourceMachines: Machine[] = resources.map((r) => ({
     id: r._id,
     name: r.name,
-    status: r.status === "Unavailable" ? "Unavailable" : "Available",
+    status:
+      r.status === ResourceStatus.UNAVAILABLE
+        ? ResourceStatus.UNAVAILABLE
+        : ResourceStatus.AVAILABLE,
     description: r.description || `${r.category} resource`,
   }));
 
@@ -89,7 +93,10 @@ export function ProjectCalendarView() {
   const serviceMachines: Machine[] = services.map((s) => ({
     id: s._id,
     name: s.name,
-    status: s.status === "Unavailable" ? "Unavailable" : "Available",
+    status:
+      s.status === ServiceStatus.UNAVAILABLE
+        ? ServiceStatus.UNAVAILABLE
+        : ServiceStatus.AVAILABLE,
     description: "Service Booking Queue",
   }));
 

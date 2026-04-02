@@ -19,6 +19,7 @@ import { FileUpload, type UploadedFile } from "@/components/file-upload";
 import type { AddServiceFormValues } from "@/types/add-service";
 import { ActionDialog } from "@/components/action-dialog";
 import { toast } from "sonner";
+import { ServiceStatus } from "@convex/constants";
 
 const machineOptions = [
   { label: "Machine 1", value: "machine-1" },
@@ -26,9 +27,10 @@ const machineOptions = [
   { label: "Machine 3", value: "machine-3" },
 ];
 
+// status options aligned with the backend literals
 const statusOptions = [
-  { label: "Available", value: "Available" },
-  { label: "Unavailable", value: "Unavailable" },
+  { label: ServiceStatus.AVAILABLE, value: ServiceStatus.AVAILABLE },
+  { label: ServiceStatus.UNAVAILABLE, value: ServiceStatus.UNAVAILABLE },
 ];
 
 export function EditServiceClient({

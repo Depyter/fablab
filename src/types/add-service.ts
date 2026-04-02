@@ -1,4 +1,5 @@
 import { formOptions } from "@tanstack/react-form";
+import { ServiceStatus, type ServiceStatusType } from "@convex/constants";
 
 export interface AddServiceFormValues {
   name: string;
@@ -6,7 +7,7 @@ export interface AddServiceFormValues {
   regularPrice: number;
   upPrice: number;
   unitPrice: string;
-  status: "Available" | "Unavailable";
+  status: ServiceStatusType;
   images: string[];
   samples: string[];
   requirements: string[];
@@ -18,7 +19,7 @@ const defaultAddServiceValues: AddServiceFormValues = {
   regularPrice: 0,
   upPrice: 0,
   unitPrice: "",
-  status: "Available",
+  status: ServiceStatus.AVAILABLE,
   images: [],
   samples: [],
   requirements: [""],

@@ -13,14 +13,19 @@ import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import {
+  ResourceCategoryType,
+  ResourceStatusType,
+  ResourceStatus,
+} from "@convex/constants";
 
-export type InventoryItemType = "machine" | "tool" | "room" | "misc";
+export type InventoryItemType = ResourceCategoryType;
 
 export type InventoryItemFormValues = {
   name: string;
   description: string;
   type: string;
-  status: "Available" | "Unavailable" | "Under Maintenance";
+  status: ResourceStatusType;
   thumbnail: string[]; // storage IDs
 };
 
@@ -109,7 +114,7 @@ export function InventoryItemForm({
       name: initialValues?.name ?? "",
       description: initialValues?.description ?? "",
       type: initialValues?.type ?? config.typeOptions[0].value,
-      status: initialValues?.status ?? "Available",
+      status: initialValues?.status ?? ResourceStatus.AVAILABLE,
       thumbnail: initialValues?.thumbnail ?? ([] as string[]),
     } as InventoryItemFormValues,
     onSubmit: async ({ value }) => {
@@ -279,11 +284,17 @@ export function InventoryItemForm({
                     label="Status"
                     placeholder="Select status"
                     options={[
-                      { label: "Available", value: "Available" },
-                      { label: "Unavailable", value: "Unavailable" },
                       {
-                        label: "Under Maintenance",
-                        value: "Under Maintenance",
+                        label: ResourceStatus.AVAILABLE,
+                        value: ResourceStatus.AVAILABLE,
+                      },
+                      {
+                        label: ResourceStatus.UNAVAILABLE,
+                        value: ResourceStatus.UNAVAILABLE,
+                      },
+                      {
+                        label: ResourceStatus.UNDER_MAINTENANCE,
+                        value: ResourceStatus.UNDER_MAINTENANCE,
                       },
                     ]}
                   />

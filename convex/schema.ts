@@ -1,12 +1,27 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+  FileStatus,
+  PaymentMode,
+  ProjectMaterial,
+  ProjectPricing,
+  ProjectServiceType,
+  ProjectStatus,
+  ResourceCategory,
+  ResourceStatus,
+  ServiceStatus,
+  UserRole,
+} from "./constants";
 
 export default defineSchema({
   files: defineTable({
     originalName: v.string(),
     storageId: v.id("_storage"),
     type: v.string(),
-    status: v.union(v.literal("claimed"), v.literal("orphaned")),
+    status: v.union(
+      v.literal(FileStatus.CLAIMED),
+      v.literal(FileStatus.ORPHANED),
+    ),
   })
     .index("by_storageId", ["storageId"])
     .index("status", ["status"]),
@@ -22,24 +37,27 @@ export default defineSchema({
     unitPrice: v.string(),
     description: v.string(),
     requirements: v.array(v.string()),
-    status: v.union(v.literal("Unavailable"), v.literal("Available")),
+    status: v.union(
+      v.literal(ServiceStatus.UNAVAILABLE),
+      v.literal(ServiceStatus.AVAILABLE),
+    ),
   }).index("by_slug", ["slug"]),
 
   resources: defineTable({
     name: v.string(),
     category: v.union(
-      v.literal("room"),
-      v.literal("machine"),
-      v.literal("tool"),
-      v.literal("misc"),
+      v.literal(ResourceCategory.ROOM),
+      v.literal(ResourceCategory.MACHINE),
+      v.literal(ResourceCategory.TOOL),
+      v.literal(ResourceCategory.MISC),
     ),
     type: v.string(),
     images: v.array(v.id("_storage")),
     description: v.string(),
     status: v.union(
-      v.literal("Unavailable"),
-      v.literal("Available"),
-      v.literal("Under Maintenance"),
+      v.literal(ResourceStatus.UNAVAILABLE),
+      v.literal(ResourceStatus.AVAILABLE),
+      v.literal(ResourceStatus.UNDER_MAINTENANCE),
     ),
   }).index("by_category", ["category"]),
 
@@ -56,19 +74,25 @@ export default defineSchema({
   projects: defineTable({
     name: v.string(),
     description: v.string(),
-    serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
-    material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
+    serviceType: v.union(
+      v.literal(ProjectServiceType.SELF_SERVICE),
+      v.literal(ProjectServiceType.FULL_SERVICE),
+    ),
+    material: v.union(
+      v.literal(ProjectMaterial.PROVIDE_OWN),
+      v.literal(ProjectMaterial.BUY_FROM_LAB),
+    ),
     userId: v.id("userProfile"),
     service: v.id("services"),
     pricing: v.union(
-      v.literal("normal"),
-      v.literal("UP"),
-      v.literal("Special"),
+      v.literal(ProjectPricing.NORMAL),
+      v.literal(ProjectPricing.UP),
+      v.literal(ProjectPricing.SPECIAL),
     ),
     status: v.union(
-      v.literal("pending"),
-      v.literal("approved"),
-      v.literal("rejected"),
+      v.literal(ProjectStatus.PENDING),
+      v.literal(ProjectStatus.APPROVED),
+      v.literal(ProjectStatus.REJECTED),
     ),
     resources: v.array(v.id("resources")),
     receipt: v.optional(v.id("receipts")),
@@ -79,10 +103,10 @@ export default defineSchema({
   receipts: defineTable({
     receiptNumber: v.int64(),
     paymentMode: v.union(
-      v.literal("cash"),
-      v.literal("gcash"),
-      v.literal("bank transfer"),
-      v.literal("others"),
+      v.literal(PaymentMode.CASH),
+      v.literal(PaymentMode.GCASH),
+      v.literal(PaymentMode.BANK_TRANSFER),
+      v.literal(PaymentMode.OTHERS),
     ),
     booking: v.id("bookings"),
     proof: v.string(), // transaction number of the proof
@@ -113,7 +137,11 @@ export default defineSchema({
     userId: v.string(),
     name: v.string(),
     email: v.string(),
-    role: v.union(v.literal("admin"), v.literal("maker"), v.literal("client")),
+    role: v.union(
+      v.literal(UserRole.ADMIN),
+      v.literal(UserRole.MAKER),
+      v.literal(UserRole.CLIENT),
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_role", ["role"]),

@@ -1,6 +1,7 @@
 "use client";
 
 import { InventoryItemForm } from "./inventory-item-form";
+import { ResourceCategory } from "@convex/constants";
 
 interface AddMachineFormProps {
   onSuccess?: () => void;
@@ -8,6 +9,10 @@ interface AddMachineFormProps {
 
 export function AddMachineForm({ onSuccess }: AddMachineFormProps) {
   return (
-    <InventoryItemForm itemType="machine" mode="add" onSuccess={onSuccess} />
+    <InventoryItemForm
+      itemType={ResourceCategory.MACHINE}
+      mode="add"
+      onSuccess={onSuccess}
+    />
   );
 }

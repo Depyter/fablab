@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ResourceStatus } from "@convex/constants";
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import {
   Plus,
@@ -39,7 +40,7 @@ import {
 export interface Machine {
   id: string;
   name: string;
-  status: "Available" | "Unavailable";
+  status: typeof ResourceStatus.AVAILABLE | typeof ResourceStatus.UNAVAILABLE;
   description: string;
 }
 
@@ -149,7 +150,7 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                             <span
                               className={cn(
                                 "text-[10px] font-normal px-2 py-0.5 rounded-full w-fit",
-                                machine.status === "Available"
+                                machine.status === ResourceStatus.AVAILABLE
                                   ? "bg-emerald-100 text-emerald-700"
                                   : "bg-red-100 text-red-700",
                               )}

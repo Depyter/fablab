@@ -22,7 +22,7 @@ export interface InventoryItem {
   description: string;
   type: string;
   category: InventoryItemType;
-  status: "Available" | "Unavailable" | "Under Maintenance";
+  status: import("@convex/constants").ResourceStatusType;
   images: string[];
   imageUrls: string[];
 }

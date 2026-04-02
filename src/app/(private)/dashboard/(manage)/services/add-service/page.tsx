@@ -16,6 +16,7 @@ import { MachineSelectForm } from "@/components/services/forms/machine-select-fo
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
 import { addServiceFormOpts } from "@/types/add-service";
+import { ServiceStatus } from "@convex/constants";
 
 import { toast } from "sonner";
 
@@ -28,8 +29,8 @@ const machineOptions = [
 
 // status options aligned with the backend literals
 const statusOptions = [
-  { label: "Available", value: "Available" },
-  { label: "Unavailable", value: "Unavailable" },
+  { label: ServiceStatus.AVAILABLE, value: ServiceStatus.AVAILABLE },
+  { label: ServiceStatus.UNAVAILABLE, value: ServiceStatus.UNAVAILABLE },
 ];
 
 export default function AddServicePage() {

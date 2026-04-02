@@ -6,12 +6,17 @@ interface InventoryTabProps {
   items: InventoryItem[];
 }
 
+import { ResourceCategory } from "@convex/constants";
+
 export function InventoryTab({ items }: InventoryTabProps) {
   // Filter items by category based on the backend schema
-  const machines = items.filter((item) => item.category === "machine");
-  const rooms = items.filter((item) => item.category === "room");
-  const tools = items.filter((item) => item.category === "tool");
-  const misc = items.filter((item) => item.category === "misc");
+  // Group items by category
+  const machines = items.filter(
+    (item) => item.category === ResourceCategory.MACHINE,
+  );
+  const tools = items.filter((item) => item.category === ResourceCategory.TOOL);
+  const rooms = items.filter((item) => item.category === ResourceCategory.ROOM);
+  const misc = items.filter((item) => item.category === ResourceCategory.MISC);
 
   return (
     <Tabs defaultValue="machines" className="w-full">
