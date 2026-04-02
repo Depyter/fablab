@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldSet } from "@/components/ui/field";
 import { FileUpload } from "@/components/file-upload/file-upload";
@@ -88,7 +88,7 @@ export function InventoryItemForm({
   onSuccess,
 }: InventoryItemFormProps) {
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
-  const config = useMemo(() => ITEM_CONFIG[itemType], [itemType]);
+  const config = ITEM_CONFIG[itemType];
   const isEdit = mode === "edit";
 
   const addResource = useMutation(api.resource.mutate.addResource);
@@ -101,10 +101,8 @@ export function InventoryItemForm({
     api.resource.mutate.deleteImageFromResource,
   );
 
-  const handleThumbnailUploading = useCallback(
-    (isUploading: boolean) => setThumbnailUploading(isUploading),
-    [],
-  );
+  const handleThumbnailUploading = (isUploading: boolean) =>
+    setThumbnailUploading(isUploading);
 
   const form = useAppForm({
     defaultValues: {

@@ -41,13 +41,12 @@ export function ChatSidebar({
   const params = useParams();
   const activeRoomId = params?.slug as string;
 
-  const filteredRooms = React.useMemo(() => {
-    if (!rooms) return [];
-    return rooms.filter(
-      (room) =>
-        room && room.name?.toLowerCase().includes(searchTerm.toLowerCase()),
-    ) as RoomWithLastMessage[];
-  }, [rooms, searchTerm]);
+  const filteredRooms = !rooms
+    ? []
+    : (rooms.filter(
+        (room) =>
+          room && room.name?.toLowerCase().includes(searchTerm.toLowerCase()),
+      ) as RoomWithLastMessage[]);
 
   const formatTimestamp = (creationTime: number) => {
     const date = new Date(creationTime);

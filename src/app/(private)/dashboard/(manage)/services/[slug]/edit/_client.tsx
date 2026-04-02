@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,14 +46,10 @@ export function EditServiceClient({
 
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
-  const handleThumbnailUploading = useCallback(
-    (isUploading: boolean) => setThumbnailUploading(isUploading),
-    [],
-  );
-  const handleSamplesUploading = useCallback(
-    (isUploading: boolean) => setSamplesUploading(isUploading),
-    [],
-  );
+  const handleThumbnailUploading = (isUploading: boolean) =>
+    setThumbnailUploading(isUploading);
+  const handleSamplesUploading = (isUploading: boolean) =>
+    setSamplesUploading(isUploading);
 
   const updateService = useMutation(api.services.mutate.updateService);
   const addImageToService = useMutation(api.services.mutate.addImageToService);

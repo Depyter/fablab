@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,14 +45,10 @@ export default function AddServicePage() {
     api.services.mutate.deleteOrphanedFiles,
   );
 
-  const handleThumbnailUploading = useCallback(
-    (isUploading: boolean) => setThumbnailUploading(isUploading),
-    [],
-  );
-  const handleSamplesUploading = useCallback(
-    (isUploading: boolean) => setSamplesUploading(isUploading),
-    [],
-  );
+  const handleThumbnailUploading = (isUploading: boolean) =>
+    setThumbnailUploading(isUploading);
+  const handleSamplesUploading = (isUploading: boolean) =>
+    setSamplesUploading(isUploading);
 
   useEffect(() => {
     const handleScroll = () => {
