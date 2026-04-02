@@ -26,6 +26,9 @@ updates:
       day: "monday"
     cooldown:
       default-days: 3 # Wait 3 days after an npm package is published (prevents 0-day supply chain attacks)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
     # --------------------------------------------------
     # Grouping Strategy for Next.js
@@ -39,17 +42,7 @@ updates:
           - "react"
           - "react-dom"
           - "@types/react*"
-
-      # 2. Linter & Formatting Tools
-      linters:
-        patterns:
-          - "eslint*"
-          - "@typescript-eslint/*"
-          - "@convex-dev/eslint-plugin"
-          - "prettier*"
-          - "typescript"
-
-      # 3. Everything Else
+      # 2. Everything Else
       other-dependencies:
         patterns:
           - "*"
@@ -59,8 +52,3 @@ updates:
           - "react"
           - "react-dom"
           - "@types/react*"
-          - "eslint*"
-          - "@typescript-eslint/*"
-          - "@convex-dev/eslint-plugin"
-          - "prettier*"
-          - "typescript"
