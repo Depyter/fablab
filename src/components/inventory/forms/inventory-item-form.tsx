@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Field, FieldLabel, FieldSet } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -15,14 +13,8 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/file-upload/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ActionDialog } from "@/components/action-dialog";
+import { FormSection } from "@/components/ui/form-section";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -207,58 +199,35 @@ export function InventoryItemForm({
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-4">
             <FieldSet>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-bold text-lg">
-                    General Information
-                  </CardTitle>
-                  <CardDescription>
-                    Provide details about your {config.title.toLowerCase()}.
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent>
-                  <FieldGroup className="mt-4 space-y-4">
-                    <form.Field
-                      name="name"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>Name</FieldLabel>
-                          <Input
-                            id={field.name}
-                            placeholder={`e.g. ${config.title} Name`}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            required
-                          />
-                        </Field>
-                      )}
+              <FormSection
+                title="General Information"
+                description={`Provide details about your ${config.title.toLowerCase()}.`}
+                className="mt-4 space-y-4"
+              >
+                <form.AppField
+                  name="name"
+                  children={(field) => (
+                    <field.TextInput
+                      label="Name"
+                      placeholder={`e.g. ${config.title} Name`}
+                      required
                     />
+                  )}
+                />
 
-                    <form.Field
-                      name="description"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>
-                            Description
-                          </FieldLabel>
-                          <Textarea
-                            id={field.name}
-                            placeholder={`Describe the ${config.title.toLowerCase()}...`}
-                            className="resize-height w-full"
-                            rows={4}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            required
-                          />
-                        </Field>
-                      )}
+                <form.AppField
+                  name="description"
+                  children={(field) => (
+                    <field.TextareaInput
+                      label="Description"
+                      placeholder={`Describe the ${config.title.toLowerCase()}...`}
+                      className="resize-height w-full"
+                      rows={4}
+                      required
                     />
-                  </FieldGroup>
-                </CardContent>
-              </Card>
+                  )}
+                />
+              </FormSection>
             </FieldSet>
           </div>
 
@@ -300,77 +269,70 @@ export function InventoryItemForm({
 
           <div className="space-y-4">
             <FieldSet>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-bold text-lg">Details</CardTitle>
-                </CardHeader>
+              <FormSection
+                title="Details"
+                className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
+              >
+                <form.Field
+                  name="type"
+                  children={(field) => (
+                    <Field>
+                      <FieldLabel htmlFor={field.name}>
+                        {config.typeLabel}
+                      </FieldLabel>
+                      <Select
+                        value={field.state.value}
+                        onValueChange={field.handleChange}
+                      >
+                        <SelectTrigger id={field.name}>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {config.typeOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+                />
 
-                <CardContent>
-                  <FieldGroup className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <form.Field
-                      name="type"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>
-                            {config.typeLabel}
-                          </FieldLabel>
-                          <Select
-                            value={field.state.value}
-                            onValueChange={field.handleChange}
-                          >
-                            <SelectTrigger id={field.name}>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {config.typeOptions.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                      )}
-                    />
-
-                    <form.Field
-                      name="status"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>Status</FieldLabel>
-                          <Select
-                            value={field.state.value}
-                            onValueChange={(val) =>
-                              field.handleChange(
-                                val as InventoryItemFormValues["status"],
-                              )
-                            }
-                          >
-                            <SelectTrigger id={field.name}>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value="Available">
-                                  Available
-                                </SelectItem>
-                                <SelectItem value="Unavailable">
-                                  Unavailable
-                                </SelectItem>
-                                <SelectItem value="Under Maintenance">
-                                  Under Maintenance
-                                </SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                      )}
-                    />
-                  </FieldGroup>
-                </CardContent>
-              </Card>
+                <form.Field
+                  name="status"
+                  children={(field) => (
+                    <Field>
+                      <FieldLabel htmlFor={field.name}>Status</FieldLabel>
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(val) =>
+                          field.handleChange(
+                            val as InventoryItemFormValues["status"],
+                          )
+                        }
+                      >
+                        <SelectTrigger id={field.name}>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="Available">Available</SelectItem>
+                            <SelectItem value="Unavailable">
+                              Unavailable
+                            </SelectItem>
+                            <SelectItem value="Under Maintenance">
+                              Under Maintenance
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+                />
+              </FormSection>
             </FieldSet>
           </div>
         </div>

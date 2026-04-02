@@ -3,13 +3,7 @@
 import { useRef } from "react";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
 import {
   Field,
   FieldGroup,
@@ -31,14 +25,11 @@ export const RequirementsForm = withForm({
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     return (
-      <Card className="w-full sm:max-w-3xl">
-        <CardHeader>
-          <CardTitle className="font-bold text-lg">Requirements</CardTitle>
-          <CardDescription>
-            Specify the requirements for your service.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="w-full sm:max-w-3xl">
+        <FormSection
+          title="Requirements"
+          description="Specify the requirements for your service."
+        >
           <form.Field
             name="requirements"
             mode="array"
@@ -110,8 +101,8 @@ export const RequirementsForm = withForm({
               </FieldSet>
             )}
           />
-        </CardContent>
-      </Card>
+        </FormSection>
+      </div>
     );
   },
 });

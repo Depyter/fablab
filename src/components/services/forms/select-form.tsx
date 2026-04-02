@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldGroup } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { FormSection } from "@/components/ui/form-section";
 import {
   Select,
   SelectTrigger,
@@ -22,28 +22,23 @@ export function SelectForm({
   onChange,
 }: SelectFormProps) {
   return (
-    <Card className="w-full sm:max-w-3xl">
-      <CardHeader>
-        <CardTitle className="font-bold text-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          <Field>
-            <Select value={value} onValueChange={onChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={`Select ${title.toLowerCase()}...`} />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        </FieldGroup>
-      </CardContent>
-    </Card>
+    <div className="w-full sm:max-w-3xl">
+      <FormSection title={title}>
+        <Field>
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={`Select ${title.toLowerCase()}...`} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      </FormSection>
+    </div>
   );
 }
