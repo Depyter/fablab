@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FileUpload } from "@/components/file-upload";
+import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
 import { useChat } from "./use-chat";
 import { MessageAttachments } from "./parts/message-attachments";
 import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
@@ -243,6 +244,7 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
               variant="inline"
               multiple={true}
               maxFiles={10}
+              accept={CHAT_ACCEPTED_TYPES}
               disabled={isLoading}
               value={fileUploadInitialFiles}
               onFilesChange={handleFilesChange}

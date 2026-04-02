@@ -19,7 +19,12 @@ import {
   Paperclip,
 } from "lucide-react";
 import { useFileUpload } from "./use-file-upload";
-import { getFileIcon, formatFileSize } from "./utils";
+import {
+  getFileIcon,
+  formatFileSize,
+  isImageFile,
+  resolveFileType,
+} from "./utils";
 import type { FileUploadProps, UploadedFile, UploadingFile } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -35,7 +40,7 @@ function UploadingThumb({
   size: "sm" | "md";
   getFilePreviewUrl: (file: File) => string | undefined;
 }) {
-  const previewUrl = uf.file.type.startsWith("image/")
+  const previewUrl = isImageFile(uf.file)
     ? getFilePreviewUrl(uf.file)
     : undefined;
   const dim = size === "sm" ? "h-10 w-10" : "h-14 w-14";
@@ -66,7 +71,7 @@ function UploadingThumb({
     );
   }
 
-  const fileIcon = getFileIcon(uf.file.type);
+  const fileIcon = getFileIcon(resolveFileType(uf.file));
   return (
     <div className="shrink-0">
       {uf.status === "uploading" && (

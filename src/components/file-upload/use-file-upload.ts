@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
+import { resolveFileType } from "./utils";
 
 export interface UseFileUploadOptions {
   maxFiles?: number;
@@ -126,9 +127,11 @@ export function useFileUpload({
       try {
         const uploadUrl = await generateUploadUrl();
 
+        const mimeType = resolveFileType(file);
+
         const result = await fetch(uploadUrl, {
           method: "POST",
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": mimeType },
           body: file,
         });
 
@@ -140,14 +143,14 @@ export function useFileUpload({
 
         await trackUpload({
           originalName: file.name,
-          type: file.type,
+          type: mimeType,
           upload: storageId,
         });
 
         const uploadedFile: UploadedFile = {
           storageId,
           fileName: file.name,
-          fileType: file.type,
+          fileType: mimeType,
           fileSize: file.size,
           uploadedAt: new Date(),
           url: previewUrlMapRef.current.get(file),
