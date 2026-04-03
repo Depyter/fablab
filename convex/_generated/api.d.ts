@@ -9,8 +9,10 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chat_helper from "../chat/helper.js";
 import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
+import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as helper from "../helper.js";
@@ -33,8 +35,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  "chat/helper": typeof chat_helper;
   "chat/mutate": typeof chat_mutate;
   "chat/query": typeof chat_query;
+  constants: typeof constants;
   crons: typeof crons;
   files: typeof files;
   helper: typeof helper;

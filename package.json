@@ -55,7 +55,7 @@
     "vitest": "^4.1.2"
   },
   "devDependencies": {
-    "@convex-dev/eslint-plugin": "^1.2.1",
+    "@convex-dev/eslint-plugin": "^1.2.2",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
@@ -67,6 +67,6 @@
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "wrangler": "^4.79.0"
+    "wrangler": "^4.80.0"
   }
 }
