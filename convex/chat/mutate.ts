@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
 
 export const sendMessage = authMutation({
@@ -27,9 +27,11 @@ export const sendMessage = authMutation({
     });
 
     if (args.threadId) {
+      const thread = await ctx.db.get(args.threadId);
       await ctx.db.patch(args.threadId, {
         lastMessageText: args.content,
         lastMessageAt: now,
+        messageCount: (thread?.messageCount ?? 0) + 1,
       });
     }
   },
@@ -49,6 +51,7 @@ export const createThread = authMutation({
       createdBy: ctx.profile._id,
       archived: "Active",
       lastMessageAt: Date.now(),
+      messageCount: 1,
     });
 
     await ctx.db.insert("messages", {
@@ -60,5 +63,79 @@ export const createThread = authMutation({
     });
 
     return thread;
+  },
+});
+
+export const markThreadRead = authMutation({
+  args: {
+    threadId: v.id("threads"),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new ConvexError("Thread not found");
+
+    const existingRead = await ctx.db
+      .query("threadReads")
+      .withIndex("by_userId_threadId", (q) =>
+        q.eq("userId", ctx.profile._id).eq("threadId", args.threadId),
+      )
+      .first();
+
+    if (existingRead) {
+      await ctx.db.patch(existingRead._id, {
+        lastReadMessageCount: thread.messageCount ?? 0,
+      });
+    } else {
+      await ctx.db.insert("threadReads", {
+        threadId: args.threadId,
+        userId: ctx.profile._id,
+        lastReadMessageCount: thread.messageCount ?? 0,
+      });
+    }
+  },
+});
+
+export const addNewMember = authMutation({
+  args: {
+    roomId: v.id("rooms"),
+    userId: v.id("userProfile"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("roomMembers")
+      .withIndex("by_roomId_participantId", (q) =>
+        q.eq("roomId", args.roomId).eq("participantId", args.userId),
+      )
+      .first();
+
+    if (existing) {
+      throw new ConvexError("User is already a member of this room");
+    }
+
+    await ctx.db.insert("roomMembers", {
+      roomId: args.roomId,
+      participantId: args.userId,
+    });
+  },
+});
+
+export const removeMember = authMutation({
+  args: {
+    roomId: v.id("rooms"),
+    userId: v.id("userProfile"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("roomMembers")
+      .withIndex("by_roomId_participantId", (q) =>
+        q.eq("roomId", args.roomId).eq("participantId", args.userId),
+      )
+      .first();
+
+    if (!existing) {
+      throw new ConvexError("User is not a member of this room");
+    }
+
+    await ctx.db.delete(existing._id);
   },
 });

@@ -97,11 +97,23 @@ export const createProject = authMutation({
         }
       }
 
-      // Create an initial message for the main room
+      // Create a main workspace thread not associated with any project
+      const welcomeContent = `Welcome to ${workspaceName}! This is your main room for general inquiries.`;
+      const generalThreadId = await ctx.db.insert("threads", {
+        roomId: roomId,
+        title: "General",
+        createdBy: userProfile._id,
+        archived: "Active",
+        lastMessageText: welcomeContent,
+        lastMessageAt: Date.now(),
+        messageCount: 1,
+      });
+
       await ctx.db.insert("messages", {
         room: roomId,
-        content: `Welcome to ${workspaceName}! This is your main room for general inquiries.`,
-        sender: admins.length > 0 ? admins[0]._id : userProfile._id,
+        threadId: generalThreadId,
+        content: welcomeContent,
+        sender: "System",
       });
     }
 
@@ -117,6 +129,7 @@ export const createProject = authMutation({
       archived: "Active",
       lastMessageText: messageContent,
       lastMessageAt: now,
+      messageCount: 1,
     });
 
     // create initial system message inside the thread
@@ -124,7 +137,7 @@ export const createProject = authMutation({
       room: roomId,
       threadId: threadId,
       content: messageContent,
-      sender: admins.length > 0 ? admins[0]._id : userProfile._id, // Fallback to user if no admins exist
+      sender: "System",
     });
 
     await ctx.db.patch(roomId, {

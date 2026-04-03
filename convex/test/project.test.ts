@@ -44,17 +44,27 @@ describe("Project and Chat functionality", () => {
 
       // check thread
       const thread = await ctx.db.query("threads").collect();
-      expect(thread.length).toBe(1);
+      expect(thread.length).toBe(2);
       expect(thread[0].roomId).toBe(room[0]._id);
-      expect(thread[0].projectId).toBe(project[0]._id);
+      expect(thread[0].title).toBe("General");
+
+      expect(thread[1].roomId).toBe(room[0]._id);
+      expect(thread[1].projectId).toBe(project[0]._id);
 
       // check chat
       const message = await ctx.db.query("messages").collect();
-      expect(message.length).toBe(1);
+      expect(message.length).toBe(2);
       expect(message[0].room).toBe(room[0]._id);
       expect(message[0].threadId).toBe(thread[0]._id);
-      expect(message[0].sender).toBeDefined();
+      expect(message[0].sender).toBe("System");
       expect(message[0].content).toBe(
+        "Welcome to Harley's Workspace! This is your main room for general inquiries.",
+      );
+
+      expect(message[1].room).toBe(room[0]._id);
+      expect(message[1].threadId).toBe(thread[1]._id);
+      expect(message[1].sender).toBe("System");
+      expect(message[1].content).toBe(
         "Generated thread for project: 3d printing - Harley",
       );
     });

@@ -137,14 +137,21 @@ export default defineSchema({
     lastMessageAt: v.optional(v.number()),
     unreadCount: v.optional(v.number()),
     archived: v.union(v.literal("Archived"), v.literal("Active")),
+    messageCount: v.optional(v.number()),
   })
     .index("by_roomId", ["roomId"])
     .index("projectId", ["projectId"]),
 
+  threadReads: defineTable({
+    threadId: v.id("threads"),
+    userId: v.id("userProfile"),
+    lastReadMessageCount: v.number(),
+  }).index("by_userId_threadId", ["userId", "threadId"]),
+
   messages: defineTable({
     content: v.string(),
     file: v.optional(v.array(v.id("_storage"))),
-    sender: v.id("userProfile"),
+    sender: v.union(v.string(), v.id("userProfile")),
     room: v.id("rooms"),
     // DIRECTION 2 (Everything is a thread):
     // To normalize this further, you could make `threadId: v.id("threads")` required.

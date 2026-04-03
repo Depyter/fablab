@@ -32,8 +32,30 @@ export const getRoomMessages = authQuery({
       ...messages,
       page: await Promise.all(
         messages.page.map(async (message) => {
+          let senderName = message.sender;
+          let senderProfilePicUrl: string | null = null;
+          const senderId = ctx.db.normalizeId("userProfile", message.sender);
+          if (senderId) {
+            const profile = await ctx.db.get(senderId);
+            if (profile) {
+              senderName = profile.name;
+              if (profile.profilePic) {
+                senderProfilePicUrl = await ctx.storage.getUrl(
+                  profile.profilePic,
+                );
+              }
+            }
+          }
+
           if (!message.file || message.file.length === 0) {
-            return { ...message, files: [], fileUrl: null, fileType: null };
+            return {
+              ...message,
+              sender: senderName,
+              senderProfilePicUrl,
+              files: [],
+              fileUrl: null,
+              fileType: null,
+            };
           }
 
           const filesData = await Promise.all(
@@ -55,6 +77,8 @@ export const getRoomMessages = authQuery({
 
           return {
             ...message,
+            sender: senderName,
+            senderProfilePicUrl,
             files: filesData,
             // Legacy single-file fields kept for backward compatibility
             fileUrl: filesData[0]?.fileUrl ?? null,
@@ -93,7 +117,36 @@ export const getRooms = authQuery({
           .withIndex("by_roomId", (q) => q.eq("roomId", room._id))
           .order("desc")
           .collect();
-        return { ...room, threads };
+
+        let roomUnreadCount = 0;
+
+        const threadsWithUnreads = await Promise.all(
+          threads.map(async (thread) => {
+            const threadRead = await ctx.db
+              .query("threadReads")
+              .withIndex("by_userId_threadId", (q) =>
+                q.eq("userId", ctx.profile._id).eq("threadId", thread._id),
+              )
+              .first();
+
+            const lastReadMessageCount = threadRead?.lastReadMessageCount ?? 0;
+            const messageCount = thread.messageCount ?? 0;
+            const unreadCount = Math.max(
+              0,
+              messageCount - lastReadMessageCount,
+            );
+
+            roomUnreadCount += unreadCount;
+
+            return { ...thread, unreadCount };
+          }),
+        );
+
+        return {
+          ...room,
+          unreadCount: roomUnreadCount,
+          threads: threadsWithUnreads,
+        };
       }),
     );
 
@@ -115,5 +168,37 @@ export const getThreads = authQuery({
       .withIndex("by_roomId", (q) => q.eq("roomId", args.roomId))
       .order("desc")
       .collect();
+  },
+});
+
+export const getRoomMembers = authQuery({
+  args: { roomId: v.id("rooms") },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("roomMembers")
+      .withIndex("by_roomId_participantId", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    const members = await Promise.all(
+      memberships.map((m) => ctx.db.get(m.participantId)),
+    );
+
+    return members.filter((m): m is NonNullable<typeof m> => m !== null);
+  },
+});
+
+export const getAddableUsers = authQuery({
+  args: { roomId: v.id("rooms") },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("roomMembers")
+      .withIndex("by_roomId_participantId", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    const memberIds = new Set(memberships.map((m) => m.participantId));
+
+    const allUsers = await ctx.db.query("userProfile").collect();
+
+    return allUsers.filter((u) => !memberIds.has(u._id));
   },
 });

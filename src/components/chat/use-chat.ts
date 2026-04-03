@@ -44,6 +44,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   );
 
   const sendMessageMutation = useMutation(api.chat.mutate.sendMessage);
+  const markReadMutation = useMutation(api.chat.mutate.markThreadRead);
 
   // Scroll handling
   const handleScroll = useCallback(() => {
@@ -63,6 +64,12 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
       loadMore(50);
     }
   }, [status, loadMore]);
+
+  useEffect(() => {
+    if (threadId) {
+      markReadMutation({ threadId }).catch(console.error);
+    }
+  }, [threadId, messages.length, markReadMutation]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;

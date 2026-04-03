@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,7 @@ export function ChatInterface({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4"
       >
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
@@ -118,6 +118,7 @@ export function ChatInterface({
                 <div
                   key={message._id}
                   className={cn(
+                    "flex flex-col",
                     isFirstInGroup && !showSeparator ? "mt-4" : "mt-0.5",
                   )}
                 >
@@ -141,71 +142,107 @@ export function ChatInterface({
 
                   <div
                     className={cn(
-                      "flex flex-col",
-                      isCurrentUser ? "items-end" : "items-start",
+                      "flex gap-2 max-w-[85%]",
+                      isCurrentUser
+                        ? "self-end flex-row-reverse"
+                        : "self-start",
                     )}
                   >
-                    {/* Sender name — above bubble, first message in group only */}
-                    {!isCurrentUser && isFirstInGroup && (
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-1 px-1">
-                        {message.sender}
-                      </span>
+                    {/* Avatar for non-current user */}
+                    {!isCurrentUser && message.sender !== "System" && (
+                      <div className="shrink-0 mt-auto mb-1 flex flex-col items-center">
+                        {isLastInGroup ? (
+                          <div className="h-8 w-8 rounded-full bg-sidebar-accent/50 flex items-center justify-center overflow-hidden border border-sidebar-border shrink-0">
+                            {message.senderProfilePicUrl ? (
+                              <img
+                                src={message.senderProfilePicUrl}
+                                alt={message.sender}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <User className="h-4 w-4 text-sidebar-foreground/40" />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-8 shrink-0" />
+                        )}
+                      </div>
                     )}
 
                     <div
-                      onClick={() =>
-                        setShowTimeId(
-                          showTimeId === message._id ? null : message._id,
-                        )
-                      }
                       className={cn(
-                        "max-w-xs lg:max-w-md text-sm cursor-pointer overflow-hidden",
-                        // Padding: skip when file-only (no text)
-                        message.content
-                          ? "px-3.5 py-2.5 rounded-2xl"
-                          : messageFiles.length > 0
-                            ? "p-1 rounded-2xl"
-                            : "px-3.5 py-2.5 rounded-2xl",
-                        // Background
-                        isCurrentUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted/50 border border-border/30 text-foreground",
-                        // Subtle corner flattening for grouped messages
-                        isCurrentUser && !isFirstInGroup ? "rounded-tr-md" : "",
-                        isCurrentUser && !isLastInGroup ? "rounded-br-md" : "",
-                        !isCurrentUser && !isFirstInGroup
-                          ? "rounded-tl-md"
-                          : "",
-                        !isCurrentUser && !isLastInGroup ? "rounded-bl-md" : "",
+                        "flex flex-col",
+                        isCurrentUser ? "items-end" : "items-start",
                       )}
                     >
-                      {message.content && (
-                        <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
-                          {message.content}
-                        </p>
+                      {/* Sender name — above bubble, first message in group only */}
+                      {!isCurrentUser && isFirstInGroup && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-1 px-1">
+                          {message.sender}
+                        </span>
                       )}
 
-                      {messageFiles.length > 0 && (
-                        <div className={cn(message.content ? "mt-2" : "")}>
-                          <MessageAttachments
-                            files={messageFiles}
-                            isCurrentUser={isCurrentUser}
-                          />
-                        </div>
+                      <div
+                        onClick={() =>
+                          setShowTimeId(
+                            showTimeId === message._id ? null : message._id,
+                          )
+                        }
+                        className={cn(
+                          "max-w-xs lg:max-w-md text-sm cursor-pointer overflow-hidden",
+                          // Padding: skip when file-only (no text)
+                          message.content
+                            ? "px-3.5 py-2.5 rounded-2xl"
+                            : messageFiles.length > 0
+                              ? "p-1 rounded-2xl"
+                              : "px-3.5 py-2.5 rounded-2xl",
+                          // Background
+                          isCurrentUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted/50 border border-border/30 text-foreground",
+                          // Subtle corner flattening for grouped messages
+                          isCurrentUser && !isFirstInGroup
+                            ? "rounded-tr-md"
+                            : "",
+                          isCurrentUser && !isLastInGroup
+                            ? "rounded-br-md"
+                            : "",
+                          !isCurrentUser && !isFirstInGroup
+                            ? "rounded-tl-md"
+                            : "",
+                          !isCurrentUser && !isLastInGroup
+                            ? "rounded-bl-md"
+                            : "",
+                        )}
+                      >
+                        {message.content && (
+                          <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
+                            {message.content}
+                          </p>
+                        )}
+
+                        {messageFiles.length > 0 && (
+                          <div className={cn(message.content ? "mt-2" : "")}>
+                            <MessageAttachments
+                              files={messageFiles}
+                              isCurrentUser={isCurrentUser}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {showTimeId === message._id && (
+                        <span className="text-[10px] mt-1 font-bold uppercase tracking-widest text-muted-foreground/35 px-1">
+                          {new Date(message._creationTime).toLocaleTimeString(
+                            [],
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
+                        </span>
                       )}
                     </div>
-
-                    {showTimeId === message._id && (
-                      <span className="text-[10px] mt-1 font-bold uppercase tracking-widest text-muted-foreground/35 px-1">
-                        {new Date(message._creationTime).toLocaleTimeString(
-                          [],
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </span>
-                    )}
                   </div>
                 </div>
               );
