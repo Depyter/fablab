@@ -82,15 +82,28 @@ export const getRooms = authQuery({
       roomMembers.map((member) => ctx.db.get(member.roomId)),
     );
 
-    const results = rooms.filter((r): r is NonNullable<typeof r> => r !== null);
+    const validRooms = rooms.filter(
+      (r): r is NonNullable<typeof r> => r !== null,
+    );
 
-    results.sort((a, b) => {
+    const roomsWithThreads = await Promise.all(
+      validRooms.map(async (room) => {
+        const threads = await ctx.db
+          .query("threads")
+          .withIndex("by_roomId", (q) => q.eq("roomId", room._id))
+          .order("desc")
+          .collect();
+        return { ...room, threads };
+      }),
+    );
+
+    roomsWithThreads.sort((a, b) => {
       const timeA = a.lastMessageAt ?? a._creationTime;
       const timeB = b.lastMessageAt ?? b._creationTime;
       return timeB - timeA;
     });
 
-    return results;
+    return roomsWithThreads;
   },
 });
 

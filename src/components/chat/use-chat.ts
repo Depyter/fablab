@@ -9,9 +9,10 @@ import { PendingAttachment } from "./types";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
+  threadId?: Id<"threads">;
 }
 
-export function useChat({ roomId }: UseChatOptions) {
+export function useChat({ roomId, threadId }: UseChatOptions) {
   const [input, setInput] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<
     PendingAttachment[]
@@ -38,7 +39,7 @@ export function useChat({ roomId }: UseChatOptions) {
     loadMore,
   } = usePaginatedQuery(
     api.chat.query.getRoomMessages,
-    { room: roomId },
+    { room: roomId, threadId },
     { initialNumItems: 50 },
   );
 
@@ -106,6 +107,7 @@ export function useChat({ roomId }: UseChatOptions) {
             ? (attachments.map((a) => a.storageId) as Id<"_storage">[])
             : undefined,
         room: roomId,
+        threadId,
       });
     } catch (error) {
       console.error("Failed to send message:", error);

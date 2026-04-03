@@ -62,46 +62,76 @@ export const createProject = authMutation({
       date: args.booking.date,
     });
 
-    // create associated chat
-    const room = await ctx.db.insert("rooms", {
-      name: defaultAlias,
-      color: "yellow",
-    });
+    // Find if the user already has a dedicated workspace room
+    const workspaceName = `${userProfile.name}'s Workspace`;
+    const existingRoom = await ctx.db
+      .query("rooms")
+      .filter((q) => q.eq(q.field("name"), workspaceName))
+      .first();
 
-    // add the user as a chat member
-    await ctx.db.insert("roomMembers", {
-      roomId: room,
-      participantId: userProfile._id,
-    });
-
+    let roomId;
     const admins = await ctx.db
       .query("userProfile")
       .withIndex("by_role", (q) => q.eq("role", "admin"))
       .collect();
 
-    // add all the admins to the chat
-    for (const admin of admins) {
+    if (existingRoom) {
+      roomId = existingRoom._id;
+    } else {
+      roomId = await ctx.db.insert("rooms", {
+        name: workspaceName,
+        color: "yellow",
+      });
+
       await ctx.db.insert("roomMembers", {
-        roomId: room,
-        participantId: admin._id,
+        roomId: roomId,
+        participantId: userProfile._id,
+      });
+
+      for (const admin of admins) {
+        if (admin._id !== userProfile._id) {
+          await ctx.db.insert("roomMembers", {
+            roomId: roomId,
+            participantId: admin._id,
+          });
+        }
+      }
+
+      // Create an initial message for the main room
+      await ctx.db.insert("messages", {
+        room: roomId,
+        content: `Welcome to ${workspaceName}! This is your main room for general inquiries.`,
+        sender: admins.length > 0 ? admins[0]._id : userProfile._id,
       });
     }
 
-    // create initial system message
-    const messageContent = `Generated room for project: ${defaultAlias}`;
     const now = Date.now();
+    const messageContent = `Generated thread for project: ${defaultAlias}`;
 
-    await ctx.db.insert("messages", {
-      room: room,
-      content: messageContent,
-      sender: admins.length > 0 ? admins[0]._id : userProfile._id, // Fallback to user if no admins exist
-    });
-
-    await ctx.db.patch(room, {
+    // Create a thread for the project
+    const threadId = await ctx.db.insert("threads", {
+      roomId: roomId,
+      projectId: project,
+      title: defaultAlias,
+      createdBy: userProfile._id,
+      archived: "Active",
       lastMessageText: messageContent,
       lastMessageAt: now,
     });
 
-    return room;
+    // create initial system message inside the thread
+    await ctx.db.insert("messages", {
+      room: roomId,
+      threadId: threadId,
+      content: messageContent,
+      sender: admins.length > 0 ? admins[0]._id : userProfile._id, // Fallback to user if no admins exist
+    });
+
+    await ctx.db.patch(roomId, {
+      lastMessageText: messageContent,
+      lastMessageAt: now,
+    });
+
+    return roomId;
   },
 });

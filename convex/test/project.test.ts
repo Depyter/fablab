@@ -33,7 +33,7 @@ describe("Project and Chat functionality", () => {
       const room = await ctx.db.query("rooms").collect();
       expect(room.length).toBe(1);
       expect(room[0].color).toBe("yellow");
-      expect(room[0].name).toBe("3d printing - Harley");
+      expect(room[0].name).toBe("Harley's Workspace");
 
       // check room members
       const members = await ctx.db.query("roomMembers").collect();
@@ -42,13 +42,20 @@ describe("Project and Chat functionality", () => {
       expect(members[0].participantId).toBe(userHarley!._id);
       expect(members[1].participantId).toBe(userAera!._id);
 
+      // check thread
+      const thread = await ctx.db.query("threads").collect();
+      expect(thread.length).toBe(1);
+      expect(thread[0].roomId).toBe(room[0]._id);
+      expect(thread[0].projectId).toBe(project[0]._id);
+
       // check chat
       const message = await ctx.db.query("messages").collect();
       expect(message.length).toBe(1);
       expect(message[0].room).toBe(room[0]._id);
+      expect(message[0].threadId).toBe(thread[0]._id);
       expect(message[0].sender).toBeDefined();
       expect(message[0].content).toBe(
-        "Generated room for project: 3d printing - Harley",
+        "Generated thread for project: 3d printing - Harley",
       );
     });
   });
@@ -85,13 +92,13 @@ describe("Project and Chat functionality", () => {
         )
         .collect();
 
-      expect(messages.length).toBe(3);
-      // first message is from the system
-      expect(messages[1].sender).toBe(userAera!._id);
-      expect(messages[2].sender).toBe(userHarley!._id);
+      expect(messages.length).toBe(2);
+      // system message is in a thread, so these are the first root messages
+      expect(messages[0].sender).toBe(userAera!._id);
+      expect(messages[1].sender).toBe(userHarley!._id);
 
-      expect(messages[1].content).toBe("Hello this project...");
-      expect(messages[2].content).toBe("Hello Aera");
+      expect(messages[0].content).toBe("Hello this project...");
+      expect(messages[1].content).toBe("Hello Aera");
     });
   });
 

@@ -12,7 +12,11 @@ import { MessageAttachments } from "./parts/message-attachments";
 import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
 import { ChatInterfaceProps, MessageFile } from "./types";
 
-export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
+export function ChatInterface({
+  roomId,
+  threadId,
+  currentUserName,
+}: ChatInterfaceProps) {
   const [showTimeId, setShowTimeId] = useState<string | null>(null);
 
   const {
@@ -34,7 +38,7 @@ export function ChatInterface({ roomId, currentUserName }: ChatInterfaceProps) {
     handleKeyPress,
     handleFilesChange,
     removeAttachment,
-  } = useChat({ roomId });
+  } = useChat({ roomId, threadId });
 
   return (
     <div className="flex flex-col h-full bg-background">
