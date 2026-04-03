@@ -183,7 +183,18 @@ export const getRoomMembers = authQuery({
       memberships.map((m) => ctx.db.get(m.participantId)),
     );
 
-    return members.filter((m): m is NonNullable<typeof m> => m !== null);
+    const validMembers = members.filter(
+      (m): m is NonNullable<typeof m> => m !== null,
+    );
+
+    return await Promise.all(
+      validMembers.map(async (member) => ({
+        ...member,
+        profilePicUrl: member.profilePic
+          ? await ctx.storage.getUrl(member.profilePic)
+          : null,
+      })),
+    );
   },
 });
 

@@ -1,0 +1,125 @@
+"use client";
+
+import { usePathname, useSearchParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import usePresence from "@convex-dev/presence/react";
+
+import { cn } from "@/lib/utils";
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+interface PresenceIndicatorProps {
+  threadId: string;
+  userId: string;
+  roomId: Id<"rooms">;
+}
+
+export function PresenceIndicator({
+  threadId,
+  userId,
+  roomId,
+}: PresenceIndicatorProps) {
+  const presenceState = usePresence(api.presence, threadId, userId);
+  const members = useQuery(api.chat.query.getRoomMembers, { roomId });
+
+  if (!presenceState || !members) return null;
+
+  const online = presenceState.filter((p) => p.online);
+  if (online.length === 0) return null;
+
+  // Build a name → profilePicUrl map from room members
+  const picByName = new Map<string, string | null>();
+  for (const member of members) {
+    picByName.set(
+      member.name,
+      (member as { profilePicUrl?: string | null }).profilePicUrl ?? null,
+    );
+  }
+
+  const visible = online.slice(0, 3);
+  const overflow = online.length - 3;
+
+  return (
+    <div className="flex items-center gap-2.5 shrink-0">
+      {/* Stacked avatars */}
+      <div className="flex items-center">
+        {visible.map((presence, i) => {
+          const picUrl = picByName.get(presence.userId) ?? null;
+          return (
+            <div
+              key={presence.userId}
+              title={presence.userId}
+              className={cn(
+                "h-10 w-10 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden shrink-0",
+                i > 0 && "-ml-3",
+              )}
+            >
+              {picUrl ? (
+                <img
+                  src={picUrl}
+                  alt={presence.userId}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-[11px] font-bold text-muted-foreground leading-none select-none">
+                  {getInitials(presence.userId)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {overflow > 0 && (
+          <div className="h-10 w-10 rounded-full border-2 border-background bg-muted flex items-center justify-center -ml-3 shrink-0">
+            <span className="text-[11px] font-bold text-muted-foreground leading-none">
+              +{overflow}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Online label */}
+      <div className="flex items-center gap-1.5">
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-60" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+          {online.length} online
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Self-contained widget for the desktop DashboardHeader.
+ * Reads the active thread + room from the URL and the current user from the profile query.
+ */
+export function ChatPresenceWidget() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const profile = useQuery(api.users.getUserProfile);
+
+  const chatMatch = pathname.match(/^\/dashboard\/chat\/([^/]+)/);
+  const roomId = chatMatch?.[1] as Id<"rooms"> | undefined;
+  const threadId = searchParams.get("thread");
+
+  if (!roomId || !threadId || !profile?.name) return null;
+
+  return (
+    <PresenceIndicator
+      threadId={threadId}
+      userId={profile.name}
+      roomId={roomId}
+    />
+  );
+}
