@@ -41,6 +41,7 @@ export const ProjectStatus = {
   PENDING: "pending",
   APPROVED: "approved",
   REJECTED: "rejected",
+  COMPLETED: "completed",
 } as const;
 
 export const PaymentMode = {

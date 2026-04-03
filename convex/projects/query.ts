@@ -40,6 +40,11 @@ export const getProjects = authQuery({
           .filter((q) => q.eq(q.field("project"), project._id))
           .first();
 
+        const coverUrl =
+          service?.images && service.images.length > 0
+            ? await ctx.storage.getUrl(service.images[0])
+            : null;
+
         return {
           ...project,
           clientName: clientProfile?.name ?? "Unknown Client",
@@ -47,6 +52,7 @@ export const getProjects = authQuery({
           bookingDate: usage?.date ?? Date.now(),
           bookingTime: usage?.startTime ?? Date.now(),
           estimatedPrice: 0, // Fallback price calculation
+          coverUrl,
         };
       }),
     );

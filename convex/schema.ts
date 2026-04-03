@@ -93,6 +93,7 @@ export default defineSchema({
       v.literal(ProjectStatus.PENDING),
       v.literal(ProjectStatus.APPROVED),
       v.literal(ProjectStatus.REJECTED),
+      v.literal(ProjectStatus.COMPLETED),
     ),
     resources: v.array(v.id("resources")),
     receipt: v.optional(v.id("receipts")),

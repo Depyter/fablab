@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Plus,
   Calendar as CalendarIcon,
-  MoreHorizontal,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,20 +25,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
 import { ResourceStatus, ServiceStatus } from "@convex/constants";
-
-type ViewFilter = "all" | "confirmed";
 
 function getSnappedDecimalHours(ms: number, ceil = false) {
   const d = new Date(ms);
@@ -49,7 +38,6 @@ function getSnappedDecimalHours(ms: number, ceil = false) {
 
 export function ProjectCalendarView() {
   const [date, setDate] = React.useState<Date>(startOfToday());
-  const [viewFilter, setViewFilter] = React.useState<ViewFilter>("all");
   const [activeTab, setActiveTab] = React.useState<string>("resources");
 
   const services = useQuery(api.services.query.getServices) || [];
@@ -63,7 +51,6 @@ export function ProjectCalendarView() {
   const handleNextDay = () => setDate((prev) => addDays(prev, 1));
   const handleToday = () => setDate(startOfToday());
 
-  // ----- Resources Table Data (Machine Schedule) -----
   const resourceMachines: Machine[] = resources.map((r) => ({
     id: r._id,
     name: r.name,
@@ -82,14 +69,13 @@ export function ProjectCalendarView() {
       projectId: b.project?._id || "",
       projectAlias: b.project?.name || "Unknown Project",
       projectStatus: b.project?.status || "pending",
-      makerName: b.maker?.name || "Unknown Maker",
+      makerName: b.maker?.name || "Unassigned",
       date: b.date,
       startTime: getSnappedDecimalHours(b.startTime, false),
       endTime: getSnappedDecimalHours(b.endTime, true),
       color: "bg-blue-500/10 border-blue-500 text-blue-700",
     }));
 
-  // ----- Services Table Data (Project Booking Times) -----
   const serviceMachines: Machine[] = services.map((s) => ({
     id: s._id,
     name: s.name,
@@ -115,43 +101,24 @@ export function ProjectCalendarView() {
       color: "bg-purple-500/10 border-purple-500 text-purple-700",
     }));
 
-  // Apply Date and Status filters
-  const filteredResourceUsages = resourceUsages.filter((u) => {
-    const isDateMatch = isSameDay(new Date(u.date), date);
-    return (
-      isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
-    );
-  });
+  const filteredResourceUsages = resourceUsages.filter((u) =>
+    isSameDay(new Date(u.date), date),
+  );
 
-  const filteredServiceUsages = serviceUsages.filter((u) => {
-    const isDateMatch = isSameDay(new Date(u.date), date);
-    return (
-      isDateMatch && (viewFilter === "all" || u.projectStatus === "approved")
-    );
-  });
+  const filteredServiceUsages = serviceUsages.filter((u) =>
+    isSameDay(new Date(u.date), date),
+  );
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-col gap-4 p-6 border-b sm:flex-row sm:items-center sm:justify-between shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Machine Usage</h1>
-          <p className="text-muted-foreground text-sm">
-            Monitor and schedule machine time across projects.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative w-full max-w-50"></div>
-          <Button variant="default" size="sm" className="gap-1">
-            <Plus className="h-4 w-4" />
-            Add Usage
-          </Button>
-        </div>
-      </div>
-
-      {/* Navigation & Filters Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b bg-muted/30 gap-4 shrink-0">
-        <div className="flex flex-wrap items-center gap-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 flex flex-col overflow-hidden"
+      >
+        {/* Single combined toolbar */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 shrink-0 flex-wrap">
+          {/* Date navigation */}
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -170,14 +137,17 @@ export function ProjectCalendarView() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
           <Button
             variant="ghost"
-            className="font-semibold text-sm h-8"
+            className="font-semibold text-sm h-8 px-3"
             onClick={handleToday}
           >
             Today
           </Button>
-          <div className="hidden sm:block h-4 w-px bg-border mx-1" />
+
+          <div className="h-4 w-px bg-border" />
+
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -200,78 +170,49 @@ export function ProjectCalendarView() {
               />
             </PopoverContent>
           </Popover>
+
+          <div className="h-4 w-px bg-border" />
+
+          {/* Tab switcher inline */}
+          <TabsList className="h-8">
+            <TabsTrigger value="resources" className="text-xs h-7 px-3">
+              Machine Schedule
+            </TabsTrigger>
+            <TabsTrigger value="services" className="text-xs h-7 px-3">
+              Service Bookings
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          <Button variant="default" size="sm" className="h-8 gap-1">
+            <Plus className="h-4 w-4" />
+            Add Usage
+          </Button>
         </div>
 
-        <div className="flex items-center gap-3 self-end md:self-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              View:
-            </span>
-            <Select
-              value={viewFilter}
-              onValueChange={(v) => setViewFilter(v as ViewFilter)}
-            >
-              <SelectTrigger className="h-8 w-[160px] text-xs font-semibold">
-                <SelectValue placeholder="Select view" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">
-                  All Usages
-                </SelectItem>
-                <SelectItem value="confirmed" className="text-xs">
-                  Confirmed Only
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="hidden lg:flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="rounded-md font-medium px-2 py-0.5 text-[10px]"
-            >
-              Schedule View
-            </Badge>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col overflow-hidden p-6 pt-4">
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex-1 flex flex-col overflow-hidden"
+        {/* Table content */}
+        <TabsContent
+          value="resources"
+          className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0"
         >
-          <div className="flex items-center justify-between mb-2 shrink-0">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="resources">Machine Schedule</TabsTrigger>
-              <TabsTrigger value="services">Service Bookings</TabsTrigger>
-            </TabsList>
-          </div>
+          <UsageTable
+            machines={resourceMachines}
+            usages={filteredResourceUsages}
+          />
+        </TabsContent>
 
-          <TabsContent
-            value="resources"
-            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0 pt-2"
-          >
-            <UsageTable
-              machines={resourceMachines}
-              usages={filteredResourceUsages}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value="services"
-            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0 pt-2"
-          >
-            <UsageTable
-              machines={serviceMachines}
-              usages={filteredServiceUsages}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent
+          value="services"
+          className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0"
+        >
+          <UsageTable
+            machines={serviceMachines}
+            usages={filteredServiceUsages}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
