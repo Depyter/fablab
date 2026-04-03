@@ -12,8 +12,7 @@ export default async function ChatPage({
   const { slug } = await params;
   const roomId = slug as Id<"rooms">;
 
-  const [preloadedRoom, preloadedCurrentUser] = await Promise.all([
-    preloadAuthQuery(api.chat.query.getRoom, { roomId }),
+  const [preloadedCurrentUser] = await Promise.all([
     preloadAuthQuery(api.auth.getCurrentUser, {}),
   ]);
 
@@ -27,7 +26,6 @@ export default async function ChatPage({
     >
       <ChatRoomClient
         roomId={roomId}
-        preloadedRoom={preloadedRoom}
         preloadedCurrentUser={preloadedCurrentUser}
       />
     </Suspense>

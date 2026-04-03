@@ -1,14 +1,41 @@
 import { internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { authQuery } from "./helper";
+import { authQuery, authMutation, claimFiles } from "./helper";
+import { Id } from "./_generated/dataModel";
 
 export const getUserProfile = authQuery({
   args: {},
   handler: async (ctx) => {
-    return ctx.db
+    const profile = await ctx.db
       .query("userProfile")
       .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
       .first();
+
+    if (!profile) return null;
+
+    return {
+      ...profile,
+      profilePicUrl: profile.profilePic
+        ? await ctx.storage.getUrl(profile.profilePic)
+        : null,
+    };
+  },
+});
+
+export const updateProfile = authMutation({
+  args: {
+    name: v.optional(v.string()),
+    profilePic: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const updates: { name?: string; profilePic?: Id<"_storage"> } = {};
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.profilePic !== undefined) {
+      updates.profilePic = args.profilePic;
+      await claimFiles(ctx, [args.profilePic]);
+    }
+
+    await ctx.db.patch(ctx.profile._id, updates);
   },
 });
 

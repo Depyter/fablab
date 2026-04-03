@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
@@ -22,16 +22,25 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 function ChatRoomBreadcrumb({ roomId }: { roomId: string }) {
-  const room = useQuery(api.chat.query.getRoom, {
+  const searchParams = useSearchParams();
+  const activeThreadId = searchParams.get("thread");
+
+  const threads = useQuery(api.chat.query.getThreads, {
     roomId: roomId as Id<"rooms">,
   });
+
+  const activeThread = activeThreadId
+    ? threads?.find((t) => t._id === activeThreadId)
+    : null;
+
+  if (!activeThread) return null;
 
   return (
     <>
       <BreadcrumbSeparator className="text-sidebar-foreground/20" />
       <BreadcrumbItem>
         <BreadcrumbPage className="font-bold text-foreground truncate max-w-[150px] md:max-w-[300px]">
-          {room?.name ?? "..."}
+          {activeThread.title}
         </BreadcrumbPage>
       </BreadcrumbItem>
     </>
@@ -41,7 +50,6 @@ function ChatRoomBreadcrumb({ roomId }: { roomId: string }) {
 export function DashboardBreadcrumb() {
   const pathname = usePathname();
 
-  // Strip leading /dashboard/ and split into segments
   const segments = pathname
     .replace(/^\/dashboard\/?/, "")
     .split("/")
@@ -93,7 +101,7 @@ export function DashboardBreadcrumb() {
           )}
         </BreadcrumbItem>
 
-        {/* Chat room detail */}
+        {/* Chat: show thread title only */}
         {section === "chat" && slug && <ChatRoomBreadcrumb roomId={slug} />}
 
         {/* Generic sub-page fallback */}
