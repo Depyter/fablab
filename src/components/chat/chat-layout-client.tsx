@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -22,11 +23,19 @@ export function ChatLayoutClient({
       <div
         className={cn(
           "shrink-0 h-full border-r",
-          "md:w-[350px] md:block",
+          "md:w-[400px] md:block",
           isInConversation ? "hidden" : "w-full",
         )}
       >
-        <ChatSidebar preloadedRooms={preloadedRooms} className="h-full" />
+        <Suspense
+          fallback={
+            <div className="h-full bg-sidebar flex items-center justify-center text-sm text-sidebar-foreground/50 uppercase tracking-widest font-bold">
+              Loading...
+            </div>
+          }
+        >
+          <ChatSidebar preloadedRooms={preloadedRooms} className="h-full" />
+        </Suspense>
       </div>
 
       {/* Chat content panel: hidden on mobile when showing list, flex-1 otherwise */}
