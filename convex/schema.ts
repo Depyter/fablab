@@ -116,7 +116,9 @@ export default defineSchema({
   rooms: defineTable({
     name: v.string(),
     color: v.string(), // can be a string literal if need be down the road
-    lastMessageId: v.optional(v.id("messages")),
+    lastMessageText: v.optional(v.string()),
+    lastMessageAt: v.optional(v.number()),
+    unreadCount: v.optional(v.number()),
   }),
 
   roomMembers: defineTable({
@@ -126,15 +128,37 @@ export default defineSchema({
     .index("by_participantId", ["participantId"])
     .index("by_roomId_participantId", ["roomId", "participantId"]),
 
+  threads: defineTable({
+    roomId: v.id("rooms"),
+    projectId: v.optional(v.id("projects")),
+    title: v.string(),
+    createdBy: v.optional(v.id("userProfile")),
+    lastMessageText: v.optional(v.string()),
+    lastMessageAt: v.optional(v.number()),
+    unreadCount: v.optional(v.number()),
+    archived: v.union(v.literal("Archived"), v.literal("Active")),
+  })
+    .index("by_roomId", ["roomId"])
+    .index("projectId", ["projectId"]),
+
   messages: defineTable({
     content: v.string(),
     file: v.optional(v.array(v.id("_storage"))),
-    sender: v.string(),
+    sender: v.id("userProfile"),
     room: v.id("rooms"),
-  }).index("by_room", ["room"]),
+    // DIRECTION 2 (Everything is a thread):
+    // To normalize this further, you could make `threadId: v.id("threads")` required.
+    // The main room chat would just be a default "General" thread created alongside the room.
+    // This fully normalizes the data and simplifies queries, as every message always belongs to a thread.
+    threadId: v.optional(v.id("threads")),
+  })
+    // DIRECTION 1: Compound index to efficiently query both main room and specific threads
+    // without needing .filter() scans.
+    .index("by_room_and_thread", ["room", "threadId"]),
 
   userProfile: defineTable({
     userId: v.string(),
+    profilePic: v.optional(v.id("_storage")),
     name: v.string(),
     email: v.string(),
     role: v.union(

@@ -46,7 +46,7 @@ describe("Project and Chat functionality", () => {
       const message = await ctx.db.query("messages").collect();
       expect(message.length).toBe(1);
       expect(message[0].room).toBe(room[0]._id);
-      expect(message[0].sender).toBe("System");
+      expect(message[0].sender).toBeDefined();
       expect(message[0].content).toBe(
         "Generated room for project: 3d printing - Harley",
       );
@@ -68,15 +68,27 @@ describe("Project and Chat functionality", () => {
 
     // Check if the message is sent
     await t.run(async (ctx) => {
+      const userAera = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "2"))
+        .first();
+
+      const userHarley = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "1"))
+        .first();
+
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_room", (q) => q.eq("room", roomId))
+        .withIndex("by_room_and_thread", (q) =>
+          q.eq("room", roomId).eq("threadId", undefined),
+        )
         .collect();
 
       expect(messages.length).toBe(3);
       // first message is from the system
-      expect(messages[1].sender).toBe("Aera");
-      expect(messages[2].sender).toBe("Harley");
+      expect(messages[1].sender).toBe(userAera!._id);
+      expect(messages[2].sender).toBe(userHarley!._id);
 
       expect(messages[1].content).toBe("Hello this project...");
       expect(messages[2].content).toBe("Hello Aera");

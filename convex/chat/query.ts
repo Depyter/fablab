@@ -1,7 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { authQuery } from "../helper";
 import { checkRoomMembership } from "./helper";
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 
 export const getRoom = authQuery({
   args: { roomId: v.id("rooms") },
@@ -12,13 +12,19 @@ export const getRoom = authQuery({
 });
 // Use paginated query
 export const getRoomMessages = authQuery({
-  args: { paginationOpts: paginationOptsValidator, room: v.id("rooms") },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    room: v.id("rooms"),
+    threadId: v.optional(v.id("threads")),
+  },
   handler: async (ctx, args) => {
     checkRoomMembership(args.room, ctx, ctx.user);
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_room", (q) => q.eq("room", args.room))
+      .withIndex("by_room_and_thread", (q) =>
+        q.eq("room", args.room).eq("threadId", args.threadId),
+      )
       .order("desc")
       .paginate(args.paginationOpts);
 
@@ -64,17 +70,10 @@ export const getRoomMessages = authQuery({
 export const getRooms = authQuery({
   args: {},
   handler: async (ctx) => {
-    const userProfile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
-      .first();
-
-    if (!userProfile) throw new ConvexError("User profile does not exist!!");
-
     const roomMembers = await ctx.db
       .query("roomMembers")
       .withIndex("by_participantId", (q) =>
-        q.eq("participantId", userProfile?._id),
+        q.eq("participantId", ctx.profile._id),
       )
       .collect();
 
@@ -83,29 +82,25 @@ export const getRooms = authQuery({
       roomMembers.map((member) => ctx.db.get(member.roomId)),
     );
 
-    // Wave 2: fetch all last messages in parallel (no longer sequential per room)
-    const lastMessages = await Promise.all(
-      rooms.map((room) =>
-        room?.lastMessageId ? ctx.db.get(room.lastMessageId) : null,
-      ),
-    );
-
-    const results = rooms
-      .map((room, i) => {
-        if (!room) return null;
-        return {
-          ...room,
-          lastMessage: lastMessages[i] ?? null,
-        };
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null);
+    const results = rooms.filter((r): r is NonNullable<typeof r> => r !== null);
 
     results.sort((a, b) => {
-      const timeA = a.lastMessage?._creationTime ?? a._creationTime;
-      const timeB = b.lastMessage?._creationTime ?? b._creationTime;
+      const timeA = a.lastMessageAt ?? a._creationTime;
+      const timeB = b.lastMessageAt ?? b._creationTime;
       return timeB - timeA;
     });
 
     return results;
+  },
+});
+
+export const getThreads = authQuery({
+  args: { roomId: v.id("rooms") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("threads")
+      .withIndex("by_roomId", (q) => q.eq("roomId", args.roomId))
+      .order("desc")
+      .collect();
   },
 });

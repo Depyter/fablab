@@ -88,14 +88,18 @@ export const createProject = authMutation({
     }
 
     // create initial system message
-    const message = await ctx.db.insert("messages", {
+    const messageContent = `Generated room for project: ${defaultAlias}`;
+    const now = Date.now();
+
+    await ctx.db.insert("messages", {
       room: room,
-      content: `Generated room for project: ${defaultAlias}`,
-      sender: "System",
+      content: messageContent,
+      sender: admins.length > 0 ? admins[0]._id : userProfile._id, // Fallback to user if no admins exist
     });
 
-    await ctx.db.patch("rooms", room, {
-      lastMessageId: message,
+    await ctx.db.patch(room, {
+      lastMessageText: messageContent,
+      lastMessageAt: now,
     });
 
     return room;
