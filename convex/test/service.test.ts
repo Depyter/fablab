@@ -89,7 +89,7 @@ describe("Service functions", () => {
         status: "Available",
       });
     }).rejects.toThrow(
-      "Unauthorized: You do not the correct permissions to mutate.",
+      "Unauthorized: You do not have the correct permissions to mutate.",
     );
   });
 
@@ -242,7 +242,7 @@ describe("Service functions", () => {
         service: service[0]._id,
       });
     }).rejects.toThrow(
-      "Unauthorized: You do not the correct permissions to mutate.",
+      "Unauthorized: You do not have the correct permissions to mutate.",
     );
   });
 });
