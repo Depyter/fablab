@@ -4,6 +4,7 @@ import { usePreloadedQuery, Preloaded, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat/chat-interface";
+import { PresenceIndicator } from "@/components/chat/presence-indicator";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,16 @@ export function ChatRoomClient({
             </Link>
           </Button>
           {activeThread && (
-            <span className="font-semibold truncate">{activeThread.title}</span>
+            <span className="font-semibold truncate flex-1">
+              {activeThread.title}
+            </span>
+          )}
+          {activeThreadId && currentUser?.name && (
+            <PresenceIndicator
+              threadId={activeThreadId}
+              userId={currentUser.name}
+              roomId={roomId}
+            />
           )}
         </div>
 
