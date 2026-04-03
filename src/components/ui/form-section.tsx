@@ -1,5 +1,11 @@
 import * as React from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 
 interface FormSectionProps {
@@ -9,7 +15,12 @@ interface FormSectionProps {
   className?: string;
 }
 
-export function FormSection({ title, description, children, className }: FormSectionProps) {
+export function FormSection({
+  title,
+  description,
+  children,
+  className,
+}: FormSectionProps) {
   return (
     <Card>
       <CardHeader>
@@ -17,9 +28,7 @@ export function FormSection({ title, description, children, className }: FormSec
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <FieldGroup className={className}>
-          {children}
-        </FieldGroup>
+        <FieldGroup className={className}>{children}</FieldGroup>
       </CardContent>
     </Card>
   );
