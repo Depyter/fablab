@@ -158,7 +158,8 @@ export function UserProfileDialog({ children }: { children: React.ReactNode }) {
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 accept="image/*"
-                className="hidden"
+                className="sr-only"
+                tabIndex={-1}
               />
             </div>
 

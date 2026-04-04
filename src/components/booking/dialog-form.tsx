@@ -361,7 +361,7 @@ export function BookingDialog({
                     value={field.state.value}
                     onFilesChange={field.handleChange}
                     onUploadingChange={handleUploadingChange}
-                    accept="image/*,.stl"
+                    accept="*/*"
                   />
                 )}
               />

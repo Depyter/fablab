@@ -13,7 +13,7 @@ export const SampleProjectsForm = withForm({
         children={(field) => (
           <FileUpload
             title="Sample Projects"
-            accept="image/png, image/jpeg, image/jpg"
+            accept="*/*"
             onFilesChange={(files) =>
               field.handleChange(files.map((f) => f.storageId))
             }
