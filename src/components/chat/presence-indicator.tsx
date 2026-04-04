@@ -8,6 +8,21 @@ import usePresence from "@convex-dev/presence/react";
 
 import { cn } from "@/lib/utils";
 
+if (typeof window !== "undefined") {
+  if (!window.crypto) {
+    Object.defineProperty(window, "crypto", { value: {}, writable: true });
+  }
+  if (!window.crypto.randomUUID) {
+    window.crypto.randomUUID = () => {
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      }) as `${string}-${string}-${string}-${string}-${string}`;
+    };
+  }
+}
+
 function getInitials(name: string): string {
   return name
     .split(" ")
