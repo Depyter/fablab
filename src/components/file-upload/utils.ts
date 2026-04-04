@@ -60,31 +60,7 @@ export const EXT_MIME: Record<string, string> = {
 //   sheet collapses to camera + photos only.
 // ---------------------------------------------------------------------------
 
-export const CHAT_ACCEPTED_TYPES = [
-  // Media — wildcard keeps native camera / gallery option on mobile
-  "image/*",
-  "video/*",
-  // Non-media MIME types to ensure iOS shows the "Files" option
-  "application/pdf",
-  "text/*",
-  "model/*",
-  "application/*",
-  // 3-D / CAD
-  ".stl",
-  ".obj",
-  ".glb",
-  ".gltf",
-  ".3mf",
-  ".step",
-  ".stp",
-  // Design & documents
-  ".pdf",
-  ".dxf",
-  ".dwg",
-  ".ai",
-  ".eps",
-  ".psd",
-].join(",");
+export const CHAT_ACCEPTED_TYPES = "*/*";
 
 // ---------------------------------------------------------------------------
 // Resolve the MIME type for a File object.

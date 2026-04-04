@@ -20,7 +20,7 @@ export const ThumbnailForm = withForm({
           <div>
             <FileUpload
               title="Thumbnail"
-              accept="image/png, image/jpeg, image/jpg"
+              accept="*/*"
               maxFiles={1}
               onFilesChange={(files) =>
                 field.handleChange(files.map((f) => f.storageId))

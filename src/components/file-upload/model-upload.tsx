@@ -112,7 +112,8 @@ export function ModelUpload({
         accept={ACCEPTED}
         multiple={false}
         disabled={disabled}
-        className="hidden"
+        className="sr-only"
+        tabIndex={-1}
       />
 
       {/* Upload-in-progress state */}

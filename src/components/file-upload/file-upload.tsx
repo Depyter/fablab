@@ -177,7 +177,8 @@ export function FileUpload({
       accept={accept}
       multiple={multiple}
       disabled={disabled}
-      className="hidden"
+      className="sr-only"
+      tabIndex={-1}
     />
   );
 

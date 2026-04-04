@@ -275,7 +275,7 @@ export function EditServiceClient({
             children={(field) => (
               <FileUpload
                 title="Sample Projects"
-                accept="image/png, image/jpeg, image/jpg"
+                accept="*/*"
                 value={initialUploadedSamples}
                 onAddFile={(file) =>
                   addSampleToService({
@@ -307,7 +307,7 @@ export function EditServiceClient({
               <>
                 <FileUpload
                   title="Thumbnail"
-                  accept="image/png, image/jpeg, image/jpg"
+                  accept="*/*"
                   value={initialUploadedImages}
                   onAddFile={(file) =>
                     addImageToService({

@@ -232,7 +232,7 @@ export function InventoryItemForm({
               children={(field) => (
                 <FileUpload
                   title="Images"
-                  accept="image/png, image/jpeg, image/jpg"
+                  accept="*/*"
                   multiple={true}
                   value={initialImages}
                   onAddFile={
