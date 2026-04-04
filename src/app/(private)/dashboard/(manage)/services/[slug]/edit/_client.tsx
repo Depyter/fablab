@@ -13,7 +13,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
-import { MachineSelectForm } from "@/components/services/forms/machine-select-form";
+import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload, type UploadedFile } from "@/components/file-upload";
 import type { AddServiceFormValues } from "@/types/add-service";
@@ -25,6 +25,12 @@ const machineOptions = [
   { label: "Machine 1", value: "machine-1" },
   { label: "Machine 2", value: "machine-2" },
   { label: "Machine 3", value: "machine-3" },
+];
+
+const acceptedFileTypeOptions = [
+  { label: "Images", value: "image" },
+  { label: "Documents", value: "document" },
+  { label: "CAD Files", value: "cad" },
 ];
 
 // status options aligned with the backend literals
@@ -186,75 +192,77 @@ export function EditServiceClient({
   }
 
   return (
-    <main className="container mx-auto max-w-6xl p-10">
-      {/* Sticky header */}
-      <header
-        className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${
-          isScrolled ? "border-b border-gray-200" : "border-b-0"
-        }`}
-      >
-        <div className="flex items-center gap-4">
-          <Link href={`/dashboard/services/`}>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 border-gray-200 rounded-lg"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Edit {service.name}
-          </h1>
-        </div>
-        <div className="flex items-center gap-3">
-          {submitError && (
-            <p className="text-sm text-red-500 max-w-xs text-right">
-              {submitError}
-            </p>
-          )}
-          <ActionDialog
-            onConfirm={handleDeleteService}
-            title="Delete Service?"
-            description="Are you sure you want to delete this service? This action cannot be undone."
-            baseActionText="Remove"
-            confirmButtonText="Confirm Delete"
-            className="bg-red-500 text-white hover:bg-red-600 hover:text-white px-6 font-medium rounded-lg"
-          />
-
-          <ActionDialog
-            onConfirm={() => {
-              form.reset();
-              setSubmitError(null);
-            }}
-            title="Discard Changes?"
-            description="Are you sure you want to discard all changes?"
-            baseActionText="Discard"
-            confirmButtonText="Confirm"
-            className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-          />
-
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
+    <div className="mx-auto w-full p-10">
+      <div className="mx-auto w-full max-w-6xl">
+        {/* Sticky header */}
+        <header
+          className={`sticky top-0 z-30 mb-8 flex items-center justify-between pt-3 pb-4 bg-background ${
+            isScrolled ? "border-b border-gray-200 shadow-sm" : "border-b-0"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <Link href={`/dashboard/services/`}>
               <Button
-                type="button"
-                className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
-                disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
-                onClick={() => form.handleSubmit()}
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 border-gray-200 rounded-lg"
               >
-                {isSubmitting
-                  ? "Saving..."
-                  : hasUploadsInProgress
-                    ? "Uploading..."
-                    : "Save Changes"}
+                <ChevronLeft className="h-5 w-5" />
               </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Edit {service.name}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {submitError && (
+              <p className="text-sm text-red-500 max-w-xs text-right">
+                {submitError}
+              </p>
             )}
-          />
-        </div>
-      </header>
+            <ActionDialog
+              onConfirm={handleDeleteService}
+              title="Delete Service?"
+              description="Are you sure you want to delete this service? This action cannot be undone."
+              baseActionText="Remove"
+              confirmButtonText="Confirm Delete"
+              className="bg-red-500 text-white hover:bg-red-600 hover:text-white px-6 font-medium rounded-lg"
+            />
 
-      <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
+            <ActionDialog
+              onConfirm={() => {
+                form.reset();
+                setSubmitError(null);
+              }}
+              title="Discard Changes?"
+              description="Are you sure you want to discard all changes?"
+              baseActionText="Discard"
+              confirmButtonText="Confirm"
+              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
+            />
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <Button
+                  type="button"
+                  className="bg-[#1A8A7E] hover:bg-[#156E65] px-6 font-medium rounded-lg"
+                  disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
+                  onClick={() => form.handleSubmit()}
+                >
+                  {isSubmitting
+                    ? "Saving..."
+                    : hasUploadsInProgress
+                      ? "Uploading..."
+                      : "Save Changes"}
+                </Button>
+              )}
+            />
+          </div>
+        </header>
+
+      <main className="mx-auto w-full max-w-6xl">
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
         {/* Left column */}
         <div className="lg:col-span-5 space-y-5">
           <GeneralInfoForm form={form} />
@@ -327,7 +335,19 @@ export function EditServiceClient({
             )}
           />
 
-          <MachineSelectForm options={machineOptions} />
+          <MultipleSelectForm
+            options={machineOptions}
+            title="Machines"
+            fieldName="machines"
+            placeholder="Select machine..."
+          />
+
+          <MultipleSelectForm
+            options={acceptedFileTypeOptions}
+            title="Accepted File Types"
+            fieldName="acceptedFileTypes"
+            placeholder="Select file type..."
+          />
 
           <form.AppField
             name="status"
@@ -343,8 +363,11 @@ export function EditServiceClient({
               </div>
             )}
           />
+
         </div>
+        </div>
+      </main>
       </div>
-    </main>
+    </div>
   );
 }

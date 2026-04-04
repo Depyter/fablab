@@ -23,6 +23,11 @@ export const RequirementsForm = withForm({
   ...addServiceFormOpts,
   render: function RequirementsRender({ form }) {
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const focusInputAt = (nextIndex: number) => {
+      requestAnimationFrame(() => {
+        inputRefs.current[nextIndex]?.focus();
+      });
+    };
 
     return (
       <div className="w-full sm:max-w-3xl">
@@ -57,12 +62,9 @@ export const RequirementsForm = withForm({
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
+                                    const nextIndex = index + 1;
                                     field.pushValue("");
-                                    setTimeout(() => {
-                                      inputRefs.current[
-                                        field.state.value.length
-                                      ]?.focus();
-                                    }, 50);
+                                    focusInputAt(nextIndex);
                                   }
                                 }}
                               />
@@ -71,7 +73,13 @@ export const RequirementsForm = withForm({
                                   type="button"
                                   variant="ghost"
                                   size="icon-xs"
-                                  onClick={() => field.removeValue(index)}
+                                  onClick={() => {
+                                    if (index === 0) {
+                                      subField.handleChange("");
+                                      return;
+                                    }
+                                    field.removeValue(index);
+                                  }}
                                 >
                                   <XIcon className="h-4 w-4" />
                                 </InputGroupButton>
@@ -88,10 +96,9 @@ export const RequirementsForm = withForm({
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      const nextIndex = field.state.value.length;
                       field.pushValue("");
-                      setTimeout(() => {
-                        inputRefs.current[field.state.value.length]?.focus();
-                      }, 50);
+                      focusInputAt(nextIndex);
                     }}
                   >
                     <CirclePlus className="h-4 w-4 mr-2" />

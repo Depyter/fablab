@@ -39,21 +39,21 @@ export function MultipleSelectForm({
 
   return (
     <div className="w-full sm:max-w-3xl">
-      <FormSection title={title} className="space-y-2">
+      <FormSection title={title} className="space-y-1 flex flex-col gap-2">
         {/* Render existing selections */}
-        {selectedValues.map((selectValue: string, index: number) => {
-          const label = options.find((o) => o.value === selectValue)?.label;
+        {selectedValues.map((machineValue: string, index: number) => {
+          const label = options.find((o) => o.value === machineValue)?.label;
           return (
             <div
               key={index}
               className="flex items-center justify-between p-2 border rounded-lg bg-gray-50"
             >
-              <span>{label ?? selectValue}</span>
+              <span>{label ?? machineValue}</span>
 
               {/* CRUCIAL: Hidden input ensures this value is included in the parent form's submission.
                   Multiple inputs with the same name="machines" create an array in FormData.
                 */}
-              <input type="hidden" name={fieldName} value={selectValue} />
+              <input type="hidden" name={fieldName} value={machineValue} />
 
               <button type="button" onClick={() => removeMachine(index)}>
                 <XIcon className="h-4 w-4 text-gray-500" />

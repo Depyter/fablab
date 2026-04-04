@@ -12,7 +12,7 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
-import { MachineSelectForm } from "@/components/services/forms/machine-select-form";
+import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
 import { addServiceFormOpts } from "@/types/add-service";
@@ -25,6 +25,13 @@ const machineOptions = [
   { label: "Machine 1", value: "machine-1" },
   { label: "Machine 2", value: "machine-2" },
   { label: "Machine 3", value: "machine-3" },
+];
+
+// sample accepted file type options
+const acceptedFileTypeOptions = [
+  { label: "Images", value: "image" },
+  { label: "Documents", value: "document" },
+  { label: "CAD Files", value: "cad" },
 ];
 
 // status options aligned with the backend literals
@@ -92,7 +99,7 @@ export default function AddServicePage() {
     <main className="container mx-auto max-w-6xl p-10">
       {/* Top Navigation & Actions */}
       <header
-        className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${
+        className={`sticky top-0 z-10 flex items-center justify-between pt-3 mb-8 bg-background pb-4 ${
           isScrolled ? "border-b border-gray-200" : "border-b-0"
         }`}
       >
@@ -140,7 +147,7 @@ export default function AddServicePage() {
             children={([canSubmit, isSubmitting]) => (
               <Button
                 type="button"
-                className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg"
+                className="bg-[#1A8A7E] hover:bg-[#156E65] px-8 font-medium rounded-lg"
                 disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
                 onClick={() => form.handleSubmit()}
               >
@@ -208,7 +215,20 @@ export default function AddServicePage() {
             )}
           />
 
-          <MachineSelectForm options={machineOptions} />
+          <MultipleSelectForm
+            options={machineOptions}
+            title="Machines"
+            fieldName="machines"
+            placeholder="Select machine..."
+          />
+
+          <MultipleSelectForm
+            options={acceptedFileTypeOptions}
+            title="Accepted File Types"
+            fieldName="acceptedFileTypes"
+            placeholder="Select file type..."
+          />
+
           <form.AppField
             name="status"
             children={(field) => (
