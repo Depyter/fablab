@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
-import { ConvexError } from "convex/values";
+import { ConvexError, v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 import { authQuery } from "../helper";
 
 export const getProjects = authQuery({
@@ -37,7 +38,7 @@ export const getProjects = authQuery({
         // Find resource usage for date/time
         const usage = await ctx.db
           .query("resourceUsage")
-          .filter((q) => q.eq(q.field("project"), project._id))
+          .withIndex("by_project", (q) => q.eq("project", project._id))
           .first();
 
         const coverUrl =
@@ -60,6 +61,127 @@ export const getProjects = authQuery({
     return {
       ...result,
       page: enrichedPage,
+    };
+  },
+});
+
+export const getProject = authQuery({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+
+    if (!project) throw new ConvexError("Project not found.");
+
+    // Access control: admins and makers see all projects; a client can only
+    // access a project they initiated.
+    const { role, _id: callerId } = ctx.profile;
+    const isPrivileged = role === "admin" || role === "maker";
+
+    if (!isPrivileged && project.userId !== callerId) {
+      throw new ConvexError("You do not have permission to view this project.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Client profile — name + profile picture URL
+    // -------------------------------------------------------------------------
+    const clientProfile = await ctx.db.get(project.userId);
+    const clientPfpUrl = clientProfile?.profilePic
+      ? await ctx.storage.getUrl(clientProfile.profilePic)
+      : null;
+
+    // -------------------------------------------------------------------------
+    // Service — surface level only (name + status)
+    // -------------------------------------------------------------------------
+    const serviceDoc = await ctx.db.get(project.service);
+    const service = serviceDoc
+      ? {
+          _id: serviceDoc._id,
+          name: serviceDoc.name,
+          status: serviceDoc.status,
+        }
+      : null;
+
+    // -------------------------------------------------------------------------
+    // Files — metadata from the `files` table + signed storage URL
+    // The project stores these as plain strings (storage IDs from the frontend).
+    // -------------------------------------------------------------------------
+    const resolvedFiles = project.files
+      ? await Promise.all(
+          project.files.map(async (rawId) => {
+            const storageId = rawId as Id<"_storage">;
+
+            const [fileDoc, url] = await Promise.all([
+              ctx.db
+                .query("files")
+                .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+                .first(),
+              ctx.storage.getUrl(storageId),
+            ]);
+
+            if (!fileDoc)
+              return {
+                storageId,
+                url,
+                originalName: null,
+                type: null,
+                status: null,
+              };
+
+            const { originalName, type, status } = fileDoc;
+            return { storageId, url, originalName, type, status };
+          }),
+        )
+      : [];
+
+    // -------------------------------------------------------------------------
+    // Receipt — full document
+    // -------------------------------------------------------------------------
+    const receipt = project.receipt ? await ctx.db.get(project.receipt) : null;
+
+    // -------------------------------------------------------------------------
+    // Resource usages for this project — includes resolved maker and resource
+    // -------------------------------------------------------------------------
+    const usageDocs = await ctx.db
+      .query("resourceUsage")
+      .withIndex("by_project", (q) => q.eq("project", project._id))
+      .collect();
+
+    const resourceUsages = await Promise.all(
+      usageDocs.map(async (usage) => {
+        const makerProfile = usage.maker ? await ctx.db.get(usage.maker) : null;
+        const resourceDoc = usage.resource
+          ? await ctx.db.get(usage.resource)
+          : null;
+
+        const makerPfpUrl = makerProfile?.profilePic
+          ? await ctx.storage.getUrl(makerProfile.profilePic)
+          : null;
+
+        return {
+          ...usage,
+          makerName: makerProfile?.name ?? null,
+          makerPfpUrl,
+          resourceDetails: resourceDoc,
+        };
+      }),
+    );
+
+    // -------------------------------------------------------------------------
+    // Final shape
+    // -------------------------------------------------------------------------
+    return {
+      ...project,
+      client: {
+        _id: clientProfile?._id ?? null,
+        name: clientProfile?.name ?? "Unknown Client",
+        pfpUrl: clientPfpUrl,
+      },
+      service,
+      resolvedFiles,
+      receipt,
+      resourceUsages,
     };
   },
 });
