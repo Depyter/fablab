@@ -69,7 +69,9 @@ export default defineSchema({
     startTime: v.number(),
     endTime: v.number(),
     date: v.number(),
-  }).index("by_date_resource_startTime", ["date", "resource", "startTime"]),
+  })
+    .index("by_date_resource_startTime", ["date", "resource", "startTime"])
+    .index("by_project", ["project"]),
 
   projects: defineTable({
     name: v.string(),
@@ -95,7 +97,6 @@ export default defineSchema({
       v.literal(ProjectStatus.REJECTED),
       v.literal(ProjectStatus.COMPLETED),
     ),
-    resources: v.array(v.id("resources")),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())), // storageId given by the frontend
     notes: v.string(),

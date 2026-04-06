@@ -48,7 +48,6 @@ export const createProject = authMutation({
       service: args.service,
       pricing: args.pricing,
       status: "pending",
-      resources: [],
       files: args.files,
       notes: args.notes,
     });
