@@ -57,6 +57,45 @@ export const UserRole = {
   CLIENT: "client",
 } as const;
 
+// ---------------------------------------------------------------------------
+// File validation constants — kept in sync with src/components/file-upload/utils.ts
+// ---------------------------------------------------------------------------
+
+export const ALLOWED_MIME_TYPES = new Set([
+  // Images
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/bmp",
+  "image/tiff",
+  "image/avif",
+  "image/svg+xml",
+  "image/x-icon",
+  // Videos
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+  // 3D / CAD
+  "model/stl",
+  "model/obj",
+  "model/gltf-binary",
+  "model/gltf+json",
+  "application/vnd.ms-3mfdocument",
+  "application/step",
+  // Design & documents
+  "application/pdf",
+  "image/vnd.dxf",
+  "image/vnd.dwg",
+  "application/postscript",
+  "image/vnd.adobe.photoshop",
+]);
+
+/** 100 MB hard limit per file. */
+export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+
 // Type helpers for extracting the union types from the constants
 export type FileStatusType = (typeof FileStatus)[keyof typeof FileStatus];
 export type ServiceStatusType =
