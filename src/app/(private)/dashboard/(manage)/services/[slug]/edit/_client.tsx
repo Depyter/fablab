@@ -261,112 +261,111 @@ export function EditServiceClient({
           </div>
         </header>
 
-      <main className="mx-auto w-full max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
-        {/* Left column */}
-        <div className="lg:col-span-5 space-y-5">
-          <GeneralInfoForm form={form} />
-          <PricingForm form={form} />
-          <RequirementsForm form={form} />
+        <main className="mx-auto w-full max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
+            {/* Left column */}
+            <div className="lg:col-span-5 space-y-5">
+              <GeneralInfoForm form={form} />
+              <PricingForm form={form} />
+              <RequirementsForm form={form} />
 
-          {/* Sample projects — inlined so we can pass initial files */}
-          <form.Field
-            name="samples"
-            children={(field) => (
-              <FileUpload
-                title="Sample Projects"
-                accept="*/*"
-                value={initialUploadedSamples}
-                onAddFile={(file) =>
-                  addSampleToService({
-                    service: service._id as Id<"services">,
-                    sample: file.storageId as Id<"_storage">,
-                  })
-                }
-                onRemoveFile={(file) =>
-                  deleteSampleFromService({
-                    service: service._id as Id<"services">,
-                    sample: file.storageId as Id<"_storage">,
-                  })
-                }
-                onFilesChange={(files) =>
-                  field.handleChange(files.map((f) => f.storageId))
-                }
-                onUploadingChange={handleSamplesUploading}
-              />
-            )}
-          />
-        </div>
-
-        {/* Right column */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Thumbnail — inlined so we can pass initial files */}
-          <form.Field
-            name="images"
-            children={(field) => (
-              <>
-                <FileUpload
-                  title="Thumbnail"
-                  accept="*/*"
-                  value={initialUploadedImages}
-                  onAddFile={(file) =>
-                    addImageToService({
-                      service: service._id as Id<"services">,
-                      image: file.storageId as Id<"_storage">,
-                    })
-                  }
-                  onRemoveFile={(file) =>
-                    deleteImageFromService({
-                      service: service._id as Id<"services">,
-                      image: file.storageId as Id<"_storage">,
-                    })
-                  }
-                  onFilesChange={(files) =>
-                    field.handleChange(files.map((f) => f.storageId))
-                  }
-                  onUploadingChange={handleThumbnailUploading}
-                />
-                {field.state.meta.errors.length > 0 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {String(field.state.meta.errors[0])}
-                  </p>
-                )}
-              </>
-            )}
-          />
-
-          <MultipleSelectForm
-            options={machineOptions}
-            title="Machines"
-            fieldName="machines"
-            placeholder="Select machine..."
-          />
-
-          <MultipleSelectForm
-            options={acceptedFileTypeOptions}
-            title="Accepted File Types"
-            fieldName="acceptedFileTypes"
-            placeholder="Select file type..."
-          />
-
-          <form.AppField
-            name="status"
-            children={(field) => (
-              <div className="w-full sm:max-w-3xl">
-                <FormSection title="Status">
-                  <field.SelectInput
-                    label="Status"
-                    placeholder="Select status..."
-                    options={statusOptions}
+              {/* Sample projects — inlined so we can pass initial files */}
+              <form.Field
+                name="samples"
+                children={(field) => (
+                  <FileUpload
+                    title="Sample Projects"
+                    accept="*/*"
+                    value={initialUploadedSamples}
+                    onAddFile={(file) =>
+                      addSampleToService({
+                        service: service._id as Id<"services">,
+                        sample: file.storageId as Id<"_storage">,
+                      })
+                    }
+                    onRemoveFile={(file) =>
+                      deleteSampleFromService({
+                        service: service._id as Id<"services">,
+                        sample: file.storageId as Id<"_storage">,
+                      })
+                    }
+                    onFilesChange={(files) =>
+                      field.handleChange(files.map((f) => f.storageId))
+                    }
+                    onUploadingChange={handleSamplesUploading}
                   />
-                </FormSection>
-              </div>
-            )}
-          />
+                )}
+              />
+            </div>
 
-        </div>
-        </div>
-      </main>
+            {/* Right column */}
+            <div className="lg:col-span-3 space-y-4">
+              {/* Thumbnail — inlined so we can pass initial files */}
+              <form.Field
+                name="images"
+                children={(field) => (
+                  <>
+                    <FileUpload
+                      title="Thumbnail"
+                      accept="*/*"
+                      value={initialUploadedImages}
+                      onAddFile={(file) =>
+                        addImageToService({
+                          service: service._id as Id<"services">,
+                          image: file.storageId as Id<"_storage">,
+                        })
+                      }
+                      onRemoveFile={(file) =>
+                        deleteImageFromService({
+                          service: service._id as Id<"services">,
+                          image: file.storageId as Id<"_storage">,
+                        })
+                      }
+                      onFilesChange={(files) =>
+                        field.handleChange(files.map((f) => f.storageId))
+                      }
+                      onUploadingChange={handleThumbnailUploading}
+                    />
+                    {field.state.meta.errors.length > 0 && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {String(field.state.meta.errors[0])}
+                      </p>
+                    )}
+                  </>
+                )}
+              />
+
+              <MultipleSelectForm
+                options={machineOptions}
+                title="Machines"
+                fieldName="machines"
+                placeholder="Select machine..."
+              />
+
+              <MultipleSelectForm
+                options={acceptedFileTypeOptions}
+                title="Accepted File Types"
+                fieldName="acceptedFileTypes"
+                placeholder="Select file type..."
+              />
+
+              <form.AppField
+                name="status"
+                children={(field) => (
+                  <div className="w-full sm:max-w-3xl">
+                    <FormSection title="Status">
+                      <field.SelectInput
+                        label="Status"
+                        placeholder="Select status..."
+                        options={statusOptions}
+                      />
+                    </FormSection>
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
