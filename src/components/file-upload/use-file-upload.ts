@@ -11,6 +11,7 @@ export interface UseFileUploadOptions {
   maxFileSizeMB?: number;
   disabled?: boolean;
   autoUpload?: boolean;
+  allowedTypes?: string[];
   value?: UploadedFile[];
   onAddFile?: (file: UploadedFile) => void;
   onUploadComplete?: (file: UploadedFile) => void;
@@ -42,6 +43,7 @@ export function useFileUpload({
   maxFileSizeMB = 100,
   disabled = false,
   autoUpload = true,
+  allowedTypes,
   value = [],
   onAddFile,
   onUploadComplete,
@@ -105,6 +107,25 @@ export function useFileUpload({
 
   const uploadFile = useCallback(
     async (file: File) => {
+      const mimeType = resolveFileType(file);
+
+      if (
+        allowedTypes &&
+        allowedTypes.length > 0 &&
+        !allowedTypes.includes(mimeType)
+      ) {
+        const error = new Error(`File type ${mimeType} is not allowed`);
+        setUploadingFiles((prev) =>
+          prev.map((f) =>
+            f.file === file
+              ? { ...f, status: "error" as const, error: error.message }
+              : f,
+          ),
+        );
+        onUploadError?.(error, file);
+        return;
+      }
+
       if (file.size > maxFileSizeMB * 1024 * 1024) {
         const error = new Error(`File size exceeds ${maxFileSizeMB}MB`);
         setUploadingFiles((prev) =>
@@ -126,8 +147,6 @@ export function useFileUpload({
 
       try {
         const uploadUrl = await generateUploadUrl();
-
-        const mimeType = resolveFileType(file);
 
         const result = await fetch(uploadUrl, {
           method: "POST",
@@ -193,6 +212,7 @@ export function useFileUpload({
       generateUploadUrl,
       trackUpload,
       maxFileSizeMB,
+      allowedTypes,
       onAddFile,
       onUploadComplete,
       onUploadError,

@@ -35,7 +35,7 @@ export function ActionDialog({
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline" className={cn("rounded-lg", className)}>
+          <Button variant="outline" className={`rounded-lg px-10 ${className}`}>
             {baseActionText || "Back"}
           </Button>
         </DialogTrigger>

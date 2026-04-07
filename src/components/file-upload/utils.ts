@@ -6,48 +6,7 @@ import {
   Box,
   type LucideIcon,
 } from "lucide-react";
-
-// ---------------------------------------------------------------------------
-// Extension → MIME type map for all project-relevant file types.
-// Used to resolve reliable MIME types on systems (e.g. Linux) where the
-// browser may leave file.type as an empty string.
-// ---------------------------------------------------------------------------
-
-export const EXT_MIME: Record<string, string> = {
-  // Images
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  webp: "image/webp",
-  bmp: "image/bmp",
-  tiff: "image/tiff",
-  tif: "image/tiff",
-  avif: "image/avif",
-  svg: "image/svg+xml",
-  ico: "image/x-icon",
-  // Videos
-  mp4: "video/mp4",
-  webm: "video/webm",
-  mov: "video/quicktime",
-  avi: "video/x-msvideo",
-  mkv: "video/x-matroska",
-  // 3D / CAD
-  stl: "model/stl",
-  obj: "model/obj",
-  glb: "model/gltf-binary",
-  gltf: "model/gltf+json",
-  "3mf": "application/vnd.ms-3mfdocument",
-  step: "application/step",
-  stp: "application/step",
-  // Design & documents
-  pdf: "application/pdf",
-  dxf: "image/vnd.dxf",
-  dwg: "image/vnd.dwg",
-  ai: "application/postscript",
-  eps: "application/postscript",
-  psd: "image/vnd.adobe.photoshop",
-};
+import { EXT_MIME } from "@convex/constants";
 
 // ---------------------------------------------------------------------------
 // Accept string for the chat file input.

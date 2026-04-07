@@ -145,6 +145,7 @@ export function ServiceDetailClient({
                   serviceId={service._id}
                   serviceName={service.name}
                   requirements={service.requirements}
+                  fileTypes={service.fileTypes ?? []}
                 />
               </div>
             </div>

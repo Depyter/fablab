@@ -16,8 +16,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, LayoutGrid } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ManageHeader,
+  ManageFilterBar,
+  ManageFilterSearch,
+  ManageFilterClear,
+} from "@/components/manage/manage-layout";
 
 interface InventoryClientProps {
   preloadedResources: Preloaded<typeof api.resource.query.getResources>;
@@ -30,87 +42,152 @@ export function InventoryClient({ preloadedResources }: InventoryClientProps) {
   const [roomOpen, setRoomOpen] = useState(false);
   const [miscOpen, setMiscOpen] = useState(false);
 
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"name-az" | "status">("name-az");
+
+  const filteredResources = (() => {
+    let result = [...resources];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q),
+      );
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === "name-az") return a.name.localeCompare(b.name);
+      if (sortBy === "status") return a.status.localeCompare(b.status);
+      return 0;
+    });
+
+    return result;
+  })();
+
+  const activeFilterCount = [search.trim() !== "", sortBy !== "name-az"].filter(
+    Boolean,
+  ).length;
+
+  const clearFilters = () => {
+    setSearch("");
+    setSortBy("name-az");
+  };
+
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex flex-col gap-4 p-6 border-b sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
+    <>
+      <ManageHeader
+        title="Inventory"
+        subtitle={
+          filteredResources.length === resources.length
+            ? `${resources.length} item${resources.length === 1 ? "" : "s"}`
+            : `${filteredResources.length} of ${resources.length} items`
+        }
+      >
+        <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Gallery View"
+            className="h-8 w-8 rounded-none px-0 bg-muted text-foreground"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Search */}
-          <div className="relative w-full max-w-50">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8 w-full h-9"
-            />
-          </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" className="h-8 gap-1 shrink-0">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Item</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setMachineOpen(true)}>
+              Add Machine
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setToolOpen(true)}>
+              Add Tool
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setRoomOpen(true)}>
+              Add Room
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
+              Add Misc Item
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </ManageHeader>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="gap-1 h-9 max-w-40">
-                <Plus className="h-4 w-4" />
-                Add New Item
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              <DropdownMenuItem onSelect={() => setMachineOpen(true)}>
-                Add machine
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setToolOpen(true)}>
-                Add tool
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setRoomOpen(true)}>
-                Add room
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
-                Add misc item
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <ManageFilterBar>
+        <ManageFilterSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search inventory…"
+          onClear={() => setSearch("")}
+        />
 
-          {/* Dialogs rendered outside DropdownMenu to prevent unmounting/hydration issues */}
-          <Dialog open={machineOpen} onOpenChange={setMachineOpen}>
-            <DialogContent
-              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-              showCloseButton={false}
-            >
-              <AddMachineForm onSuccess={() => setMachineOpen(false)} />
-            </DialogContent>
-          </Dialog>
+        <Select
+          value={sortBy}
+          onValueChange={(v: "name-az" | "status") => setSortBy(v)}
+        >
+          <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-az" className="text-xs">
+              Name A → Z
+            </SelectItem>
+            <SelectItem value="status" className="text-xs">
+              Status
+            </SelectItem>
+          </SelectContent>
+        </Select>
 
-          <Dialog open={toolOpen} onOpenChange={setToolOpen}>
-            <DialogContent
-              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-              showCloseButton={false}
-            >
-              <AddToolForm onSuccess={() => setToolOpen(false)} />
-            </DialogContent>
-          </Dialog>
+        <ManageFilterClear
+          activeCount={activeFilterCount}
+          onClear={clearFilters}
+        />
+      </ManageFilterBar>
 
-          <Dialog open={roomOpen} onOpenChange={setRoomOpen}>
-            <DialogContent
-              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-              showCloseButton={false}
-            >
-              <AddRoomForm onSuccess={() => setRoomOpen(false)} />
-            </DialogContent>
-          </Dialog>
+      {/* Dialogs rendered outside DropdownMenu to prevent unmounting/hydration issues */}
+      <Dialog open={machineOpen} onOpenChange={setMachineOpen}>
+        <DialogContent
+          className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+          showCloseButton={false}
+        >
+          <AddMachineForm onSuccess={() => setMachineOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
-          <Dialog open={miscOpen} onOpenChange={setMiscOpen}>
-            <DialogContent
-              className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
-              showCloseButton={false}
-            >
-              <AddMiscForm onSuccess={() => setMiscOpen(false)} />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      <InventoryTab items={resources ?? []} />
-    </div>
+      <Dialog open={toolOpen} onOpenChange={setToolOpen}>
+        <DialogContent
+          className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+          showCloseButton={false}
+        >
+          <AddToolForm onSuccess={() => setToolOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={roomOpen} onOpenChange={setRoomOpen}>
+        <DialogContent
+          className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+          showCloseButton={false}
+        >
+          <AddRoomForm onSuccess={() => setRoomOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={miscOpen} onOpenChange={setMiscOpen}>
+        <DialogContent
+          className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+          showCloseButton={false}
+        >
+          <AddMiscForm onSuccess={() => setMiscOpen(false)} />
+        </DialogContent>
+      </Dialog>
+      <InventoryTab items={filteredResources ?? []} />
+    </>
   );
 }

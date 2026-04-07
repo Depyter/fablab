@@ -39,6 +39,7 @@ export async function setupProject() {
     upPrice: 1,
     unitPrice: "min",
     requirements: ["design", "model"],
+    fileTypes: [],
     description: "std to 3d printed model",
     status: "Available",
   });

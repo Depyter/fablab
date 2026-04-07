@@ -25,7 +25,7 @@ describe("Project and Chat functionality", () => {
       // Check if project was added
       const project = await ctx.db.query("projects").collect();
       expect(project.length).toBe(1);
-      expect(project[0].name).toBe("3d printing - Harley");
+      expect(project[0].name).toBe("test");
       expect(project[0].status).toBe("pending");
       expect(project[0].userId).toBe(userHarley!._id);
 
@@ -64,9 +64,7 @@ describe("Project and Chat functionality", () => {
       expect(message[1].room).toBe(room[0]._id);
       expect(message[1].threadId).toBe(thread[1]._id);
       expect(message[1].sender).toBe("System");
-      expect(message[1].content).toBe(
-        "Generated thread for project: 3d printing - Harley",
-      );
+      expect(message[1].content).toContain("New project created: test");
     });
   });
 

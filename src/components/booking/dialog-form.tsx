@@ -30,11 +30,13 @@ import { UploadedFile } from "../file-upload/types";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import { FILE_CATEGORIES } from "@convex/constants";
 
 interface BookingDialog {
   serviceId: Id<"services">;
   serviceName: string;
   requirements: string[];
+  fileTypes?: string[];
 }
 
 type Step = 1 | 2 | 3;
@@ -51,11 +53,16 @@ export function BookingDialog({
   serviceId,
   serviceName,
   requirements,
+  fileTypes = [],
 }: BookingDialog) {
+  const expandedFileTypes = fileTypes.flatMap(
+    (cat) => FILE_CATEGORIES[cat] || [cat],
+  );
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
 
   const handleUploadingChange = useCallback((uploading: boolean) => {
@@ -77,11 +84,14 @@ export function BookingDialog({
       files: [],
     } as LocalBookingFormValues,
     onSubmit: async ({ value }) => {
+      if (isSubmitting) return;
+
       if (!value.dateTime.date) {
         toast.error("Please select a date.");
         return;
       }
 
+      setIsSubmitting(true);
       try {
         const [startHours, startMinutes] = value.dateTime.startTime
           .split(":")
@@ -96,7 +106,7 @@ export function BookingDialog({
         const endDate = new Date(value.dateTime.date);
         endDate.setHours(endHours, endMinutes, 0, 0);
 
-        const roomId = await createProject({
+        const { roomId, threadId } = await createProject({
           name: value.name,
           description: value.description,
           serviceType: value.serviceType,
@@ -104,7 +114,7 @@ export function BookingDialog({
           service: serviceId,
           pricing: "normal", // default for now
           notes: value.notes,
-          files: value.files.map((f) => f.storageId),
+          files: value.files.map((f) => f.storageId as Id<"_storage">),
           booking: {
             date: value.dateTime.date.getTime(),
             startTime: startDate.getTime(),
@@ -113,11 +123,13 @@ export function BookingDialog({
         });
 
         toast.success("Booking request created successfully!");
-        router.push(`/dashboard/chat/${roomId}`);
+        router.push(`/dashboard/chat/${roomId}?thread=${threadId}`);
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : "Failed to create booking.",
         );
+      } finally {
+        setIsSubmitting(false);
       }
     },
   });
@@ -141,6 +153,7 @@ export function BookingDialog({
       // Reset state on close
       setTimeout(() => {
         setStep(1);
+        setIsSubmitting(false);
         form.reset();
       }, 300);
     }
@@ -362,6 +375,7 @@ export function BookingDialog({
                     onFilesChange={field.handleChange}
                     onUploadingChange={handleUploadingChange}
                     accept="*/*"
+                    allowedTypes={expandedFileTypes}
                   />
                 )}
               />
@@ -409,19 +423,20 @@ export function BookingDialog({
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              if (isSubmitting) return;
               form.handleSubmit();
             }}
           >
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
+              children={([canSubmit, formIsSubmitting]) => (
                 <EstimateProjectDetails
                   serviceName={serviceName}
                   data={{
                     ...form.state.values,
                     files: form.state.values.files,
                   }}
-                  isSubmitting={isSubmitting}
+                  isSubmitting={isSubmitting || formIsSubmitting}
                   canSubmit={canSubmit}
                   onBack={handlePrevStep}
                 />

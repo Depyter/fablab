@@ -1,5 +1,6 @@
 import { internalMutation } from "../_generated/server";
 import { v, ConvexError } from "convex/values";
+import type { Id } from "../_generated/dataModel";
 import {
   authMutation,
   checkAuthority,
@@ -46,6 +47,8 @@ export const addService = authMutation({
     regularPrice: v.number(),
     upPrice: v.number(),
     unitPrice: v.string(),
+    fileTypes: v.array(v.string()),
+    resources: v.optional(v.array(v.id("resources"))),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
@@ -57,6 +60,8 @@ export const addService = authMutation({
       regularPrice: args.regularPrice,
       upPrice: args.upPrice,
       unitPrice: args.unitPrice,
+      fileTypes: args.fileTypes,
+      resources: args.resources,
       status: args.status,
       requirements: args.requirements,
       samples: args.samples,
@@ -76,6 +81,8 @@ export const updateService = authMutation({
     upPrice: v.optional(v.number()),
     unitPrice: v.optional(v.string()),
     requirements: v.optional(v.array(v.string())),
+    fileTypes: v.optional(v.array(v.string())),
+    resources: v.optional(v.array(v.id("resources"))),
     description: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -96,6 +103,8 @@ export const updateService = authMutation({
       upPrice: number;
       unitPrice: string;
       requirements: string[];
+      fileTypes: string[];
+      resources: Id<"resources">[];
       description: string;
       type: string;
       status: "Unavailable" | "Available";
@@ -113,6 +122,8 @@ export const updateService = authMutation({
     if (args.unitPrice !== undefined) updates.unitPrice = args.unitPrice;
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;
+    if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
+    if (args.resources !== undefined) updates.resources = args.resources;
 
     await ctx.db.patch("services", args.service, updates);
   },

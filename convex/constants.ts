@@ -58,8 +58,86 @@ export const UserRole = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// File validation constants — kept in sync with src/components/file-upload/utils.ts
+// Extension → MIME type map for all project-relevant file types.
+// Used to resolve reliable MIME types on systems (e.g. Linux) where the
+// browser may leave file.type as an empty string.
 // ---------------------------------------------------------------------------
+
+export const EXT_MIME: Record<string, string> = {
+  // Images
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp",
+  tiff: "image/tiff",
+  tif: "image/tiff",
+  avif: "image/avif",
+  svg: "image/svg+xml",
+  ico: "image/x-icon",
+  // Videos
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  avi: "video/x-msvideo",
+  mkv: "video/x-matroska",
+  // 3D / CAD
+  stl: "model/stl",
+  obj: "model/obj",
+  glb: "model/gltf-binary",
+  gltf: "model/gltf+json",
+  "3mf": "application/vnd.ms-3mfdocument",
+  step: "application/step",
+  stp: "application/step",
+  // Design & documents
+  pdf: "application/pdf",
+  dxf: "image/vnd.dxf",
+  dwg: "image/vnd.dwg",
+  ai: "application/postscript",
+  eps: "application/postscript",
+  psd: "image/vnd.adobe.photoshop",
+};
+
+// ---------------------------------------------------------------------------
+// File validation constants
+// ---------------------------------------------------------------------------
+
+export const FILE_CATEGORIES: Record<string, string[]> = {
+  Images: [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/bmp",
+    "image/tiff",
+    "image/avif",
+    "image/svg+xml",
+    "image/x-icon",
+  ],
+  Videos: [
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",
+    "video/x-matroska",
+  ],
+  "3D / CAD": [
+    "model/stl",
+    "model/obj",
+    "model/gltf-binary",
+    "model/gltf+json",
+    "application/vnd.ms-3mfdocument",
+    "application/step",
+  ],
+  "Design & Documents": [
+    "application/pdf",
+    "image/vnd.dxf",
+    "image/vnd.dwg",
+    "application/postscript",
+    "image/vnd.adobe.photoshop",
+  ],
+};
 
 export const ALLOWED_MIME_TYPES = new Set([
   // Images
