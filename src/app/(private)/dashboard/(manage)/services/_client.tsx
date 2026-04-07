@@ -1,11 +1,28 @@
 "use client";
 
+import React, { useState } from "react";
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
-import { CardButton } from "@/components/card-button";
-import { PackageOpen } from "lucide-react";
-import { toast } from "sonner";
+import { PackageOpen, Search, LayoutGrid, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ManageHeader,
+  ManageFilterBar,
+  ManageFilterSearch,
+  ManageFilterClear,
+  ManageGrid,
+  ManageEmptyState,
+} from "@/components/manage/manage-layout";
 
 export function ServicesListClient({
   preloadedServices,
@@ -13,39 +30,133 @@ export function ServicesListClient({
   preloadedServices: Preloaded<typeof api.services.query.getServices>;
 }) {
   const services = usePreloadedQuery(preloadedServices);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"name-az" | "price-high" | "price-low">(
+    "name-az",
+  );
+
+  const filteredServices = (() => {
+    let result = [...services];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q),
+      );
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === "price-high") return b.regularPrice - a.regularPrice;
+      if (sortBy === "price-low") return a.regularPrice - b.regularPrice;
+      if (sortBy === "name-az") return a.name.localeCompare(b.name);
+      return 0;
+    });
+
+    return result;
+  })();
+
+  const activeFilterCount = [search.trim() !== "", sortBy !== "name-az"].filter(
+    Boolean,
+  ).length;
+
+  const clearFilters = () => {
+    setSearch("");
+    setSortBy("name-az");
+  };
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Available Services</h1>
-        <p className="text-muted-foreground mt-2">
-          {services.length === 0
-            ? "No services yet — add one to get started."
-            : `Total services: ${services.length}`}
-        </p>
-      </div>
+    <>
+      <ManageHeader
+        title="Services"
+        subtitle={
+          filteredServices.length === services.length
+            ? `${services.length} service${services.length === 1 ? "" : "s"}`
+            : `${filteredServices.length} of ${services.length} services`
+        }
+      >
+        <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Gallery View"
+            className="h-8 w-8 rounded-none px-0 bg-muted text-foreground"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+        </div>
+        <Link href="/dashboard/services/add-service">
+          <Button size="sm" className="h-8 gap-1 shrink-0">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Service</span>
+          </Button>
+        </Link>
+      </ManageHeader>
+
+      <ManageFilterBar>
+        <ManageFilterSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search services…"
+          onClear={() => setSearch("")}
+        />
+
+        <Select
+          value={sortBy}
+          onValueChange={(v: "name-az" | "price-high" | "price-low") =>
+            setSortBy(v)
+          }
+        >
+          <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-az" className="text-xs">
+              Name A → Z
+            </SelectItem>
+            <SelectItem value="price-high" className="text-xs">
+              Price: high → low
+            </SelectItem>
+            <SelectItem value="price-low" className="text-xs">
+              Price: low → high
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <ManageFilterClear
+          activeCount={activeFilterCount}
+          onClear={clearFilters}
+        />
+      </ManageFilterBar>
 
       {services.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-8 py-16">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="rounded-full bg-muted p-6">
-              <PackageOpen className="size-12 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-semibold">No services found</h2>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              The catalogue is empty. Create your first service to make it
-              available for clients to browse and request.
-            </p>
-          </div>
-          <CardButton
-            path="/dashboard/services/add-service"
-            title="Add Service"
-            description="Click to add a new service to the catalogue"
-          />
-        </div>
+        <ManageEmptyState
+          icon={<PackageOpen className="size-12" />}
+          title="No services found"
+          description="The catalogue is empty. Create your first service to make it available for clients to browse and request."
+          action={
+            <Link href="/dashboard/services/add-service">
+              <Button variant="outline" size="sm">
+                Add Service
+              </Button>
+            </Link>
+          }
+        />
+      ) : filteredServices.length === 0 ? (
+        <ManageEmptyState
+          icon={<Search className="size-8" />}
+          title="No matching services"
+          description="Try adjusting your filters."
+          action={
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {services.map((service) => (
+        <ManageGrid>
+          {filteredServices.map((service) => (
             <ServiceCard
               key={service._id}
               slug={service.slug}
@@ -57,13 +168,8 @@ export function ServicesListClient({
               unit={service.unitPrice}
             />
           ))}
-          <CardButton
-            path="/dashboard/services/add-service"
-            title="Add Service"
-            description="Click to add a new service to the catalogue"
-          />
-        </div>
+        </ManageGrid>
       )}
-    </div>
+    </>
   );
 }

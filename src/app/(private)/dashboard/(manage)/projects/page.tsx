@@ -22,6 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  ManageHeader,
+  ManageFilterBar,
+  ManageFilterSearch,
+  ManageFilterClear,
+  ManageGrid,
+  ManageEmptyState,
+} from "@/components/manage/manage-layout";
 import * as React from "react";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -135,23 +143,17 @@ export default function ProjectsList() {
   const showFilterBar = view !== "calendar" && !isLoading;
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header — single row at all widths */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b shrink-0">
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-base leading-tight truncate">
-            Your Projects
-          </h1>
-          {!isLoading && view !== "calendar" && (
-            <p className="text-[11px] text-muted-foreground hidden sm:block">
-              {filteredProjects.length === projects.length
-                ? `${projects.length} project${projects.length === 1 ? "" : "s"}`
-                : `${filteredProjects.length} of ${projects.length} projects`}
-            </p>
-          )}
-        </div>
-
-        {/* View toggle */}
+    <>
+      <ManageHeader
+        title="Your Projects"
+        subtitle={
+          !isLoading && view !== "calendar"
+            ? filteredProjects.length === projects.length
+              ? `${projects.length} project${projects.length === 1 ? "" : "s"}`
+              : `${filteredProjects.length} of ${projects.length} projects`
+            : undefined
+        }
+      >
         <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
           <Button
             variant="ghost"
@@ -195,31 +197,16 @@ export default function ProjectsList() {
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Add Project</span>
         </Button>
-      </div>
+      </ManageHeader>
 
-      {/* Filter bar */}
       {showFilterBar && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/20 shrink-0 flex-wrap">
-          <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0 hidden sm:block" />
-
-          {/* Search */}
-          <div className="relative flex-1 min-w-36 max-w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
-            <Input
-              placeholder="Search projects…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-7 pl-7 text-xs bg-background border-border/60 shadow-none"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+        <ManageFilterBar>
+          <ManageFilterSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search projects…"
+            onClear={() => setSearch("")}
+          />
 
           {/* Status */}
           <Select
@@ -311,22 +298,11 @@ export default function ProjectsList() {
             </SelectContent>
           </Select>
 
-          {/* Clear filters */}
-          {activeFilterCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="h-7 px-2 text-xs text-muted-foreground gap-1 hover:text-foreground"
-            >
-              <X className="h-3 w-3" />
-              Clear
-              <span className="h-4 w-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center leading-none">
-                {activeFilterCount}
-              </span>
-            </Button>
-          )}
-        </div>
+          <ManageFilterClear
+            activeCount={activeFilterCount}
+            onClear={clearFilters}
+          />
+        </ManageFilterBar>
       )}
 
       {/* Content */}
@@ -337,52 +313,39 @@ export default function ProjectsList() {
           Loading projects...
         </div>
       ) : projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-8 py-16 flex-1">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="rounded-full bg-muted p-6">
-              <PackageOpen className="size-12 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-semibold">No projects found</h2>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              The catalogue is empty. No clients have created projects or
-              booking requests yet.
-            </p>
-          </div>
-        </div>
+        <ManageEmptyState
+          icon={<PackageOpen className="size-12" />}
+          title="No projects found"
+          description="The catalogue is empty. No clients have created projects or booking requests yet."
+        />
       ) : filteredProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-16 flex-1">
-          <div className="rounded-full bg-muted p-5">
-            <Search className="size-8 text-muted-foreground" />
-          </div>
-          <div className="text-center">
-            <h2 className="text-base font-semibold">No matching projects</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              Try adjusting your filters.
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={clearFilters}>
-            Clear filters
-          </Button>
-        </div>
+        <ManageEmptyState
+          icon={<Search className="size-8" />}
+          title="No matching projects"
+          description="Try adjusting your filters."
+          action={
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          }
+        />
       ) : view === "gallery" ? (
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {filteredProjects.map((project) => (
-              <ProjectCard
-                key={project._id}
-                title={project.name}
-                description={project.description}
-                clientName={project.clientName}
-                serviceName={project.serviceName}
-                bookingDate={project.bookingDate}
-                estimatedPrice={project.estimatedPrice}
-                status={project.status}
-                bookingTime={project.bookingTime}
-                coverUrl={project.coverUrl ?? null}
-              />
-            ))}
-          </div>
-        </div>
+        <ManageGrid>
+          {filteredProjects.map((project) => (
+            <ProjectCard
+              key={project._id}
+              title={project.name}
+              description={project.description}
+              clientName={project.clientName}
+              serviceName={project.serviceName}
+              bookingDate={project.bookingDate}
+              estimatedPrice={project.estimatedPrice}
+              status={project.status}
+              bookingTime={project.bookingTime}
+              coverUrl={project.coverUrl ?? null}
+            />
+          ))}
+        </ManageGrid>
       ) : (
         /* List View */
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
@@ -468,6 +431,6 @@ export default function ProjectsList() {
           </Button>
         </div>
       )}
-    </div>
+    </>
   );
 }

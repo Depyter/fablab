@@ -1,9 +1,9 @@
-import { preloadQuery } from "convex/nextjs";
+import { preloadAuthQuery } from "@/lib/auth-server";
 import { api } from "@convex/_generated/api";
 import { InventoryClient } from "./_client";
 
 export default async function InventoryPage() {
-  const preloadedResources = await preloadQuery(
+  const preloadedResources = await preloadAuthQuery(
     api.resource.query.getResources,
   );
 

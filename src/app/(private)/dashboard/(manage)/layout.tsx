@@ -15,5 +15,9 @@ export default async function ManageLayout({
     redirect("/dashboard");
   }
 
-  return <>{children}</>;
+  return (
+    <div className="flex flex-col h-full bg-background w-full min-w-0">
+      {children}
+    </div>
+  );
 }

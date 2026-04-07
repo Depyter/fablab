@@ -1,13 +1,6 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ManageCard } from "@/components/manage/manage-card";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -46,55 +39,43 @@ export function ServiceCard({
   imageAlt = "Service image",
   badgeText = "Featured",
   badgeVariant = "secondary",
-  buttonText = "View Service",
+  buttonText = "Edit Service",
   showBadge = true,
   className = "",
   unit = "per unit",
 }: ServiceCardProps) {
   return (
-    <Card className={`relative mx-auto w-full max-w-sm pt-0 ${className}`}>
-      <div className="absolute inset-0 z-30 aspect-video bg-black/35" />
-      <Image
-        src={imageSrc}
-        alt={imageAlt}
-        width={640}
-        height={480}
-        className="relative z-20 aspect-video w-full object-cover brightness-60 grayscale dark:brightness-40"
-      />
-      <CardAction
-        className={"absolute inset-0 z-40 p-4 flex items-start justify-end"}
-      >
-        {showBadge && (
-          <Badge variant={badgeVariant} className="h-8 rounded-lg">
-            {badgeText}
-          </Badge>
-        )}
-      </CardAction>
-      <CardHeader>
-        <CardTitle className="font-bold text-xl">{title}</CardTitle>
-        <CardDescription>
-          {description}
-
-          <div className="h-2" />
-          <div className="mt-2 flex flex-col items-start gap-1 text-chart-6">
-            <span className="text-lg font-semibold flex flex-row items-baseline text-chart-6 gap-2">
-              <p className="text-muted-foreground text-sm">Regular</p>P
-              {regularPrice.toFixed(2)}/{unit}
-            </span>
-            <span className="text-lg font-semibold flex flex-row items-baseline text-chart-6 gap-2">
-              <p className="text-muted-foreground text-sm ">UP Rate</p>P
-              {discountedPrice.toFixed(2)}/{unit}
-            </span>
-          </div>
-        </CardDescription>
-      </CardHeader>
-
-      <div className="flex-1/2" />
-      <CardFooter>
-        <Link href={`/dashboard/services/${slug}/edit`} className="w-full">
-          <Button className="w-full">{buttonText}</Button>
+    <ManageCard
+      className={className}
+      title={title}
+      subtitle={
+        <>
+          ₱{regularPrice.toFixed(2)}/{unit} Regular · ₱
+          {discountedPrice.toFixed(2)}/{unit} UP Rate
+        </>
+      }
+      description={description}
+      coverFallback={
+        <Image
+          src={imageSrc}
+          alt={imageAlt}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover"
+        />
+      }
+      badgeText={showBadge ? badgeText : undefined}
+      badgeClassName="bg-secondary/10 text-secondary-foreground border-secondary/20"
+      action={
+        <Link
+          href={`/dashboard/services/${slug}/edit`}
+          className="w-full block"
+        >
+          <Button size="sm" variant="outline" className="w-full h-8 text-xs">
+            {buttonText}
+          </Button>
         </Link>
-      </CardFooter>
-    </Card>
+      }
+    />
   );
 }
