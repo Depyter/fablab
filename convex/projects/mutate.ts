@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { authMutation } from "../helper";
+import { authMutation, claimFiles } from "../helper";
 
 // Initialize a project
 export const createProject = authMutation({
@@ -10,7 +10,7 @@ export const createProject = authMutation({
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     service: v.id("services"),
     pricing: v.union(v.literal("normal"), v.literal("UP")),
-    files: v.optional(v.array(v.string())),
+    files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
 
     booking: v.object({
@@ -35,12 +35,9 @@ export const createProject = authMutation({
     const service = await ctx.db.get(args.service);
     if (!service) throw new ConvexError("Service not found!");
 
-    // create default alias: [service name] - [user name]
-    const defaultAlias = `${service.name} - ${userProfile.name}`;
-
     // create project
     const project = await ctx.db.insert("projects", {
-      name: defaultAlias,
+      name: args.name,
       description: args.description,
       serviceType: args.serviceType,
       material: args.material,
@@ -117,13 +114,13 @@ export const createProject = authMutation({
     }
 
     const now = Date.now();
-    const messageContent = `Generated thread for project: ${defaultAlias}`;
+    const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(args.booking.date).toDateString()} from ${new Date(args.booking.startTime).toLocaleTimeString()} to ${new Date(args.booking.endTime).toLocaleTimeString()}`;
 
     // Create a thread for the project
     const threadId = await ctx.db.insert("threads", {
       roomId: roomId,
       projectId: project,
-      title: defaultAlias,
+      title: args.name,
       createdBy: userProfile._id,
       archived: "Active",
       lastMessageText: messageContent,
@@ -137,13 +134,18 @@ export const createProject = authMutation({
       threadId: threadId,
       content: messageContent,
       sender: "System",
+      file: args.files,
     });
+
+    if (args.files && args.files.length > 0) {
+      claimFiles(ctx, args.files);
+    }
 
     await ctx.db.patch(roomId, {
       lastMessageText: messageContent,
       lastMessageAt: now,
     });
 
-    return roomId;
+    return { roomId, threadId };
   },
 });
