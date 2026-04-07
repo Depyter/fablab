@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { Hash, ChevronDown, ChevronRight } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
 
-import { ManageMembersDialog } from "./manage-members-dialog";
+import { RoomSettingsDialog } from "./room-settings-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -128,7 +128,7 @@ export function ChatSidebar({
                       {room.name}
                     </span>
                     {room._id && room.name && (
-                      <ManageMembersDialog
+                      <RoomSettingsDialog
                         roomId={room._id as Id<"rooms">}
                         roomName={room.name}
                       />
@@ -180,7 +180,8 @@ export function ChatSidebar({
                                 {thread.title}
                               </span>
 
-                              {thread.unreadCount ? (
+                              {thread.unreadCount &&
+                              thread._id !== activeThreadId ? (
                                 <div className="h-4 px-1.5 min-w-4 rounded-full bg-primary/90 text-white text-[10px] font-semibold flex items-center justify-center shrink-0">
                                   {thread.unreadCount}
                                 </div>
@@ -237,7 +238,8 @@ export function ChatSidebar({
                                         {thread.title}
                                       </span>
 
-                                      {thread.unreadCount ? (
+                                      {thread.unreadCount &&
+                                      thread._id !== activeThreadId ? (
                                         <div className="h-4 px-1.5 min-w-4 rounded-full bg-white/90 text-black text-[10px] font-semibold flex items-center justify-center shrink-0">
                                           {thread.unreadCount}
                                         </div>

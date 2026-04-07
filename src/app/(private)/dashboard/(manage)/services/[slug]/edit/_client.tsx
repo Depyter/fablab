@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAppForm } from "@/lib/form-context";
-import { useMutation } from "convex/react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import {
+  useMutation,
+  useQuery,
+  usePreloadedQuery,
+  Preloaded,
+} from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
@@ -17,21 +21,17 @@ import { MultipleSelectForm } from "@/components/services/forms/multiple-select-
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload, type UploadedFile } from "@/components/file-upload";
 import type { AddServiceFormValues } from "@/types/add-service";
+import { ManageHeader } from "@/components/manage/manage-layout";
 import { ActionDialog } from "@/components/action-dialog";
 import { toast } from "sonner";
-import { ServiceStatus } from "@convex/constants";
+import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
 
-const machineOptions = [
-  { label: "Machine 1", value: "machine-1" },
-  { label: "Machine 2", value: "machine-2" },
-  { label: "Machine 3", value: "machine-3" },
-];
-
-const acceptedFileTypeOptions = [
-  { label: "Images", value: "image" },
-  { label: "Documents", value: "document" },
-  { label: "CAD Files", value: "cad" },
-];
+const acceptedFileTypeOptions = Object.keys(FILE_CATEGORIES).map(
+  (category) => ({
+    label: category,
+    value: category,
+  }),
+);
 
 // status options aligned with the backend literals
 const statusOptions = [
@@ -47,7 +47,13 @@ export function EditServiceClient({
   const service = usePreloadedQuery(preloadedService);
   const router = useRouter();
   const deleteService = useMutation(api.services.mutate.deleteService);
-  const [isScrolled, setIsScrolled] = useState(false);
+
+  const resourcesQuery = useQuery(api.resource.query.getResources) || [];
+  const resourceOptions = resourcesQuery.map((r) => ({
+    label: r.name,
+    value: r._id,
+  }));
+
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
@@ -70,12 +76,6 @@ export function EditServiceClient({
   const deleteSampleFromService = useMutation(
     api.services.mutate.deleteSampleFromService,
   );
-
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Convert existing storage IDs into UploadedFile entries so FileUpload can
   // render them as "already uploaded" items.
@@ -116,6 +116,8 @@ export function EditServiceClient({
         service?.requirements && service.requirements.length > 0
           ? service.requirements
           : [""],
+      fileTypes: (service?.fileTypes ?? []) as string[],
+      resources: (service?.resources ?? []) as string[],
     },
     onSubmit: async ({ value }) => {
       if (!service) return;
@@ -132,6 +134,8 @@ export function EditServiceClient({
           unitPrice: value.unitPrice,
           status: value.status,
           requirements: value.requirements.filter((r) => r.trim() !== ""),
+          fileTypes: value.fileTypes,
+          resources: value.resources as Id<"resources">[],
         });
 
         // Navigate to the (possibly renamed) service detail page.
@@ -172,96 +176,75 @@ export function EditServiceClient({
   // Guard against the service being deleted while the user is on this page.
   if (service === null) {
     return (
-      <main className="container mx-auto max-w-6xl p-10">
-        <div className="flex items-center gap-4 mb-8">
+      <>
+        <ManageHeader title="Service Not Found">
           <Link href="/dashboard/services">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 border-gray-200 rounded-lg"
-            >
-              <ChevronLeft className="h-5 w-5" />
+            <Button variant="outline" size="sm">
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back to Services
             </Button>
           </Link>
+        </ManageHeader>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <p className="text-muted-foreground">
+            This service no longer exists.
+          </p>
         </div>
-        <p className="text-muted-foreground text-center py-10">
-          This service no longer exists.
-        </p>
-      </main>
+      </>
     );
   }
 
   return (
-    <div className="mx-auto w-full p-10">
-      <div className="mx-auto w-full max-w-6xl">
-        {/* Sticky header */}
-        <header
-          className={`sticky top-0 z-30 mb-8 flex items-center justify-between pt-3 pb-4 bg-background ${
-            isScrolled ? "border-b border-gray-200 shadow-sm" : "border-b-0"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <Link href={`/dashboard/services/`}>
+    <>
+      <ManageHeader title={`Edit ${service.name}`}>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/services">
+            <Button variant="outline" size="sm" className="h-8 gap-1">
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
+          </Link>
+          {submitError && (
+            <p className="text-sm text-red-500 max-w-xs text-right mr-2 hidden sm:block">
+              {submitError}
+            </p>
+          )}
+
+          <ActionDialog
+            onConfirm={() => {
+              form.reset();
+              setSubmitError(null);
+            }}
+            title="Discard Changes?"
+            description="Are you sure you want to discard all changes?"
+            baseActionText="Discard"
+            confirmButtonText="Confirm"
+            className="h-8 text-xs font-medium"
+          />
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
               <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 border-gray-200 rounded-lg"
+                type="button"
+                size="sm"
+                className="h-8 gap-1"
+                disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
+                onClick={() => form.handleSubmit()}
               >
-                <ChevronLeft className="h-5 w-5" />
+                {isSubmitting
+                  ? "Saving..."
+                  : hasUploadsInProgress
+                    ? "Uploading..."
+                    : "Save Changes"}
               </Button>
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Edit {service.name}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {submitError && (
-              <p className="text-sm text-red-500 max-w-xs text-right">
-                {submitError}
-              </p>
             )}
-            <ActionDialog
-              onConfirm={handleDeleteService}
-              title="Delete Service?"
-              description="Are you sure you want to delete this service? This action cannot be undone."
-              baseActionText="Remove"
-              confirmButtonText="Confirm Delete"
-              className="bg-red-500 text-white hover:bg-red-600 hover:text-white px-6 font-medium rounded-lg"
-            />
+          />
+        </div>
+      </ManageHeader>
 
-            <ActionDialog
-              onConfirm={() => {
-                form.reset();
-                setSubmitError(null);
-              }}
-              title="Discard Changes?"
-              description="Are you sure you want to discard all changes?"
-              baseActionText="Discard"
-              confirmButtonText="Confirm"
-              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            />
-
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
-                <Button
-                  type="button"
-                  className="bg-[#1A8A7E] hover:bg-[#156E65] px-6 font-medium rounded-lg"
-                  disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
-                  onClick={() => form.handleSubmit()}
-                >
-                  {isSubmitting
-                    ? "Saving..."
-                    : hasUploadsInProgress
-                      ? "Uploading..."
-                      : "Save Changes"}
-                </Button>
-              )}
-            />
-          </div>
-        </header>
-
-        <main className="mx-auto w-full max-w-6xl">
+      <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+        <div className="mx-auto w-full max-w-5xl">
           <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
             {/* Left column */}
             <div className="lg:col-span-5 space-y-5">
@@ -335,18 +318,30 @@ export function EditServiceClient({
                 )}
               />
 
-              <MultipleSelectForm
-                options={machineOptions}
-                title="Machines"
-                fieldName="machines"
-                placeholder="Select machine..."
+              <form.Field
+                name="resources"
+                children={(field) => (
+                  <MultipleSelectForm
+                    options={resourceOptions}
+                    title="Resources (Machines, etc.)"
+                    placeholder="Select resource..."
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
               />
 
-              <MultipleSelectForm
-                options={acceptedFileTypeOptions}
-                title="Accepted File Types"
-                fieldName="acceptedFileTypes"
-                placeholder="Select file type..."
+              <form.Field
+                name="fileTypes"
+                children={(field) => (
+                  <MultipleSelectForm
+                    options={acceptedFileTypeOptions}
+                    title="Accepted File Types"
+                    placeholder="Select file type..."
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
               />
 
               <form.AppField
@@ -365,8 +360,26 @@ export function EditServiceClient({
               />
             </div>
           </div>
-        </main>
+
+          <div className="mt-12 rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div className="space-y-1">
+              <h3 className="font-semibold text-destructive">Danger Zone</h3>
+              <p className="text-sm text-muted-foreground">
+                Once you delete a service, there is no going back. Please be
+                certain.
+              </p>
+            </div>
+            <ActionDialog
+              onConfirm={handleDeleteService}
+              title="Delete Service?"
+              description="Are you sure you want to delete this service? This action cannot be undone."
+              baseActionText="Delete Service"
+              confirmButtonText="Confirm Delete"
+              className="bg-destructive hover:bg-destructive/90 text-white shadow-sm"
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

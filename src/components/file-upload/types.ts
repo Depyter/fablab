@@ -27,6 +27,7 @@ export interface FileUploadProps {
   maxFiles?: number;
   maxFileSizeMB?: number;
   accept?: string;
+  allowedTypes?: string[];
   disabled?: boolean;
   className?: string;
   multiple?: boolean;

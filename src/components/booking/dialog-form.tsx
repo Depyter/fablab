@@ -30,11 +30,13 @@ import { UploadedFile } from "../file-upload/types";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import { FILE_CATEGORIES } from "@convex/constants";
 
 interface BookingDialog {
   serviceId: Id<"services">;
   serviceName: string;
   requirements: string[];
+  fileTypes?: string[];
 }
 
 type Step = 1 | 2 | 3;
@@ -51,7 +53,11 @@ export function BookingDialog({
   serviceId,
   serviceName,
   requirements,
+  fileTypes = [],
 }: BookingDialog) {
+  const expandedFileTypes = fileTypes.flatMap(
+    (cat) => FILE_CATEGORIES[cat] || [cat],
+  );
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [isOpen, setIsOpen] = useState(false);
@@ -369,6 +375,7 @@ export function BookingDialog({
                     onFilesChange={field.handleChange}
                     onUploadingChange={handleUploadingChange}
                     accept="*/*"
+                    allowedTypes={expandedFileTypes}
                   />
                 )}
               />

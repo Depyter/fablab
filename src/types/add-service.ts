@@ -11,6 +11,8 @@ export interface AddServiceFormValues {
   images: string[];
   samples: string[];
   requirements: string[];
+  fileTypes: string[];
+  resources: string[];
 }
 
 const defaultAddServiceValues: AddServiceFormValues = {
@@ -23,6 +25,8 @@ const defaultAddServiceValues: AddServiceFormValues = {
   images: [],
   samples: [],
   requirements: [""],
+  fileTypes: [],
+  resources: [],
 };
 
 export const addServiceFormOpts = formOptions({

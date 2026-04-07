@@ -37,6 +37,8 @@ export default defineSchema({
     unitPrice: v.string(),
     description: v.string(),
     requirements: v.array(v.string()),
+    fileTypes: v.array(v.string()),
+    resources: v.optional(v.array(v.id("resources"))),
     status: v.union(
       v.literal(ServiceStatus.UNAVAILABLE),
       v.literal(ServiceStatus.AVAILABLE),
@@ -121,7 +123,9 @@ export default defineSchema({
     lastMessageText: v.optional(v.string()),
     lastMessageAt: v.optional(v.number()),
     unreadCount: v.optional(v.number()),
-  }),
+    createdVia: v.union(v.literal("Project"), v.literal("Admin/Maker")),
+    creator: v.id("userProfile"),
+  }).index("by_creator", ["creator"]),
 
   roomMembers: defineTable({
     roomId: v.id("rooms"),

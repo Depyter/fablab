@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAppForm } from "@/lib/form-context";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
@@ -16,23 +16,16 @@ import { MultipleSelectForm } from "@/components/services/forms/multiple-select-
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
 import { addServiceFormOpts } from "@/types/add-service";
-import { ServiceStatus } from "@convex/constants";
+import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
 
 import { toast } from "sonner";
 
-// sample select machine options
-const machineOptions = [
-  { label: "Machine 1", value: "machine-1" },
-  { label: "Machine 2", value: "machine-2" },
-  { label: "Machine 3", value: "machine-3" },
-];
-
-// sample accepted file type options
-const acceptedFileTypeOptions = [
-  { label: "Images", value: "image" },
-  { label: "Documents", value: "document" },
-  { label: "CAD Files", value: "cad" },
-];
+const acceptedFileTypeOptions = Object.keys(FILE_CATEGORIES).map(
+  (category) => ({
+    label: category,
+    value: category,
+  }),
+);
 
 // status options aligned with the backend literals
 const statusOptions = [
@@ -52,6 +45,12 @@ export default function AddServicePage() {
   const deleteOrphanedFiles = useMutation(
     api.services.mutate.deleteOrphanedFiles,
   );
+
+  const resourcesQuery = useQuery(api.resource.query.getResources) || [];
+  const resourceOptions = resourcesQuery.map((r) => ({
+    label: r.name,
+    value: r._id,
+  }));
 
   const handleThumbnailUploading = (isUploading: boolean) =>
     setThumbnailUploading(isUploading);
@@ -81,6 +80,8 @@ export default function AddServicePage() {
           images: value.images as Id<"_storage">[],
           samples: value.samples as Id<"_storage">[],
           requirements: value.requirements.filter((r) => r.trim() !== ""),
+          fileTypes: value.fileTypes,
+          resources: value.resources as Id<"resources">[],
         });
         toast.success("Service added successfully!");
         setTimeout(() => router.push("/dashboard/services"), 1000);
@@ -215,18 +216,30 @@ export default function AddServicePage() {
             )}
           />
 
-          <MultipleSelectForm
-            options={machineOptions}
-            title="Machines"
-            fieldName="machines"
-            placeholder="Select machine..."
+          <form.Field
+            name="resources"
+            children={(field) => (
+              <MultipleSelectForm
+                options={resourceOptions}
+                title="Resources (Machines, etc.)"
+                placeholder="Select resource..."
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            )}
           />
 
-          <MultipleSelectForm
-            options={acceptedFileTypeOptions}
-            title="Accepted File Types"
-            fieldName="acceptedFileTypes"
-            placeholder="Select file type..."
+          <form.Field
+            name="fileTypes"
+            children={(field) => (
+              <MultipleSelectForm
+                options={acceptedFileTypeOptions}
+                title="Accepted File Types"
+                placeholder="Select file type..."
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            )}
           />
 
           <form.AppField

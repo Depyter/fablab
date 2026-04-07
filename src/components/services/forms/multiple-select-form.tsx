@@ -16,6 +16,8 @@ interface MultipleSelectFormProps {
   title?: string;
   fieldName?: string;
   placeholder?: string;
+  value?: string[];
+  onChange?: (value: string[]) => void;
 }
 
 export function MultipleSelectForm({
@@ -23,18 +25,26 @@ export function MultipleSelectForm({
   title = "Machines",
   fieldName = "machines",
   placeholder = "Select item...",
+  value,
+  onChange,
 }: MultipleSelectFormProps) {
-  // Local state just to manage the visual list of selected items
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  // Local state as fallback for uncontrolled usage
+  const [localValues, setLocalValues] = useState<string[]>([]);
 
-  const addMachine = (value: string) => {
-    if (!selectedValues.includes(value)) {
-      setSelectedValues([...selectedValues, value]);
+  const selectedValues = value ?? localValues;
+
+  const addMachine = (val: string) => {
+    if (!selectedValues.includes(val)) {
+      const newValues = [...selectedValues, val];
+      if (onChange) onChange(newValues);
+      else setLocalValues(newValues);
     }
   };
 
   const removeMachine = (indexToRemove: number) => {
-    setSelectedValues(selectedValues.filter((_, i) => i !== indexToRemove));
+    const newValues = selectedValues.filter((_, i) => i !== indexToRemove);
+    if (onChange) onChange(newValues);
+    else setLocalValues(newValues);
   };
 
   return (
@@ -51,9 +61,10 @@ export function MultipleSelectForm({
               <span>{label ?? machineValue}</span>
 
               {/* CRUCIAL: Hidden input ensures this value is included in the parent form's submission.
-                  Multiple inputs with the same name="machines" create an array in FormData.
-                */}
-              <input type="hidden" name={fieldName} value={machineValue} />
+                  if used without react-form field binding. */}
+              {!value && (
+                <input type="hidden" name={fieldName} value={machineValue} />
+              )}
 
               <button type="button" onClick={() => removeMachine(index)}>
                 <XIcon className="h-4 w-4 text-gray-500" />

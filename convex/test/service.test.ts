@@ -40,6 +40,7 @@ describe("Service functions", () => {
       upPrice: 2,
       unitPrice: "min",
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -71,6 +72,7 @@ describe("Service functions", () => {
         upPrice: 2,
         unitPrice: "min",
         requirements: ["design", "model"],
+        fileTypes: [],
         description: "printing services",
         status: "Available",
       });
@@ -85,6 +87,7 @@ describe("Service functions", () => {
         upPrice: 2,
         unitPrice: "min",
         requirements: ["design", "model"],
+        fileTypes: [],
         description: "printing services",
         status: "Available",
       });
@@ -104,6 +107,7 @@ describe("Service functions", () => {
       upPrice: 2,
       unitPrice: "min",
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -193,6 +197,7 @@ describe("Service functions", () => {
       upPrice: 2,
       unitPrice: "min",
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -226,6 +231,7 @@ describe("Service functions", () => {
       upPrice: 2,
       unitPrice: "min",
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });

@@ -1,5 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
+import { FILE_CATEGORIES } from "../constants";
 
 // Initialize a project
 export const createProject = authMutation({
@@ -35,6 +36,30 @@ export const createProject = authMutation({
     const service = await ctx.db.get(args.service);
     if (!service) throw new ConvexError("Service not found!");
 
+    if (
+      args.files &&
+      args.files.length > 0 &&
+      service.fileTypes &&
+      service.fileTypes.length > 0
+    ) {
+      const allowedMimes = service.fileTypes.flatMap(
+        (cat) => FILE_CATEGORIES[cat] || [cat],
+      );
+
+      for (const fileId of args.files) {
+        const fileDoc = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", fileId))
+          .first();
+
+        if (fileDoc && !allowedMimes.includes(fileDoc.type)) {
+          throw new ConvexError(
+            `File type ${fileDoc.type} is not allowed for this service.`,
+          );
+        }
+      }
+    }
+
     // create project
     const project = await ctx.db.insert("projects", {
       name: args.name,
@@ -59,10 +84,11 @@ export const createProject = authMutation({
     });
 
     // Find if the user already has a dedicated workspace room
-    const workspaceName = `${userProfile.name}'s Workspace`;
+    const workspaceName = `${userProfile.name}'s Channel`;
     const existingRoom = await ctx.db
       .query("rooms")
-      .filter((q) => q.eq(q.field("name"), workspaceName))
+      .withIndex("by_creator", (q) => q.eq("creator", userProfile._id))
+      .filter((q) => q.eq(q.field("createdVia"), "Project"))
       .first();
 
     let roomId;
@@ -77,6 +103,8 @@ export const createProject = authMutation({
       roomId = await ctx.db.insert("rooms", {
         name: workspaceName,
         color: "yellow",
+        creator: ctx.profile._id,
+        createdVia: "Project",
       });
 
       await ctx.db.insert("roomMembers", {

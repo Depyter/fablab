@@ -26,6 +26,7 @@ import {
   resolveFileType,
 } from "./utils";
 import type { FileUploadProps, UploadedFile, UploadingFile } from "./types";
+import { EXT_MIME } from "@convex/constants";
 
 // ---------------------------------------------------------------------------
 // Thumbnail sub-renders
@@ -133,6 +134,7 @@ export function FileUpload({
   maxFiles = 10,
   maxFileSizeMB = 100,
   accept,
+  allowedTypes,
   disabled = false,
   className,
   multiple = true,
@@ -159,6 +161,7 @@ export function FileUpload({
     maxFileSizeMB,
     disabled,
     autoUpload,
+    allowedTypes,
     value,
     onAddFile,
     onUploadComplete,
@@ -167,6 +170,14 @@ export function FileUpload({
     onRemoveFile,
     onUploadingChange,
   });
+
+  const readableAllowedTypes =
+    allowedTypes && allowedTypes.length > 0
+      ? Object.entries(EXT_MIME)
+          .filter(([, mime]) => allowedTypes.includes(mime))
+          .map(([ext]) => `.${ext}`)
+          .join(", ")
+      : null;
 
   // Shared hidden file input — rendered once, referenced by all variants.
   const fileInput = (
@@ -396,8 +407,12 @@ export function FileUpload({
                   : "Click to upload or drag and drop"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {accept ? `Accepted: ${accept}` : "Any file type"} • Max{" "}
-                {maxFileSizeMB}MB per file
+                {readableAllowedTypes
+                  ? `Accepted: ${readableAllowedTypes}`
+                  : accept && accept !== "*/*"
+                    ? `Accepted: ${accept}`
+                    : "Any file type"}{" "}
+                • Max {maxFileSizeMB}MB per file
               </p>
               {maxFiles > 1 && (
                 <p className="text-xs text-muted-foreground">
