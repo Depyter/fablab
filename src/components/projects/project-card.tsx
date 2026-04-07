@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { Id } from "@convex/_generated/dataModel";
+import { ProjectDetails } from "./project-details";
 
-const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
+export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
   pending: {
     badge: "bg-amber-100 text-amber-700 border-amber-200",
     cover: "from-amber-500/20 to-amber-500/5",
@@ -19,6 +20,7 @@ const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
 };
 
 interface ProjectCardProps {
+  projectId: Id<"projects">;
   title: string;
   description: string;
   clientName: string;
@@ -28,11 +30,11 @@ interface ProjectCardProps {
   status: string;
   coverUrl?: string | null;
   bookingTime?: number;
-  buttonText?: string;
   className?: string;
 }
 
 export function ProjectCard({
+  projectId,
   title,
   description,
   clientName,
@@ -42,7 +44,6 @@ export function ProjectCard({
   estimatedPrice,
   status,
   coverUrl,
-  buttonText = "View Details",
   className,
 }: ProjectCardProps) {
   const styles = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
@@ -112,11 +113,14 @@ export function ProjectCard({
           </span>
         </div>
 
-        <Link href="/dashboard/projects/" className="w-full mt-1">
-          <Button size="sm" variant="outline" className="w-full h-8 text-xs">
-            {buttonText}
-          </Button>
-        </Link>
+        <div className="w-full mt-1">
+          <ProjectDetails
+            projectId={projectId}
+            bookingDate={bookingDate}
+            bookingTime={bookingTime}
+            serviceName={serviceName}
+          />
+        </div>
       </div>
     </Card>
   );

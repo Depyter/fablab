@@ -99,6 +99,7 @@ export default defineSchema({
     ),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())), // storageId given by the frontend
+    resources: v.optional(v.array(v.id("resources"))),
     notes: v.string(),
   }).index("by_userProfile", ["userId"]),
 

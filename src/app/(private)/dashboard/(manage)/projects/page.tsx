@@ -25,7 +25,9 @@ import { cn } from "@/lib/utils";
 import * as React from "react";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { Id } from "@convex/_generated/dataModel";
 import { isToday, isThisWeek, isThisMonth } from "date-fns";
+import { ProjectDetails } from "@/components/projects/project-details";
 
 type ViewMode = "gallery" | "list" | "calendar";
 type StatusFilter = "all" | "pending" | "approved" | "rejected" | "completed";
@@ -33,7 +35,7 @@ type DateFilter = "all" | "today" | "week" | "month";
 type SortOption = "newest" | "oldest" | "price-high" | "price-low" | "name-az";
 
 type EnrichedProject = {
-  _id: string;
+  _id: Id<"projects">;
   name: string;
   description: string;
   clientName: string;
@@ -370,6 +372,7 @@ export default function ProjectsList() {
             {filteredProjects.map((project) => (
               <ProjectCard
                 key={project._id}
+                projectId={project._id}
                 title={project.name}
                 description={project.description}
                 clientName={project.clientName}
@@ -388,7 +391,10 @@ export default function ProjectsList() {
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           <div className="border rounded-lg divide-y bg-background overflow-hidden">
             {filteredProjects.map((project) => (
-              <div
+              <ProjectDetails
+                projectId={project._id}
+                trigger={
+                  <div
                 key={project._id}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
               >
@@ -456,6 +462,8 @@ export default function ProjectsList() {
                   </div>
                 </div>
               </div>
+                }
+              />
             ))}
           </div>
         </div>
