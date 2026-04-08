@@ -78,8 +78,9 @@ export const PricingForm = withForm({
                   type: "COMPOSITE",
                   baseFee: 0,
                   upBaseFee: undefined,
-                  timeRatePerHour: 0,
-                  upTimeRatePerHour: undefined,
+                  unitName: "hour",
+                  timeRate: 0,
+                  upTimeRate: undefined,
                 });
               }
             };
@@ -283,6 +284,24 @@ export const PricingForm = withForm({
 
                   {pricingType === "COMPOSITE" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Field className="sm:col-span-2">
+                        <FieldLabel htmlFor="compositeUnitName">
+                          Time Unit
+                        </FieldLabel>
+                        <Input
+                          id="compositeUnitName"
+                          placeholder="e.g. hour, min, day"
+                          className="bg-transparent"
+                          value={pricing.unitName ?? "hour"}
+                          onChange={(e) =>
+                            field.handleChange({
+                              ...pricing,
+                              unitName: e.target.value,
+                            })
+                          }
+                        />
+                      </Field>
+
                       <Field>
                         <FieldLabel htmlFor="compositeBaseFee">
                           Base Fee
@@ -336,7 +355,7 @@ export const PricingForm = withForm({
 
                       <Field>
                         <FieldLabel htmlFor="compositeTimeRate">
-                          Time Rate (per Hour)
+                          Time Rate per Unit
                         </FieldLabel>
                         <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
                           <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
@@ -348,14 +367,12 @@ export const PricingForm = withForm({
                             placeholder="0.00"
                             className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
                             value={
-                              pricing.timeRatePerHour === 0
-                                ? ""
-                                : pricing.timeRatePerHour
+                              pricing.timeRate === 0 ? "" : pricing.timeRate
                             }
                             onChange={(e) =>
                               field.handleChange({
                                 ...pricing,
-                                timeRatePerHour: Number(e.target.value) || 0,
+                                timeRate: Number(e.target.value) || 0,
                               })
                             }
                           />
@@ -375,11 +392,11 @@ export const PricingForm = withForm({
                             type="number"
                             placeholder="0.00"
                             className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.upTimeRatePerHour ?? ""}
+                            value={pricing.upTimeRate ?? ""}
                             onChange={(e) =>
                               field.handleChange({
                                 ...pricing,
-                                upTimeRatePerHour:
+                                upTimeRate:
                                   e.target.value === ""
                                     ? undefined
                                     : Number(e.target.value),

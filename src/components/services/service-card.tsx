@@ -24,8 +24,9 @@ interface ServiceCardProps {
         type: "COMPOSITE";
         baseFee: number;
         upBaseFee?: number;
-        timeRatePerHour: number;
-        upTimeRatePerHour?: number;
+        unitName: string;
+        timeRate: number;
+        upTimeRate?: number;
       };
 
   // optional
@@ -76,9 +77,9 @@ export function ServiceCard({
                 : ""
             }`}
           {pricing.type === "COMPOSITE" &&
-            `₱${pricing.baseFee.toFixed(2)} Base + ₱${pricing.timeRatePerHour.toFixed(2)}/hr${
+            `₱${pricing.baseFee.toFixed(2)} Base + ₱${pricing.timeRate.toFixed(2)}/hr${
               pricing.upBaseFee !== undefined ||
-              pricing.upTimeRatePerHour !== undefined
+              pricing.upTimeRate !== undefined
                 ? " (UP Available)"
                 : ""
             }`}

@@ -67,8 +67,9 @@ export default defineSchema({
         type: v.literal("COMPOSITE"), // e.g., 3D Printing
         baseFee: v.number(),
         upBaseFee: v.optional(v.number()),
-        timeRatePerHour: v.number(),
-        upTimeRatePerHour: v.optional(v.number()),
+        unitName: v.string(),
+        timeRate: v.number(),
+        upTimeRate: v.optional(v.number()),
       }),
     ),
   }).index("by_slug", ["slug"]),

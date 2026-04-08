@@ -190,17 +190,16 @@ export function ServiceDetailClient({
                         </h4>
                         <div className="flex flex-col items-start gap-1">
                           <p className="text-xl font-black tracking-tight text-primary flex items-baseline gap-2">
-                            ₱{service.pricing.timeRatePerHour.toLocaleString()}
+                            ₱{service.pricing.timeRate.toLocaleString()}
                             <span className="text-xs font-bold text-muted-foreground/60">
-                              /hour
+                              /{service.pricing.unitName}
                             </span>
                           </p>
-                          {service.pricing.upTimeRatePerHour !== undefined && (
+                          {service.pricing.upTimeRate !== undefined && (
                             <span className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <CirclePercent className="h-3 w-3" />
-                              UP: ₱
-                              {service.pricing.upTimeRatePerHour.toLocaleString()}
-                              /hour
+                              UP: ₱{service.pricing.upTimeRate.toLocaleString()}
+                              /{service.pricing.unitName}
                             </span>
                           )}
                           {service.pricing.upBaseFee !== undefined && (
@@ -231,7 +230,7 @@ export function ServiceDetailClient({
                         service.pricing.upRatePerUnit !== undefined)) ||
                     (service.pricing.type === "COMPOSITE" &&
                       (service.pricing.upBaseFee !== undefined ||
-                        service.pricing.upTimeRatePerHour !== undefined))
+                        service.pricing.upTimeRate !== undefined))
                   }
                   servicePricing={service.pricing}
                 />

@@ -39,7 +39,8 @@ export async function setupProject() {
     pricing: {
       type: "COMPOSITE",
       baseFee: 1,
-      timeRatePerHour: 2,
+      unitName: "hour",
+      timeRate: 2,
     },
     requirements: ["design", "model"],
     fileTypes: [],

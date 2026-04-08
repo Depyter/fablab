@@ -32,8 +32,9 @@ interface PricingEstimateCardProps {
           type: "COMPOSITE";
           baseFee: number;
           upBaseFee?: number;
-          timeRatePerHour: number;
-          upTimeRatePerHour?: number;
+          unitName: string;
+          timeRate: number;
+          upTimeRate?: number;
         };
     name?: string;
   };
@@ -91,16 +92,22 @@ export function PricingEstimateCard({
         defaultDuration = 1;
       }
     } else if (service.pricing.type === "COMPOSITE") {
-      unitName = "hour";
+      unitName = service.pricing.unitName;
       defaultRate =
-        isUp && service.pricing.upTimeRatePerHour !== undefined
-          ? service.pricing.upTimeRatePerHour
-          : service.pricing.timeRatePerHour;
+        isUp && service.pricing.upTimeRate !== undefined
+          ? service.pricing.upTimeRate
+          : service.pricing.timeRate;
       baseFee =
         isUp && service.pricing.upBaseFee !== undefined
           ? service.pricing.upBaseFee
           : service.pricing.baseFee;
-      defaultDuration = defaultDurationMs / (1000 * 60 * 60);
+      if (unitName === "min" || unitName === "minute") {
+        defaultDuration = defaultDurationMs / (1000 * 60);
+      } else if (unitName === "hr" || unitName === "hour") {
+        defaultDuration = defaultDurationMs / (1000 * 60 * 60);
+      } else {
+        defaultDuration = 1;
+      }
     }
   }
 

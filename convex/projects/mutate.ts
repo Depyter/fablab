@@ -99,8 +99,11 @@ export const createProject = authMutation({
     }
 
     if (service.availableDays && service.availableDays.length > 0) {
-      const bookingDate = new Date(finalBooking.date);
-      const dayOfWeek = bookingDate.getDay();
+      const localDateString = new Date(finalBooking.date).toLocaleString(
+        "en-US",
+        { timeZone: "Asia/Manila" },
+      );
+      const dayOfWeek = new Date(localDateString).getDay();
       if (!service.availableDays.includes(dayOfWeek)) {
         throw new ConvexError(
           "Selected date falls on an unavailable day for this service.",
@@ -300,6 +303,7 @@ export const completeProject = authMutation({
     let baseFee = 0;
 
     const hours = args.actualDurationMs / (1000 * 60 * 60);
+    const minutes = args.actualDurationMs / (1000 * 60);
     const isUp = project.pricing === "UP";
 
     if (service.pricing.type === "COMPOSITE") {
@@ -307,11 +311,24 @@ export const completeProject = authMutation({
         isUp && service.pricing.upBaseFee !== undefined
           ? service.pricing.upBaseFee
           : service.pricing.baseFee;
-      const timeRatePerHour =
-        isUp && service.pricing.upTimeRatePerHour !== undefined
-          ? service.pricing.upTimeRatePerHour
-          : service.pricing.timeRatePerHour;
-      timeCost = hours * timeRatePerHour;
+      const timeRate =
+        isUp && service.pricing.upTimeRate !== undefined
+          ? service.pricing.upTimeRate
+          : service.pricing.timeRate;
+
+      if (
+        service.pricing.unitName === "hour" ||
+        service.pricing.unitName === "hr"
+      ) {
+        timeCost = hours * timeRate;
+      } else if (
+        service.pricing.unitName === "minute" ||
+        service.pricing.unitName === "min"
+      ) {
+        timeCost = minutes * timeRate;
+      } else {
+        timeCost = hours * timeRate;
+      }
 
       if (args.materialsUsed && args.materialsUsed.length > 0) {
         for (const usage of args.materialsUsed) {

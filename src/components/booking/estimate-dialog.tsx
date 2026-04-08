@@ -45,8 +45,9 @@ interface EstimateProjectDetailsProps {
         type: "COMPOSITE";
         baseFee: number;
         upBaseFee?: number;
-        timeRatePerHour: number;
-        upTimeRatePerHour?: number;
+        unitName: string;
+        timeRate: number;
+        upTimeRate?: number;
       };
   serviceMaterials?: Array<{
     _id: string;
@@ -111,10 +112,18 @@ export function EstimateProjectDetails({
           ? servicePricing.upBaseFee
           : servicePricing.baseFee;
       const timeRate =
-        isUp && servicePricing.upTimeRatePerHour !== undefined
-          ? servicePricing.upTimeRatePerHour
-          : servicePricing.timeRatePerHour;
-      durationCost = durationHours * timeRate;
+        isUp && servicePricing.upTimeRate !== undefined
+          ? servicePricing.upTimeRate
+          : servicePricing.timeRate;
+      unitName = servicePricing.unitName;
+
+      if (unitName === "hour" || unitName === "hr") {
+        durationCost = durationHours * timeRate;
+      } else if (unitName === "minute" || unitName === "min") {
+        durationCost = durationMins * timeRate;
+      } else {
+        durationCost = durationHours * timeRate;
+      }
     }
   }
 

@@ -19,8 +19,9 @@ export interface AddServiceFormValues {
         type: "COMPOSITE";
         baseFee: number;
         upBaseFee?: number;
-        timeRatePerHour: number;
-        upTimeRatePerHour?: number;
+        unitName: string;
+        timeRate: number;
+        upTimeRate?: number;
       };
   status: ServiceStatusType;
   images: string[];

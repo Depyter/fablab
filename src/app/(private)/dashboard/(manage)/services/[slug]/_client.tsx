@@ -125,14 +125,11 @@ export function ServiceDetailClient({
       });
       displays.push({
         label: "Regular Time Rate",
-        price: pricing.timeRatePerHour,
-        unit: "hr",
+        price: pricing.timeRate,
+        unit: pricing.unitName,
         isUp: false,
       });
-      if (
-        pricing.upBaseFee !== undefined ||
-        pricing.upTimeRatePerHour !== undefined
-      ) {
+      if (pricing.upBaseFee !== undefined || pricing.upTimeRate !== undefined) {
         if (pricing.upBaseFee !== undefined) {
           displays.push({
             label: "UP Base",
@@ -141,11 +138,11 @@ export function ServiceDetailClient({
             isUp: true,
           });
         }
-        if (pricing.upTimeRatePerHour !== undefined) {
+        if (pricing.upTimeRate !== undefined) {
           displays.push({
             label: "UP Time Rate",
-            price: pricing.upTimeRatePerHour,
-            unit: "hr",
+            price: pricing.upTimeRate,
+            unit: pricing.unitName,
             isUp: true,
           });
         }

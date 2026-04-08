@@ -51,7 +51,7 @@ export function ServicesListClient({
       if (pricing.type === "PER_UNIT")
         return pricing.baseFee + pricing.ratePerUnit;
       if (pricing.type === "COMPOSITE")
-        return pricing.baseFee + pricing.timeRatePerHour;
+        return pricing.baseFee + pricing.timeRate;
       return 0;
     };
 
