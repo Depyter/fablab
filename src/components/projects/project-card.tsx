@@ -81,19 +81,17 @@ export function ProjectCard({
           <span className="font-semibold text-foreground">
             ₱{estimatedPrice.toFixed(2)}
           </span>
-       
 
-        <div className="w-full mt-1">
-          <ProjectDetails
-            projectId={projectId}
-            bookingDate={bookingDate}
-            bookingTime={bookingTime}
-            serviceName={serviceName}
-          />
-        </div>
+          <div className="w-full mt-1">
+            <ProjectDetails
+              projectId={projectId}
+              bookingDate={bookingDate}
+              bookingTime={bookingTime}
+              serviceName={serviceName}
+            />
+          </div>
         </>
       }
-    >
-    </ManageCard>
+    ></ManageCard>
   );
 }

@@ -19,18 +19,20 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await Promise.all([
-      tAera.mutation(api.files.trackUpload, {
-        upload: storageId,
-        type: "image",
+    await t.run(async (ctx) => {
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-      tAera.mutation(api.files.trackUpload, {
-        upload: sampleStorageId,
-        type: "image",
+        storageId: storageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-    ]);
+        storageId: sampleStorageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+    });
 
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
@@ -139,10 +141,13 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await tAera.mutation(api.files.trackUpload, {
-      upload: storageId,
-      type: "image",
-      originalName: "test",
+    await t.run(async (ctx) => {
+      await ctx.db.insert("files", {
+        originalName: "test",
+        storageId: storageId,
+        type: "image/png",
+        status: "orphaned",
+      });
     });
 
     await tAera.mutation(api.services.mutate.addImageToService, {
@@ -176,18 +181,20 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await Promise.all([
-      tAera.mutation(api.files.trackUpload, {
-        upload: storageId,
-        type: "image",
+    await t.run(async (ctx) => {
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-      tAera.mutation(api.files.trackUpload, {
-        upload: sampleStorageId,
-        type: "image",
+        storageId: storageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-    ]);
+        storageId: sampleStorageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+    });
 
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",

@@ -75,7 +75,8 @@ export function ProjectDetails({
                 : "Pending",
           byLabel: project.status === "pending" ? "Waiting" : "Admin",
           active: project.status === "pending",
-          completed: project.status === "approved" || project.status === "completed",
+          completed:
+            project.status === "approved" || project.status === "completed",
         },
         {
           title: "Maker assignment",
@@ -103,10 +104,7 @@ export function ProjectDetails({
     <Dialog>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button
-            variant="outline"
-            className={cn("w-full", triggerClassName)}
-          >
+          <Button variant="outline" className={cn("w-full", triggerClassName)}>
             {buttonLabel}
           </Button>
         )}
@@ -125,15 +123,27 @@ export function ProjectDetails({
               </DialogTitle>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Approve & Assign
                 </Button>
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   Reject Request
                 </Button>
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Message Client
                 </Button>
@@ -168,7 +178,7 @@ export function ProjectDetails({
                         <Label className="text-muted-foreground text-xs font-normal">
                           Description
                         </Label>
-                          <p className="wrap-break-word text-sm whitespace-pre-line">
+                        <p className="wrap-break-word text-sm whitespace-pre-line">
                           {project.description}
                         </p>
                       </Field>
@@ -264,7 +274,10 @@ export function ProjectDetails({
                     ) : (
                       <div className="space-y-2">
                         {project.resourceUsages.map((usage) => (
-                          <div key={usage._id} className="rounded-md bg-muted/80 p-3 min-w-0">
+                          <div
+                            key={usage._id}
+                            className="rounded-md bg-muted/80 p-3 min-w-0"
+                          >
                             <p className="wrap-break-word text-sm font-medium">
                               {usage.resourceDetails?.name ??
                                 "Unassigned resource"}

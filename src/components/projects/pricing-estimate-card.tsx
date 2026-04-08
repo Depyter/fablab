@@ -132,16 +132,15 @@ export function PricingEstimateCard({
 
       <CardFooter className="pt-0 flex flex-col gap-2 sm:justify-end">
         {isEditing && (
-            <ActionDialog
-                title="Discard Estimate Changes"
-                description="Are you sure you want to cancel the changes?"
-                onConfirm={() => setIsEditing(false)}
-                cancelButtonText="Back"
-                confirmButtonText="Discard"
-                className="w-full"
-                baseActionText="Cancel"
-            />
-          
+          <ActionDialog
+            title="Discard Estimate Changes"
+            description="Are you sure you want to cancel the changes?"
+            onConfirm={() => setIsEditing(false)}
+            cancelButtonText="Back"
+            confirmButtonText="Discard"
+            className="w-full"
+            baseActionText="Cancel"
+          />
         )}
         <Button
           variant="outline"

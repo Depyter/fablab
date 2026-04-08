@@ -30,7 +30,9 @@ function StepDot({
         "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-background shadow-sm sm:h-10 sm:w-10",
         completed && "border-chart-6 bg-secondary/10 text-chart-6",
         active && !completed && "border-primary bg-primary-muted text-primary",
-        !active && !completed && "border-muted-foreground/20 bg-muted text-muted-foreground",
+        !active &&
+          !completed &&
+          "border-muted-foreground/20 bg-muted text-muted-foreground",
       )}
     >
       {completed ? (
@@ -55,7 +57,6 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
         >
           <div>
             <p className="text-sm font-semibold">Project Timeline</p>
-          
           </div>
           <ChevronDown
             className={cn(
@@ -73,7 +74,10 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                 return (
                   <div key={step.title} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <StepDot active={step.active} completed={step.completed} />
+                      <StepDot
+                        active={step.active}
+                        completed={step.completed}
+                      />
                       {!isLast && (
                         <div className="my-2 h-full w-px flex-1 bg-muted-foreground/20" />
                       )}
@@ -88,7 +92,9 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                           "text-xs",
                           step.completed && "text-chart-6",
                           step.active && !step.completed && "text-primary",
-                          !step.active && !step.completed && "text-muted-foreground",
+                          !step.active &&
+                            !step.completed &&
+                            "text-muted-foreground",
                         )}
                       >
                         {step.statusLabel}
@@ -111,7 +117,10 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
             const isLast = index === steps.length - 1;
 
             return (
-              <div key={step.title} className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+              <div
+                key={step.title}
+                className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4"
+              >
                 <div className="flex w-36 shrink-0 flex-col items-center text-center sm:w-44 lg:w-full lg:max-w-44">
                   <StepDot active={step.active} completed={step.completed} />
 
@@ -124,12 +133,13 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                         "text-[10px] sm:text-xs",
                         step.completed && "text-chart-6",
                         step.active && !step.completed && "text-primary",
-                        !step.active && !step.completed && "text-muted-foreground",
+                        !step.active &&
+                          !step.completed &&
+                          "text-muted-foreground",
                       )}
                     >
                       {step.statusLabel}
                     </p>
-                    
                   </div>
                 </div>
 
