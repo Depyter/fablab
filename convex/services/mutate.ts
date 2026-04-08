@@ -49,6 +49,7 @@ export const addService = authMutation({
     unitPrice: v.string(),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
+    availableDays: v.optional(v.array(v.number())),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
@@ -62,6 +63,7 @@ export const addService = authMutation({
       unitPrice: args.unitPrice,
       fileTypes: args.fileTypes,
       resources: args.resources,
+      availableDays: args.availableDays,
       status: args.status,
       requirements: args.requirements,
       samples: args.samples,
@@ -83,6 +85,7 @@ export const updateService = authMutation({
     requirements: v.optional(v.array(v.string())),
     fileTypes: v.optional(v.array(v.string())),
     resources: v.optional(v.array(v.id("resources"))),
+    availableDays: v.optional(v.array(v.number())),
     description: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -105,6 +108,7 @@ export const updateService = authMutation({
       requirements: string[];
       fileTypes: string[];
       resources: Id<"resources">[];
+      availableDays: number[];
       description: string;
       type: string;
       status: "Unavailable" | "Available";
@@ -124,6 +128,8 @@ export const updateService = authMutation({
       updates.requirements = args.requirements;
     if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
     if (args.resources !== undefined) updates.resources = args.resources;
+    if (args.availableDays !== undefined)
+      updates.availableDays = args.availableDays;
 
     await ctx.db.patch("services", args.service, updates);
   },

@@ -146,6 +146,7 @@ export function ServiceDetailClient({
                   serviceName={service.name}
                   requirements={service.requirements}
                   fileTypes={service.fileTypes ?? []}
+                  availableDays={service.availableDays ?? []}
                 />
               </div>
             </div>

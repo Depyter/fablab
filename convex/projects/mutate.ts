@@ -60,6 +60,25 @@ export const createProject = authMutation({
       }
     }
 
+    const now = Date.now();
+    if (args.booking.startTime < now) {
+      throw new ConvexError("Cannot book a date or time in the past.");
+    }
+
+    if (args.booking.endTime <= args.booking.startTime) {
+      throw new ConvexError("End time must be after start time.");
+    }
+
+    if (service.availableDays && service.availableDays.length > 0) {
+      const bookingDate = new Date(args.booking.date);
+      const dayOfWeek = bookingDate.getDay();
+      if (!service.availableDays.includes(dayOfWeek)) {
+        throw new ConvexError(
+          "Selected date falls on an unavailable day for this service.",
+        );
+      }
+    }
+
     // create project
     const project = await ctx.db.insert("projects", {
       name: args.name,
@@ -141,7 +160,6 @@ export const createProject = authMutation({
       });
     }
 
-    const now = Date.now();
     const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(args.booking.date).toDateString()} from ${new Date(args.booking.startTime).toLocaleTimeString()} to ${new Date(args.booking.endTime).toLocaleTimeString()}`;
 
     // Create a thread for the project

@@ -141,23 +141,29 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                       {trackIdx === 0 && (
                         <TableCell
                           rowSpan={tracks.length}
-                          className="sticky left-0 z-20 bg-background border-b border-r font-semibold shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs whitespace-normal break-words p-1.5 h-16 max-h-16 overflow-hidden w-28"
+                          className="sticky left-0 z-20 bg-background border-b border-r font-semibold shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs whitespace-normal break-words p-0 h-16 max-h-16 overflow-hidden w-28"
                         >
-                          <div className="flex flex-col gap-1">
-                            <span className="leading-tight">
-                              {machine.name}
-                            </span>
-                            <span
-                              className={cn(
-                                "text-[10px] font-normal px-2 py-0.5 rounded-full w-fit",
-                                machine.status === ResourceStatus.AVAILABLE
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700",
-                              )}
-                            >
-                              {machine.status}
-                            </span>
-                          </div>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <button
+                                className="w-full h-full p-1.5 flex items-start gap-1.5 text-left hover:bg-muted/50 transition-colors"
+                                title="View Resource Details"
+                              >
+                                <div
+                                  className={cn(
+                                    "mt-1 h-2 w-2 rounded-full shrink-0",
+                                    machine.status === ResourceStatus.AVAILABLE
+                                      ? "bg-emerald-500"
+                                      : "bg-red-500",
+                                  )}
+                                />
+                                <span className="leading-tight">
+                                  {machine.name}
+                                </span>
+                              </button>
+                            </DialogTrigger>
+                            <MachineDetailsDialog machine={machine} />
+                          </Dialog>
                         </TableCell>
                       )}
 
@@ -252,19 +258,27 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
             <div key={machine.id}>
               {/* Compact sticky machine header */}
               <div className="flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-4 py-2 border-b">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div
-                    className={cn(
-                      "h-2 w-2 rounded-full shrink-0",
-                      machine.status === ResourceStatus.AVAILABLE
-                        ? "bg-emerald-500"
-                        : "bg-red-400",
-                    )}
-                  />
-                  <span className="font-semibold text-sm truncate">
-                    {machine.name}
-                  </span>
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button
+                      className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity"
+                      title="View Resource Details"
+                    >
+                      <div
+                        className={cn(
+                          "h-2 w-2 rounded-full shrink-0",
+                          machine.status === ResourceStatus.AVAILABLE
+                            ? "bg-emerald-500"
+                            : "bg-red-500",
+                        )}
+                      />
+                      <span className="font-semibold text-sm truncate">
+                        {machine.name}
+                      </span>
+                    </button>
+                  </DialogTrigger>
+                  <MachineDetailsDialog machine={machine} />
+                </Dialog>
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button
@@ -321,6 +335,63 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * Dialog Content for viewing machine resource details
+ */
+function MachineDetailsDialog({ machine }: { machine: Machine }) {
+  return (
+    <DialogContent className="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Info className="h-5 w-5 text-primary" />
+          {machine.name} Details
+        </DialogTitle>
+        <DialogDescription>
+          Information regarding this resource.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-4 items-center gap-4">
+          <span className="text-sm font-bold text-muted-foreground">Name:</span>
+          <span className="col-span-3 text-sm font-medium">{machine.name}</span>
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <span className="text-sm font-bold text-muted-foreground">
+            Status:
+          </span>
+          <span className="col-span-3">
+            <Badge
+              className={cn(
+                "capitalize",
+                machine.status === ResourceStatus.AVAILABLE
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                  : "bg-red-100 text-red-700 hover:bg-red-200",
+              )}
+            >
+              {machine.status}
+            </Badge>
+          </span>
+        </div>
+        <div className="grid grid-cols-4 items-start gap-4">
+          <span className="text-sm font-bold text-muted-foreground">
+            Description:
+          </span>
+          <span className="col-span-3 text-sm whitespace-pre-wrap leading-relaxed">
+            {machine.description || "No description provided."}
+          </span>
+        </div>
+      </div>
+      <DialogFooter>
+        <DialogTrigger asChild>
+          <Button variant="outline" type="button" className="w-full sm:w-auto">
+            Close
+          </Button>
+        </DialogTrigger>
+      </DialogFooter>
+    </DialogContent>
   );
 }
 

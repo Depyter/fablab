@@ -13,6 +13,7 @@ export interface AddServiceFormValues {
   requirements: string[];
   fileTypes: string[];
   resources: string[];
+  availableDays: number[];
 }
 
 const defaultAddServiceValues: AddServiceFormValues = {
@@ -27,6 +28,7 @@ const defaultAddServiceValues: AddServiceFormValues = {
   requirements: [""],
   fileTypes: [],
   resources: [],
+  availableDays: [],
 };
 
 export const addServiceFormOpts = formOptions({

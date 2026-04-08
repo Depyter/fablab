@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useCallback, useState, Suspense } from "react";
 import { useLoader } from "@react-three/fiber";
-import {
-  OrbitControls,
-  Grid,
-  Environment,
-  Center,
-  useGLTF,
-} from "@react-three/drei";
+import { OrbitControls, Environment, Center, useGLTF } from "@react-three/drei";
 import { STLLoader, OBJLoader } from "three-stdlib";
 import * as THREE from "three";
 import { type Vector3, type ModelData, computeModelData } from "./utils";
@@ -18,12 +12,6 @@ import { type Vector3, type ModelData, computeModelData } from "./utils";
 // ---------------------------------------------------------------------------
 
 export type ModelFormat = "stl" | "glb" | "gltf" | "obj";
-
-interface GridConfig {
-  cellSize: number;
-  sectionSize: number;
-  fadeDistance: number;
-}
 
 interface ZoomConfig {
   minDistance: number;
@@ -38,7 +26,6 @@ interface ModelSceneProps {
 
 interface ModelProps {
   fileUrl: string;
-  onGridConfig: (cfg: GridConfig) => void;
   onZoomConfig: (cfg: ZoomConfig) => void;
   onData?: (data: ModelData) => void;
 }
@@ -47,27 +34,10 @@ interface ModelProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Derives a visually pleasing grid config from the model's XZ footprint. */
-function computeGridConfig(footprint: number): GridConfig {
-  const rawCell = footprint / 20;
-  const magnitude = Math.pow(
-    10,
-    Math.floor(Math.log10(Math.max(rawCell, 0.001))),
-  );
-  const norm = rawCell / magnitude;
-  const niceStep = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
-  const cellSize = Math.max(0.1, niceStep * magnitude);
-  return {
-    cellSize,
-    sectionSize: cellSize * 10,
-    fadeDistance: footprint * 3,
-  };
-}
-
 /** Computes a ZoomConfig from the model's footprint. */
 function computeZoomConfig(footprint: number): ZoomConfig {
   const minDistance = Math.max(footprint / 4, 1);
-  const maxDistance = footprint * 3;
+  const maxDistance = footprint * 10;
   return { minDistance, maxDistance };
 }
 
@@ -128,10 +98,10 @@ function extractFromObject3D(object: THREE.Object3D): {
 // Per-format model components
 // ---------------------------------------------------------------------------
 
-function STLModel({ fileUrl, onGridConfig, onZoomConfig, onData }: ModelProps) {
+function STLModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
   const geometry = useLoader(STLLoader, fileUrl);
 
-  const { position, gridConfig, zoomConfig, data } = useMemo(() => {
+  const { position, zoomConfig, data } = useMemo(() => {
     geometry.computeBoundingBox();
     const bb = geometry.boundingBox!;
 
@@ -148,17 +118,15 @@ function STLModel({ fileUrl, onGridConfig, onZoomConfig, onData }: ModelProps) {
 
     return {
       position: [px, py, pz] as [number, number, number],
-      gridConfig: computeGridConfig(footprint),
       zoomConfig: computeZoomConfig(footprint),
       data,
     };
   }, [geometry]);
 
   useEffect(() => {
-    onGridConfig(gridConfig);
     onZoomConfig(zoomConfig);
     onData?.(data);
-  }, [gridConfig, zoomConfig, data, onGridConfig, onZoomConfig, onData]);
+  }, [zoomConfig, data, onZoomConfig, onData]);
 
   return (
     <mesh
@@ -171,18 +139,13 @@ function STLModel({ fileUrl, onGridConfig, onZoomConfig, onData }: ModelProps) {
   );
 }
 
-function GLTFModel({
-  fileUrl,
-  onGridConfig,
-  onZoomConfig,
-  onData,
-}: ModelProps) {
+function GLTFModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
   const { scene } = useGLTF(fileUrl);
 
   // Clone so the cached GLTF scene isn't mutated by other renders.
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
 
-  const { gridConfig, zoomConfig, data } = useMemo(() => {
+  const { zoomConfig, data } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(clonedScene);
     const size = box.getSize(new THREE.Vector3());
     const footprint = Math.max(size.x, size.z);
@@ -191,17 +154,15 @@ function GLTFModel({
     const data = computeModelData(vertices, faces);
 
     return {
-      gridConfig: computeGridConfig(footprint),
       zoomConfig: computeZoomConfig(footprint),
       data,
     };
   }, [clonedScene]);
 
   useEffect(() => {
-    onGridConfig(gridConfig);
     onZoomConfig(zoomConfig);
     onData?.(data);
-  }, [gridConfig, zoomConfig, data, onGridConfig, onZoomConfig, onData]);
+  }, [zoomConfig, data, onZoomConfig, onData]);
 
   return (
     <Center bottom>
@@ -210,7 +171,7 @@ function GLTFModel({
   );
 }
 
-function OBJModel({ fileUrl, onGridConfig, onZoomConfig, onData }: ModelProps) {
+function OBJModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
   const obj = useLoader(OBJLoader, fileUrl);
 
   // Clone so the cached OBJ group isn't mutated between renders.
@@ -231,7 +192,7 @@ function OBJModel({ fileUrl, onGridConfig, onZoomConfig, onData }: ModelProps) {
     return clone;
   }, [obj]);
 
-  const { gridConfig, zoomConfig, data } = useMemo(() => {
+  const { zoomConfig, data } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(clonedObj);
     const size = box.getSize(new THREE.Vector3());
     const footprint = Math.max(size.x, size.z);
@@ -240,17 +201,15 @@ function OBJModel({ fileUrl, onGridConfig, onZoomConfig, onData }: ModelProps) {
     const data = computeModelData(vertices, faces);
 
     return {
-      gridConfig: computeGridConfig(footprint),
       zoomConfig: computeZoomConfig(footprint),
       data,
     };
   }, [clonedObj]);
 
   useEffect(() => {
-    onGridConfig(gridConfig);
     onZoomConfig(zoomConfig);
     onData?.(data);
-  }, [gridConfig, zoomConfig, data, onGridConfig, onZoomConfig, onData]);
+  }, [zoomConfig, data, onZoomConfig, onData]);
 
   return (
     <Center bottom>
@@ -268,19 +227,11 @@ export default function ModelScene({
   format,
   onData,
 }: ModelSceneProps) {
-  const [gridConfig, setGridConfig] = useState<GridConfig>({
-    cellSize: 5,
-    sectionSize: 50,
-    fadeDistance: 150,
-  });
   const [zoomConfig, setZoomConfig] = useState<ZoomConfig>({
     minDistance: 1,
-    maxDistance: 300,
+    maxDistance: 1000,
   });
 
-  const handleGridConfig = useCallback((cfg: GridConfig) => {
-    setGridConfig(cfg);
-  }, []);
   const handleZoomConfig = useCallback((cfg: ZoomConfig) => {
     setZoomConfig(cfg);
   }, []);
@@ -301,7 +252,6 @@ export default function ModelScene({
         {isSTL && (
           <STLModel
             fileUrl={fileUrl}
-            onGridConfig={handleGridConfig}
             onZoomConfig={handleZoomConfig}
             onData={onData}
           />
@@ -309,7 +259,6 @@ export default function ModelScene({
         {isGLTF && (
           <GLTFModel
             fileUrl={fileUrl}
-            onGridConfig={handleGridConfig}
             onZoomConfig={handleZoomConfig}
             onData={onData}
           />
@@ -317,29 +266,25 @@ export default function ModelScene({
         {isOBJ && (
           <OBJModel
             fileUrl={fileUrl}
-            onGridConfig={handleGridConfig}
             onZoomConfig={handleZoomConfig}
             onData={onData}
           />
         )}
       </Suspense>
 
-      <Grid
-        position={[0, 0, 0]}
-        infiniteGrid
-        cellSize={gridConfig.cellSize}
-        sectionSize={gridConfig.sectionSize}
-        fadeDistance={gridConfig.fadeDistance}
-        sectionColor="#666"
-        cellColor="#999"
-      />
-
       <OrbitControls
         makeDefault
-        autoRotate
-        autoRotateSpeed={0.5}
+        enableDamping={true}
+        dampingFactor={0.05}
+        enablePan={true}
+        enableZoom={true}
         minDistance={zoomConfig.minDistance}
         maxDistance={zoomConfig.maxDistance}
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.PAN,
+        }}
       />
     </>
   );

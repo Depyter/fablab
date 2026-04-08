@@ -118,6 +118,7 @@ export function EditServiceClient({
           : [""],
       fileTypes: (service?.fileTypes ?? []) as string[],
       resources: (service?.resources ?? []) as string[],
+      availableDays: service?.availableDays ?? [],
     },
     onSubmit: async ({ value }) => {
       if (!service) return;
@@ -136,6 +137,7 @@ export function EditServiceClient({
           requirements: value.requirements.filter((r) => r.trim() !== ""),
           fileTypes: value.fileTypes,
           resources: value.resources as Id<"resources">[],
+          availableDays: value.availableDays,
         });
 
         // Navigate to the (possibly renamed) service detail page.

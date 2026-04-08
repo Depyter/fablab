@@ -39,6 +39,7 @@ export default defineSchema({
     requirements: v.array(v.string()),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
+    availableDays: v.optional(v.array(v.number())),
     status: v.union(
       v.literal(ServiceStatus.UNAVAILABLE),
       v.literal(ServiceStatus.AVAILABLE),

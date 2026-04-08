@@ -37,6 +37,7 @@ interface BookingDialog {
   serviceName: string;
   requirements: string[];
   fileTypes?: string[];
+  availableDays?: number[];
 }
 
 type Step = 1 | 2 | 3;
@@ -54,6 +55,7 @@ export function BookingDialog({
   serviceName,
   requirements,
   fileTypes = [],
+  availableDays = [],
 }: BookingDialog) {
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
@@ -105,6 +107,18 @@ export function BookingDialog({
 
         const endDate = new Date(value.dateTime.date);
         endDate.setHours(endHours, endMinutes, 0, 0);
+
+        if (startDate.getTime() < Date.now()) {
+          toast.error("Cannot book a date or time in the past.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (endDate.getTime() <= startDate.getTime()) {
+          toast.error("End time must be after start time.");
+          setIsSubmitting(false);
+          return;
+        }
 
         const { roomId, threadId } = await createProject({
           name: value.name,
@@ -322,6 +336,7 @@ export function BookingDialog({
                         <DateTimePicker
                           value={field.state.value}
                           onChange={field.handleChange}
+                          availableDays={availableDays}
                         />
                       </>
                     ) : (
@@ -335,6 +350,7 @@ export function BookingDialog({
                         <DateTimePicker
                           value={field.state.value}
                           onChange={field.handleChange}
+                          availableDays={availableDays}
                         />
                       </>
                     )}

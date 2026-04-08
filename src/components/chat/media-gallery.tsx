@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { X, Play, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   Dialog,
   DialogPortal,
@@ -58,6 +59,9 @@ function MediaLightbox({
   };
 
   const is3D = is3DModel(f.fileType, f.originalName);
+  const isMediaFile =
+    f.fileType?.startsWith("image/") || f.fileType?.startsWith("video/");
+  const isDocument = !isMediaFile && !is3D;
 
   const downloadCurrent = async () => {
     try {
@@ -82,7 +86,7 @@ function MediaLightbox({
           onClick={() => onOpenChange(false)}
         />
 
-        <div
+        <DialogPrimitive.Content
           className="fixed inset-0 z-50 flex flex-col outline-none"
           onKeyDown={handleKey}
           tabIndex={-1}
@@ -134,6 +138,27 @@ function MediaLightbox({
                   originalName={f.originalName}
                   className="w-full h-full rounded-2xl"
                 />
+              </div>
+            ) : isDocument ? (
+              <div
+                className="flex flex-col items-center justify-center gap-4 bg-white/5 rounded-2xl p-12 text-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-white/50 bg-white/5 p-6 rounded-full">
+                  <Download className="w-16 h-16" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-medium text-white/90 mb-1">
+                    {f.originalName || "Document"}
+                  </h3>
+                  <p className="text-white/50 text-sm">Preview not available</p>
+                </div>
+                <button
+                  onClick={downloadCurrent}
+                  className="mt-4 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
+                >
+                  Download File
+                </button>
               </div>
             ) : f.fileType?.startsWith("video/") ? (
               <video
@@ -246,7 +271,7 @@ function MediaLightbox({
               </div>
             )}
           </div>
-        </div>
+        </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
   );
@@ -278,6 +303,9 @@ export function MediaGallery({
   if (count === 1) {
     const f = mediaFiles[0];
     const is3D = is3DModel(f.fileType, f.originalName);
+    const isMediaFile =
+      f.fileType?.startsWith("image/") || f.fileType?.startsWith("video/");
+    const isDocument = !isMediaFile && !is3D;
 
     return (
       <>
@@ -286,9 +314,9 @@ export function MediaGallery({
           onClick={() => openAt(0)}
           className="mt-1.5 block w-full text-left focus:outline-none"
         >
-          {is3D ? (
+          {is3D || isDocument ? (
             <FileAttachmentCard
-              fileName={f.originalName || "Model"}
+              fileName={f.originalName || "File"}
               fileType={f.fileType}
               isCurrentUser={isCurrentUser}
             />
@@ -352,6 +380,10 @@ export function MediaGallery({
           const isFirstOfThree = count === 3 && i === 0;
           const isLastVisible = i === visibleFiles.length - 1 && remaining > 0;
           const is3D = is3DModel(f.fileType, f.originalName);
+          const isMediaFile =
+            f.fileType?.startsWith("image/") ||
+            f.fileType?.startsWith("video/");
+          const isDocument = !isMediaFile && !is3D;
 
           return (
             <button
@@ -363,9 +395,9 @@ export function MediaGallery({
                 isFirstOfThree ? "col-span-2" : "",
               )}
             >
-              {is3D ? (
+              {is3D || isDocument ? (
                 <FileAttachmentThumbnail
-                  fileName={f.originalName || "Model"}
+                  fileName={f.originalName || "File"}
                   fileType={f.fileType}
                   isCurrentUser={isCurrentUser}
                   className={isFirstOfThree ? "h-32" : "h-24"}

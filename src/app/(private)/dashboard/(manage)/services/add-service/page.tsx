@@ -82,6 +82,7 @@ export default function AddServicePage() {
           requirements: value.requirements.filter((r) => r.trim() !== ""),
           fileTypes: value.fileTypes,
           resources: value.resources as Id<"resources">[],
+          availableDays: value.availableDays,
         });
         toast.success("Service added successfully!");
         setTimeout(() => router.push("/dashboard/services"), 1000);
