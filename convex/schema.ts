@@ -41,6 +41,7 @@ export default defineSchema({
     requirements: v.array(v.string()),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
+    materials: v.optional(v.array(v.id("materials"))),
     availableDays: v.optional(v.array(v.number())),
     status: v.union(
       v.literal(ServiceStatus.UNAVAILABLE),
@@ -52,18 +53,22 @@ export default defineSchema({
       v.object({
         type: v.literal("FIXED"),
         amount: v.number(),
+        upAmount: v.optional(v.number()),
       }),
       v.object({
         type: v.literal("PER_UNIT"),
         baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
         unitName: v.string(), // e.g., "hour", "sqft"
         ratePerUnit: v.number(),
+        upRatePerUnit: v.optional(v.number()),
       }),
       v.object({
         type: v.literal("COMPOSITE"), // e.g., 3D Printing
         baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
         timeRatePerHour: v.number(),
-        materialRatePerUnit: v.optional(v.number()),
+        upTimeRatePerHour: v.optional(v.number()),
       }),
     ),
   }).index("by_slug", ["slug"]),

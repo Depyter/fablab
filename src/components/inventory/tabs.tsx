@@ -1,14 +1,17 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryListView } from "@/components/inventory/inventory-view";
 import type { InventoryItem } from "@/components/inventory/inventory-card";
+import { MaterialListView } from "@/components/inventory/material-view";
+import type { MaterialItem } from "@/components/inventory/material-card";
 
 interface InventoryTabProps {
   items: InventoryItem[];
+  materials?: MaterialItem[];
 }
 
 import { ResourceCategory } from "@convex/constants";
 
-export function InventoryTab({ items }: InventoryTabProps) {
+export function InventoryTab({ items, materials = [] }: InventoryTabProps) {
   // Filter items by category based on the backend schema
   // Group items by category
   const machines = items.filter(
@@ -25,6 +28,7 @@ export function InventoryTab({ items }: InventoryTabProps) {
         <TabsTrigger value="rooms">Rooms</TabsTrigger>
         <TabsTrigger value="tools">Tools</TabsTrigger>
         <TabsTrigger value="misc">Misc</TabsTrigger>
+        <TabsTrigger value="materials">Materials</TabsTrigger>
       </TabsList>
 
       <TabsContent value="machines" className="mt-6">
@@ -41,6 +45,10 @@ export function InventoryTab({ items }: InventoryTabProps) {
 
       <TabsContent value="misc" className="mt-6">
         <InventoryListView items={misc} />
+      </TabsContent>
+
+      <TabsContent value="materials" className="mt-6">
+        <MaterialListView items={materials} />
       </TabsContent>
     </Tabs>
   );

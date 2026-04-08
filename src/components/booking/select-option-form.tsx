@@ -10,11 +10,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 interface RadioGroupChoiceCardProps {
   value: string;
   onValueChange: (value: string) => void;
+  disableBuyFromLab?: boolean;
 }
 
 export function RadioGroupChoiceCard({
   value,
   onValueChange,
+  disableBuyFromLab,
 }: RadioGroupChoiceCardProps) {
   return (
     <RadioGroup
@@ -33,15 +35,24 @@ export function RadioGroupChoiceCard({
           <RadioGroupItem value="provide-own" id="plus-plan" />
         </Field>
       </FieldLabel>
-      <FieldLabel htmlFor="pro-plan">
+      <FieldLabel
+        htmlFor="pro-plan"
+        className={disableBuyFromLab ? "opacity-50 cursor-not-allowed" : ""}
+      >
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldTitle>Buy From Fablab</FieldTitle>
+            <FieldTitle>Buy from FabLab</FieldTitle>
             <FieldDescription>
-              For client with no on hand materials.
+              User will choose material in the inventory.
+              {disableBuyFromLab &&
+                " (No materials available for this service)"}
             </FieldDescription>
           </FieldContent>
-          <RadioGroupItem value="buy-from-lab" id="pro-plan" />
+          <RadioGroupItem
+            value="buy-from-lab"
+            id="pro-plan"
+            disabled={disableBuyFromLab}
+          />
         </Field>
       </FieldLabel>
     </RadioGroup>

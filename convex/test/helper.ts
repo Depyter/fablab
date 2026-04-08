@@ -43,6 +43,7 @@ export async function setupProject() {
     },
     requirements: ["design", "model"],
     fileTypes: [],
+    materials: [],
     description: "std to 3d printed model",
     status: "Available",
   });

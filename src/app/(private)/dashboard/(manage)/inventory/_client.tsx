@@ -9,6 +9,7 @@ import { AddRoomForm } from "@/components/inventory/forms/add-room-form";
 import { AddToolForm } from "@/components/inventory/forms/add-tool-form";
 import { AddMachineForm } from "@/components/inventory/forms/add-machine-form";
 import { AddMiscForm } from "@/components/inventory/forms/add-misc-form";
+import { MaterialForm } from "@/components/inventory/forms/material-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -33,14 +34,20 @@ import {
 
 interface InventoryClientProps {
   preloadedResources: Preloaded<typeof api.resource.query.getResources>;
+  preloadedMaterials: Preloaded<typeof api.materials.query.getMaterials>;
 }
 
-export function InventoryClient({ preloadedResources }: InventoryClientProps) {
+export function InventoryClient({
+  preloadedResources,
+  preloadedMaterials,
+}: InventoryClientProps) {
   const resources = usePreloadedQuery(preloadedResources);
+  const materials = usePreloadedQuery(preloadedMaterials);
   const [machineOpen, setMachineOpen] = useState(false);
   const [toolOpen, setToolOpen] = useState(false);
   const [roomOpen, setRoomOpen] = useState(false);
   const [miscOpen, setMiscOpen] = useState(false);
+  const [materialOpen, setMaterialOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name-az" | "status">("name-az");
@@ -66,6 +73,30 @@ export function InventoryClient({ preloadedResources }: InventoryClientProps) {
     return result;
   })();
 
+  const filteredMaterials = (() => {
+    let result = [...materials];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.category.toLowerCase().includes(q),
+      );
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === "name-az") return a.name.localeCompare(b.name);
+      if (sortBy === "status") return a.status.localeCompare(b.status);
+      return 0;
+    });
+
+    return result;
+  })();
+
+  const totalItems = resources.length + materials.length;
+  const filteredTotal = filteredResources.length + filteredMaterials.length;
+
   const activeFilterCount = [search.trim() !== "", sortBy !== "name-az"].filter(
     Boolean,
   ).length;
@@ -80,9 +111,9 @@ export function InventoryClient({ preloadedResources }: InventoryClientProps) {
       <ManageHeader
         title="Inventory"
         subtitle={
-          filteredResources.length === resources.length
-            ? `${resources.length} item${resources.length === 1 ? "" : "s"}`
-            : `${filteredResources.length} of ${resources.length} items`
+          filteredTotal === totalItems
+            ? `${totalItems} item${totalItems === 1 ? "" : "s"}`
+            : `${filteredTotal} of ${totalItems} items`
         }
       >
         <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
@@ -115,6 +146,9 @@ export function InventoryClient({ preloadedResources }: InventoryClientProps) {
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
               Add Misc Item
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setMaterialOpen(true)}>
+              Add Material
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -187,7 +221,19 @@ export function InventoryClient({ preloadedResources }: InventoryClientProps) {
           <AddMiscForm onSuccess={() => setMiscOpen(false)} />
         </DialogContent>
       </Dialog>
-      <InventoryTab items={filteredResources ?? []} />
+
+      <Dialog open={materialOpen} onOpenChange={setMaterialOpen}>
+        <DialogContent
+          className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
+          showCloseButton={false}
+        >
+          <MaterialForm onSuccess={() => setMaterialOpen(false)} />
+        </DialogContent>
+      </Dialog>
+      <InventoryTab
+        items={filteredResources ?? []}
+        materials={filteredMaterials ?? []}
+      />
     </>
   );
 }

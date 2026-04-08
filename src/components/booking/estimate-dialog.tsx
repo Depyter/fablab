@@ -18,6 +18,8 @@ export type BookingFormValues = {
   description: string;
   notes: string;
   material: string;
+  requestedMaterialId?: string;
+  pricing: "normal" | "UP";
   dateTime: {
     date: Date | undefined;
     startTime: string;
@@ -29,6 +31,29 @@ export type BookingFormValues = {
 interface EstimateProjectDetailsProps {
   serviceName: string;
   data: BookingFormValues;
+  servicePricing?:
+    | { type: "FIXED"; amount: number; upAmount?: number }
+    | {
+        type: "PER_UNIT";
+        baseFee: number;
+        upBaseFee?: number;
+        unitName: string;
+        ratePerUnit: number;
+        upRatePerUnit?: number;
+      }
+    | {
+        type: "COMPOSITE";
+        baseFee: number;
+        upBaseFee?: number;
+        timeRatePerHour: number;
+        upTimeRatePerHour?: number;
+      };
+  serviceMaterials?: Array<{
+    _id: string;
+    name: string;
+    pricePerUnit?: number;
+    costPerUnit?: number;
+  }>;
   isSubmitting?: boolean;
   canSubmit?: boolean;
   onBack: () => void;
@@ -37,10 +62,77 @@ interface EstimateProjectDetailsProps {
 export function EstimateProjectDetails({
   serviceName,
   data,
+  servicePricing,
+  serviceMaterials,
   isSubmitting,
   canSubmit,
   onBack,
 }: EstimateProjectDetailsProps) {
+  let durationMins = 0;
+  if (data.dateTime.startTime && data.dateTime.endTime) {
+    const [startH, startM] = data.dateTime.startTime.split(":").map(Number);
+    const [endH, endM] = data.dateTime.endTime.split(":").map(Number);
+    durationMins = endH * 60 + endM - (startH * 60 + startM);
+  }
+  const durationHours = durationMins / 60;
+
+  let basePrice = 0;
+  let durationCost = 0;
+  let materialCost = 0;
+  let unitName = "hour";
+
+  const isUp = data.pricing === "UP";
+
+  if (servicePricing) {
+    if (servicePricing.type === "FIXED") {
+      basePrice =
+        isUp && servicePricing.upAmount !== undefined
+          ? servicePricing.upAmount
+          : servicePricing.amount;
+    } else if (servicePricing.type === "PER_UNIT") {
+      basePrice =
+        isUp && servicePricing.upBaseFee !== undefined
+          ? servicePricing.upBaseFee
+          : servicePricing.baseFee;
+      const rate =
+        isUp && servicePricing.upRatePerUnit !== undefined
+          ? servicePricing.upRatePerUnit
+          : servicePricing.ratePerUnit;
+      unitName = servicePricing.unitName;
+
+      if (unitName === "hour" || unitName === "hr") {
+        durationCost = durationHours * rate;
+      } else if (unitName === "minute" || unitName === "min") {
+        durationCost = durationMins * rate;
+      }
+    } else if (servicePricing.type === "COMPOSITE") {
+      basePrice =
+        isUp && servicePricing.upBaseFee !== undefined
+          ? servicePricing.upBaseFee
+          : servicePricing.baseFee;
+      const timeRate =
+        isUp && servicePricing.upTimeRatePerHour !== undefined
+          ? servicePricing.upTimeRatePerHour
+          : servicePricing.timeRatePerHour;
+      durationCost = durationHours * timeRate;
+    }
+  }
+
+  if (
+    data.material === "buy-from-lab" &&
+    data.requestedMaterialId &&
+    serviceMaterials
+  ) {
+    const mat = serviceMaterials.find(
+      (m) => m._id === data.requestedMaterialId,
+    );
+    if (mat) {
+      materialCost = mat.pricePerUnit || mat.costPerUnit || 0;
+    }
+  }
+
+  const estimatedTotal = basePrice + durationCost + materialCost;
+
   return (
     <div className="sm:max-w-2xl sm:max-h-2xl">
       <DialogHeader>
@@ -154,23 +246,44 @@ export function EstimateProjectDetails({
 
             {/* Pricing */}
             <div className="p-6 bg-gray-50">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Pricing Estimate
-              </h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-900">
+                  Pricing Estimate
+                </h3>
+                <span className="text-xs font-bold px-2 py-1 rounded-full bg-chart-6/10 text-chart-6 uppercase tracking-wider">
+                  {isUp ? "UP Rate" : "Normal Rate"}
+                </span>
+              </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Base Price</span>
-                  <span className="font-medium">P 0.00</span>
+                  <span className="font-medium">₱{basePrice.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Duration</span>
-                  <span className="font-medium">0 mins</span>
-                </div>
+                {durationCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      Duration ({durationMins} mins)
+                    </span>
+                    <span className="font-medium">
+                      ₱{durationCost.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {materialCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      Lab Material (Est. 1 unit)
+                    </span>
+                    <span className="font-medium">
+                      ₱{materialCost.toFixed(2)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-between pt-2 border-t border-gray-300">
                   <span className="font-semibold">Estimated Total</span>
                   <span className="font-semibold text-lg text-chart-6">
-                    P 0.00
+                    ₱{estimatedTotal.toFixed(2)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">

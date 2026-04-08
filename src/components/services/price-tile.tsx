@@ -4,7 +4,7 @@ import { PhilippinePeso } from "lucide-react";
 
 interface PriceTileProps {
   label: string;
-  price: number;
+  price: number | string;
   unit: string;
   icon: ReactNode;
 }
@@ -19,7 +19,8 @@ export function PriceTile({ label, price, unit, icon }: PriceTileProps) {
         </div>
         <div className="text-lg font-bold flex flex-row">
           {" "}
-          <PhilippinePeso /> {price.toFixed(2)}/{unit}
+          <PhilippinePeso />{" "}
+          {typeof price === "number" ? price.toFixed(2) : price}/{unit}
         </div>
       </CardContent>
     </Card>

@@ -110,11 +110,16 @@ export const createProject = authMutation({
 
     let costBreakdown = undefined;
     if (args.sharedUsageId && service.pricing.type === "FIXED") {
+      const isUp = args.pricing === "UP";
+      const amount =
+        isUp && service.pricing.upAmount !== undefined
+          ? service.pricing.upAmount
+          : service.pricing.amount;
       costBreakdown = {
-        baseFee: service.pricing.amount,
+        baseFee: amount,
         materialCost: 0,
         timeCost: 0,
-        total: service.pricing.amount,
+        total: amount,
       };
     }
 
@@ -295,17 +300,24 @@ export const completeProject = authMutation({
     let baseFee = 0;
 
     const hours = args.actualDurationMs / (1000 * 60 * 60);
+    const isUp = project.pricing === "UP";
 
     if (service.pricing.type === "COMPOSITE") {
-      baseFee = service.pricing.baseFee;
-      timeCost = hours * service.pricing.timeRatePerHour;
+      baseFee =
+        isUp && service.pricing.upBaseFee !== undefined
+          ? service.pricing.upBaseFee
+          : service.pricing.baseFee;
+      const timeRatePerHour =
+        isUp && service.pricing.upTimeRatePerHour !== undefined
+          ? service.pricing.upTimeRatePerHour
+          : service.pricing.timeRatePerHour;
+      timeCost = hours * timeRatePerHour;
 
       if (args.materialsUsed && args.materialsUsed.length > 0) {
         for (const usage of args.materialsUsed) {
           const material = await ctx.db.get(usage.materialId);
           if (material) {
-            const rate =
-              service.pricing.materialRatePerUnit || material.pricePerUnit || 0;
+            const rate = material.pricePerUnit || 0;
             materialCost += usage.amountUsed * rate;
 
             const newStock = Math.max(
@@ -330,21 +342,31 @@ export const completeProject = authMutation({
         }
       }
     } else if (service.pricing.type === "PER_UNIT") {
-      baseFee = service.pricing.baseFee;
+      baseFee =
+        isUp && service.pricing.upBaseFee !== undefined
+          ? service.pricing.upBaseFee
+          : service.pricing.baseFee;
+      const ratePerUnit =
+        isUp && service.pricing.upRatePerUnit !== undefined
+          ? service.pricing.upRatePerUnit
+          : service.pricing.ratePerUnit;
+
       if (
         service.pricing.unitName === "hour" ||
         service.pricing.unitName === "hr"
       ) {
-        timeCost = hours * service.pricing.ratePerUnit;
+        timeCost = hours * ratePerUnit;
       } else if (
         service.pricing.unitName === "minute" ||
         service.pricing.unitName === "min"
       ) {
-        timeCost =
-          (args.actualDurationMs / (1000 * 60)) * service.pricing.ratePerUnit;
+        timeCost = (args.actualDurationMs / (1000 * 60)) * ratePerUnit;
       }
     } else if (service.pricing.type === "FIXED") {
-      baseFee = service.pricing.amount;
+      baseFee =
+        isUp && service.pricing.upAmount !== undefined
+          ? service.pricing.upAmount
+          : service.pricing.amount;
     }
 
     const total = baseFee + timeCost + materialCost;

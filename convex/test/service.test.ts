@@ -47,6 +47,7 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
+      materials: [],
       description: "printing services",
       status: "Available",
     });
@@ -83,6 +84,7 @@ describe("Service functions", () => {
         },
         requirements: ["design", "model"],
         fileTypes: [],
+        materials: [],
         description: "printing services",
         status: "Available",
       });
@@ -102,6 +104,7 @@ describe("Service functions", () => {
         },
         requirements: ["design", "model"],
         fileTypes: [],
+        materials: [],
         description: "printing services",
         status: "Available",
       });
@@ -126,6 +129,7 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
+      materials: [],
       description: "printing services",
       status: "Available",
     });
@@ -225,6 +229,7 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
+      materials: [],
       description: "printing services",
       status: "Available",
     });
@@ -263,6 +268,7 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
+      materials: [],
       description: "printing services",
       status: "Available",
     });

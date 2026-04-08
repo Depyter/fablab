@@ -17,6 +17,8 @@ import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as helper from "../helper.js";
 import type * as http from "../http.js";
+import type * as materials_mutate from "../materials/mutate.js";
+import type * as materials_query from "../materials/query.js";
 import type * as presence from "../presence.js";
 import type * as projects_mutate from "../projects/mutate.js";
 import type * as projects_query from "../projects/query.js";
@@ -44,6 +46,8 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   helper: typeof helper;
   http: typeof http;
+  "materials/mutate": typeof materials_mutate;
+  "materials/query": typeof materials_query;
   presence: typeof presence;
   "projects/mutate": typeof projects_mutate;
   "projects/query": typeof projects_query;

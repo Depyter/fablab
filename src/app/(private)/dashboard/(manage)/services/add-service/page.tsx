@@ -52,6 +52,12 @@ export default function AddServicePage() {
     value: r._id,
   }));
 
+  const materialsQuery = useQuery(api.materials.query.getMaterials) || [];
+  const materialOptions = materialsQuery.map((m) => ({
+    label: m.name,
+    value: m._id,
+  }));
+
   const handleThumbnailUploading = (isUploading: boolean) =>
     setThumbnailUploading(isUploading);
   const handleSamplesUploading = (isUploading: boolean) =>
@@ -73,15 +79,15 @@ export default function AddServicePage() {
         await addService({
           name: value.name,
           description: value.description,
-          regularPrice: value.regularPrice,
-          upPrice: value.upPrice,
-          unitPrice: value.unitPrice,
+          serviceCategory: value.serviceCategory,
+          pricing: value.pricing,
           status: value.status,
           images: value.images as Id<"_storage">[],
           samples: value.samples as Id<"_storage">[],
           requirements: value.requirements.filter((r) => r.trim() !== ""),
           fileTypes: value.fileTypes,
           resources: value.resources as Id<"resources">[],
+          materials: value.materials as Id<"materials">[],
           availableDays: value.availableDays,
         });
         toast.success("Service added successfully!");
@@ -224,6 +230,19 @@ export default function AddServicePage() {
                 options={resourceOptions}
                 title="Resources (Machines, etc.)"
                 placeholder="Select resource..."
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            )}
+          />
+
+          <form.Field
+            name="materials"
+            children={(field) => (
+              <MultipleSelectForm
+                options={materialOptions}
+                title="Allowed Materials"
+                placeholder="Select materials..."
                 value={field.state.value}
                 onChange={field.handleChange}
               />

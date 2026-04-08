@@ -1,6 +1,5 @@
 import { internalMutation } from "../_generated/server";
 import { v, ConvexError } from "convex/values";
-import type { Id } from "../_generated/dataModel";
 import {
   authMutation,
   checkAuthority,
@@ -49,22 +48,27 @@ export const addService = authMutation({
       v.object({
         type: v.literal("FIXED"),
         amount: v.number(),
+        upAmount: v.optional(v.number()),
       }),
       v.object({
         type: v.literal("PER_UNIT"),
         baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
         unitName: v.string(),
         ratePerUnit: v.number(),
+        upRatePerUnit: v.optional(v.number()),
       }),
       v.object({
         type: v.literal("COMPOSITE"),
         baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
         timeRatePerHour: v.number(),
-        materialRatePerUnit: v.optional(v.number()),
+        upTimeRatePerHour: v.optional(v.number()),
       }),
     ),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
+    materials: v.optional(v.array(v.id("materials"))),
     availableDays: v.optional(v.array(v.number())),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
@@ -78,6 +82,7 @@ export const addService = authMutation({
       pricing: args.pricing,
       fileTypes: args.fileTypes,
       resources: args.resources,
+      materials: args.materials,
       availableDays: args.availableDays,
       status: args.status,
       requirements: args.requirements,
@@ -102,24 +107,29 @@ export const updateService = authMutation({
         v.object({
           type: v.literal("FIXED"),
           amount: v.number(),
+          upAmount: v.optional(v.number()),
         }),
         v.object({
           type: v.literal("PER_UNIT"),
           baseFee: v.number(),
+          upBaseFee: v.optional(v.number()),
           unitName: v.string(),
           ratePerUnit: v.number(),
+          upRatePerUnit: v.optional(v.number()),
         }),
         v.object({
           type: v.literal("COMPOSITE"),
           baseFee: v.number(),
+          upBaseFee: v.optional(v.number()),
           timeRatePerHour: v.number(),
-          materialRatePerUnit: v.optional(v.number()),
+          upTimeRatePerHour: v.optional(v.number()),
         }),
       ),
     ),
     requirements: v.optional(v.array(v.string())),
     fileTypes: v.optional(v.array(v.string())),
     resources: v.optional(v.array(v.id("resources"))),
+    materials: v.optional(v.array(v.id("materials"))),
     availableDays: v.optional(v.array(v.number())),
     description: v.optional(v.string()),
     status: v.optional(
@@ -150,6 +160,7 @@ export const updateService = authMutation({
       updates.requirements = args.requirements;
     if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
     if (args.resources !== undefined) updates.resources = args.resources;
+    if (args.materials !== undefined) updates.materials = args.materials;
     if (args.availableDays !== undefined)
       updates.availableDays = args.availableDays;
 

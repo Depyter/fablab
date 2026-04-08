@@ -10,9 +10,23 @@ interface ServiceCardProps {
   imageSrc: string;
   title: string;
   description: string;
-  regularPrice: number;
-  discountedPrice: number;
-  unit: string; // e.g., "per hour", "per item"
+  pricing:
+    | { type: "FIXED"; amount: number; upAmount?: number }
+    | {
+        type: "PER_UNIT";
+        baseFee: number;
+        upBaseFee?: number;
+        unitName: string;
+        ratePerUnit: number;
+        upRatePerUnit?: number;
+      }
+    | {
+        type: "COMPOSITE";
+        baseFee: number;
+        upBaseFee?: number;
+        timeRatePerHour: number;
+        upTimeRatePerHour?: number;
+      };
 
   // optional
   imageAlt?: string;
@@ -34,15 +48,13 @@ export function ServiceCard({
   imageSrc,
   title,
   description,
-  regularPrice,
-  discountedPrice,
+  pricing,
   imageAlt = "Service image",
   badgeText = "Featured",
   badgeVariant = "secondary",
   buttonText = "Edit Service",
   showBadge = true,
   className = "",
-  unit = "per unit",
 }: ServiceCardProps) {
   return (
     <ManageCard
@@ -50,8 +62,26 @@ export function ServiceCard({
       title={title}
       subtitle={
         <>
-          ₱{regularPrice.toFixed(2)}/{unit} Regular · ₱
-          {discountedPrice.toFixed(2)}/{unit} UP Rate
+          {pricing.type === "FIXED" &&
+            `₱${pricing.amount.toFixed(2)} Fixed${
+              pricing.upAmount !== undefined
+                ? ` (UP: ₱${pricing.upAmount.toFixed(2)})`
+                : ""
+            }`}
+          {pricing.type === "PER_UNIT" &&
+            `₱${pricing.baseFee.toFixed(2)} Base + ₱${pricing.ratePerUnit.toFixed(2)}/${pricing.unitName}${
+              pricing.upBaseFee !== undefined ||
+              pricing.upRatePerUnit !== undefined
+                ? " (UP Available)"
+                : ""
+            }`}
+          {pricing.type === "COMPOSITE" &&
+            `₱${pricing.baseFee.toFixed(2)} Base + ₱${pricing.timeRatePerHour.toFixed(2)}/hr${
+              pricing.upBaseFee !== undefined ||
+              pricing.upTimeRatePerHour !== undefined
+                ? " (UP Available)"
+                : ""
+            }`}
         </>
       }
       description={description}

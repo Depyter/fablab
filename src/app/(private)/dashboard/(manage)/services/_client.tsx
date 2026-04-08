@@ -6,7 +6,6 @@ import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
 import { PackageOpen, Search, LayoutGrid, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import {
   Select,
@@ -47,9 +46,20 @@ export function ServicesListClient({
       );
     }
 
+    const getSortPrice = (pricing: (typeof services)[number]["pricing"]) => {
+      if (pricing.type === "FIXED") return pricing.amount;
+      if (pricing.type === "PER_UNIT")
+        return pricing.baseFee + pricing.ratePerUnit;
+      if (pricing.type === "COMPOSITE")
+        return pricing.baseFee + pricing.timeRatePerHour;
+      return 0;
+    };
+
     result.sort((a, b) => {
-      if (sortBy === "price-high") return b.regularPrice - a.regularPrice;
-      if (sortBy === "price-low") return a.regularPrice - b.regularPrice;
+      const priceA = getSortPrice(a.pricing);
+      const priceB = getSortPrice(b.pricing);
+      if (sortBy === "price-high") return priceB - priceA;
+      if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "name-az") return a.name.localeCompare(b.name);
       return 0;
     });
@@ -163,9 +173,7 @@ export function ServicesListClient({
               imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
               title={service.name}
               description={service.description}
-              regularPrice={service.regularPrice}
-              discountedPrice={service.upPrice}
-              unit={service.unitPrice}
+              pricing={service.pricing}
             />
           ))}
         </ManageGrid>
