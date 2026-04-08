@@ -9,16 +9,20 @@ export const createProject = authMutation({
     description: v.string(),
     serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
+    requestedMaterialId: v.optional(v.id("materials")),
     service: v.id("services"),
     pricing: v.union(v.literal("normal"), v.literal("UP")),
     files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
 
-    booking: v.object({
-      startTime: v.number(),
-      endTime: v.number(),
-      date: v.number(),
-    }),
+    booking: v.optional(
+      v.object({
+        startTime: v.number(),
+        endTime: v.number(),
+        date: v.number(),
+      }),
+    ),
+    sharedUsageId: v.optional(v.id("resourceUsage")),
   },
   handler: async (ctx, args) => {
     // assume user has already logged in
@@ -60,17 +64,42 @@ export const createProject = authMutation({
       }
     }
 
+    let finalBooking = args.booking;
+    let sharedUsage = null;
+
+    if (args.sharedUsageId) {
+      sharedUsage = await ctx.db.get(args.sharedUsageId);
+      if (!sharedUsage) throw new ConvexError("Shared event not found.");
+      if (sharedUsage.usageMode !== "SHARED") {
+        throw new ConvexError("This resource is not a shared event.");
+      }
+      if (
+        sharedUsage.maxCapacity &&
+        sharedUsage.projects.length >= sharedUsage.maxCapacity
+      ) {
+        throw new ConvexError("Shared event is at maximum capacity.");
+      }
+
+      finalBooking = {
+        startTime: sharedUsage.startTime,
+        endTime: sharedUsage.endTime,
+        date: sharedUsage.date,
+      };
+    } else if (!finalBooking) {
+      throw new ConvexError("Booking details are required.");
+    }
+
     const now = Date.now();
-    if (args.booking.startTime < now) {
+    if (finalBooking.startTime < now) {
       throw new ConvexError("Cannot book a date or time in the past.");
     }
 
-    if (args.booking.endTime <= args.booking.startTime) {
+    if (finalBooking.endTime <= finalBooking.startTime) {
       throw new ConvexError("End time must be after start time.");
     }
 
     if (service.availableDays && service.availableDays.length > 0) {
-      const bookingDate = new Date(args.booking.date);
+      const bookingDate = new Date(finalBooking.date);
       const dayOfWeek = bookingDate.getDay();
       if (!service.availableDays.includes(dayOfWeek)) {
         throw new ConvexError(
@@ -79,28 +108,47 @@ export const createProject = authMutation({
       }
     }
 
+    let costBreakdown = undefined;
+    if (args.sharedUsageId && service.pricing.type === "FIXED") {
+      costBreakdown = {
+        baseFee: service.pricing.amount,
+        materialCost: 0,
+        timeCost: 0,
+        total: service.pricing.amount,
+      };
+    }
+
     // create project
     const project = await ctx.db.insert("projects", {
       name: args.name,
       description: args.description,
       serviceType: args.serviceType,
       material: args.material,
+      requestedMaterialId: args.requestedMaterialId,
       userId: userProfile._id,
       service: args.service,
       pricing: args.pricing,
       status: "pending",
       files: args.files,
       notes: args.notes,
+      costBreakdown,
     });
 
-    // create proposed usage
-    await ctx.db.insert("resourceUsage", {
-      service: args.service,
-      project: project,
-      startTime: args.booking.startTime,
-      endTime: args.booking.endTime,
-      date: args.booking.date,
-    });
+    if (args.sharedUsageId && sharedUsage) {
+      await ctx.db.patch(args.sharedUsageId, {
+        projects: [...sharedUsage.projects, project],
+      });
+    } else {
+      // create proposed usage
+      await ctx.db.insert("resourceUsage", {
+        service: args.service,
+        usageMode: "EXCLUSIVE",
+        projects: [project],
+        startTime: finalBooking.startTime,
+        endTime: finalBooking.endTime,
+        date: finalBooking.date,
+      });
+    }
 
     // Find if the user already has a dedicated workspace room
     const workspaceName = `${userProfile.name}'s Channel`;
@@ -160,7 +208,7 @@ export const createProject = authMutation({
       });
     }
 
-    const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(args.booking.date).toDateString()} from ${new Date(args.booking.startTime).toLocaleTimeString()} to ${new Date(args.booking.endTime).toLocaleTimeString()}`;
+    const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(finalBooking.date).toDateString()} from ${new Date(finalBooking.startTime).toLocaleTimeString()} to ${new Date(finalBooking.endTime).toLocaleTimeString()}`;
 
     // Create a thread for the project
     const threadId = await ctx.db.insert("threads", {
@@ -218,5 +266,109 @@ export const updateProject = authMutation({
     if (status !== undefined) updates.status = status;
 
     await ctx.db.patch(projectId, updates);
+  },
+});
+
+export const completeProject = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    actualDurationMs: v.number(),
+    materialsUsed: v.optional(
+      v.array(
+        v.object({
+          materialId: v.id("materials"),
+          amountUsed: v.number(),
+        }),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+
+    const service = await ctx.db.get(project.service);
+    if (!service) throw new ConvexError("Service not found.");
+
+    let timeCost = 0;
+    let materialCost = 0;
+    let baseFee = 0;
+
+    const hours = args.actualDurationMs / (1000 * 60 * 60);
+
+    if (service.pricing.type === "COMPOSITE") {
+      baseFee = service.pricing.baseFee;
+      timeCost = hours * service.pricing.timeRatePerHour;
+
+      if (args.materialsUsed && args.materialsUsed.length > 0) {
+        for (const usage of args.materialsUsed) {
+          const material = await ctx.db.get(usage.materialId);
+          if (material) {
+            const rate =
+              service.pricing.materialRatePerUnit || material.pricePerUnit || 0;
+            materialCost += usage.amountUsed * rate;
+
+            const newStock = Math.max(
+              0,
+              material.currentStock - usage.amountUsed,
+            );
+            let newStatus = material.status;
+            if (newStock === 0) {
+              newStatus = "OUT_OF_STOCK";
+            } else if (
+              material.reorderThreshold &&
+              newStock <= material.reorderThreshold
+            ) {
+              newStatus = "LOW_STOCK";
+            }
+
+            await ctx.db.patch(material._id, {
+              currentStock: newStock,
+              status: newStatus,
+            });
+          }
+        }
+      }
+    } else if (service.pricing.type === "PER_UNIT") {
+      baseFee = service.pricing.baseFee;
+      if (
+        service.pricing.unitName === "hour" ||
+        service.pricing.unitName === "hr"
+      ) {
+        timeCost = hours * service.pricing.ratePerUnit;
+      } else if (
+        service.pricing.unitName === "minute" ||
+        service.pricing.unitName === "min"
+      ) {
+        timeCost =
+          (args.actualDurationMs / (1000 * 60)) * service.pricing.ratePerUnit;
+      }
+    } else if (service.pricing.type === "FIXED") {
+      baseFee = service.pricing.amount;
+    }
+
+    const total = baseFee + timeCost + materialCost;
+
+    await ctx.db.patch(args.projectId, {
+      status: "completed",
+      costBreakdown: {
+        baseFee,
+        timeCost,
+        materialCost,
+        total,
+      },
+    });
+
+    const usages = await ctx.db
+      .query("resourceUsage")
+      .withIndex("by_service", (q) => q.eq("service", project.service))
+      .collect();
+
+    const usage = usages.find((u) => u.projects.includes(project._id));
+    if (usage && args.materialsUsed) {
+      await ctx.db.patch(usage._id, {
+        materialsUsed: args.materialsUsed,
+      });
+    }
   },
 });

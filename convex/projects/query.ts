@@ -36,10 +36,11 @@ export const getProjects = authQuery({
         const service = await ctx.db.get(project.service);
 
         // Find resource usage for date/time
-        const usage = await ctx.db
+        const usages = await ctx.db
           .query("resourceUsage")
-          .withIndex("by_project", (q) => q.eq("project", project._id))
-          .first();
+          .withIndex("by_service", (q) => q.eq("service", project.service))
+          .collect();
+        const usage = usages.find((u) => u.projects.includes(project._id));
 
         const coverUrl =
           service?.images && service.images.length > 0
@@ -100,6 +101,7 @@ export const getProject = authQuery({
           _id: serviceDoc._id,
           name: serviceDoc.name,
           status: serviceDoc.status,
+          pricing: serviceDoc.pricing,
         }
       : null;
 
@@ -143,10 +145,14 @@ export const getProject = authQuery({
     // -------------------------------------------------------------------------
     // Resource usages for this project — includes resolved maker and resource
     // -------------------------------------------------------------------------
-    const usageDocs = await ctx.db
+    const allUsagesForService = await ctx.db
       .query("resourceUsage")
-      .withIndex("by_project", (q) => q.eq("project", project._id))
+      .withIndex("by_service", (q) => q.eq("service", project.service))
       .collect();
+
+    const usageDocs = allUsagesForService.filter((u) =>
+      u.projects.includes(project._id),
+    );
 
     const resourceUsages = await Promise.all(
       usageDocs.map(async (usage) => {

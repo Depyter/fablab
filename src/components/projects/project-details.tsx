@@ -11,8 +11,21 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  ChevronDown,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { STATUS_STYLES } from "./project-card";
@@ -50,7 +63,7 @@ export function ProjectDetails({
   const updateProject = useMutation(api.projects.mutate.updateProject);
 
   const handleUpdateStatus = async (
-    newStatus: "approved" | "rejected" | "completed",
+    newStatus: "pending" | "approved" | "rejected" | "completed",
   ) => {
     try {
       await updateProject({ projectId, status: newStatus });
@@ -140,26 +153,46 @@ export function ProjectDetails({
               </DialogTitle>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  disabled={project.status !== "pending"}
-                  onClick={() => handleUpdateStatus("approved")}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Approve & Assign
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  disabled={project.status !== "pending"}
-                  onClick={() => handleUpdateStatus("rejected")}
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Reject Request
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                    >
+                      Update Status <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleUpdateStatus("pending")}
+                      disabled={project.status === "pending"}
+                    >
+                      <Circle className="mr-2 h-4 w-4" /> Mark as Pending
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleUpdateStatus("approved")}
+                      disabled={project.status === "approved"}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4 text-blue-500" />{" "}
+                      Approve & Assign
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleUpdateStatus("completed")}
+                      disabled={project.status === "completed"}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />{" "}
+                      Complete Project
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleUpdateStatus("rejected")}
+                      disabled={project.status === "rejected"}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <XCircle className="mr-2 h-4 w-4" /> Reject Request
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {project.roomId && project.threadId ? (
                   <Button
                     variant="outline"
@@ -352,12 +385,13 @@ export function ProjectDetails({
                             <p className="mt-0.5 text-xs text-muted-foreground wrap-break-word">
                               Maker: {usage.makerName ?? "Unassigned"}
                             </p>
-                            {usage.material && (
-                              <p className="mt-0.5 text-xs text-muted-foreground wrap-break-word">
-                                Material: {usage.material.amount}{" "}
-                                {usage.material.type}
-                              </p>
-                            )}
+                            {usage.materialsUsed &&
+                              usage.materialsUsed.length > 0 && (
+                                <p className="mt-0.5 text-xs text-muted-foreground wrap-break-word">
+                                  Material: {usage.materialsUsed[0].amountUsed}{" "}
+                                  units
+                                </p>
+                              )}
                           </div>
                         ))}
                       </div>
@@ -365,7 +399,11 @@ export function ProjectDetails({
                   </CardContent>
                 </Card>
 
-                <PricingEstimateCard material={project.material} />
+                <PricingEstimateCard
+                  material={project.material}
+                  service={project.service ?? undefined}
+                  resourceUsages={project.resourceUsages}
+                />
 
                 {project.receipt && (
                   <Card>
