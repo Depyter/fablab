@@ -169,6 +169,14 @@ export const getProject = authQuery({
     );
 
     // -------------------------------------------------------------------------
+    // Thread
+    // -------------------------------------------------------------------------
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("projectId", (q) => q.eq("projectId", project._id))
+      .first();
+
+    // -------------------------------------------------------------------------
     // Final shape
     // -------------------------------------------------------------------------
     return {
@@ -182,6 +190,8 @@ export const getProject = authQuery({
       resolvedFiles,
       receipt,
       resourceUsages,
+      threadId: thread?._id ?? null,
+      roomId: thread?.roomId ?? null,
     };
   },
 });

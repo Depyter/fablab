@@ -4,6 +4,8 @@ import * as React from "react";
 import { ResourceStatus } from "@convex/constants";
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import { Plus, HardDrive, Info } from "lucide-react";
+import type { Id } from "@convex/_generated/dataModel";
+import { ProjectDetails } from "./project-details";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -186,8 +188,9 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                               className="p-0.5 border-b border-r bg-muted/5 align-top h-16 max-h-16 overflow-hidden"
                               colSpan={clampedColSpan}
                             >
-                              <Dialog>
-                                <DialogTrigger asChild>
+                              <ProjectDetails
+                                projectId={usage.projectId as Id<"projects">}
+                                trigger={
                                   <Card
                                     className={cn(
                                       "h-full border shadow-sm rounded-md px-2 py-1 flex items-center justify-center overflow-hidden transition-all cursor-pointer hover:ring-2 hover:ring-primary/20",
@@ -201,12 +204,8 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                                       {usage.projectAlias}
                                     </span>
                                   </Card>
-                                </DialogTrigger>
-                                <UsageDetailsDialog
-                                  usage={usage}
-                                  machine={machine}
-                                />
-                              </Dialog>
+                                }
+                              />
                             </TableCell>
                           );
                         }
@@ -297,8 +296,10 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
               {machineUsages.length > 0 ? (
                 <div className="divide-y">
                   {machineUsages.map((usage) => (
-                    <Dialog key={usage.id}>
-                      <DialogTrigger asChild>
+                    <ProjectDetails
+                      key={usage.id}
+                      projectId={usage.projectId as Id<"projects">}
+                      trigger={
                         <button
                           className={cn(
                             "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/40 active:bg-muted/60",
@@ -308,7 +309,7 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                           <div
                             className={cn(
                               "h-8 w-1 rounded-full shrink-0",
-                              usage.color ? "bg-blue-500" : "bg-blue-400",
+                              usage.color || "bg-blue-500",
                               usage.projectStatus === "pending" && "opacity-50",
                             )}
                           />
@@ -320,9 +321,8 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                             {formatShortTime(usage.endTime)}
                           </span>
                         </button>
-                      </DialogTrigger>
-                      <UsageDetailsDialog usage={usage} machine={machine} />
-                    </Dialog>
+                      }
+                    />
                   ))}
                 </div>
               ) : (
@@ -390,75 +390,6 @@ function MachineDetailsDialog({ machine }: { machine: Machine }) {
             Close
           </Button>
         </DialogTrigger>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-/**
- * Placeholder Dialog Content for viewing usage details
- */
-function UsageDetailsDialog({
-  usage,
-  machine,
-}: {
-  usage: MachineUsage;
-  machine: Machine;
-}) {
-  return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <Info className="h-5 w-5 text-primary" />
-          Usage Details
-        </DialogTitle>
-        <DialogDescription>
-          Information regarding the scheduled machine time.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <span className="text-sm font-bold">Project:</span>
-          <span className="col-span-3 text-sm">{usage.projectAlias}</span>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <span className="text-sm font-bold">Machine:</span>
-          <span className="col-span-3 text-sm">{machine.name}</span>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <span className="text-sm font-bold">Maker:</span>
-          <span className="col-span-3 text-sm">{usage.makerName}</span>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <span className="text-sm font-bold">Time:</span>
-          <span className="col-span-3 text-sm">
-            {formatDecimalTime(usage.startTime)} -{" "}
-            {formatDecimalTime(usage.endTime)}
-          </span>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <span className="text-sm font-bold">Status:</span>
-          <span className="col-span-3">
-            <Badge
-              variant={
-                usage.projectStatus === "approved" ? "default" : "secondary"
-              }
-              className="capitalize"
-            >
-              {usage.projectStatus}
-            </Badge>
-          </span>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" type="button" className="w-full sm:w-auto">
-          Close
-        </Button>
-        {usage.projectStatus === "pending" && (
-          <Button type="button" className="w-full sm:w-auto">
-            Review Project
-          </Button>
-        )}
       </DialogFooter>
     </DialogContent>
   );

@@ -66,6 +66,12 @@ export default defineSchema({
 
   resourceUsage: defineTable({
     resource: v.optional(v.id("resources")),
+    material: v.optional(
+      v.object({
+        type: v.string(),
+        amount: v.string(),
+      }),
+    ),
     service: v.id("services"),
     project: v.id("projects"),
     maker: v.optional(v.id("userProfile")),

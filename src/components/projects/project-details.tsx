@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -12,21 +11,17 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {
-  Clipboard,
-  Calendar,
-  File,
-  CheckCircle,
-  XCircle,
-  MessageSquare,
-} from "lucide-react";
+import { CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import Link from "next/link";
 
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { STATUS_STYLES } from "./project-card";
 import { PricingEstimateCard } from "./pricing-estimate-card";
 import { ProjectTimeline } from "@/components/projects/project-timeline";
 import { Label } from "@/components/ui/label";
-import { useQuery } from "convex/react";
+import { MessageAttachments } from "@/components/chat/parts/message-attachments";
+import { useQuery, useMutation } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@/../convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 
@@ -44,7 +39,6 @@ export function ProjectDetails({
   projectId,
   bookingDate,
   bookingTime,
-  serviceName,
   trigger,
   triggerClassName,
   buttonLabel = "View Details",
@@ -52,6 +46,19 @@ export function ProjectDetails({
   const project = useQuery(api.projects.query.getProject, {
     projectId,
   });
+
+  const updateProject = useMutation(api.projects.mutate.updateProject);
+
+  const handleUpdateStatus = async (
+    newStatus: "approved" | "rejected" | "completed",
+  ) => {
+    try {
+      await updateProject({ projectId, status: newStatus });
+      toast.success(`Project ${newStatus} successfully!`);
+    } catch {
+      toast.error(`Failed to update project to ${newStatus}`);
+    }
+  };
 
   const styles = project
     ? (STATUS_STYLES[project.status] ?? STATUS_STYLES.pending)
@@ -68,31 +75,39 @@ export function ProjectDetails({
         {
           title: "Admin review",
           statusLabel:
-            project.status === "pending"
-              ? "Pending"
-              : project.status === "approved"
-                ? "Completed"
-                : "Pending",
+            project.status === "rejected"
+              ? "Rejected"
+              : project.status === "pending"
+                ? "Pending"
+                : "Completed",
           byLabel: project.status === "pending" ? "Waiting" : "Admin",
           active: project.status === "pending",
           completed:
             project.status === "approved" || project.status === "completed",
+          rejected: project.status === "rejected",
         },
         {
           title: "Maker assignment",
           statusLabel:
-            project.status === "approved"
-              ? "Completed"
-              : project.status === "completed"
+            project.status === "rejected"
+              ? "Cancelled"
+              : project.status === "approved"
                 ? "Completed"
-                : "Pending",
+                : project.status === "completed"
+                  ? "Completed"
+                  : "Pending",
           byLabel: project.status === "approved" ? "Assigned" : "Waiting",
           active: project.status === "approved",
           completed: project.status === "completed",
         },
         {
           title: "Project execution",
-          statusLabel: project.status === "completed" ? "Completed" : "Pending",
+          statusLabel:
+            project.status === "rejected"
+              ? "Cancelled"
+              : project.status === "completed"
+                ? "Completed"
+                : "Pending",
           byLabel: project.status === "completed" ? "Finished" : "Waiting",
           active: project.status === "completed",
           completed: project.status === "completed",
@@ -102,13 +117,15 @@ export function ProjectDetails({
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
           <Button variant="outline" className={cn("w-full", triggerClassName)}>
             {buttonLabel}
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
 
       <DialogContent className="max-h-[92vh] sm:max-w-6xl overflow-x-hidden overflow-y-auto rounded-xl p-4 sm:p-6">
         {!project ? (
@@ -127,6 +144,8 @@ export function ProjectDetails({
                   variant="outline"
                   size="sm"
                   className="w-full sm:w-auto"
+                  disabled={project.status !== "pending"}
+                  onClick={() => handleUpdateStatus("approved")}
                 >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Approve & Assign
@@ -135,18 +154,37 @@ export function ProjectDetails({
                   variant="outline"
                   size="sm"
                   className="w-full sm:w-auto"
+                  disabled={project.status !== "pending"}
+                  onClick={() => handleUpdateStatus("rejected")}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
                   Reject Request
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Message Client
-                </Button>
+                {project.roomId && project.threadId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    asChild
+                  >
+                    <Link
+                      href={`/dashboard/chat/${project.roomId}?thread=${project.threadId}`}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Message Client
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    disabled
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Message Client
+                  </Button>
+                )}
               </div>
             </DialogHeader>
 
@@ -238,7 +276,18 @@ export function ProjectDetails({
                         <Label className="text-muted-foreground text-xs font-normal">
                           Estimated Duration
                         </Label>
-                        <p className="text-sm">2.5 hours</p>
+                        <p className="text-sm">
+                          {project.resourceUsages &&
+                          project.resourceUsages.length > 0
+                            ? `${(
+                                project.resourceUsages.reduce(
+                                  (acc, u) => acc + (u.endTime - u.startTime),
+                                  0,
+                                ) /
+                                (1000 * 60 * 60)
+                              ).toFixed(1)} hours`
+                            : "Not specified"}
+                        </p>
                       </Field>
                     </FieldGroup>
                     <FieldGroup>
@@ -256,6 +305,23 @@ export function ProjectDetails({
                     <h3 className="text-base font-semibold sm:text-lg">
                       File Uploads
                     </h3>
+                    {project.resolvedFiles &&
+                    project.resolvedFiles.length > 0 ? (
+                      <MessageAttachments
+                        files={project.resolvedFiles
+                          .filter((f) => !!f.url)
+                          .map((f) => ({
+                            fileUrl: f.url!,
+                            fileType: f.type,
+                            originalName: f.originalName,
+                          }))}
+                        isCurrentUser={false}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No files uploaded.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -286,6 +352,12 @@ export function ProjectDetails({
                             <p className="mt-0.5 text-xs text-muted-foreground wrap-break-word">
                               Maker: {usage.makerName ?? "Unassigned"}
                             </p>
+                            {usage.material && (
+                              <p className="mt-0.5 text-xs text-muted-foreground wrap-break-word">
+                                Material: {usage.material.amount}{" "}
+                                {usage.material.type}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>

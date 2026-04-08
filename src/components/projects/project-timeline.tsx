@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown, CheckCircle2, Circle } from "lucide-react";
+import { ChevronDown, CheckCircle2, Circle, XCircle } from "lucide-react";
 
 export type ProjectTimelineStep = {
   title: string;
@@ -10,6 +10,7 @@ export type ProjectTimelineStep = {
   byLabel: string;
   active?: boolean;
   completed?: boolean;
+  rejected?: boolean;
 };
 
 interface ProjectTimelineProps {
@@ -20,22 +21,31 @@ interface ProjectTimelineProps {
 function StepDot({
   active,
   completed,
+  rejected,
 }: {
   active?: boolean;
   completed?: boolean;
+  rejected?: boolean;
 }) {
   return (
     <div
       className={cn(
         "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-background shadow-sm sm:h-10 sm:w-10",
-        completed && "border-chart-6 bg-secondary/10 text-chart-6",
-        active && !completed && "border-primary bg-primary-muted text-primary",
+        completed && !rejected && "border-chart-6 bg-secondary/10 text-chart-6",
+        rejected && "border-red-500 bg-red-50 text-red-500",
+        active &&
+          !completed &&
+          !rejected &&
+          "border-primary bg-primary-muted text-primary",
         !active &&
           !completed &&
+          !rejected &&
           "border-muted-foreground/20 bg-muted text-muted-foreground",
       )}
     >
-      {completed ? (
+      {rejected ? (
+        <XCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+      ) : completed ? (
         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
       ) : (
         <Circle className="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" />
@@ -77,6 +87,7 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                       <StepDot
                         active={step.active}
                         completed={step.completed}
+                        rejected={step.rejected}
                       />
                       {!isLast && (
                         <div className="my-2 h-full w-px flex-1 bg-muted-foreground/20" />
@@ -122,7 +133,11 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                 className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4"
               >
                 <div className="flex w-36 shrink-0 flex-col items-center text-center sm:w-44 lg:w-full lg:max-w-44">
-                  <StepDot active={step.active} completed={step.completed} />
+                  <StepDot
+                    active={step.active}
+                    completed={step.completed}
+                    rejected={step.rejected}
+                  />
 
                   <div className="mt-3 space-y-1">
                     <h4 className="text-[11px] font-semibold leading-tight sm:text-sm wrap-break-word">

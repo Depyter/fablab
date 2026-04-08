@@ -195,3 +195,28 @@ export const createProject = authMutation({
     return { roomId, threadId };
   },
 });
+
+export const updateProject = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("rejected"),
+        v.literal("completed"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const { projectId, status } = args;
+    const updates: Partial<{
+      status: "pending" | "approved" | "rejected" | "completed";
+    }> = {};
+
+    if (status !== undefined) updates.status = status;
+
+    await ctx.db.patch(projectId, updates);
+  },
+});

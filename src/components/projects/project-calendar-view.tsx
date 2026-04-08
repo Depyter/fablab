@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
 import { ResourceStatus, ServiceStatus } from "@convex/constants";
+import { STATUS_STYLES } from "@/components/projects/project-card";
 
 function getSnappedDecimalHours(ms: number, ceil = false) {
   const d = new Date(ms);
@@ -73,7 +74,9 @@ export function ProjectCalendarView() {
       date: b.date,
       startTime: getSnappedDecimalHours(b.startTime, false),
       endTime: getSnappedDecimalHours(b.endTime, true),
-      color: "bg-blue-500/10 border-blue-500 text-blue-700",
+      color:
+        STATUS_STYLES[b.project?.status || "pending"]?.badge ||
+        "bg-blue-500/10 border-blue-500 text-blue-700",
     }));
 
   const serviceMachines: Machine[] = services.map((s) => ({
@@ -98,7 +101,9 @@ export function ProjectCalendarView() {
       date: b.date,
       startTime: getSnappedDecimalHours(b.startTime, false),
       endTime: getSnappedDecimalHours(b.endTime, true),
-      color: "bg-purple-500/10 border-purple-500 text-purple-700",
+      color:
+        STATUS_STYLES[b.project?.status || "pending"]?.badge ||
+        "bg-purple-500/10 border-purple-500 text-purple-700",
     }));
 
   const filteredResourceUsages = resourceUsages.filter((u) =>
