@@ -51,7 +51,7 @@ export function ManageCard({
           <span
             className={cn(
               "absolute top-2.5 right-2.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-sm bg-background/70",
-              badgeClassName
+              badgeClassName,
             )}
           >
             {badgeText}

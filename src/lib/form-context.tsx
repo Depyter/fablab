@@ -76,6 +76,40 @@ export const { useAppForm, withForm } = createFormHook({
         </Field>
       );
     },
+    NumberInput: (props: {
+      label: string;
+      placeholder?: string;
+      required?: boolean;
+      min?: number;
+      max?: number;
+      step?: number;
+    }) => {
+      const field = useFieldContext<number>();
+      return (
+        <Field>
+          <FieldLabel htmlFor={field.name}>{props.label}</FieldLabel>
+          <Input
+            id={field.name}
+            type="number"
+            placeholder={props.placeholder}
+            value={field.state.value}
+            onBlur={field.handleBlur}
+            onChange={(e) => field.handleChange(Number(e.target.value))}
+            required={props.required}
+            min={props.min}
+            max={props.max}
+            step={props.step}
+          />
+          {field.state.meta.errors?.length > 0 && (
+            <FieldError
+              errors={field.state.meta.errors.map((err) => ({
+                message: err?.toString() ?? "Invalid value",
+              }))}
+            />
+          )}
+        </Field>
+      );
+    },
     SelectInput: (props: {
       label: string;
       placeholder?: string;

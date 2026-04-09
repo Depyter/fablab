@@ -14,6 +14,9 @@ import {
 } from "./constants";
 
 export default defineSchema({
+  // --------------------------------------------------------
+  // EXISTING: Files
+  // --------------------------------------------------------
   files: defineTable({
     originalName: v.string(),
     storageId: v.id("_storage"),
@@ -26,25 +29,54 @@ export default defineSchema({
     .index("by_storageId", ["storageId"])
     .index("status", ["status"]),
 
-  // Services that the users can see and admin can manage
+  // --------------------------------------------------------
+  // 1. SERVICES: Defines the offering and pricing rules
+  // --------------------------------------------------------
   services: defineTable({
     name: v.string(),
     slug: v.string(),
-    images: v.array(v.id("_storage")), // array of fileids in convex
+    images: v.array(v.id("_storage")),
     samples: v.array(v.id("_storage")),
-    regularPrice: v.number(),
-    upPrice: v.number(),
-    unitPrice: v.string(),
     description: v.string(),
     requirements: v.array(v.string()),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
+    materials: v.optional(v.array(v.id("materials"))),
+    availableDays: v.optional(v.array(v.number())),
     status: v.union(
       v.literal(ServiceStatus.UNAVAILABLE),
       v.literal(ServiceStatus.AVAILABLE),
     ),
+    serviceCategory: v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+    // Polymorphic pricing structure
+    pricing: v.union(
+      v.object({
+        type: v.literal("FIXED"),
+        amount: v.number(),
+        upAmount: v.optional(v.number()),
+      }),
+      v.object({
+        type: v.literal("PER_UNIT"),
+        baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
+        unitName: v.string(), // e.g., "hour", "sqft"
+        ratePerUnit: v.number(),
+        upRatePerUnit: v.optional(v.number()),
+      }),
+      v.object({
+        type: v.literal("COMPOSITE"), // e.g., 3D Printing
+        baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
+        unitName: v.string(),
+        timeRate: v.number(),
+        upTimeRate: v.optional(v.number()),
+      }),
+    ),
   }).index("by_slug", ["slug"]),
 
+  // --------------------------------------------------------
+  // 2. RESOURCES: Non-consumable, bookable assets (Time-based)
+  // --------------------------------------------------------
   resources: defineTable({
     name: v.string(),
     category: v.union(
@@ -63,18 +95,62 @@ export default defineSchema({
     ),
   }).index("by_category", ["category"]),
 
+  // --------------------------------------------------------
+  // 3. MATERIALS: Consumable inventory (Quantity-based)
+  // --------------------------------------------------------
+  materials: defineTable({
+    name: v.string(),
+    category: v.string(), // e.g., "Filament", "Wood", "Kits"
+    unit: v.string(), // e.g., "grams", "sheets", "pcs"
+    currentStock: v.number(),
+    costPerUnit: v.optional(v.number()),
+    pricePerUnit: v.optional(v.number()),
+    reorderThreshold: v.optional(v.number()),
+    color: v.optional(v.string()),
+    status: v.union(
+      v.literal("IN_STOCK"),
+      v.literal("LOW_STOCK"),
+      v.literal("OUT_OF_STOCK"),
+    ),
+    image: v.optional(v.id("_storage")),
+  })
+    .index("by_category", ["category"])
+    .index("by_status", ["status"]),
+
+  // --------------------------------------------------------
+  // 4. RESOURCE USAGE: The scheduling & consumption engine
+  // --------------------------------------------------------
   resourceUsage: defineTable({
     resource: v.optional(v.id("resources")),
     service: v.id("services"),
-    project: v.id("projects"),
+    usageMode: v.union(
+      v.literal("EXCLUSIVE"), // One project locks the resource
+      v.literal("SHARED"), // Multiple projects/users can join
+    ),
+    projects: v.array(v.id("projects")),
+    maxCapacity: v.optional(v.number()),
     maker: v.optional(v.id("userProfile")),
+
+    // Inventory deductions mapped to this specific session
+    materialsUsed: v.optional(
+      v.array(
+        v.object({
+          materialId: v.id("materials"),
+          amountUsed: v.number(),
+        }),
+      ),
+    ),
+
     startTime: v.number(),
     endTime: v.number(),
     date: v.number(),
   })
     .index("by_date_resource_startTime", ["date", "resource", "startTime"])
-    .index("by_project", ["project"]),
+    .index("by_service", ["service"]),
 
+  // --------------------------------------------------------
+  // 5. PROJECTS: User submissions & financial line items
+  // --------------------------------------------------------
   projects: defineTable({
     name: v.string(),
     description: v.string(),
@@ -86,8 +162,21 @@ export default defineSchema({
       v.literal(ProjectMaterial.PROVIDE_OWN),
       v.literal(ProjectMaterial.BUY_FROM_LAB),
     ),
+    requestedMaterialId: v.optional(v.id("materials")), // What the client selected
+
     userId: v.id("userProfile"),
     service: v.id("services"),
+
+    // Frozen calculated cost breakdown for history/receipts
+    costBreakdown: v.optional(
+      v.object({
+        baseFee: v.number(),
+        materialCost: v.number(),
+        timeCost: v.number(),
+        total: v.number(),
+      }),
+    ),
+
     pricing: v.union(
       v.literal(ProjectPricing.NORMAL),
       v.literal(ProjectPricing.UP),
@@ -100,11 +189,13 @@ export default defineSchema({
       v.literal(ProjectStatus.COMPLETED),
     ),
     receipt: v.optional(v.id("receipts")),
-    files: v.optional(v.array(v.string())), // storageId given by the frontend
-    resources: v.optional(v.array(v.id("resources"))),
+    files: v.optional(v.array(v.string())),
     notes: v.string(),
   }).index("by_userProfile", ["userId"]),
 
+  // --------------------------------------------------------
+  // EXISTING TABLES: Keep existing unmodified
+  // --------------------------------------------------------
   receipts: defineTable({
     receiptNumber: v.int64(),
     paymentMode: v.union(
@@ -113,14 +204,13 @@ export default defineSchema({
       v.literal(PaymentMode.BANK_TRANSFER),
       v.literal(PaymentMode.OTHERS),
     ),
-    booking: v.id("bookings"),
-    proof: v.string(), // transaction number of the proof
-    image: v.optional(v.id("_storage")), // optional file upload for proof of payment
+    proof: v.string(),
+    image: v.optional(v.id("_storage")),
   }),
 
   rooms: defineTable({
     name: v.string(),
-    color: v.string(), // can be a string literal if need be down the road
+    color: v.string(),
     lastMessageText: v.optional(v.string()),
     lastMessageAt: v.optional(v.number()),
     unreadCount: v.optional(v.number()),
@@ -160,15 +250,8 @@ export default defineSchema({
     file: v.optional(v.array(v.id("_storage"))),
     sender: v.union(v.string(), v.id("userProfile")),
     room: v.id("rooms"),
-    // DIRECTION 2 (Everything is a thread):
-    // To normalize this further, you could make `threadId: v.id("threads")` required.
-    // The main room chat would just be a default "General" thread created alongside the room.
-    // This fully normalizes the data and simplifies queries, as every message always belongs to a thread.
     threadId: v.optional(v.id("threads")),
-  })
-    // DIRECTION 1: Compound index to efficiently query both main room and specific threads
-    // without needing .filter() scans.
-    .index("by_room_and_thread", ["room", "threadId"]),
+  }).index("by_room_and_thread", ["room", "threadId"]),
 
   userProfile: defineTable({
     userId: v.string(),

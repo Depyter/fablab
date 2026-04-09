@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { publicQuery } from "../helper";
+import type { Id } from "../_generated/dataModel";
 
 export const getServices = publicQuery({
   args: {},
@@ -33,6 +34,40 @@ export const getService = publicQuery({
     const sampleUrls = (
       await Promise.all(service.samples.map((id) => ctx.storage.getUrl(id)))
     ).filter((url): url is string => url !== null);
-    return { ...service, imageUrls, sampleUrls };
+
+    let materialDetails: Array<{
+      _id: Id<"materials">;
+      name: string;
+      category: string;
+      unit: string;
+      pricePerUnit?: number;
+      costPerUnit?: number;
+      currentStock?: number;
+      status?: string;
+      imageUrl: string | null;
+    }> = [];
+    if (service.materials && service.materials.length > 0) {
+      materialDetails = await Promise.all(
+        service.materials.map(async (materialId) => {
+          const material = await ctx.db.get(materialId);
+          const imageUrl = material?.image
+            ? await ctx.storage.getUrl(material.image)
+            : null;
+          return {
+            _id: materialId,
+            name: material?.name || "Unknown",
+            category: material?.category || "",
+            unit: material?.unit || "",
+            pricePerUnit: material?.pricePerUnit,
+            costPerUnit: material?.costPerUnit,
+            currentStock: material?.currentStock,
+            status: material?.status,
+            imageUrl,
+          };
+        }),
+      );
+    }
+
+    return { ...service, imageUrls, sampleUrls, materialDetails };
   },
 });

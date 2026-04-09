@@ -9,35 +9,138 @@ import { ActionDialog } from "../action-dialog";
 
 type EstimationValues = {
   basePrice: number;
-  estimatedDurationHours: number;
+  duration: number;
+  durationRate: number;
   materialCost: number;
   estimatedMaterialUsed: string;
 };
 
 interface PricingEstimateCardProps {
   material: string;
+  service?: {
+    pricing:
+      | { type: "FIXED"; amount: number; upAmount?: number }
+      | {
+          type: "PER_UNIT";
+          baseFee: number;
+          upBaseFee?: number;
+          unitName: string;
+          ratePerUnit: number;
+          upRatePerUnit?: number;
+        }
+      | {
+          type: "COMPOSITE";
+          baseFee: number;
+          upBaseFee?: number;
+          unitName: string;
+          timeRate: number;
+          upTimeRate?: number;
+        };
+    name?: string;
+  };
+  projectPricing?: "normal" | "UP" | "Special";
+  resourceUsages?: Array<{
+    startTime: number;
+    endTime: number;
+    materialsUsed?: Array<{ amountUsed: number; materialId: string }>;
+  }>;
   initialValues?: Partial<EstimationValues>;
   onSave?: (values: EstimationValues) => void;
 }
 
 export function PricingEstimateCard({
   material,
+  service,
+  resourceUsages,
   initialValues,
   onSave,
+  projectPricing = "normal",
 }: PricingEstimateCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+
+  const defaultDurationMs =
+    resourceUsages?.reduce((acc, u) => acc + (u.endTime - u.startTime), 0) || 0;
+
+  let defaultDuration = 0;
+  let unitName = "unit";
+  let defaultRate = 0;
+  let baseFee = 0;
+
+  if (service?.pricing) {
+    const isUp = projectPricing === "UP";
+    if (service.pricing.type === "FIXED") {
+      defaultDuration = 1;
+      baseFee =
+        isUp && service.pricing.upAmount !== undefined
+          ? service.pricing.upAmount
+          : service.pricing.amount;
+    } else if (service.pricing.type === "PER_UNIT") {
+      unitName = service.pricing.unitName;
+      defaultRate =
+        isUp && service.pricing.upRatePerUnit !== undefined
+          ? service.pricing.upRatePerUnit
+          : service.pricing.ratePerUnit;
+      baseFee =
+        isUp && service.pricing.upBaseFee !== undefined
+          ? service.pricing.upBaseFee
+          : service.pricing.baseFee;
+      if (unitName === "min" || unitName === "minute") {
+        defaultDuration = defaultDurationMs / (1000 * 60);
+      } else if (unitName === "hr" || unitName === "hour") {
+        defaultDuration = defaultDurationMs / (1000 * 60 * 60);
+      } else {
+        defaultDuration = 1;
+      }
+    } else if (service.pricing.type === "COMPOSITE") {
+      unitName = service.pricing.unitName;
+      defaultRate =
+        isUp && service.pricing.upTimeRate !== undefined
+          ? service.pricing.upTimeRate
+          : service.pricing.timeRate;
+      baseFee =
+        isUp && service.pricing.upBaseFee !== undefined
+          ? service.pricing.upBaseFee
+          : service.pricing.baseFee;
+      if (unitName === "min" || unitName === "minute") {
+        defaultDuration = defaultDurationMs / (1000 * 60);
+      } else if (unitName === "hr" || unitName === "hour") {
+        defaultDuration = defaultDurationMs / (1000 * 60 * 60);
+      } else {
+        defaultDuration = 1;
+      }
+    }
+  }
+
+  const defaultMaterialAmount =
+    resourceUsages
+      ?.find((u) => u.materialsUsed && u.materialsUsed.length > 0)
+      ?.materialsUsed?.[0]?.amountUsed?.toString() || "0";
+  const defaultMaterialType = "units";
+
   const [values, setValues] = useState<EstimationValues>({
-    basePrice: initialValues?.basePrice ?? 0,
-    estimatedDurationHours: initialValues?.estimatedDurationHours ?? 2.5,
+    basePrice: initialValues?.basePrice ?? baseFee,
+    duration: initialValues?.duration ?? defaultDuration,
+    durationRate: initialValues?.durationRate ?? defaultRate,
     materialCost: initialValues?.materialCost ?? 0,
-    estimatedMaterialUsed: initialValues?.estimatedMaterialUsed ?? "500 g",
+    estimatedMaterialUsed:
+      initialValues?.estimatedMaterialUsed ??
+      (defaultMaterialAmount !== "0"
+        ? `${defaultMaterialAmount} ${defaultMaterialType}`
+        : "500 g"),
   });
 
   const total = useMemo(() => {
+    const durationCost = values.duration * values.durationRate;
     return material === "buy-from-lab"
-      ? values.basePrice + values.materialCost
-      : values.basePrice;
-  }, [material, values.basePrice, values.materialCost]);
+      ? values.basePrice + durationCost + values.materialCost
+      : values.basePrice + durationCost;
+  }, [
+    material,
+    values.basePrice,
+    values.duration,
+    values.durationRate,
+    values.materialCost,
+  ]);
 
   const toggleEdit = () => {
     if (isEditing && onSave) {
@@ -55,27 +158,66 @@ export function PricingEstimateCard({
 
         <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
           <span className="text-muted-foreground">Base Price</span>
-          <span>₱{values.basePrice.toFixed(2)}</span>
-        </div>
-
-        <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-muted-foreground">Est. Duration</span>
           {isEditing ? (
             <Input
               type="number"
               min={0}
-              step="0.5"
-              value={values.estimatedDurationHours}
+              step="0.01"
+              value={values.basePrice}
               onChange={(e) =>
                 setValues((prev) => ({
                   ...prev,
-                  estimatedDurationHours: Number(e.target.value || 0),
+                  basePrice: Number(e.target.value || 0),
                 }))
               }
               className="h-8 w-full text-right sm:w-36"
             />
           ) : (
-            <span>{values.estimatedDurationHours} hrs</span>
+            <span>₱{values.basePrice.toFixed(2)}</span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-muted-foreground">Duration ({unitName})</span>
+          {isEditing ? (
+            <Input
+              type="number"
+              min={0}
+              step="0.1"
+              value={values.duration}
+              onChange={(e) =>
+                setValues((prev) => ({
+                  ...prev,
+                  duration: Number(e.target.value || 0),
+                }))
+              }
+              className="h-8 w-full text-right sm:w-36"
+            />
+          ) : (
+            <span>
+              {values.duration.toFixed(1)} {unitName}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-muted-foreground">Rate per {unitName}</span>
+          {isEditing ? (
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={values.durationRate}
+              onChange={(e) =>
+                setValues((prev) => ({
+                  ...prev,
+                  durationRate: Number(e.target.value || 0),
+                }))
+              }
+              className="h-8 w-full text-right sm:w-36"
+            />
+          ) : (
+            <span>₱{values.durationRate.toFixed(2)}</span>
           )}
         </div>
 
@@ -132,16 +274,15 @@ export function PricingEstimateCard({
 
       <CardFooter className="pt-0 flex flex-col gap-2 sm:justify-end">
         {isEditing && (
-            <ActionDialog
-                title="Discard Estimate Changes"
-                description="Are you sure you want to cancel the changes?"
-                onConfirm={() => setIsEditing(false)}
-                cancelButtonText="Back"
-                confirmButtonText="Discard"
-                className="w-full"
-                baseActionText="Cancel"
-            />
-          
+          <ActionDialog
+            title="Discard Estimate Changes"
+            description="Are you sure you want to cancel the changes?"
+            onConfirm={() => setIsEditing(false)}
+            cancelButtonText="Back"
+            confirmButtonText="Discard"
+            className="w-full"
+            baseActionText="Cancel"
+          />
         )}
         <Button
           variant="outline"

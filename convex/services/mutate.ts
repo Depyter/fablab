@@ -1,6 +1,5 @@
 import { internalMutation } from "../_generated/server";
 import { v, ConvexError } from "convex/values";
-import type { Id } from "../_generated/dataModel";
 import {
   authMutation,
   checkAuthority,
@@ -44,11 +43,34 @@ export const addService = authMutation({
     samples: v.array(v.id("_storage")),
     description: v.string(),
     requirements: v.array(v.string()),
-    regularPrice: v.number(),
-    upPrice: v.number(),
-    unitPrice: v.string(),
+    serviceCategory: v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+    pricing: v.union(
+      v.object({
+        type: v.literal("FIXED"),
+        amount: v.number(),
+        upAmount: v.optional(v.number()),
+      }),
+      v.object({
+        type: v.literal("PER_UNIT"),
+        baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
+        unitName: v.string(),
+        ratePerUnit: v.number(),
+        upRatePerUnit: v.optional(v.number()),
+      }),
+      v.object({
+        type: v.literal("COMPOSITE"),
+        baseFee: v.number(),
+        upBaseFee: v.optional(v.number()),
+        unitName: v.string(),
+        timeRate: v.number(),
+        upTimeRate: v.optional(v.number()),
+      }),
+    ),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
+    materials: v.optional(v.array(v.id("materials"))),
+    availableDays: v.optional(v.array(v.number())),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
@@ -57,11 +79,12 @@ export const addService = authMutation({
       slug: slugify(args.name),
       images: args.images,
       description: args.description,
-      regularPrice: args.regularPrice,
-      upPrice: args.upPrice,
-      unitPrice: args.unitPrice,
+      serviceCategory: args.serviceCategory,
+      pricing: args.pricing,
       fileTypes: args.fileTypes,
       resources: args.resources,
+      materials: args.materials,
+      availableDays: args.availableDays,
       status: args.status,
       requirements: args.requirements,
       samples: args.samples,
@@ -77,12 +100,39 @@ export const updateService = authMutation({
   args: {
     service: v.id("services"),
     name: v.optional(v.string()),
-    regularPrice: v.optional(v.number()),
-    upPrice: v.optional(v.number()),
-    unitPrice: v.optional(v.string()),
+    serviceCategory: v.optional(
+      v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+    ),
+    pricing: v.optional(
+      v.union(
+        v.object({
+          type: v.literal("FIXED"),
+          amount: v.number(),
+          upAmount: v.optional(v.number()),
+        }),
+        v.object({
+          type: v.literal("PER_UNIT"),
+          baseFee: v.number(),
+          upBaseFee: v.optional(v.number()),
+          unitName: v.string(),
+          ratePerUnit: v.number(),
+          upRatePerUnit: v.optional(v.number()),
+        }),
+        v.object({
+          type: v.literal("COMPOSITE"),
+          baseFee: v.number(),
+          upBaseFee: v.optional(v.number()),
+          unitName: v.string(),
+          timeRate: v.number(),
+          upTimeRate: v.optional(v.number()),
+        }),
+      ),
+    ),
     requirements: v.optional(v.array(v.string())),
     fileTypes: v.optional(v.array(v.string())),
     resources: v.optional(v.array(v.id("resources"))),
+    materials: v.optional(v.array(v.id("materials"))),
+    availableDays: v.optional(v.array(v.number())),
     description: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -96,19 +146,8 @@ export const updateService = authMutation({
     if (!authorization)
       throw new ConvexError("Unauthorized. Cannot add service.");
 
-    const updates: Partial<{
-      name: string;
-      slug: string;
-      regularPrice: number;
-      upPrice: number;
-      unitPrice: string;
-      requirements: string[];
-      fileTypes: string[];
-      resources: Id<"resources">[];
-      description: string;
-      type: string;
-      status: "Unavailable" | "Available";
-    }> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updates: Record<string, any> = {};
 
     if (args.name !== undefined) {
       updates.name = args.name;
@@ -116,16 +155,18 @@ export const updateService = authMutation({
     }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
-    if (args.regularPrice !== undefined)
-      updates.regularPrice = args.regularPrice;
-    if (args.upPrice !== undefined) updates.upPrice = args.upPrice;
-    if (args.unitPrice !== undefined) updates.unitPrice = args.unitPrice;
+    if (args.serviceCategory !== undefined)
+      updates.serviceCategory = args.serviceCategory;
+    if (args.pricing !== undefined) updates.pricing = args.pricing;
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;
     if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
     if (args.resources !== undefined) updates.resources = args.resources;
+    if (args.materials !== undefined) updates.materials = args.materials;
+    if (args.availableDays !== undefined)
+      updates.availableDays = args.availableDays;
 
-    await ctx.db.patch("services", args.service, updates);
+    await ctx.db.patch(args.service, updates);
   },
 });
 

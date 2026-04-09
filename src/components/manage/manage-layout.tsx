@@ -14,11 +14,7 @@ interface ManageHeaderProps {
   children?: ReactNode; // For actions like Add buttons, view toggles
 }
 
-export function ManageHeader({
-  title,
-  subtitle,
-  children,
-}: ManageHeaderProps) {
+export function ManageHeader({ title, subtitle, children }: ManageHeaderProps) {
   return (
     <div className="flex items-center gap-2 px-4 py-3 border-b shrink-0">
       <div className="flex-1 min-w-0">

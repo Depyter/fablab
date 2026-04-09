@@ -113,31 +113,105 @@ export function ServiceDetailClient({
 
               {/* Pricing Section */}
               <div className="border-t border-sidebar-border/30 pt-10 mb-12">
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
-                      <PhilippinePeso className="h-3 w-3" />
-                      Regular Rate
-                    </h4>
-                    <p className="text-xl font-black tracking-tight">
-                      ₱{service.regularPrice.toLocaleString()}
-                      <span className="text-xs font-bold text-muted-foreground ml-1">
-                        /{service.unitPrice}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
-                      <CirclePercent className="h-3 w-3" />
-                      UP Rate
-                    </h4>
-                    <p className="text-xl font-black tracking-tight text-primary">
-                      ₱{service.upPrice.toLocaleString()}
-                      <span className="text-xs font-bold text-muted-foreground/60 ml-1">
-                        /{service.unitPrice}
-                      </span>
-                    </p>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  {service.pricing.type === "FIXED" && (
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
+                        <PhilippinePeso className="h-3 w-3" />
+                        Fixed Price
+                      </h4>
+                      <div className="flex flex-col items-start gap-1">
+                        <p className="text-xl font-black tracking-tight">
+                          ₱{service.pricing.amount.toLocaleString()}
+                        </p>
+                        {service.pricing.upAmount !== undefined && (
+                          <p className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <CirclePercent className="h-3 w-3" />
+                            UP: ₱{service.pricing.upAmount.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {service.pricing.type === "PER_UNIT" && (
+                    <>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <PhilippinePeso className="h-3 w-3" />
+                          Base Fee
+                        </h4>
+                        <p className="text-xl font-black tracking-tight">
+                          ₱{service.pricing.baseFee.toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
+                          <CirclePercent className="h-3 w-3" />
+                          Rate Per {service.pricing.unitName}
+                        </h4>
+                        <div className="flex flex-col items-start gap-1">
+                          <p className="text-xl font-black tracking-tight text-primary">
+                            ₱{service.pricing.ratePerUnit.toLocaleString()}
+                          </p>
+                          {service.pricing.upRatePerUnit !== undefined && (
+                            <p className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CirclePercent className="h-3 w-3" />
+                              UP: ₱
+                              {service.pricing.upRatePerUnit.toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                        {service.pricing.upBaseFee !== undefined && (
+                          <p className="text-xs font-bold text-muted-foreground mt-2 flex items-center gap-1">
+                            UP Base Fee: ₱
+                            {service.pricing.upBaseFee.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {service.pricing.type === "COMPOSITE" && (
+                    <>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <PhilippinePeso className="h-3 w-3" />
+                          Base Fee
+                        </h4>
+                        <p className="text-xl font-black tracking-tight">
+                          ₱{service.pricing.baseFee.toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
+                          <CirclePercent className="h-3 w-3" />
+                          Time Rate
+                        </h4>
+                        <div className="flex flex-col items-start gap-1">
+                          <p className="text-xl font-black tracking-tight text-primary flex items-baseline gap-2">
+                            ₱{service.pricing.timeRate.toLocaleString()}
+                            <span className="text-xs font-bold text-muted-foreground/60">
+                              /{service.pricing.unitName}
+                            </span>
+                          </p>
+                          {service.pricing.upTimeRate !== undefined && (
+                            <span className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CirclePercent className="h-3 w-3" />
+                              UP: ₱{service.pricing.upTimeRate.toLocaleString()}
+                              /{service.pricing.unitName}
+                            </span>
+                          )}
+                          {service.pricing.upBaseFee !== undefined && (
+                            <p className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1">
+                              UP Base Fee: ₱
+                              {service.pricing.upBaseFee.toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 mt-10 w-full">
@@ -146,6 +220,19 @@ export function ServiceDetailClient({
                   serviceName={service.name}
                   requirements={service.requirements}
                   fileTypes={service.fileTypes ?? []}
+                  availableDays={service.availableDays ?? []}
+                  serviceMaterials={service.materialDetails ?? []}
+                  hasUpPricing={
+                    (service.pricing.type === "FIXED" &&
+                      service.pricing.upAmount !== undefined) ||
+                    (service.pricing.type === "PER_UNIT" &&
+                      (service.pricing.upBaseFee !== undefined ||
+                        service.pricing.upRatePerUnit !== undefined)) ||
+                    (service.pricing.type === "COMPOSITE" &&
+                      (service.pricing.upBaseFee !== undefined ||
+                        service.pricing.upTimeRate !== undefined))
+                  }
+                  servicePricing={service.pricing}
                 />
               </div>
             </div>

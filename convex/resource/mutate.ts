@@ -130,7 +130,7 @@ export const deleteImageFromResource = authMutation({
 export const updateUsage = authMutation({
   args: {
     id: v.id("resourceUsage"),
-    project: v.optional(v.id("projects")),
+    projects: v.optional(v.array(v.id("projects"))),
     resource: v.optional(v.id("resources")),
     service: v.optional(v.id("services")),
     maker: v.optional(v.id("userProfile")),
@@ -142,16 +142,19 @@ export const updateUsage = authMutation({
     const usage = await ctx.db.get(args.id);
     if (!usage) throw new Error("Usage not found!");
 
-    const project = await ctx.db.get(args.project ?? usage.project);
+    const projectsList = args.projects ?? usage.projects;
+    let isOwner = false;
 
-    if (!project) throw new ConvexError("Project not found!");
-
-    const profile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", project.userId))
-      .first();
-
-    const isOwner = ctx.user.subject === profile?.userId;
+    if (projectsList && projectsList.length > 0) {
+      const project = await ctx.db.get(projectsList[0]);
+      if (project) {
+        const profile = await ctx.db
+          .query("userProfile")
+          .withIndex("by_userId", (q) => q.eq("userId", project.userId))
+          .first();
+        isOwner = ctx.user.subject === profile?.userId;
+      }
+    }
     const isPrivileged = await checkAuthority(
       ["admin", "maker"],
       ctx.user,
@@ -166,14 +169,15 @@ export const updateUsage = authMutation({
       !isPrivileged &&
       (args.resource !== undefined ||
         args.maker !== undefined ||
-        args.project !== undefined)
+        args.projects !== undefined)
     ) {
       throw new ConvexError("Unauthorized. Cannot modify restricted fields.");
     }
 
-    const updates: Record<string, string | number> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updates: Record<string, any> = {};
 
-    if (args.project !== undefined) updates.project = args.project;
+    if (args.projects !== undefined) updates.projects = args.projects;
     if (args.resource !== undefined) updates.resource = args.resource;
     if (args.service !== undefined) updates.service = args.service;
     if (args.maker !== undefined) updates.maker = args.maker;
@@ -194,9 +198,36 @@ export const deleteUsage = authMutation({
     const usage = await ctx.db.get(args.usage);
     if (!usage) throw new ConvexError("Usage not found!");
 
-    const project = await ctx.db.get(usage.project);
-    if (!project) throw new ConvexError("Project not found!");
-
     await ctx.db.delete(args.usage);
+  },
+});
+
+export const createSharedUsage = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    resource: v.id("resources"),
+    service: v.id("services"),
+    maxCapacity: v.number(),
+    startTime: v.number(),
+    endTime: v.number(),
+    date: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const service = await ctx.db.get(args.service);
+    if (!service) throw new ConvexError("Service not found!");
+
+    const resource = await ctx.db.get(args.resource);
+    if (!resource) throw new ConvexError("Resource not found!");
+
+    await ctx.db.insert("resourceUsage", {
+      resource: args.resource,
+      service: args.service,
+      usageMode: "SHARED",
+      maxCapacity: args.maxCapacity,
+      projects: [],
+      startTime: args.startTime,
+      endTime: args.endTime,
+      date: args.date,
+    });
   },
 });

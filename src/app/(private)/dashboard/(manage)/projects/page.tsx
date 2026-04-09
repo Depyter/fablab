@@ -336,7 +336,7 @@ export default function ProjectsList() {
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project._id}
-                projectId={project._id}
+              projectId={project._id}
               title={project.name}
               description={project.description}
               clientName={project.clientName}
@@ -355,76 +355,79 @@ export default function ProjectsList() {
           <div className="border rounded-lg divide-y bg-background overflow-hidden">
             {filteredProjects.map((project) => (
               <ProjectDetails
+                key={project._id}
                 projectId={project._id}
                 trigger={
-                  <div
-                key={project._id}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
-              >
-                {/* Thumbnail */}
-                <div className="h-10 w-14 rounded-md overflow-hidden shrink-0 bg-muted">
-                  {project.coverUrl ? (
-                    <img
-                      src={project.coverUrl}
-                      alt={project.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        "h-full w-full",
-                        project.status === "pending" && "bg-amber-500/20",
-                        project.status === "approved" && "bg-blue-500/20",
-                        project.status === "rejected" && "bg-red-500/20",
-                        project.status === "completed" && "bg-emerald-500/20",
+                  <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
+                    {/* Thumbnail */}
+                    <div className="h-10 w-14 rounded-md overflow-hidden shrink-0 bg-muted">
+                      {project.coverUrl ? (
+                        <img
+                          src={project.coverUrl}
+                          alt={project.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className={cn(
+                            "h-full w-full",
+                            project.status === "pending" && "bg-amber-500/20",
+                            project.status === "approved" && "bg-blue-500/20",
+                            project.status === "rejected" && "bg-red-500/20",
+                            project.status === "completed" &&
+                              "bg-emerald-500/20",
+                          )}
+                        />
                       )}
-                    />
-                  )}
-                </div>
+                    </div>
 
-                <div className="flex flex-1 items-center justify-between min-w-0 gap-3">
-                  {/* Project info */}
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="font-semibold text-sm truncate">
-                      {project.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {project.serviceName} · {project.clientName}
-                    </span>
+                    <div className="flex flex-1 items-center justify-between min-w-0 gap-3">
+                      {/* Project info */}
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="font-semibold text-sm truncate">
+                          {project.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {project.serviceName} · {project.clientName}
+                        </span>
+                      </div>
+
+                      {/* Right-side meta */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs text-muted-foreground hidden md:block whitespace-nowrap">
+                          {new Date(project.bookingDate).toLocaleDateString(
+                            [],
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
+                        </span>
+                        <span className="text-sm font-semibold whitespace-nowrap hidden sm:block">
+                          ₱{project.estimatedPrice.toFixed(2)}
+                        </span>
+
+                        {/* Status pill — always visible */}
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap",
+                            STATUS_STYLES[project.status] ??
+                              "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full shrink-0",
+                              STATUS_DOT[project.status] ??
+                                "bg-muted-foreground",
+                            )}
+                          />
+                          {project.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Right-side meta */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-muted-foreground hidden md:block whitespace-nowrap">
-                      {new Date(project.bookingDate).toLocaleDateString([], {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                    <span className="text-sm font-semibold whitespace-nowrap hidden sm:block">
-                      ₱{project.estimatedPrice.toFixed(2)}
-                    </span>
-
-                    {/* Status pill — always visible */}
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap",
-                        STATUS_STYLES[project.status] ??
-                          "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "h-1.5 w-1.5 rounded-full shrink-0",
-                          STATUS_DOT[project.status] ?? "bg-muted-foreground",
-                        )}
-                      />
-                      {project.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
                 }
               />
             ))}

@@ -54,6 +54,12 @@ export function EditServiceClient({
     value: r._id,
   }));
 
+  const materialsQuery = useQuery(api.materials.query.getMaterials) || [];
+  const materialOptions = materialsQuery.map((m) => ({
+    label: m.name,
+    value: m._id,
+  }));
+
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
@@ -105,9 +111,8 @@ export function EditServiceClient({
     defaultValues: {
       name: service?.name ?? "",
       description: service?.description ?? "",
-      regularPrice: service?.regularPrice ?? 0,
-      upPrice: service?.upPrice ?? 0,
-      unitPrice: service?.unitPrice ?? "",
+      serviceCategory: service?.serviceCategory ?? "WORKSHOP",
+      pricing: service?.pricing ?? { type: "FIXED", amount: 0 },
       status: (service?.status ??
         "Available") as AddServiceFormValues["status"],
       images: (service?.images ?? []) as string[],
@@ -118,6 +123,8 @@ export function EditServiceClient({
           : [""],
       fileTypes: (service?.fileTypes ?? []) as string[],
       resources: (service?.resources ?? []) as string[],
+      materials: (service?.materials ?? []) as string[],
+      availableDays: service?.availableDays ?? [],
     },
     onSubmit: async ({ value }) => {
       if (!service) return;
@@ -129,13 +136,14 @@ export function EditServiceClient({
           service: service._id as Id<"services">,
           name: value.name,
           description: value.description,
-          regularPrice: value.regularPrice,
-          upPrice: value.upPrice,
-          unitPrice: value.unitPrice,
+          serviceCategory: value.serviceCategory,
+          pricing: value.pricing,
           status: value.status,
           requirements: value.requirements.filter((r) => r.trim() !== ""),
           fileTypes: value.fileTypes,
           resources: value.resources as Id<"resources">[],
+          materials: value.materials as Id<"materials">[],
+          availableDays: value.availableDays,
         });
 
         // Navigate to the (possibly renamed) service detail page.
@@ -325,6 +333,19 @@ export function EditServiceClient({
                     options={resourceOptions}
                     title="Resources (Machines, etc.)"
                     placeholder="Select resource..."
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
+              />
+
+              <form.Field
+                name="materials"
+                children={(field) => (
+                  <MultipleSelectForm
+                    options={materialOptions}
+                    title="Allowed Materials"
+                    placeholder="Select materials..."
                     value={field.state.value}
                     onChange={field.handleChange}
                   />

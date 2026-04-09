@@ -40,8 +40,12 @@ export const getBookings = authQuery({
 
     return await Promise.all(
       machineUsages.map(async (usage) => {
+        const firstProjectId =
+          usage.projects && usage.projects.length > 0
+            ? usage.projects[0]
+            : undefined;
         const [project, maker, resource, service] = await Promise.all([
-          ctx.db.get(usage.project),
+          firstProjectId ? ctx.db.get(firstProjectId) : undefined,
           usage.maker ? ctx.db.get(usage.maker) : undefined,
           usage.resource ? ctx.db.get(usage.resource) : undefined,
           ctx.db.get(usage.service),
