@@ -13,7 +13,7 @@ const fablabGoals = [
         shape: (
             <div className="relative h-28 w-28">
                 <div
-                    className="absolute left-8.5 bottom h-10 w-10 rotate-45 rounded-sm"
+                    className="absolute left-8 bottom h-10 w-10 rotate-45 rounded-sm"
                     style={{ backgroundColor: "var(--chart-6)" }}
                 />
                 <div
@@ -25,7 +25,7 @@ const fablabGoals = [
                     style={{ backgroundColor: "var(--chart-3)" }}
                 />
                 <div
-                    className="absolute left-19 top-8 h-10 w-10 rotate-45 rounded-sm"
+                    className="absolute left-16 top-8 h-10 w-10 rotate-45 rounded-sm"
                     style={{ backgroundColor: "var(--primary)" }}
                 />
             </div>

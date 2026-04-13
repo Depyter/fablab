@@ -2,6 +2,7 @@ import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import Link from "next/link";
 import Image from "next/image";
 import { ReactNode } from "react";
+import { PublicMobileNav } from "@/components/sidebar/public-mobile-nav";
 
 export default async function PublicLayout({
   children,
@@ -26,13 +27,17 @@ export default async function PublicLayout({
               </span>
             </Link>
 
+            <div className="sm:hidden">
+              <PublicMobileNav />
+            </div>
+
             <nav className="hidden sm:flex items-center gap-4 md:gap-6 text-white">
-              <Link href="/services" className="text-sm font-medium">
-                Services
-              </Link>
-        
               <Link href="/about" className="text-sm font-medium">
                 About Us
+              </Link>
+
+              <Link href="/services" className="text-sm font-medium">
+                Services
               </Link>
               
               <Link href="/login" className="text-sm font-medium">
