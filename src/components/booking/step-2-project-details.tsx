@@ -96,7 +96,7 @@ export function Step2ProjectDetails({
   };
 
   return (
-    <form onSubmit={handleNext} className="flex flex-col h-full max-h-[80vh]">
+    <form onSubmit={handleNext} className="flex flex-col h-full max-h-[80vh] sm:w-2xl">
       <DialogHeader className="shrink-0 pb-4">
         <DialogTitle className="text-2xl font-extrabold">
           Book {serviceName}
@@ -105,6 +105,25 @@ export function Step2ProjectDetails({
           Provide necessary information for your project request.
         </DialogDescription>
       </DialogHeader>
+
+      <Card className="border border-gray-200 bg-gray-50 rounded-lg">
+        <CardContent className="pt-2 pb-2">
+          <div className="flex flex-col gap-2 text-gray-500">
+            <p className="font-semibold text-gray-700">File Guidelines</p>
+            {requirements.length > 0 ? (
+              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                {requirements.map((req, i) => (
+                  <li key={i}>{req}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-400 text-sm">
+                No strict requirements listed.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
         <FieldGroup>
@@ -320,28 +339,11 @@ export function Step2ProjectDetails({
             )}
           />
 
-          <Card className="border border-gray-200 bg-gray-50 rounded-lg">
-            <CardContent className="pt-6 pb-6">
-              <div className="flex flex-col gap-2 text-gray-500">
-                <p className="font-semibold text-gray-700">File Guidelines</p>
-                {requirements.length > 0 ? (
-                  <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                    {requirements.map((req, i) => (
-                      <li key={i}>{req}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-400 text-sm">
-                    No strict requirements listed.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          
         </FieldGroup>
       </div>
 
-      <div className="shrink-0 pt-6 border-t mt-4 flex items-center justify-between">
+      <div className="shrink-0 pt-6 border-t mt-4 flex items-center justify-end gap-2">
         <Button
           type="button"
           variant="outline"

@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ActionDialog } from "../action-dialog";
 
 interface ProjectDetailsContentProps {
   project: any;
@@ -33,6 +34,8 @@ interface ProjectDetailsContentProps {
   onUpdateStatus: (
     newStatus: "pending" | "approved" | "rejected" | "completed",
   ) => void;
+  isClient: boolean;
+  onCancelProject: () => void;
 }
 
 export function ProjectDetailsContent({
@@ -43,6 +46,8 @@ export function ProjectDetailsContent({
   timelineSteps,
   onOpenAssignView,
   onUpdateStatus,
+  isClient,
+  onCancelProject,
 }: ProjectDetailsContentProps) {
   return (
     <div className="space-y-4">
@@ -52,40 +57,52 @@ export function ProjectDetailsContent({
         </DialogTitle>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                Update Status <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => onUpdateStatus("pending")}
-                disabled={project.status === "pending"}
-              >
-                <Circle className="mr-2 h-4 w-4" /> Mark as Pending
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={onOpenAssignView}
-                disabled={project.status === "approved"}
-              >
-                <CheckCircle className="mr-2 h-4 w-4 text-blue-500" /> Approve & Assign
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onUpdateStatus("completed")}
-                disabled={project.status === "completed"}
-              >
-                <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" /> Complete Project
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onUpdateStatus("rejected")}
-                disabled={project.status === "rejected"}
-                className="text-red-600 focus:text-red-600"
-              >
-                <XCircle className="mr-2 h-4 w-4" /> Reject Request
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isClient ? (
+            <ActionDialog
+              title="Cancel Project Request"
+              description="Do you want to cancel this project request? This cannot be undone."
+              onConfirm={onCancelProject}
+              baseActionText="Cancel Request"
+              cancelButtonText="Back"
+              confirmButtonText="Yes, cancel"
+              className="w-full sm:w-auto"
+            />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                  Update Status <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onUpdateStatus("pending")}
+                  disabled={project.status === "pending"}
+                >
+                  <Circle className="mr-2 h-4 w-4" /> Mark as Pending
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={onOpenAssignView}
+                  disabled={project.status === "approved"}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4 text-blue-500" /> Approve & Assign
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onUpdateStatus("completed")}
+                  disabled={project.status === "completed"}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" /> Complete Project
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onUpdateStatus("rejected")}
+                  disabled={project.status === "rejected"}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <XCircle className="mr-2 h-4 w-4" /> Reject Request
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {project.roomId && project.threadId ? (
             <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
               <Link href={`/dashboard/chat/${project.roomId}?thread=${project.threadId}`}>
@@ -248,6 +265,7 @@ export function ProjectDetailsContent({
             material={project.material}
             service={project.service ?? undefined}
             resourceUsages={project.resourceUsages}
+            readOnly={isClient}
           />
 
           {project.receipt && (

@@ -41,6 +41,9 @@ export function ProjectDetails({
   });
 
   const updateProject = useMutation(api.projects.mutate.updateProject);
+  const cancelOwnProject = useMutation(api.projects.mutate.cancelOwnProject);
+  const role = useQuery(api.users.getRole, {});
+  const isClient = role === "client";
 
   const handleUpdateStatus = async (
     newStatus: "pending" | "approved" | "rejected" | "completed",
@@ -50,6 +53,15 @@ export function ProjectDetails({
       toast.success(`Project ${newStatus} successfully!`);
     } catch {
       toast.error(`Failed to update project to ${newStatus}`);
+    }
+  };
+
+  const handleCancelProject = async () => {
+    try {
+      await cancelOwnProject({ projectId });
+      toast.success("Project request cancelled.");
+    } catch {
+      toast.error("Failed to cancel project request.");
     }
   };
 
@@ -200,6 +212,8 @@ export function ProjectDetails({
             timelineSteps={timelineSteps}
             onOpenAssignView={handleOpenAssignView}
             onUpdateStatus={handleUpdateStatus}
+            isClient={isClient}
+            onCancelProject={handleCancelProject}
           />
         )}
       </DialogContent>

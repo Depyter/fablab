@@ -46,6 +46,7 @@ interface PricingEstimateCardProps {
   }>;
   initialValues?: Partial<EstimationValues>;
   onSave?: (values: EstimationValues) => void;
+  readOnly?: boolean;
 }
 
 export function PricingEstimateCard({
@@ -55,6 +56,7 @@ export function PricingEstimateCard({
   initialValues,
   onSave,
   projectPricing = "normal",
+  readOnly = false,
 }: PricingEstimateCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -273,7 +275,7 @@ export function PricingEstimateCard({
       </CardContent>
 
       <CardFooter className="pt-0 flex flex-col gap-2 sm:justify-end">
-        {isEditing && (
+        {!readOnly && isEditing && (
           <ActionDialog
             title="Discard Estimate Changes"
             description="Are you sure you want to cancel the changes?"
@@ -284,14 +286,16 @@ export function PricingEstimateCard({
             baseActionText="Cancel"
           />
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleEdit}
-          className="w-full rounded-md"
-        >
-          {isEditing ? "Save" : "Update Estimate"}
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleEdit}
+            className="w-full rounded-md"
+          >
+            {isEditing ? "Save" : "Update Estimate"}
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

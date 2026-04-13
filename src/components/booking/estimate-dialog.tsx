@@ -6,6 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useState } from "react";
+
 import { Card } from "@/components/ui/card";
 
 import { FieldSeparator } from "@/components/ui/field";
@@ -77,6 +79,12 @@ export function EstimateProjectDetails({
   }
   const durationHours = durationMins / 60;
 
+  const [isChecked, setIsChecked] = useState(false);
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsChecked(e.target.checked);
+  };
+
   let basePrice = 0;
   let durationCost = 0;
   let materialCost = 0;
@@ -143,7 +151,7 @@ export function EstimateProjectDetails({
   const estimatedTotal = basePrice + durationCost + materialCost;
 
   return (
-    <div className="sm:max-w-2xl sm:max-h-2xl">
+    <div className="w-full">
       <DialogHeader>
         <DialogTitle className="text-2xl font-extrabold">
           Review & Estimate Project
@@ -310,6 +318,7 @@ export function EstimateProjectDetails({
               id="terms"
               required
               className="mt-1 h-4 w-4 text-chart-6 rounded"
+              onChange={handleCheckboxChange}
             />
             <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
               I understand that this is a booking request and requires admin
@@ -341,7 +350,7 @@ export function EstimateProjectDetails({
         <Button
           type="submit"
           className="rounded-lg"
-          disabled={isSubmitting || canSubmit === false}
+          disabled={isSubmitting || canSubmit === false || !isChecked}
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}
         </Button>

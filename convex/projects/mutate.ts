@@ -277,6 +277,28 @@ export const updateProject = authMutation({
   },
 });
 
+export const cancelOwnProject = authMutation({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+
+    if (project.userId !== ctx.profile._id) {
+      throw new ConvexError("You can only cancel your own projects.");
+    }
+
+    if (project.status !== "pending") {
+      throw new ConvexError("Only pending projects can be cancelled.");
+    }
+
+    await ctx.db.patch(project._id, {
+      status: "rejected",
+    });
+  },
+});
+
 export const completeProject = authMutation({
   role: ["admin", "maker"],
   args: {

@@ -190,7 +190,7 @@ export function BookingDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-2xl sm:max-h-2xl rounded-xl">
+      <DialogContent className="h-auto w-auto min-w-[min(22rem,calc(100%-2rem))] max-w-[calc(100%-2rem)] sm:max-w-[min(80vw,80rem)] rounded-xl">
         {step === 1 && (
           <Step1ServiceType
             form={form}
@@ -225,6 +225,7 @@ export function BookingDialog({
 
         {step === 3 && (
           <form
+            className="w-full"
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();

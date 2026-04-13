@@ -117,7 +117,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         room: roomId,
         threadId,
       });
-      toast.success("Message sent");
+      // toast.success("Message sent");
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error(
