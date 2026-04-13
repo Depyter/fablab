@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UploadedFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
+import { toast } from "sonner";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
@@ -116,8 +117,12 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         room: roomId,
         threadId,
       });
+      toast.success("Message sent");
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message",
+      );
       // Restore text; files need to be re-attached (they were already uploaded)
       setInput(content);
     }

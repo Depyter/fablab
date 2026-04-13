@@ -1,6 +1,12 @@
 import { internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { authQuery, authMutation, claimFiles } from "./helper";
+import {
+  authQuery,
+  authMutation,
+  claimFiles,
+  ensureAuthentication,
+  publicMutation,
+} from "./helper";
 import { Id } from "./_generated/dataModel";
 
 export const getUserProfile = authQuery({
@@ -50,6 +56,29 @@ export const getRole = authQuery({
     if (!profile) throw new ConvexError("User profile not found");
 
     return profile.role;
+  },
+});
+
+export const ensureUserProfile = publicMutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await ensureAuthentication(ctx);
+
+    const profile = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .first();
+
+    if (profile) {
+      return profile._id;
+    }
+
+    return await ctx.db.insert("userProfile", {
+      userId: user.subject,
+      name: user.name ?? user.email ?? "User",
+      email: user.email ?? `${user.subject}@unknown.local`,
+      role: "client",
+    });
   },
 });
 

@@ -17,11 +17,11 @@ export interface UploadingFile {
 
 export interface FileUploadProps {
   title: string;
-  onAddFile?: (file: UploadedFile) => void;
-  onUploadComplete?: (file: UploadedFile) => void;
+  onAddFile?: (file: UploadedFile) => void | Promise<void>;
+  onUploadComplete?: (file: UploadedFile) => void | Promise<void>;
   onUploadError?: (error: Error, file: File) => void;
   onFilesChange?: (files: UploadedFile[]) => void;
-  onRemoveFile?: (file: UploadedFile) => void;
+  onRemoveFile?: (file: UploadedFile) => void | Promise<void>;
   /** Called whenever the in-progress upload state changes. `true` means at least one upload is still pending/uploading. */
   onUploadingChange?: (isUploading: boolean) => void;
   maxFiles?: number;
@@ -38,7 +38,7 @@ export interface FileUploadProps {
 }
 
 export interface ModelUploadProps {
-  onUploadComplete?: (file: UploadedFile) => void;
+  onUploadComplete?: (file: UploadedFile) => void | Promise<void>;
   onUploadError?: (error: Error, file: File) => void;
   onFileChange?: (file: UploadedFile | null) => void;
   onUploadingChange?: (isUploading: boolean) => void;

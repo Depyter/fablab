@@ -3,12 +3,15 @@ import { DashboardHeader } from "@/components/sidebar/dashboard-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getPreloadedUserProfile } from "@/lib/auth-queries";
+import { fetchAuthMutation } from "@/lib/auth-server";
+import { api } from "@convex/_generated/api";
 
 export default async function DashBoardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await fetchAuthMutation(api.users.ensureUserProfile, {});
   const preloadedProfile = await getPreloadedUserProfile();
 
   return (

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export function ServiceDetailClient({
   preloadedService,
@@ -55,7 +56,13 @@ export function ServiceDetailClient({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteService({ service: service._id });
+      const deletePromise = deleteService({ service: service._id });
+      toast.promise(deletePromise, {
+        loading: "Deleting service...",
+        success: "Service deleted successfully!",
+        error: "Failed to delete service. Please try again.",
+      });
+      await deletePromise;
       router.push("/dashboard/services");
     } catch (error) {
       console.error("Failed to delete service:", error);

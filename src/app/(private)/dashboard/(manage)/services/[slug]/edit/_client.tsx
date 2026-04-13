@@ -131,8 +131,7 @@ export function EditServiceClient({
       setSubmitError(null);
 
       try {
-        // 1. Update all non-file fields.
-        await updateService({
+        const updatePromise = updateService({
           service: service._id as Id<"services">,
           name: value.name,
           description: value.description,
@@ -145,6 +144,14 @@ export function EditServiceClient({
           materials: value.materials as Id<"materials">[],
           availableDays: value.availableDays,
         });
+
+        toast.promise(updatePromise, {
+          loading: "Saving changes...",
+          success: "Service updated successfully!",
+          error: "Failed to save changes. Please try again.",
+        });
+
+        await updatePromise;
 
         // Navigate to the (possibly renamed) service detail page.
         router.push(`/dashboard/services/`);
@@ -161,20 +168,15 @@ export function EditServiceClient({
   const handleDeleteService = async () => {
     if (!service) return;
     try {
-      await deleteService({
+      const deletePromise = deleteService({
         service: service._id as Id<"services">,
       });
-      toast.promise<{ name: string }>(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(() => resolve({ name: service.name }), 1000),
-          ),
-        {
-          loading: "Deleting service...",
-          success: (data) => `Service "${data.name}" deleted successfully!`,
-          error: "Failed to delete service. Please try again.",
-        },
-      );
+      toast.promise(deletePromise, {
+        loading: "Deleting service...",
+        success: `Service "${service.name}" deleted successfully!`,
+        error: "Failed to delete service. Please try again.",
+      });
+      await deletePromise;
       router.push("/dashboard/services");
     } catch {
       // Handle error silently
@@ -268,18 +270,31 @@ export function EditServiceClient({
                     title="Sample Projects"
                     accept="*/*"
                     value={initialUploadedSamples}
-                    onAddFile={(file) =>
-                      addSampleToService({
+                    onAddFile={async (file) => {
+                      const addSamplePromise = addSampleToService({
                         service: service._id as Id<"services">,
                         sample: file.storageId as Id<"_storage">,
-                      })
-                    }
-                    onRemoveFile={(file) =>
-                      deleteSampleFromService({
+                      });
+                      toast.promise(addSamplePromise, {
+                        loading: "Adding sample project...",
+                        success: "Sample project added successfully!",
+                        error: "Failed to add sample project. Please try again.",
+                      });
+                      await addSamplePromise;
+                    }}
+                    onRemoveFile={async (file) => {
+                      const removeSamplePromise = deleteSampleFromService({
                         service: service._id as Id<"services">,
                         sample: file.storageId as Id<"_storage">,
-                      })
-                    }
+                      });
+                      toast.promise(removeSamplePromise, {
+                        loading: "Removing sample project...",
+                        success: "Sample project removed successfully!",
+                        error:
+                          "Failed to remove sample project. Please try again.",
+                      });
+                      await removeSamplePromise;
+                    }}
                     onFilesChange={(files) =>
                       field.handleChange(files.map((f) => f.storageId))
                     }
@@ -300,18 +315,31 @@ export function EditServiceClient({
                       title="Thumbnail"
                       accept="*/*"
                       value={initialUploadedImages}
-                      onAddFile={(file) =>
-                        addImageToService({
+                      onAddFile={async (file) => {
+                        const addImagePromise = addImageToService({
                           service: service._id as Id<"services">,
                           image: file.storageId as Id<"_storage">,
-                        })
-                      }
-                      onRemoveFile={(file) =>
-                        deleteImageFromService({
+                        });
+                        toast.promise(addImagePromise, {
+                          loading: "Adding thumbnail...",
+                          success: "Thumbnail added successfully!",
+                          error: "Failed to add thumbnail. Please try again.",
+                        });
+                        await addImagePromise;
+                      }}
+                      onRemoveFile={async (file) => {
+                        const removeImagePromise = deleteImageFromService({
                           service: service._id as Id<"services">,
                           image: file.storageId as Id<"_storage">,
-                        })
-                      }
+                        });
+                        toast.promise(removeImagePromise, {
+                          loading: "Removing thumbnail...",
+                          success: "Thumbnail removed successfully!",
+                          error:
+                            "Failed to remove thumbnail. Please try again.",
+                        });
+                        await removeImagePromise;
+                      }}
                       onFilesChange={(files) =>
                         field.handleChange(files.map((f) => f.storageId))
                       }

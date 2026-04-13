@@ -184,8 +184,8 @@ export function useFileUpload({
         );
 
         setUploadedFiles((prev) => [...prev, uploadedFile]);
-        onAddFile?.(uploadedFile);
-        onUploadComplete?.(uploadedFile);
+        await Promise.resolve(onAddFile?.(uploadedFile));
+        await Promise.resolve(onUploadComplete?.(uploadedFile));
 
         setTimeout(() => {
           setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
@@ -321,11 +321,17 @@ export function useFileUpload({
     );
 
     if (removedFiles.length > 0 && onRemoveFile) {
-      removedFiles.forEach((file) => {
-        if (!deletingFileIdsRef.current.has(file.storageId)) {
+      void (async () => {
+        for (const file of removedFiles) {
+          if (deletingFileIdsRef.current.has(file.storageId)) {
+            continue;
+          }
+
           deletingFileIdsRef.current.add(file.storageId);
-          onRemoveFile(file);
+          await Promise.resolve(onRemoveFile(file));
         }
+      })().catch((error) => {
+        console.error("Failed to remove uploaded file:", error);
       });
     }
 

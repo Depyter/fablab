@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const robotoMono = Roboto_Mono({
   subsets: ["latin"],
@@ -22,7 +23,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${robotoMono.variable} h-full`}>
-      <body className="font-mono antialiased h-full">{children}</body>
+      <body className="font-mono antialiased h-full">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }
