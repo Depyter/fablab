@@ -59,29 +59,6 @@ export const getRole = authQuery({
   },
 });
 
-export const ensureUserProfile = publicMutation({
-  args: {},
-  handler: async (ctx) => {
-    const user = await ensureAuthentication(ctx);
-
-    const profile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
-      .first();
-
-    if (profile) {
-      return profile._id;
-    }
-
-    return await ctx.db.insert("userProfile", {
-      userId: user.subject,
-      name: user.name ?? user.email ?? "User",
-      email: user.email ?? `${user.subject}@unknown.local`,
-      role: "client",
-    });
-  },
-});
-
 export const createUserProfile = internalMutation({
   args: {
     userId: v.string(),
