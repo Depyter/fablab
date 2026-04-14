@@ -31,17 +31,12 @@ export const ProjectMaterial = {
   BUY_FROM_LAB: "buy-from-lab",
 } as const;
 
-export const ProjectPricing = {
-  NORMAL: "normal",
-  UP: "UP",
-  SPECIAL: "Special",
-} as const;
-
 export const ProjectStatus = {
   PENDING: "pending",
   APPROVED: "approved",
   REJECTED: "rejected",
   COMPLETED: "completed",
+  CANCELLED: "cancelled",
 } as const;
 
 export const PaymentMode = {
@@ -186,8 +181,6 @@ export type ProjectServiceTypeType =
   (typeof ProjectServiceType)[keyof typeof ProjectServiceType];
 export type ProjectMaterialType =
   (typeof ProjectMaterial)[keyof typeof ProjectMaterial];
-export type ProjectPricingType =
-  (typeof ProjectPricing)[keyof typeof ProjectPricing];
 export type ProjectStatusType =
   (typeof ProjectStatus)[keyof typeof ProjectStatus];
 export type PaymentModeType = (typeof PaymentMode)[keyof typeof PaymentMode];

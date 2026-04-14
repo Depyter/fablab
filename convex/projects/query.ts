@@ -161,6 +161,12 @@ export const getProject = authQuery({
           ? await ctx.db.get(usage.resource)
           : null;
 
+        const resourceImageUrls = resourceDoc?.images
+          ? await Promise.all(
+              resourceDoc.images.map((id) => ctx.storage.getUrl(id)),
+            )
+          : [];
+
         const makerPfpUrl = makerProfile?.profilePic
           ? await ctx.storage.getUrl(makerProfile.profilePic)
           : null;
@@ -169,7 +175,12 @@ export const getProject = authQuery({
           ...usage,
           makerName: makerProfile?.name ?? null,
           makerPfpUrl,
-          resourceDetails: resourceDoc,
+          resourceDetails: resourceDoc
+            ? {
+                ...resourceDoc,
+                imageUrls: resourceImageUrls.filter((url) => url !== null),
+              }
+            : null,
         };
       }),
     );

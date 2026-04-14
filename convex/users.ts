@@ -113,3 +113,22 @@ export const createAdmin = internalMutation({
     });
   },
 });
+
+export const getMakers = authQuery({
+  args: {},
+  handler: async (ctx) => {
+    const makers = await ctx.db
+      .query("userProfile")
+      .withIndex("by_role", (q) => q.eq("role", "maker"))
+      .collect();
+
+    return Promise.all(
+      makers.map(async (maker) => ({
+        ...maker,
+        profilePicUrl: maker.profilePic
+          ? await ctx.storage.getUrl(maker.profilePic)
+          : null,
+      })),
+    );
+  },
+});

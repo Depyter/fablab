@@ -4,7 +4,6 @@ import {
   FileStatus,
   PaymentMode,
   ProjectMaterial,
-  ProjectPricing,
   ProjectServiceType,
   ProjectStatus,
   ResourceCategory,
@@ -53,25 +52,47 @@ export default defineSchema({
       v.object({
         type: v.literal("FIXED"),
         amount: v.number(),
-        upAmount: v.optional(v.number()),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              amount: v.number(),
+            }),
+          ),
+        ),
       }),
       v.object({
         type: v.literal("PER_UNIT"),
         baseFee: v.number(),
-        upBaseFee: v.optional(v.number()),
         unitName: v.string(), // e.g., "hour", "sqft"
         ratePerUnit: v.number(),
-        upRatePerUnit: v.optional(v.number()),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              baseFee: v.number(),
+              ratePerUnit: v.number(),
+            }),
+          ),
+        ),
       }),
       v.object({
         type: v.literal("COMPOSITE"), // e.g., 3D Printing
         baseFee: v.number(),
-        upBaseFee: v.optional(v.number()),
         unitName: v.string(),
         timeRate: v.number(),
-        upTimeRate: v.optional(v.number()),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              baseFee: v.number(),
+              timeRate: v.number(),
+            }),
+          ),
+        ),
       }),
     ),
+    maxSlots: v.optional(v.number()),
   }).index("by_slug", ["slug"]),
 
   // --------------------------------------------------------
@@ -177,16 +198,13 @@ export default defineSchema({
       }),
     ),
 
-    pricing: v.union(
-      v.literal(ProjectPricing.NORMAL),
-      v.literal(ProjectPricing.UP),
-      v.literal(ProjectPricing.SPECIAL),
-    ),
+    pricing: v.string(), // Chosen variant name (e.g., "Default", "UP", "KID")
     status: v.union(
       v.literal(ProjectStatus.PENDING),
       v.literal(ProjectStatus.APPROVED),
       v.literal(ProjectStatus.REJECTED),
       v.literal(ProjectStatus.COMPLETED),
+      v.literal(ProjectStatus.CANCELLED),
     ),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())),

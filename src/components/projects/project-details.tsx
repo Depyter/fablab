@@ -46,13 +46,27 @@ export function ProjectDetails({
   const isClient = role === "client";
 
   const handleUpdateStatus = async (
-    newStatus: "pending" | "approved" | "rejected" | "completed",
+    newStatus:
+      | "pending"
+      | "approved"
+      | "rejected"
+      | "completed"
+      | "cancelled"
+      | string,
   ) => {
     try {
-      await updateProject({ projectId, status: newStatus });
-      toast.success(`Project ${newStatus} successfully!`);
+      await updateProject({
+        projectId,
+        status: newStatus as
+          | "pending"
+          | "approved"
+          | "rejected"
+          | "completed"
+          | "cancelled",
+      });
+      toast.success(`Project status updated to ${newStatus}!`);
     } catch {
-      toast.error(`Failed to update project to ${newStatus}`);
+      toast.error(`Failed to update project status`);
     }
   };
 
@@ -65,9 +79,18 @@ export function ProjectDetails({
     }
   };
 
-  const styles = project
+  let styles = project
     ? (STATUS_STYLES[project.status] ?? STATUS_STYLES.pending)
     : STATUS_STYLES.pending;
+
+  if (project?.status === "cancelled") {
+    styles = {
+      badge: "bg-red-100 text-red-700 border-red-200",
+      cover: "from-red-500/20 to-red-500/5",
+    };
+  }
+
+  const makers = useQuery(api.users.getMakers);
 
   const timelineSteps = project
     ? [
@@ -82,19 +105,22 @@ export function ProjectDetails({
           statusLabel:
             project.status === "rejected"
               ? "Rejected"
-              : project.status === "pending"
-                ? "Pending"
-                : "Completed",
+              : project.status === "cancelled"
+                ? "Cancelled"
+                : project.status === "pending"
+                  ? "Pending"
+                  : "Completed",
           byLabel: project.status === "pending" ? "Waiting" : "Admin",
           active: project.status === "pending",
           completed:
             project.status === "approved" || project.status === "completed",
-          rejected: project.status === "rejected",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
         },
         {
           title: "Maker assignment",
           statusLabel:
-            project.status === "rejected"
+            project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
               : project.status === "approved"
                 ? "Completed"
@@ -108,7 +134,7 @@ export function ProjectDetails({
         {
           title: "Project execution",
           statusLabel:
-            project.status === "rejected"
+            project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
               : project.status === "completed"
                 ? "Completed"
@@ -120,34 +146,15 @@ export function ProjectDetails({
       ]
     : [];
 
-  const makerOptions: OptionRadioGroupItem[] = [
-    {
-      value: "maker-1",
-      id: "maker-1",
-      title: "Maker A",
-      status: "available",
-      activeProjectsAssigned: 1,
-     
-    },
-    {
-      value: "maker-2",
-      id: "maker-2",
-      title: "Maker B",
-      status: "busy",
-      activeProjectsAssigned: 3,
-      disabled: false,
-      nextAvailable: "2026-04-10",
-    },
-    {
-      value: "maker-3",
-      id: "maker-3",
-      title: "Maker C",
-      status: "busy",
-      activeProjectsAssigned: 0,
-      disabled: true,
-      nextAvailable: "2026-05-01",
-    },
-  ];
+  const makerOptions: OptionRadioGroupItem[] = makers
+    ? makers.map((m) => ({
+        value: m._id,
+        id: m._id,
+        title: m.name,
+        status: "available",
+        activeProjectsAssigned: 0,
+      }))
+    : [];
 
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
@@ -165,16 +172,23 @@ export function ProjectDetails({
     setDialogView("details");
   };
 
-  const handleAssignMaker = () => {
+  const handleAssignMaker = async () => {
     if (!selectedMaker) {
       toast.error("Please choose a maker first.");
       return;
     }
 
-    const chosenMaker =
-      makerOptions.find((maker) => maker.value === selectedMaker)?.title ??
-      "Selected maker";
-    toast.success(`${chosenMaker} selected. Backend hookup will be added next.`);
+    try {
+      await updateProject({
+        projectId,
+        status: "approved",
+        makerId: selectedMaker as Id<"userProfile">,
+      });
+      toast.success("Project approved and maker assigned!");
+      setDialogView("details");
+    } catch {
+      toast.error("Failed to assign maker.");
+    }
   };
 
   return (

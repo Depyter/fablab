@@ -11,7 +11,7 @@ export const createProject = authMutation({
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     requestedMaterialId: v.optional(v.id("materials")),
     service: v.id("services"),
-    pricing: v.union(v.literal("normal"), v.literal("UP")),
+    pricing: v.string(),
     files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
 
@@ -113,16 +113,21 @@ export const createProject = authMutation({
 
     let costBreakdown = undefined;
     if (args.sharedUsageId && service.pricing.type === "FIXED") {
-      const isUp = args.pricing === "UP";
-      const amount =
-        isUp && service.pricing.upAmount !== undefined
-          ? service.pricing.upAmount
-          : service.pricing.amount;
+      let amount = service.pricing.amount;
+      if (service.pricing.variants) {
+        const variant = service.pricing.variants.find(
+          (v) => v.name === args.pricing,
+        );
+        if (variant) amount = variant.amount;
+      }
+
+      const baseFee = args.serviceType === "full-service" ? amount : 0;
+
       costBreakdown = {
-        baseFee: amount,
+        baseFee,
         materialCost: 0,
         timeCost: 0,
-        total: amount,
+        total: baseFee,
       };
     }
 
@@ -262,18 +267,35 @@ export const updateProject = authMutation({
         v.literal("approved"),
         v.literal("rejected"),
         v.literal("completed"),
+        v.literal("cancelled"),
       ),
     ),
+    makerId: v.optional(v.id("userProfile")),
   },
   handler: async (ctx, args) => {
-    const { projectId, status } = args;
+    const { projectId, status, makerId } = args;
     const updates: Partial<{
-      status: "pending" | "approved" | "rejected" | "completed";
+      status: "pending" | "approved" | "rejected" | "completed" | "cancelled";
     }> = {};
 
     if (status !== undefined) updates.status = status;
 
     await ctx.db.patch(projectId, updates);
+
+    if (makerId !== undefined) {
+      const project = await ctx.db.get(projectId);
+      if (project) {
+        const usages = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", project.service))
+          .collect();
+
+        const usage = usages.find((u) => u.projects.includes(project._id));
+        if (usage) {
+          await ctx.db.patch(usage._id, { maker: makerId });
+        }
+      }
+    }
   },
 });
 
@@ -282,20 +304,29 @@ export const cancelOwnProject = authMutation({
     projectId: v.id("projects"),
   },
   handler: async (ctx, args) => {
+    const userProfile = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
+      .first();
+
+    if (!userProfile) throw new ConvexError("User not authorized");
+
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
 
-    if (project.userId !== ctx.profile._id) {
-      throw new ConvexError("You can only cancel your own projects.");
+    if (project.userId !== userProfile._id) {
+      throw new ConvexError("You do not own this project.");
     }
 
-    if (project.status !== "pending") {
-      throw new ConvexError("Only pending projects can be cancelled.");
+    if (
+      project.status === "completed" ||
+      project.status === "rejected" ||
+      project.status === "cancelled"
+    ) {
+      throw new ConvexError("Cannot cancel a project in its current status.");
     }
 
-    await ctx.db.patch(project._id, {
-      status: "rejected",
-    });
+    await ctx.db.patch(args.projectId, { status: "cancelled" });
   },
 });
 
@@ -326,17 +357,24 @@ export const completeProject = authMutation({
 
     const hours = args.actualDurationMs / (1000 * 60 * 60);
     const minutes = args.actualDurationMs / (1000 * 60);
-    const isUp = project.pricing === "UP";
 
     if (service.pricing.type === "COMPOSITE") {
-      baseFee =
-        isUp && service.pricing.upBaseFee !== undefined
-          ? service.pricing.upBaseFee
-          : service.pricing.baseFee;
-      const timeRate =
-        isUp && service.pricing.upTimeRate !== undefined
-          ? service.pricing.upTimeRate
-          : service.pricing.timeRate;
+      baseFee = service.pricing.baseFee;
+      let timeRate = service.pricing.timeRate;
+
+      if (service.pricing.variants) {
+        const variant = service.pricing.variants.find(
+          (v) => v.name === project.pricing,
+        );
+        if (variant) {
+          baseFee = variant.baseFee;
+          timeRate = variant.timeRate;
+        }
+      }
+
+      if (project.serviceType !== "full-service") {
+        baseFee = 0;
+      }
 
       if (
         service.pricing.unitName === "hour" ||
@@ -351,44 +389,23 @@ export const completeProject = authMutation({
       } else {
         timeCost = hours * timeRate;
       }
+    } else if (service.pricing.type === "PER_UNIT") {
+      baseFee = service.pricing.baseFee;
+      let ratePerUnit = service.pricing.ratePerUnit;
 
-      if (args.materialsUsed && args.materialsUsed.length > 0) {
-        for (const usage of args.materialsUsed) {
-          const material = await ctx.db.get(usage.materialId);
-          if (material) {
-            const rate = material.pricePerUnit || 0;
-            materialCost += usage.amountUsed * rate;
-
-            const newStock = Math.max(
-              0,
-              material.currentStock - usage.amountUsed,
-            );
-            let newStatus = material.status;
-            if (newStock === 0) {
-              newStatus = "OUT_OF_STOCK";
-            } else if (
-              material.reorderThreshold &&
-              newStock <= material.reorderThreshold
-            ) {
-              newStatus = "LOW_STOCK";
-            }
-
-            await ctx.db.patch(material._id, {
-              currentStock: newStock,
-              status: newStatus,
-            });
-          }
+      if (service.pricing.variants) {
+        const variant = service.pricing.variants.find(
+          (v) => v.name === project.pricing,
+        );
+        if (variant) {
+          baseFee = variant.baseFee;
+          ratePerUnit = variant.ratePerUnit;
         }
       }
-    } else if (service.pricing.type === "PER_UNIT") {
-      baseFee =
-        isUp && service.pricing.upBaseFee !== undefined
-          ? service.pricing.upBaseFee
-          : service.pricing.baseFee;
-      const ratePerUnit =
-        isUp && service.pricing.upRatePerUnit !== undefined
-          ? service.pricing.upRatePerUnit
-          : service.pricing.ratePerUnit;
+
+      if (project.serviceType !== "full-service") {
+        baseFee = 0;
+      }
 
       if (
         service.pricing.unitName === "hour" ||
@@ -402,10 +419,52 @@ export const completeProject = authMutation({
         timeCost = (args.actualDurationMs / (1000 * 60)) * ratePerUnit;
       }
     } else if (service.pricing.type === "FIXED") {
-      baseFee =
-        isUp && service.pricing.upAmount !== undefined
-          ? service.pricing.upAmount
-          : service.pricing.amount;
+      baseFee = service.pricing.amount;
+      if (service.pricing.variants) {
+        const variant = service.pricing.variants.find(
+          (v) => v.name === project.pricing,
+        );
+        if (variant) {
+          baseFee = variant.amount;
+        }
+      }
+
+      if (project.serviceType !== "full-service") {
+        baseFee = 0;
+      }
+    }
+
+    if (
+      project.material === "buy-from-lab" &&
+      args.materialsUsed &&
+      args.materialsUsed.length > 0
+    ) {
+      for (const usage of args.materialsUsed) {
+        const material = await ctx.db.get(usage.materialId);
+        if (material) {
+          const rate = material.pricePerUnit || 0;
+          materialCost += usage.amountUsed * rate;
+
+          const newStock = Math.max(
+            0,
+            material.currentStock - usage.amountUsed,
+          );
+          let newStatus = material.status;
+          if (newStock === 0) {
+            newStatus = "OUT_OF_STOCK";
+          } else if (
+            material.reorderThreshold &&
+            newStock <= material.reorderThreshold
+          ) {
+            newStatus = "LOW_STOCK";
+          }
+
+          await ctx.db.patch(material._id, {
+            currentStock: newStock,
+            status: newStatus,
+          });
+        }
+      }
     }
 
     const total = baseFee + timeCost + materialCost;

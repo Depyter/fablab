@@ -48,25 +48,47 @@ export const addService = authMutation({
       v.object({
         type: v.literal("FIXED"),
         amount: v.number(),
-        upAmount: v.optional(v.number()),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              amount: v.number(),
+            }),
+          ),
+        ),
       }),
       v.object({
         type: v.literal("PER_UNIT"),
         baseFee: v.number(),
-        upBaseFee: v.optional(v.number()),
         unitName: v.string(),
         ratePerUnit: v.number(),
-        upRatePerUnit: v.optional(v.number()),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              baseFee: v.number(),
+              ratePerUnit: v.number(),
+            }),
+          ),
+        ),
       }),
       v.object({
         type: v.literal("COMPOSITE"),
         baseFee: v.number(),
-        upBaseFee: v.optional(v.number()),
         unitName: v.string(),
         timeRate: v.number(),
-        upTimeRate: v.optional(v.number()),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              baseFee: v.number(),
+              timeRate: v.number(),
+            }),
+          ),
+        ),
       }),
     ),
+    maxSlots: v.optional(v.number()),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
     materials: v.optional(v.array(v.id("materials"))),
@@ -88,6 +110,7 @@ export const addService = authMutation({
       status: args.status,
       requirements: args.requirements,
       samples: args.samples,
+      maxSlots: args.serviceCategory === "WORKSHOP" ? args.maxSlots : undefined,
     });
 
     if (args.images.length > 0) claimFiles(ctx, args.images);
@@ -108,26 +131,48 @@ export const updateService = authMutation({
         v.object({
           type: v.literal("FIXED"),
           amount: v.number(),
-          upAmount: v.optional(v.number()),
+          variants: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                amount: v.number(),
+              }),
+            ),
+          ),
         }),
         v.object({
           type: v.literal("PER_UNIT"),
           baseFee: v.number(),
-          upBaseFee: v.optional(v.number()),
           unitName: v.string(),
           ratePerUnit: v.number(),
-          upRatePerUnit: v.optional(v.number()),
+          variants: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                baseFee: v.number(),
+                ratePerUnit: v.number(),
+              }),
+            ),
+          ),
         }),
         v.object({
           type: v.literal("COMPOSITE"),
           baseFee: v.number(),
-          upBaseFee: v.optional(v.number()),
           unitName: v.string(),
           timeRate: v.number(),
-          upTimeRate: v.optional(v.number()),
+          variants: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                baseFee: v.number(),
+                timeRate: v.number(),
+              }),
+            ),
+          ),
         }),
       ),
     ),
+    maxSlots: v.optional(v.number()),
     requirements: v.optional(v.array(v.string())),
     fileTypes: v.optional(v.array(v.string())),
     resources: v.optional(v.array(v.id("resources"))),
@@ -165,6 +210,21 @@ export const updateService = authMutation({
     if (args.materials !== undefined) updates.materials = args.materials;
     if (args.availableDays !== undefined)
       updates.availableDays = args.availableDays;
+
+    if (args.maxSlots !== undefined) {
+      const existingService = await ctx.db.get(args.service);
+      const serviceCat =
+        args.serviceCategory ?? existingService?.serviceCategory;
+      if (serviceCat === "WORKSHOP") {
+        updates.maxSlots = args.maxSlots;
+      } else {
+        updates.maxSlots = undefined;
+      }
+    } else if (args.serviceCategory !== undefined) {
+      if (args.serviceCategory !== "WORKSHOP") {
+        updates.maxSlots = undefined;
+      }
+    }
 
     await ctx.db.patch(args.service, updates);
   },
