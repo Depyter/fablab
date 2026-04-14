@@ -1,8 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { OptionRadioGroup, OptionRadioGroupItem } from "../option-radio-group";
@@ -39,16 +36,12 @@ export function AssignMakerContent({
         </p>
       </DialogHeader>
 
-      
-
-        <OptionRadioGroup
-            value={selectedMaker}
-            onValueChange={onSelectMaker}
-            options={makerOptions}
-            className="max-w-full"
-        />
-    
-    
+      <OptionRadioGroup
+        value={selectedMaker}
+        onValueChange={onSelectMaker}
+        options={makerOptions}
+        className="max-w-full"
+      />
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={onBack}>

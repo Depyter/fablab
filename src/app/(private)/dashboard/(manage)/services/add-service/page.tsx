@@ -76,19 +76,69 @@ export default function AddServicePage() {
     onSubmit: async ({ value }) => {
       setSubmitError(null);
       try {
+        const getVal = (key: string) => {
+          const entry = Object.entries(value.pricing).find(([k]) => k === key);
+          return entry && entry[1] !== undefined && entry[1] !== ""
+            ? Number(entry[1])
+            : undefined;
+        };
+
+        const upAmount = getVal("upAmount");
+        const upBaseFee = getVal("upBaseFee");
+        const upRatePerUnit = getVal("upRatePerUnit");
+        const upTimeRate = getVal("upTimeRate");
+
         await addService({
-          name: value.name,
-          description: value.description,
-          serviceCategory: value.serviceCategory,
-          pricing: value.pricing,
-          status: value.status,
+          ...value,
           images: value.images as Id<"_storage">[],
           samples: value.samples as Id<"_storage">[],
-          requirements: value.requirements.filter((r) => r.trim() !== ""),
-          fileTypes: value.fileTypes,
           resources: value.resources as Id<"resources">[],
           materials: value.materials as Id<"materials">[],
-          availableDays: value.availableDays,
+          requirements: value.requirements.filter((r) => r.trim() !== ""),
+          pricing:
+            value.pricing.type === "FIXED"
+              ? {
+                  type: "FIXED",
+                  amount: value.pricing.amount,
+                  variants:
+                    upAmount !== undefined
+                      ? [{ name: "UP", amount: upAmount }]
+                      : undefined,
+                }
+              : value.pricing.type === "PER_UNIT"
+                ? {
+                    type: "PER_UNIT",
+                    baseFee: value.pricing.baseFee,
+                    unitName: value.pricing.unitName,
+                    ratePerUnit: value.pricing.ratePerUnit,
+                    variants:
+                      upBaseFee !== undefined || upRatePerUnit !== undefined
+                        ? [
+                            {
+                              name: "UP",
+                              baseFee: upBaseFee ?? value.pricing.baseFee,
+                              ratePerUnit:
+                                upRatePerUnit ?? value.pricing.ratePerUnit,
+                            },
+                          ]
+                        : undefined,
+                  }
+                : {
+                    type: "COMPOSITE",
+                    baseFee: value.pricing.baseFee,
+                    unitName: value.pricing.unitName,
+                    timeRate: value.pricing.timeRate,
+                    variants:
+                      upBaseFee !== undefined || upTimeRate !== undefined
+                        ? [
+                            {
+                              name: "UP",
+                              baseFee: upBaseFee ?? value.pricing.baseFee,
+                              timeRate: upTimeRate ?? value.pricing.timeRate,
+                            },
+                          ]
+                        : undefined,
+                  },
         });
         toast.success("Service added successfully!");
         setTimeout(() => router.push("/dashboard/services"), 1000);
@@ -185,7 +235,9 @@ export default function AddServicePage() {
                 title="Sample Projects"
                 accept="*/*"
                 onFilesChange={(files) =>
-                  field.handleChange(files.map((f) => f.storageId))
+                  field.handleChange(
+                    files.map((f) => f.storageId as Id<"_storage">),
+                  )
                 }
                 onUploadingChange={handleSamplesUploading}
               />
@@ -210,7 +262,9 @@ export default function AddServicePage() {
                   title="Thumbnail"
                   accept="*/*"
                   onFilesChange={(files) =>
-                    field.handleChange(files.map((f) => f.storageId))
+                    field.handleChange(
+                      files.map((f) => f.storageId as Id<"_storage">),
+                    )
                   }
                   onUploadingChange={handleThumbnailUploading}
                 />
@@ -230,8 +284,8 @@ export default function AddServicePage() {
                 options={resourceOptions}
                 title="Resources (Machines, etc.)"
                 placeholder="Select resource..."
-                value={field.state.value}
-                onChange={field.handleChange}
+                value={field.state.value || []}
+                onChange={(val) => field.handleChange(val as Id<"resources">[])}
               />
             )}
           />
@@ -243,8 +297,8 @@ export default function AddServicePage() {
                 options={materialOptions}
                 title="Allowed Materials"
                 placeholder="Select materials..."
-                value={field.state.value}
-                onChange={field.handleChange}
+                value={field.state.value || []}
+                onChange={(val) => field.handleChange(val as Id<"materials">[])}
               />
             )}
           />

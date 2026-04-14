@@ -72,9 +72,11 @@ export const updateMaterial = authMutation({
     if (args.name !== undefined) updates.name = args.name;
     if (args.category !== undefined) updates.category = args.category;
     if (args.unit !== undefined) updates.unit = args.unit;
-    if (args.currentStock !== undefined) updates.currentStock = args.currentStock;
+    if (args.currentStock !== undefined)
+      updates.currentStock = args.currentStock;
     if (args.costPerUnit !== undefined) updates.costPerUnit = args.costPerUnit;
-    if (args.pricePerUnit !== undefined) updates.pricePerUnit = args.pricePerUnit;
+    if (args.pricePerUnit !== undefined)
+      updates.pricePerUnit = args.pricePerUnit;
     if (args.reorderThreshold !== undefined)
       updates.reorderThreshold = args.reorderThreshold;
     if (args.color !== undefined) updates.color = args.color;

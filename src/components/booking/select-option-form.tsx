@@ -30,6 +30,11 @@ export function RadioGroupChoiceCard({
   ];
 
   return (
-    <OptionRadioGroup value={value} onValueChange={onValueChange} options={options} className="max-w-full" />
+    <OptionRadioGroup
+      value={value}
+      onValueChange={onValueChange}
+      options={options}
+      className="max-w-full"
+    />
   );
 }

@@ -107,15 +107,18 @@ export function MaterialForm({
   const handleDelete = async () => {
     if (!initialValues?._id) return;
 
-    toast.promise(deleteMaterial({ id: initialValues._id as Id<"materials"> }), {
-      loading: `Deleting material...`,
-      success: () => {
-        onSuccess?.();
-        return `Material deleted successfully!`;
+    toast.promise(
+      deleteMaterial({ id: initialValues._id as Id<"materials"> }),
+      {
+        loading: `Deleting material...`,
+        success: () => {
+          onSuccess?.();
+          return `Material deleted successfully!`;
+        },
+        error: "Failed to delete item. Please try again.",
+        position: "top-center",
       },
-      error: "Failed to delete item. Please try again.",
-      position: "top-center",
-    });
+    );
   };
 
   return (

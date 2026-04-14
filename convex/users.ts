@@ -91,6 +91,22 @@ export const createAdmin = internalMutation({
   },
 });
 
+export const createMaker = internalMutation({
+  args: {
+    userId: v.string(),
+    name: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("userProfile", {
+      userId: args.userId,
+      name: args.name,
+      email: args.email,
+      role: "maker",
+    });
+  },
+});
+
 export const getMakers = authQuery({
   args: {},
   handler: async (ctx) => {

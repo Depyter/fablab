@@ -127,7 +127,9 @@ export function ProjectDetails({
                 : project.status === "completed"
                   ? "Completed"
                   : "Pending",
-          byLabel: project.status === "approved" ? "Assigned" : "Waiting",
+          byLabel: project.assignedMaker
+            ? project.assignedMaker.name
+            : "Waiting",
           active: project.status === "approved",
           completed: project.status === "completed",
         },
@@ -139,7 +141,9 @@ export function ProjectDetails({
               : project.status === "completed"
                 ? "Completed"
                 : "Pending",
-          byLabel: project.status === "completed" ? "Finished" : "Waiting",
+          byLabel: project.assignedMaker
+            ? project.assignedMaker.name
+            : "Waiting",
           active: project.status === "completed",
           completed: project.status === "completed",
         },

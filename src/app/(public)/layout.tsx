@@ -39,7 +39,7 @@ export default async function PublicLayout({
               <Link href="/services" className="text-sm font-medium">
                 Services
               </Link>
-              
+
               <Link href="/login" className="text-sm font-medium">
                 Login
               </Link>

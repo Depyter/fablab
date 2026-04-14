@@ -186,6 +186,7 @@ export default defineSchema({
     requestedMaterialId: v.optional(v.id("materials")), // What the client selected
 
     userId: v.id("userProfile"),
+    assignedMaker: v.optional(v.id("userProfile")),
     service: v.id("services"),
 
     // Frozen calculated cost breakdown for history/receipts

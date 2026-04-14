@@ -47,10 +47,24 @@ export const getProjects = authQuery({
             ? await ctx.storage.getUrl(service.images[0])
             : null;
 
+        const makerProfile = project.assignedMaker
+          ? await ctx.db.get(project.assignedMaker)
+          : null;
+        const makerPfpUrl = makerProfile?.profilePic
+          ? await ctx.storage.getUrl(makerProfile.profilePic)
+          : null;
+
         return {
           ...project,
           clientName: clientProfile?.name ?? "Unknown Client",
           serviceName: service?.name ?? "Unknown Service",
+          assignedMaker: makerProfile
+            ? {
+                _id: makerProfile._id,
+                name: makerProfile.name,
+                pfpUrl: makerPfpUrl,
+              }
+            : null,
           bookingDate: usage?.date ?? Date.now(),
           bookingTime: usage?.startTime ?? Date.now(),
           estimatedPrice: 0, // Fallback price calculation
@@ -194,6 +208,16 @@ export const getProject = authQuery({
       .first();
 
     // -------------------------------------------------------------------------
+    // Assigned Maker
+    // -------------------------------------------------------------------------
+    const assignedMakerProfile = project.assignedMaker
+      ? await ctx.db.get(project.assignedMaker)
+      : null;
+    const assignedMakerPfpUrl = assignedMakerProfile?.profilePic
+      ? await ctx.storage.getUrl(assignedMakerProfile.profilePic)
+      : null;
+
+    // -------------------------------------------------------------------------
     // Final shape
     // -------------------------------------------------------------------------
     return {
@@ -203,6 +227,13 @@ export const getProject = authQuery({
         name: clientProfile?.name ?? "Unknown Client",
         pfpUrl: clientPfpUrl,
       },
+      assignedMaker: assignedMakerProfile
+        ? {
+            _id: assignedMakerProfile._id,
+            name: assignedMakerProfile.name,
+            pfpUrl: assignedMakerPfpUrl,
+          }
+        : null,
       service,
       resolvedFiles,
       receipt,

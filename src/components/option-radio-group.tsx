@@ -50,12 +50,18 @@ export function OptionRadioGroup({
   };
 
   return (
-    <RadioGroup value={value} onValueChange={onValueChange} className={className}>
+    <RadioGroup
+      value={value}
+      onValueChange={onValueChange}
+      className={className}
+    >
       {options.map((option) => (
         <FieldLabel
           key={option.value}
           htmlFor={option.id}
-          className={option.disabled ? "cursor-not-allowed opacity-50" : undefined}
+          className={
+            option.disabled ? "cursor-not-allowed opacity-50" : undefined
+          }
         >
           <Field orientation="horizontal">
             <FieldContent>
@@ -72,7 +78,9 @@ export function OptionRadioGroup({
               {option.description && (
                 <FieldDescription>{option.description}</FieldDescription>
               )}
-              {(option.status || option.activeProjectsAssigned !== undefined || option.nextAvailable !== undefined) && (
+              {(option.status ||
+                option.activeProjectsAssigned !== undefined ||
+                option.nextAvailable !== undefined) && (
                 <FieldDescription>
                   <span className="flex flex-col items-start gap-2">
                     <span className="text-xs">
@@ -80,11 +88,11 @@ export function OptionRadioGroup({
                     </span>
                     {option.nextAvailable !== undefined && (
                       <span className="text-xs">
-                        Next Available: {
-                          new Date(option.nextAvailable).toLocaleDateString() === new Date().toLocaleDateString()
-                            ? "Today"
-                            : new Date(option.nextAvailable).toLocaleDateString()
-                        }
+                        Next Available:{" "}
+                        {new Date(option.nextAvailable).toLocaleDateString() ===
+                        new Date().toLocaleDateString()
+                          ? "Today"
+                          : new Date(option.nextAvailable).toLocaleDateString()}
                       </span>
                     )}
                   </span>

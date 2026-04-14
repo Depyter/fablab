@@ -61,44 +61,43 @@ export function ProjectCard({
       badgeClassName={styles.badge}
       footer={
         <>
-        <div className="flex flex-col items-center justify-between w-full">
-          <div className="flex flex-row items-center justify-between w-full mb-1">
-            <span className="text-muted-foreground">
-              {new Date(bookingDate).toLocaleDateString([], {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-              {bookingTime !== undefined && (
-                <span className="ml-1 opacity-70">
-                  ·{" "}
-                  {new Date(bookingTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              )}
-            </span>
-            <span className="font-semibold text-foreground">
-              ₱{estimatedPrice.toFixed(2)}
-            </span>
-          </div>
-          
+          <div className="flex flex-col items-center justify-between w-full">
+            <div className="flex flex-row items-center justify-between w-full mb-1">
+              <span className="text-muted-foreground">
+                {new Date(bookingDate).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                {bookingTime !== undefined && (
+                  <span className="ml-1 opacity-70">
+                    ·{" "}
+                    {new Date(bookingTime).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
+              </span>
+              <span className="font-semibold text-foreground">
+                ₱{estimatedPrice.toFixed(2)}
+              </span>
+            </div>
 
-          <div className="w-full mt-1">
-            <ProjectDetails
-              projectId={projectId}
-              bookingDate={bookingDate}
-              bookingTime={bookingTime}
-              serviceName={serviceName}
-              trigger={
-                <div className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer">
-                  View Details
-                </div>
-              }
-            />
+            <div className="w-full mt-1">
+              <ProjectDetails
+                projectId={projectId}
+                bookingDate={bookingDate}
+                bookingTime={bookingTime}
+                serviceName={serviceName}
+                trigger={
+                  <div className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer">
+                    View Details
+                  </div>
+                }
+              />
+            </div>
           </div>
-        </div>
         </>
       }
     ></ManageCard>

@@ -96,7 +96,10 @@ export function Step2ProjectDetails({
   };
 
   return (
-    <form onSubmit={handleNext} className="flex flex-col h-full max-h-[80vh] sm:w-2xl">
+    <form
+      onSubmit={handleNext}
+      className="flex flex-col h-full max-h-[80vh] sm:w-2xl"
+    >
       <DialogHeader className="shrink-0 pb-4">
         <DialogTitle className="text-2xl font-extrabold">
           Book {serviceName}
@@ -338,8 +341,6 @@ export function Step2ProjectDetails({
               />
             )}
           />
-
-          
         </FieldGroup>
       </div>
 

@@ -14,6 +14,7 @@ export const createProject = authMutation({
     pricing: v.string(),
     files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
+    assignedMaker: v.optional(v.id("userProfile")),
 
     booking: v.optional(
       v.object({
@@ -139,6 +140,7 @@ export const createProject = authMutation({
       material: args.material,
       requestedMaterialId: args.requestedMaterialId,
       userId: userProfile._id,
+      assignedMaker: args.assignedMaker,
       service: args.service,
       pricing: args.pricing,
       status: "pending",
@@ -276,9 +278,18 @@ export const updateProject = authMutation({
     const { projectId, status, makerId } = args;
     const updates: Partial<{
       status: "pending" | "approved" | "rejected" | "completed" | "cancelled";
+      assignedMaker: NonNullable<typeof args.makerId>;
     }> = {};
 
     if (status !== undefined) updates.status = status;
+
+    if (makerId !== undefined) {
+      const makerProfile = await ctx.db.get(makerId);
+      if (!makerProfile || makerProfile.role !== "maker") {
+        throw new ConvexError("Assigned user must be a maker");
+      }
+      updates.assignedMaker = makerId;
+    }
 
     await ctx.db.patch(projectId, updates);
 

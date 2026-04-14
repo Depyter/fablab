@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { setupProject } from "./helper";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 
 describe("Project and Chat functionality", () => {
   test("Initialization", async () => {
@@ -110,6 +110,34 @@ describe("Project and Chat functionality", () => {
     });
   });
 
-  test("Update Project (Privileged - Owner, Admin, Maker)", async () => {});
+  test("Update Project (Privileged - Owner, Admin, Maker)", async () => {
+    const { t, tAera, projectId } = await setupProject();
+
+    await t.mutation(internal.users.createMaker, {
+      userId: "3",
+      email: "maker@gmail.com",
+      name: "Maker",
+    });
+
+    const makerId = await t.run(async (ctx) => {
+      const maker = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .first();
+      return maker!._id;
+    });
+
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId,
+      status: "approved",
+      makerId,
+    });
+
+    await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectId);
+      expect(project!.status).toBe("approved");
+      expect(project!.assignedMaker).toBe(makerId);
+    });
+  });
   test("Update Project (Non-privileged)", async () => {});
 });

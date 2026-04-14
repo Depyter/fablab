@@ -86,7 +86,7 @@ function DropdownMenuItem({
 
 function DropdownMenuCheckboxItem({
   className,
-  children, 
+  children,
   checked,
   inset,
   ...props

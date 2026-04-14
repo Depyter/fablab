@@ -46,7 +46,9 @@ export function PublicMobileNav() {
         className="w-full border-white/10 bg-primary text-white"
       >
         <SheetHeader>
-          <SheetTitle className="text-lg font-bold text-white">IskoLab</SheetTitle>
+          <SheetTitle className="text-lg font-bold text-white">
+            IskoLab
+          </SheetTitle>
         </SheetHeader>
 
         <nav className="mt-6 ml-2 flex flex-col gap-2">

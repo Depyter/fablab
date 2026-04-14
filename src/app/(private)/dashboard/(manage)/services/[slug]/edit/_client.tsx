@@ -278,7 +278,8 @@ export function EditServiceClient({
                       toast.promise(addSamplePromise, {
                         loading: "Adding sample project...",
                         success: "Sample project added successfully!",
-                        error: "Failed to add sample project. Please try again.",
+                        error:
+                          "Failed to add sample project. Please try again.",
                       });
                       await addSamplePromise;
                     }}

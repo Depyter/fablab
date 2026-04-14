@@ -287,38 +287,28 @@ export function ProjectDetailsContent({
           <Card>
             <CardContent className="space-y-4 sm:min-w-0">
               <h3 className="text-base font-semibold sm:text-lg">
-                Assigned Makers
+                Assigned Maker
               </h3>
-              {project.resourceUsages.length === 0 ||
-              !project.resourceUsages.some((u) => u.makerName) ? (
+              {!project.assignedMaker ? (
                 <p className="text-sm text-muted-foreground">
-                  No makers assigned yet.
+                  No maker assigned yet.
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {project.resourceUsages
-                    .filter((usage) => usage.makerName)
-                    .map((usage, idx: number) => (
-                      <div
-                        key={`maker-${idx}`}
-                        className="flex items-center gap-3 rounded-md bg-muted/80 p-3 min-w-0"
-                      >
-                        {usage.makerPfpUrl ? (
-                          <img
-                            src={usage.makerPfpUrl}
-                            alt={usage.makerName ?? ""}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-medium">
-                            {usage.makerName?.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <p className="wrap-break-word text-sm font-medium">
-                          {usage.makerName}
-                        </p>
-                      </div>
-                    ))}
+                <div className="flex items-center gap-3 rounded-md bg-muted/80 p-3 min-w-0">
+                  {project.assignedMaker.pfpUrl ? (
+                    <img
+                      src={project.assignedMaker.pfpUrl}
+                      alt={project.assignedMaker.name}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-medium">
+                      {project.assignedMaker.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="wrap-break-word text-sm font-medium">
+                    {project.assignedMaker.name}
+                  </p>
                 </div>
               )}
 
