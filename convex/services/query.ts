@@ -46,9 +46,13 @@ export const getService = publicQuery({
       status?: string;
       imageUrl: string | null;
     }> = [];
-    if (service.materials && service.materials.length > 0) {
+    if (
+      service.serviceCategory.type === "FABRICATION" &&
+      service.serviceCategory.materials &&
+      service.serviceCategory.materials.length > 0
+    ) {
       materialDetails = await Promise.all(
-        service.materials.map(async (materialId) => {
+        service.serviceCategory.materials.map(async (materialId) => {
           const material = await ctx.db.get(materialId);
           const imageUrl = material?.image
             ? await ctx.storage.getUrl(material.image)

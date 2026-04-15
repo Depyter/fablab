@@ -36,6 +36,8 @@ export function Step2ProjectDetails({
   availableDays,
   serviceMaterials,
   hasUpPricing,
+  serviceCategory,
+  timeSlots,
 }: {
   form: any;
   serviceName: string;
@@ -55,7 +57,20 @@ export function Step2ProjectDetails({
     unit?: string;
   }>;
   hasUpPricing: boolean;
+  serviceCategory?: string;
+  timeSlots?: Array<{
+    startTime: number;
+    endTime: number;
+    maxSlots: number;
+  }>;
 }) {
+  const getLocalTimeString = (dateNum: number) => {
+    const d = new Date(dateNum);
+    const h = d.getHours().toString().padStart(2, "0");
+    const m = d.getMinutes().toString().padStart(2, "0");
+    return `${h}:${m}`;
+  };
+
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -82,7 +97,7 @@ export function Step2ProjectDetails({
     const endDate = new Date(dateTime.date);
     endDate.setHours(endHours, endMinutes, 0, 0);
 
-    if (startDate.getTime() < Date.now()) {
+    if (serviceCategory !== "WORKSHOP" && startDate.getTime() < Date.now()) {
       toast.error("Cannot book a date or time in the past.");
       return;
     }
@@ -291,7 +306,68 @@ export function Step2ProjectDetails({
             name="dateTime"
             children={(field: any) => (
               <>
-                {is3DPrinting ? (
+                {serviceCategory === "WORKSHOP" ? (
+                  <>
+                    <div className="flex flex-col gap-1 mb-2">
+                      <Label className="font-bold text-lg">
+                        Select Workshop Time Slot
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Choose an available slot for this workshop.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(timeSlots || []).map((slot, idx) => {
+                        const startFormatted = getLocalTimeString(
+                          slot.startTime,
+                        );
+                        const endFormatted = getLocalTimeString(slot.endTime);
+
+                        const isSelected =
+                          field.state.value?.startTime === startFormatted &&
+                          field.state.value?.endTime === endFormatted;
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              field.handleChange({
+                                date: new Date(slot.startTime),
+                                startTime: startFormatted,
+                                endTime: endFormatted,
+                              });
+                            }}
+                            className={`cursor-pointer rounded-lg border p-4 transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-gray-200 bg-white hover:border-primary/50"
+                            }`}
+                          >
+                            <p className="font-medium text-sm text-gray-900">
+                              {new Date(slot.startTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}{" "}
+                              -{" "}
+                              {new Date(slot.endTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Max capacity: {slot.maxSlots}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      {(!timeSlots || timeSlots.length === 0) && (
+                        <p className="text-sm text-muted-foreground">
+                          No time slots available for this workshop.
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : is3DPrinting ? (
                   <>
                     <div className="flex flex-col gap-1">
                       <Label className="font-bold text-lg">Deadline</Label>

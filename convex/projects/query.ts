@@ -65,8 +65,11 @@ export const getProjects = authQuery({
                 pfpUrl: makerPfpUrl,
               }
             : null,
-          bookingDate: usage?.date ?? Date.now(),
-          bookingTime: usage?.startTime ?? Date.now(),
+          bookingDate: usage?.date ?? service?.date ?? Date.now(),
+          bookingTime:
+            project.selectedTimeSlot?.startTime ??
+            usage?.startTime ??
+            Date.now(),
           estimatedPrice: 0, // Fallback price calculation
           coverUrl,
         };

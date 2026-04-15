@@ -38,7 +38,7 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [storageId],
       samples: [sampleStorageId],
-      serviceCategory: "FABRICATION",
+      serviceCategory: { type: "FABRICATION", materials: [] },
       pricing: {
         type: "PER_UNIT",
         baseFee: 2,
@@ -47,7 +47,6 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
-      materials: [],
       description: "printing services",
       status: "Available",
     });
@@ -75,7 +74,7 @@ describe("Service functions", () => {
         name: "3d printing",
         images: [],
         samples: [],
-        serviceCategory: "FABRICATION",
+        serviceCategory: { type: "FABRICATION", materials: [] },
         pricing: {
           type: "PER_UNIT",
           baseFee: 2,
@@ -84,7 +83,6 @@ describe("Service functions", () => {
         },
         requirements: ["design", "model"],
         fileTypes: [],
-        materials: [],
         description: "printing services",
         status: "Available",
       });
@@ -95,7 +93,7 @@ describe("Service functions", () => {
         name: "3d printing",
         images: [],
         samples: [],
-        serviceCategory: "FABRICATION",
+        serviceCategory: { type: "FABRICATION", materials: [] },
         pricing: {
           type: "PER_UNIT",
           baseFee: 2,
@@ -104,7 +102,6 @@ describe("Service functions", () => {
         },
         requirements: ["design", "model"],
         fileTypes: [],
-        materials: [],
         description: "printing services",
         status: "Available",
       });
@@ -120,7 +117,7 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      serviceCategory: "FABRICATION",
+      serviceCategory: { type: "FABRICATION", materials: [] },
       pricing: {
         type: "PER_UNIT",
         baseFee: 2,
@@ -129,7 +126,6 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
-      materials: [],
       description: "printing services",
       status: "Available",
     });
@@ -220,7 +216,7 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [storageId],
       samples: [sampleStorageId],
-      serviceCategory: "FABRICATION",
+      serviceCategory: { type: "FABRICATION", materials: [] },
       pricing: {
         type: "PER_UNIT",
         baseFee: 2,
@@ -229,7 +225,6 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
-      materials: [],
       description: "printing services",
       status: "Available",
     });
@@ -259,7 +254,7 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      serviceCategory: "FABRICATION",
+      serviceCategory: { type: "FABRICATION", materials: [] },
       pricing: {
         type: "PER_UNIT",
         baseFee: 2,
@@ -268,7 +263,6 @@ describe("Service functions", () => {
       },
       requirements: ["design", "model"],
       fileTypes: [],
-      materials: [],
       description: "printing services",
       status: "Available",
     });

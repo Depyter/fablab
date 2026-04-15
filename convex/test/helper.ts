@@ -35,7 +35,7 @@ export async function setupProject() {
     name: "3d printing",
     images: [],
     samples: [],
-    serviceCategory: "FABRICATION",
+    serviceCategory: { type: "FABRICATION", materials: [] },
     pricing: {
       type: "COMPOSITE",
       baseFee: 1,
@@ -44,7 +44,6 @@ export async function setupProject() {
     },
     requirements: ["design", "model"],
     fileTypes: [],
-    materials: [],
     description: "std to 3d printed model",
     status: "Available",
   });

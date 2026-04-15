@@ -40,13 +40,29 @@ export default defineSchema({
     requirements: v.array(v.string()),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
-    materials: v.optional(v.array(v.id("materials"))),
-    availableDays: v.optional(v.array(v.number())),
+
     status: v.union(
       v.literal(ServiceStatus.UNAVAILABLE),
       v.literal(ServiceStatus.AVAILABLE),
     ),
-    serviceCategory: v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+    serviceCategory: v.union(
+      v.object({
+        type: v.literal("WORKSHOP"),
+        date: v.number(),
+        timeSlots: v.array(
+          v.object({
+            startTime: v.number(),
+            endTime: v.number(),
+            maxSlots: v.number(),
+          }),
+        ),
+      }),
+      v.object({
+        type: v.literal("FABRICATION"),
+        availableDays: v.optional(v.array(v.number())),
+        materials: v.optional(v.array(v.id("materials"))),
+      }),
+    ),
     // Polymorphic pricing structure
     pricing: v.union(
       v.object({
@@ -92,7 +108,6 @@ export default defineSchema({
         ),
       }),
     ),
-    maxSlots: v.optional(v.number()),
   }).index("by_slug", ["slug"]),
 
   // --------------------------------------------------------
@@ -210,6 +225,12 @@ export default defineSchema({
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())),
     notes: v.string(),
+    selectedTimeSlot: v.optional(
+      v.object({
+        startTime: v.number(),
+        endTime: v.number(),
+      }),
+    ),
   }).index("by_userProfile", ["userId"]),
 
   // --------------------------------------------------------

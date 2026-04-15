@@ -30,6 +30,12 @@ interface BookingDialog {
   hasUpPricing?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   servicePricing?: any;
+  serviceCategory?: string;
+  timeSlots?: Array<{
+    startTime: number;
+    endTime: number;
+    maxSlots: number;
+  }>;
 }
 
 type Step = 1 | 2 | 3;
@@ -52,6 +58,8 @@ export function BookingDialog({
   serviceMaterials = [],
   hasUpPricing = false,
   servicePricing,
+  serviceCategory,
+  timeSlots,
 }: BookingDialog) {
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
@@ -136,6 +144,14 @@ export function BookingDialog({
             startTime: startDate.getTime(),
             endTime: endDate.getTime(),
           },
+          ...(serviceCategory === "WORKSHOP"
+            ? {
+                selectedTimeSlot: {
+                  startTime: startDate.getTime(),
+                  endTime: endDate.getTime(),
+                },
+              }
+            : {}),
         });
 
         toast.success("Booking request created successfully!");
@@ -220,6 +236,8 @@ export function BookingDialog({
             availableDays={availableDays}
             serviceMaterials={serviceMaterials}
             hasUpPricing={hasUpPricing}
+            serviceCategory={serviceCategory}
+            timeSlots={timeSlots}
           />
         )}
 

@@ -124,12 +124,15 @@ export function ServiceDetailClient({
                         <p className="text-xl font-black tracking-tight">
                           ₱{service.pricing.amount.toLocaleString()}
                         </p>
-                        {service.pricing.upAmount !== undefined && (
-                          <p className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        {service.pricing.variants?.map((variant) => (
+                          <p
+                            key={variant.name}
+                            className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1"
+                          >
                             <CirclePercent className="h-3 w-3" />
-                            UP: ₱{service.pricing.upAmount.toLocaleString()}
+                            {variant.name}: ₱{variant.amount.toLocaleString()}
                           </p>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}
@@ -154,20 +157,26 @@ export function ServiceDetailClient({
                           <p className="text-xl font-black tracking-tight text-primary">
                             ₱{service.pricing.ratePerUnit.toLocaleString()}
                           </p>
-                          {service.pricing.upRatePerUnit !== undefined && (
-                            <p className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          {service.pricing.variants?.map((variant) => (
+                            <p
+                              key={variant.name}
+                              className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1"
+                            >
                               <CirclePercent className="h-3 w-3" />
-                              UP: ₱
-                              {service.pricing.upRatePerUnit.toLocaleString()}
+                              {variant.name}: ₱
+                              {variant.ratePerUnit.toLocaleString()}
                             </p>
-                          )}
+                          ))}
                         </div>
-                        {service.pricing.upBaseFee !== undefined && (
-                          <p className="text-xs font-bold text-muted-foreground mt-2 flex items-center gap-1">
-                            UP Base Fee: ₱
-                            {service.pricing.upBaseFee.toLocaleString()}
+                        {service.pricing.variants?.map((variant) => (
+                          <p
+                            key={variant.name}
+                            className="text-xs font-bold text-muted-foreground mt-2 flex items-center gap-1"
+                          >
+                            {variant.name} Base Fee: ₱
+                            {variant.baseFee.toLocaleString()}
                           </p>
-                        )}
+                        ))}
                       </div>
                     </>
                   )}
@@ -195,19 +204,29 @@ export function ServiceDetailClient({
                               /{service.pricing.unitName}
                             </span>
                           </p>
-                          {service.pricing.upTimeRate !== undefined && (
-                            <span className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          {service.pricing.variants?.map((variant) => (
+                            <span
+                              key={variant.name}
+                              className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1"
+                            >
                               <CirclePercent className="h-3 w-3" />
-                              UP: ₱{service.pricing.upTimeRate.toLocaleString()}
-                              /{service.pricing.unitName}
+                              {variant.name}: ₱
+                              {variant.timeRate.toLocaleString()}/
+                              {
+                                (service.pricing as { unitName: string })
+                                  .unitName
+                              }
                             </span>
-                          )}
-                          {service.pricing.upBaseFee !== undefined && (
-                            <p className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1">
-                              UP Base Fee: ₱
-                              {service.pricing.upBaseFee.toLocaleString()}
+                          ))}
+                          {service.pricing.variants?.map((variant) => (
+                            <p
+                              key={variant.name}
+                              className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1"
+                            >
+                              {variant.name} Base Fee: ₱
+                              {variant.baseFee.toLocaleString()}
                             </p>
-                          )}
+                          ))}
                         </div>
                       </div>
                     </>
@@ -220,19 +239,23 @@ export function ServiceDetailClient({
                   serviceName={service.name}
                   requirements={service.requirements}
                   fileTypes={service.fileTypes ?? []}
-                  availableDays={service.availableDays ?? []}
+                  availableDays={
+                    service.serviceCategory.type === "FABRICATION"
+                      ? (service.serviceCategory.availableDays ?? [])
+                      : []
+                  }
                   serviceMaterials={service.materialDetails ?? []}
                   hasUpPricing={
-                    (service.pricing.type === "FIXED" &&
-                      service.pricing.upAmount !== undefined) ||
-                    (service.pricing.type === "PER_UNIT" &&
-                      (service.pricing.upBaseFee !== undefined ||
-                        service.pricing.upRatePerUnit !== undefined)) ||
-                    (service.pricing.type === "COMPOSITE" &&
-                      (service.pricing.upBaseFee !== undefined ||
-                        service.pricing.upTimeRate !== undefined))
+                    service.pricing.variants !== undefined &&
+                    service.pricing.variants.length > 0
                   }
                   servicePricing={service.pricing}
+                  serviceCategory={service.serviceCategory.type}
+                  timeSlots={
+                    service.serviceCategory.type === "WORKSHOP"
+                      ? service.serviceCategory.timeSlots
+                      : []
+                  }
                 />
               </div>
             </div>

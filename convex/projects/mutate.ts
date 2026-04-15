@@ -15,6 +15,12 @@ export const createProject = authMutation({
     files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
     assignedMaker: v.optional(v.id("userProfile")),
+    selectedTimeSlot: v.optional(
+      v.object({
+        startTime: v.number(),
+        endTime: v.number(),
+      }),
+    ),
 
     booking: v.optional(
       v.object({
@@ -99,13 +105,17 @@ export const createProject = authMutation({
       throw new ConvexError("End time must be after start time.");
     }
 
-    if (service.availableDays && service.availableDays.length > 0) {
+    if (
+      service.serviceCategory.type === "FABRICATION" &&
+      service.serviceCategory.availableDays &&
+      service.serviceCategory.availableDays.length > 0
+    ) {
       const localDateString = new Date(finalBooking.date).toLocaleString(
         "en-US",
         { timeZone: "Asia/Manila" },
       );
       const dayOfWeek = new Date(localDateString).getDay();
-      if (!service.availableDays.includes(dayOfWeek)) {
+      if (!service.serviceCategory.availableDays.includes(dayOfWeek)) {
         throw new ConvexError(
           "Selected date falls on an unavailable day for this service.",
         );
@@ -146,6 +156,7 @@ export const createProject = authMutation({
       status: "pending",
       files: args.files,
       notes: args.notes,
+      selectedTimeSlot: args.selectedTimeSlot,
       costBreakdown,
     });
 

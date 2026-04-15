@@ -56,40 +56,49 @@ export const GeneralInfoForm = withForm({
             )}
           />
 
-          <form.Field
-            name="availableDays"
-            children={(field) => (
-              <Field>
-                <FieldLabel>Available Days</FieldLabel>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Select which days of the week this service can be booked.
-                  Leave empty to allow any day.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS_OF_WEEK.map((day) => {
-                    const isSelected = field.state.value.includes(day.value);
-                    return (
-                      <Button
-                        key={day.value}
-                        type="button"
-                        variant={isSelected ? "default" : "outline"}
-                        className={cn("h-10 w-10 p-0 rounded-full")}
-                        onClick={() => {
-                          const newValue = isSelected
-                            ? field.state.value.filter(
-                                (v: number) => v !== day.value,
-                              )
-                            : [...field.state.value, day.value].sort();
-                          field.handleChange(newValue);
-                        }}
-                      >
-                        {day.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </Field>
-            )}
+          <form.Subscribe
+            selector={(state) => state.values.serviceCategory}
+            children={(serviceCategory) =>
+              serviceCategory === "FABRICATION" ? (
+                <form.Field
+                  name="availableDays"
+                  children={(field) => (
+                    <Field>
+                      <FieldLabel>Available Days</FieldLabel>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Select which days of the week this service can be
+                        booked. Leave empty to allow any day.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {DAYS_OF_WEEK.map((day) => {
+                          const isSelected = field.state.value.includes(
+                            day.value,
+                          );
+                          return (
+                            <Button
+                              key={day.value}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              className={cn("h-10 w-10 p-0 rounded-full")}
+                              onClick={() => {
+                                const newValue = isSelected
+                                  ? field.state.value.filter(
+                                      (v: number) => v !== day.value,
+                                    )
+                                  : [...field.state.value, day.value];
+                                field.handleChange(newValue);
+                              }}
+                            >
+                              {day.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </Field>
+                  )}
+                />
+              ) : null
+            }
           />
         </FormSection>
       </div>

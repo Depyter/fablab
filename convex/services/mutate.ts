@@ -43,7 +43,24 @@ export const addService = authMutation({
     samples: v.array(v.id("_storage")),
     description: v.string(),
     requirements: v.array(v.string()),
-    serviceCategory: v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+    serviceCategory: v.union(
+      v.object({
+        type: v.literal("WORKSHOP"),
+        date: v.number(),
+        timeSlots: v.array(
+          v.object({
+            startTime: v.number(),
+            endTime: v.number(),
+            maxSlots: v.number(),
+          }),
+        ),
+      }),
+      v.object({
+        type: v.literal("FABRICATION"),
+        availableDays: v.optional(v.array(v.number())),
+        materials: v.optional(v.array(v.id("materials"))),
+      }),
+    ),
     pricing: v.union(
       v.object({
         type: v.literal("FIXED"),
@@ -88,11 +105,8 @@ export const addService = authMutation({
         ),
       }),
     ),
-    maxSlots: v.optional(v.number()),
     fileTypes: v.array(v.string()),
     resources: v.optional(v.array(v.id("resources"))),
-    materials: v.optional(v.array(v.id("materials"))),
-    availableDays: v.optional(v.array(v.number())),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
@@ -105,12 +119,9 @@ export const addService = authMutation({
       pricing: args.pricing,
       fileTypes: args.fileTypes,
       resources: args.resources,
-      materials: args.materials,
-      availableDays: args.availableDays,
       status: args.status,
       requirements: args.requirements,
       samples: args.samples,
-      maxSlots: args.serviceCategory === "WORKSHOP" ? args.maxSlots : undefined,
     });
 
     if (args.images.length > 0) claimFiles(ctx, args.images);
@@ -124,7 +135,24 @@ export const updateService = authMutation({
     service: v.id("services"),
     name: v.optional(v.string()),
     serviceCategory: v.optional(
-      v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+      v.union(
+        v.object({
+          type: v.literal("WORKSHOP"),
+          date: v.number(),
+          timeSlots: v.array(
+            v.object({
+              startTime: v.number(),
+              endTime: v.number(),
+              maxSlots: v.number(),
+            }),
+          ),
+        }),
+        v.object({
+          type: v.literal("FABRICATION"),
+          availableDays: v.optional(v.array(v.number())),
+          materials: v.optional(v.array(v.id("materials"))),
+        }),
+      ),
     ),
     pricing: v.optional(
       v.union(
@@ -172,12 +200,9 @@ export const updateService = authMutation({
         }),
       ),
     ),
-    maxSlots: v.optional(v.number()),
     requirements: v.optional(v.array(v.string())),
     fileTypes: v.optional(v.array(v.string())),
     resources: v.optional(v.array(v.id("resources"))),
-    materials: v.optional(v.array(v.id("materials"))),
-    availableDays: v.optional(v.array(v.number())),
     description: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -207,24 +232,6 @@ export const updateService = authMutation({
       updates.requirements = args.requirements;
     if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
     if (args.resources !== undefined) updates.resources = args.resources;
-    if (args.materials !== undefined) updates.materials = args.materials;
-    if (args.availableDays !== undefined)
-      updates.availableDays = args.availableDays;
-
-    if (args.maxSlots !== undefined) {
-      const existingService = await ctx.db.get(args.service);
-      const serviceCat =
-        args.serviceCategory ?? existingService?.serviceCategory;
-      if (serviceCat === "WORKSHOP") {
-        updates.maxSlots = args.maxSlots;
-      } else {
-        updates.maxSlots = undefined;
-      }
-    } else if (args.serviceCategory !== undefined) {
-      if (args.serviceCategory !== "WORKSHOP") {
-        updates.maxSlots = undefined;
-      }
-    }
 
     await ctx.db.patch(args.service, updates);
   },
