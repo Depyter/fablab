@@ -16,6 +16,7 @@ import { RequirementsForm } from "@/components/services/forms/requirements-form"
 import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
 import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/file-upload/types";
 import { AddServiceFormValues } from "@/types/add-service";
 import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
 
@@ -34,6 +35,8 @@ const statusOptions = [
 export interface ServiceFormProps {
   title: string;
   initialValues: AddServiceFormValues;
+  initialImages?: UploadedFile[];
+  initialSamples?: UploadedFile[];
   onSubmit: (values: AddServiceFormValues) => Promise<void>;
   onDiscard: (formValues: AddServiceFormValues) => Promise<void> | void;
   submitError: string | null;
@@ -42,6 +45,8 @@ export interface ServiceFormProps {
 export function ServiceForm({
   title,
   initialValues,
+  initialImages = [],
+  initialSamples = [],
   onSubmit,
   onDiscard,
   submitError,
@@ -150,6 +155,7 @@ export function ServiceForm({
               <FileUpload
                 title="Sample Projects"
                 accept="*/*"
+                value={initialSamples}
                 onFilesChange={(files) =>
                   field.handleChange(
                     files.map((f) => f.storageId as Id<"_storage">),
@@ -176,6 +182,7 @@ export function ServiceForm({
                 <FileUpload
                   title="Thumbnail"
                   accept="*/*"
+                  value={initialImages}
                   onFilesChange={(files) =>
                     field.handleChange(
                       files.map((f) => f.storageId as Id<"_storage">),

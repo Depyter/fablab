@@ -7,6 +7,7 @@ import { useMutation, usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { AddServiceFormValues } from "@/types/add-service";
+import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
 import { toast } from "sonner";
 
@@ -28,6 +29,28 @@ export function EditServiceClient({
       </div>
     );
   }
+
+  const initialImages: UploadedFile[] = (service.images || []).map(
+    (id, index) => ({
+      storageId: id,
+      fileName: `Thumbnail ${index + 1}`,
+      fileType: "image/jpeg",
+      fileSize: 0,
+      uploadedAt: new Date(),
+      url: service.imageUrls?.[index] ?? undefined,
+    }),
+  );
+
+  const initialSamples: UploadedFile[] = (service.samples || []).map(
+    (id, index) => ({
+      storageId: id,
+      fileName: `Sample ${index + 1}`,
+      fileType: "image/jpeg",
+      fileSize: 0,
+      uploadedAt: new Date(),
+      url: service.sampleUrls?.[index] ?? undefined,
+    }),
+  );
 
   const initialValues: AddServiceFormValues = {
     name: service.name,
@@ -184,6 +207,8 @@ export function EditServiceClient({
       <ServiceForm
         title={`Edit ${service.name}`}
         initialValues={initialValues}
+        initialImages={initialImages}
+        initialSamples={initialSamples}
         onSubmit={handleSubmit}
         onDiscard={() => {
           router.push("/dashboard/services");
