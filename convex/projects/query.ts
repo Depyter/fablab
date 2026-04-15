@@ -65,7 +65,12 @@ export const getProjects = authQuery({
                 pfpUrl: makerPfpUrl,
               }
             : null,
-          bookingDate: usage?.date ?? service?.date ?? Date.now(),
+          bookingDate:
+            usage?.date ??
+            (service?.serviceCategory.type === "WORKSHOP"
+              ? service.serviceCategory.date
+              : undefined) ??
+            Date.now(),
           bookingTime:
             project.selectedTimeSlot?.startTime ??
             usage?.startTime ??

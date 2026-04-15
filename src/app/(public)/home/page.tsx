@@ -190,8 +190,8 @@ export default function HomePage() {
           <h3 className="mb-3 text-2xl font-bold">Ready to Create?</h3>
           <p className="mb-6 max-w-2xl text-muted-foreground">
             Join us at FabLab UP Cebu and bring your ideas to life. With our
-            state-of-the-art equipment and supportive community, there's almost
-            nothing you can't make.
+            state-of-the-art equipment and supportive community, there&apos;s
+            almost nothing you can&apos;t make.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/login">
