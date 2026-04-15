@@ -6,7 +6,7 @@ import { Preloaded } from "convex/react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, PhilippinePeso, CirclePercent } from "lucide-react";
+import { ArrowLeft, PhilippinePeso, CirclePercent } from "lucide-react";
 import { ActionDialog } from "@/components/action-dialog";
 import { useMutation } from "convex/react";
 import { PriceTile } from "@/components/services/price-tile";
@@ -81,13 +81,15 @@ export function ServiceDetailClient({
         unit: "fixed",
         isUp: false,
       });
-      if (pricing.upAmount !== undefined) {
-        displays.push({
-          label: "UP Price",
-          price: pricing.upAmount,
-          unit: "fixed",
-          isUp: true,
-        });
+      if (pricing.variants) {
+        for (const variant of pricing.variants) {
+          displays.push({
+            label: `${variant.name} Price`,
+            price: variant.amount,
+            unit: "fixed",
+            isUp: true,
+          });
+        }
       }
     } else if (pricing.type === "PER_UNIT") {
       displays.push({
@@ -102,22 +104,17 @@ export function ServiceDetailClient({
         unit: pricing.unitName,
         isUp: false,
       });
-      if (
-        pricing.upBaseFee !== undefined ||
-        pricing.upRatePerUnit !== undefined
-      ) {
-        if (pricing.upBaseFee !== undefined) {
+      if (pricing.variants) {
+        for (const variant of pricing.variants) {
           displays.push({
-            label: "UP Base",
-            price: pricing.upBaseFee,
+            label: `${variant.name} Base`,
+            price: variant.baseFee,
             unit: "base",
             isUp: true,
           });
-        }
-        if (pricing.upRatePerUnit !== undefined) {
           displays.push({
-            label: "UP Rate",
-            price: pricing.upRatePerUnit,
+            label: `${variant.name} Rate`,
+            price: variant.ratePerUnit,
             unit: pricing.unitName,
             isUp: true,
           });
@@ -136,19 +133,17 @@ export function ServiceDetailClient({
         unit: pricing.unitName,
         isUp: false,
       });
-      if (pricing.upBaseFee !== undefined || pricing.upTimeRate !== undefined) {
-        if (pricing.upBaseFee !== undefined) {
+      if (pricing.variants) {
+        for (const variant of pricing.variants) {
           displays.push({
-            label: "UP Base",
-            price: pricing.upBaseFee,
+            label: `${variant.name} Base`,
+            price: variant.baseFee,
             unit: "base",
             isUp: true,
           });
-        }
-        if (pricing.upTimeRate !== undefined) {
           displays.push({
-            label: "UP Time Rate",
-            price: pricing.upTimeRate,
+            label: `${variant.name} Time Rate`,
+            price: variant.timeRate,
             unit: pricing.unitName,
             isUp: true,
           });

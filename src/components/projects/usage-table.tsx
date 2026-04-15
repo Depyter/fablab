@@ -45,7 +45,12 @@ export interface MachineUsage {
   machineId: string;
   projectId: string;
   projectAlias: string;
-  projectStatus: "pending" | "approved" | "rejected" | "completed";
+  projectStatus:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "completed"
+    | "cancelled";
   makerName: string;
   date: number; // Unix timestamp (seconds)
   startTime: number; // Decimal hours (e.g., 7.5 for 07:30)

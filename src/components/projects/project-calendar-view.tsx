@@ -84,8 +84,8 @@ export function ProjectCalendarView() {
     name: s.name,
     status:
       s.status === ServiceStatus.UNAVAILABLE
-        ? ServiceStatus.UNAVAILABLE
-        : ServiceStatus.AVAILABLE,
+        ? ResourceStatus.UNAVAILABLE
+        : ResourceStatus.AVAILABLE,
     description: "Service Booking Queue",
   }));
 

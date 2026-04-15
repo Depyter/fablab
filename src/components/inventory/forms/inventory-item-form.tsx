@@ -237,20 +237,22 @@ export function InventoryItemForm({
                   value={initialImages}
                   onAddFile={
                     isEdit
-                      ? (file) =>
-                          addImageToResource({
+                      ? async (file) => {
+                          await addImageToResource({
                             resource: initialValues?._id as Id<"resources">,
                             image: file.storageId as Id<"_storage">,
-                          })
+                          });
+                        }
                       : undefined
                   }
                   onRemoveFile={
                     isEdit
-                      ? (file) =>
-                          deleteImageFromResource({
+                      ? async (file) => {
+                          await deleteImageFromResource({
                             resource: initialValues?._id as Id<"resources">,
                             image: file.storageId as Id<"_storage">,
-                          })
+                          });
+                        }
                       : undefined
                   }
                   onFilesChange={(files) =>
