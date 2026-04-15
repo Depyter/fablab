@@ -251,10 +251,10 @@ export function ServiceDetailClient({
                   }
                   servicePricing={service.pricing}
                   serviceCategory={service.serviceCategory.type}
-                  timeSlots={
+                  schedules={
                     service.serviceCategory.type === "WORKSHOP"
-                      ? service.serviceCategory.timeSlots
-                      : []
+                      ? service.serviceCategory.schedules
+                      : undefined
                   }
                 />
               </div>

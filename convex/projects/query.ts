@@ -66,11 +66,7 @@ export const getProjects = authQuery({
               }
             : null,
           bookingDate:
-            usage?.date ??
-            (service?.serviceCategory.type === "WORKSHOP"
-              ? service.serviceCategory.date
-              : undefined) ??
-            Date.now(),
+            usage?.date ?? project.selectedTimeSlot?.startTime ?? Date.now(),
           bookingTime:
             project.selectedTimeSlot?.startTime ??
             usage?.startTime ??

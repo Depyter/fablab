@@ -24,6 +24,7 @@ export const ResourceStatus = {
 export const ProjectServiceType = {
   SELF_SERVICE: "self-service",
   FULL_SERVICE: "full-service",
+  WORKSHOP: "workshop",
 } as const;
 
 export const ProjectMaterial = {

@@ -37,7 +37,7 @@ export function Step2ProjectDetails({
   serviceMaterials,
   hasUpPricing,
   serviceCategory,
-  timeSlots,
+  schedules,
 }: {
   form: any;
   serviceName: string;
@@ -58,10 +58,13 @@ export function Step2ProjectDetails({
   }>;
   hasUpPricing: boolean;
   serviceCategory?: string;
-  timeSlots?: Array<{
-    startTime: number;
-    endTime: number;
-    maxSlots: number;
+  schedules?: Array<{
+    date: number;
+    timeSlots: Array<{
+      startTime: number;
+      endTime: number;
+      maxSlots: number;
+    }>;
   }>;
 }) {
   const getLocalTimeString = (dateNum: number) => {
@@ -316,53 +319,76 @@ export function Step2ProjectDetails({
                         Choose an available slot for this workshop.
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {(timeSlots || []).map((slot, idx) => {
-                        const startFormatted = getLocalTimeString(
-                          slot.startTime,
-                        );
-                        const endFormatted = getLocalTimeString(slot.endTime);
+                    <div className="flex flex-col gap-6">
+                      {(schedules || []).map((schedule, sIdx) => (
+                        <div key={sIdx} className="space-y-3">
+                          <h4 className="font-semibold text-gray-900">
+                            {new Date(schedule.date).toLocaleDateString([], {
+                              weekday: "long",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {(schedule.timeSlots || []).map((slot, idx) => {
+                              const startFormatted = getLocalTimeString(
+                                slot.startTime,
+                              );
+                              const endFormatted = getLocalTimeString(
+                                slot.endTime,
+                              );
 
-                        const isSelected =
-                          field.state.value?.startTime === startFormatted &&
-                          field.state.value?.endTime === endFormatted;
+                              const isSelected =
+                                field.state.value?.date?.getTime() ===
+                                  new Date(schedule.date).getTime() &&
+                                field.state.value?.startTime ===
+                                  startFormatted &&
+                                field.state.value?.endTime === endFormatted;
 
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => {
-                              field.handleChange({
-                                date: new Date(slot.startTime),
-                                startTime: startFormatted,
-                                endTime: endFormatted,
-                              });
-                            }}
-                            className={`cursor-pointer rounded-lg border p-4 transition-colors ${
-                              isSelected
-                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                : "border-gray-200 bg-white hover:border-primary/50"
-                            }`}
-                          >
-                            <p className="font-medium text-sm text-gray-900">
-                              {new Date(slot.startTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}{" "}
-                              -{" "}
-                              {new Date(slot.endTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Max capacity: {slot.maxSlots}
-                            </p>
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    field.handleChange({
+                                      date: new Date(schedule.date),
+                                      startTime: startFormatted,
+                                      endTime: endFormatted,
+                                    });
+                                  }}
+                                  className={`cursor-pointer rounded-lg border p-4 transition-colors ${
+                                    isSelected
+                                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                      : "border-gray-200 bg-white hover:border-primary/50"
+                                  }`}
+                                >
+                                  <p className="font-medium text-sm text-gray-900">
+                                    {new Date(
+                                      slot.startTime,
+                                    ).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}{" "}
+                                    -{" "}
+                                    {new Date(slot.endTime).toLocaleTimeString(
+                                      [],
+                                      {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      },
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Max capacity: {slot.maxSlots}
+                                  </p>
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                      {(!timeSlots || timeSlots.length === 0) && (
+                        </div>
+                      ))}
+                      {(!schedules || schedules.length === 0) && (
                         <p className="text-sm text-muted-foreground">
-                          No time slots available for this workshop.
+                          No schedules available for this workshop.
                         </p>
                       )}
                     </div>
@@ -421,14 +447,16 @@ export function Step2ProjectDetails({
       </div>
 
       <div className="shrink-0 pt-6 border-t mt-4 flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onPrev}
-          className="rounded-lg pl-3"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" /> Back
-        </Button>
+        {serviceCategory !== "WORKSHOP" && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPrev}
+            className="rounded-lg pl-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+        )}
         <Button type="submit" className="rounded-lg" disabled={isUploading}>
           {isUploading ? "Uploading..." : "Review & Estimate"}
         </Button>

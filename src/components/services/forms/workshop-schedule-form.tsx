@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
 import { FormSection } from "@/components/ui/form-section";
@@ -15,6 +16,35 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const formatTimeForInput = (val: number | undefined) => {
+  if (!val) return "";
+  const d = new Date(val);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+};
+
+const handleTimeChange = (val: string, onChange: (time: number) => void) => {
+  if (!val) return;
+  const [h, m] = val.split(":");
+  const d = new Date();
+  d.setHours(Number(h), Number(m), 0, 0);
+  onChange(d.getTime());
+};
+
+const getDefaultTime = (hours: number, minutes: number) => {
+  const d = new Date();
+  d.setHours(hours, minutes, 0, 0);
+  return d.getTime();
+};
 
 export const WorkshopScheduleForm = withForm({
   ...addServiceFormOpts,
@@ -30,160 +60,223 @@ export const WorkshopScheduleForm = withForm({
                 description="Configure dates and time slots for this workshop."
               >
                 <form.Field
-                  name="date"
-                  children={(field) => (
-                    <div className="space-y-2 flex flex-col">
-                      <Label>Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.state.value && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.state.value ? (
-                              format(new Date(field.state.value), "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={
-                              field.state.value
-                                ? new Date(field.state.value)
-                                : undefined
-                            }
-                            onSelect={(date) =>
-                              field.handleChange(
-                                date ? date.getTime() : undefined,
-                              )
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  )}
-                />
-
-                <form.Field
-                  name="timeSlots"
+                  name="schedules"
                   mode="array"
-                  children={(field) => (
-                    <div className="space-y-4 mt-6">
+                  children={(schedulesField) => (
+                    <div className="space-y-6">
                       <div className="flex items-center justify-between">
-                        <Label>Time Slots</Label>
+                        <Label>Schedules</Label>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            field.pushValue({
-                              startTime: 0,
-                              endTime: 0,
-                              maxSlots: 1,
+                            schedulesField.pushValue({
+                              date: Date.now(),
+                              timeSlots: [
+                                {
+                                  startTime: getDefaultTime(9, 0),
+                                  endTime: getDefaultTime(10, 0),
+                                  maxSlots: 1,
+                                },
+                              ],
                             })
                           }
                         >
-                          Add Slot
+                          Add Date
                         </Button>
                       </div>
-                      {(field.state.value || []).map((_, index) => (
-                        <div
-                          key={index}
-                          className="flex items-end gap-3 p-4 border rounded-md bg-muted/30"
-                        >
-                          <form.Field
-                            name={`timeSlots[${index}].startTime`}
-                            children={(subField) => (
-                              <div className="space-y-1 flex-1">
-                                <Label className="text-xs text-muted-foreground">
-                                  Start Time
-                                </Label>
-                                <Input
-                                  type="time"
-                                  value={
-                                    subField.state.value
-                                      ? new Date(subField.state.value)
-                                          .toISOString()
-                                          .substring(11, 16)
-                                      : ""
-                                  }
-                                  onChange={(e) => {
-                                    if (!e.target.value) return;
-                                    const [h, m] = e.target.value.split(":");
-                                    const d = new Date();
-                                    d.setHours(Number(h), Number(m), 0, 0);
-                                    subField.handleChange(d.getTime());
-                                  }}
-                                />
-                              </div>
-                            )}
-                          />
-                          <form.Field
-                            name={`timeSlots[${index}].endTime`}
-                            children={(subField) => (
-                              <div className="space-y-1 flex-1">
-                                <Label className="text-xs text-muted-foreground">
-                                  End Time
-                                </Label>
-                                <Input
-                                  type="time"
-                                  value={
-                                    subField.state.value
-                                      ? new Date(subField.state.value)
-                                          .toISOString()
-                                          .substring(11, 16)
-                                      : ""
-                                  }
-                                  onChange={(e) => {
-                                    if (!e.target.value) return;
-                                    const [h, m] = e.target.value.split(":");
-                                    const d = new Date();
-                                    d.setHours(Number(h), Number(m), 0, 0);
-                                    subField.handleChange(d.getTime());
-                                  }}
-                                />
-                              </div>
-                            )}
-                          />
-                          <form.Field
-                            name={`timeSlots[${index}].maxSlots`}
-                            children={(subField) => (
-                              <div className="space-y-1 w-24">
-                                <Label className="text-xs text-muted-foreground">
-                                  Max Slots
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={subField.state.value}
-                                  onChange={(e) =>
-                                    subField.handleChange(
-                                      Number(e.target.value),
-                                    )
-                                  }
-                                />
-                              </div>
-                            )}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => field.removeValue(index)}
+                      {(schedulesField.state.value || []).map(
+                        (_, scheduleIndex) => (
+                          <div
+                            key={scheduleIndex}
+                            className="p-4 border rounded-md space-y-4 relative bg-card"
                           >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 text-destructive hover:bg-destructive/10 hover:text-destructive z-10"
+                              onClick={() =>
+                                schedulesField.removeValue(scheduleIndex)
+                              }
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+
+                            <form.Field
+                              name={`schedules[${scheduleIndex}].date`}
+                              children={(dateField) => (
+                                <div className="space-y-2 flex flex-col w-[240px]">
+                                  <Label>Date</Label>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                          "w-full justify-start text-left font-normal",
+                                          !dateField.state.value &&
+                                            "text-muted-foreground",
+                                        )}
+                                      >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {dateField.state.value ? (
+                                          format(
+                                            new Date(dateField.state.value),
+                                            "PPP",
+                                          )
+                                        ) : (
+                                          <span>Pick a date</span>
+                                        )}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                      className="w-auto p-0"
+                                      align="start"
+                                    >
+                                      <Calendar
+                                        mode="single"
+                                        selected={
+                                          dateField.state.value
+                                            ? new Date(dateField.state.value)
+                                            : undefined
+                                        }
+                                        onSelect={(date) =>
+                                          dateField.handleChange(
+                                            date ? date.getTime() : undefined,
+                                          )
+                                        }
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                              )}
+                            />
+
+                            <form.Field
+                              name={`schedules[${scheduleIndex}].timeSlots`}
+                              mode="array"
+                              children={(timeSlotsField) => (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <Label>Time Slots</Label>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        timeSlotsField.pushValue({
+                                          startTime: getDefaultTime(9, 0),
+                                          endTime: getDefaultTime(10, 0),
+                                          maxSlots: 1,
+                                        })
+                                      }
+                                    >
+                                      Add Slot
+                                    </Button>
+                                  </div>
+                                  <div className="flex flex-col divide-y">
+                                    {(timeSlotsField.state.value || []).map(
+                                      (_, slotIndex) => (
+                                        <div
+                                          key={slotIndex}
+                                          className="flex flex-col gap-4 py-4 first:pt-2 last:pb-0"
+                                        >
+                                          <div className="flex items-end justify-between gap-4">
+                                            <div className="flex flex-wrap items-center gap-4 flex-1">
+                                              <form.Field
+                                                name={`schedules[${scheduleIndex}].timeSlots[${slotIndex}].startTime`}
+                                                children={(subField) => (
+                                                  <div className="flex flex-col gap-3">
+                                                    <Label className="px-1">
+                                                      From
+                                                    </Label>
+                                                    <Input
+                                                      type="time"
+                                                      className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                                                      value={formatTimeForInput(
+                                                        subField.state.value,
+                                                      )}
+                                                      onChange={(e) =>
+                                                        handleTimeChange(
+                                                          e.target.value,
+                                                          subField.handleChange,
+                                                        )
+                                                      }
+                                                    />
+                                                  </div>
+                                                )}
+                                              />
+                                              <form.Field
+                                                name={`schedules[${scheduleIndex}].timeSlots[${slotIndex}].endTime`}
+                                                children={(subField) => (
+                                                  <div className="flex flex-col gap-3">
+                                                    <Label className="px-1">
+                                                      To
+                                                    </Label>
+                                                    <Input
+                                                      type="time"
+                                                      className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                                                      value={formatTimeForInput(
+                                                        subField.state.value,
+                                                      )}
+                                                      onChange={(e) =>
+                                                        handleTimeChange(
+                                                          e.target.value,
+                                                          subField.handleChange,
+                                                        )
+                                                      }
+                                                    />
+                                                  </div>
+                                                )}
+                                              />
+                                            </div>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                                              onClick={() =>
+                                                timeSlotsField.removeValue(
+                                                  slotIndex,
+                                                )
+                                              }
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                          <form.Field
+                                            name={`schedules[${scheduleIndex}].timeSlots[${slotIndex}].maxSlots`}
+                                            children={(subField) => (
+                                              <div className="flex flex-col gap-3 sm:max-w-[200px]">
+                                                <Label className="px-1">
+                                                  Max Slots
+                                                </Label>
+                                                <Input
+                                                  type="number"
+                                                  min="1"
+                                                  className="bg-background"
+                                                  value={subField.state.value}
+                                                  onChange={(e) =>
+                                                    subField.handleChange(
+                                                      Number(e.target.value),
+                                                    )
+                                                  }
+                                                />
+                                              </div>
+                                            )}
+                                          />
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            />
+                          </div>
+                        ),
+                      )}
                     </div>
                   )}
                 />

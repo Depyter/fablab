@@ -31,10 +31,13 @@ interface BookingDialog {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   servicePricing?: any;
   serviceCategory?: string;
-  timeSlots?: Array<{
-    startTime: number;
-    endTime: number;
-    maxSlots: number;
+  schedules?: Array<{
+    date: number;
+    timeSlots: Array<{
+      startTime: number;
+      endTime: number;
+      maxSlots: number;
+    }>;
   }>;
 }
 
@@ -59,13 +62,15 @@ export function BookingDialog({
   hasUpPricing = false,
   servicePricing,
   serviceCategory,
-  timeSlots,
+  schedules,
 }: BookingDialog) {
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
   );
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(
+    serviceCategory === "WORKSHOP" ? 2 : 1,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,7 +83,7 @@ export function BookingDialog({
 
   const form = useAppForm({
     defaultValues: {
-      serviceType: "self-service",
+      serviceType: serviceCategory === "WORKSHOP" ? "workshop" : "self-service",
       name: "",
       description: "",
       notes: "",
@@ -175,7 +180,8 @@ export function BookingDialog({
   };
 
   const handlePrevStep = () => {
-    if (step > 1) {
+    const minStep = serviceCategory === "WORKSHOP" ? 2 : 1;
+    if (step > minStep) {
       setStep((prev) => (prev - 1) as Step);
     }
   };
@@ -185,7 +191,7 @@ export function BookingDialog({
     if (!open) {
       // Reset state on close
       setTimeout(() => {
-        setStep(1);
+        setStep(serviceCategory === "WORKSHOP" ? 2 : 1);
         setIsSubmitting(false);
         setIsSuccess(false);
         form.reset();
@@ -209,14 +215,24 @@ export function BookingDialog({
       </DialogTrigger>
 
       <DialogContent className="h-auto w-auto min-w-[min(22rem,calc(100%-2rem))] max-w-[calc(100%-2rem)] sm:max-w-[min(80vw,80rem)] rounded-xl">
-        {step === 1 && (
+        {step === 1 && serviceCategory !== "WORKSHOP" && (
           <Step1ServiceType
             form={form}
             onNext={() => {
-              if (availableDays.length === 0) {
+              if (
+                serviceCategory === "FABRICATION" &&
+                availableDays.length === 0
+              ) {
                 toast.error(
                   "This service is currently unavailable for booking.",
                 );
+                return;
+              }
+              if (
+                serviceCategory === "WORKSHOP" &&
+                (!schedules || schedules.length === 0)
+              ) {
+                toast.error("This workshop has no available schedules.");
                 return;
               }
               handleNextStep();
@@ -239,7 +255,7 @@ export function BookingDialog({
             serviceMaterials={serviceMaterials}
             hasUpPricing={hasUpPricing}
             serviceCategory={serviceCategory}
-            timeSlots={timeSlots}
+            schedules={schedules}
           />
         )}
 
@@ -272,7 +288,8 @@ export function BookingDialog({
             />
           </form>
         )}
-        {step !== 1 && (
+        {((serviceCategory !== "WORKSHOP" && step !== 1) ||
+          (serviceCategory === "WORKSHOP" && step !== 2)) && (
           <div className="absolute bottom-6 left-4 z-50">
             <ActionDialog
               onConfirm={handleConfirmCancel}

@@ -48,12 +48,16 @@ export default defineSchema({
     serviceCategory: v.union(
       v.object({
         type: v.literal("WORKSHOP"),
-        date: v.number(),
-        timeSlots: v.array(
+        schedules: v.array(
           v.object({
-            startTime: v.number(),
-            endTime: v.number(),
-            maxSlots: v.number(),
+            date: v.number(),
+            timeSlots: v.array(
+              v.object({
+                startTime: v.number(),
+                endTime: v.number(),
+                maxSlots: v.number(),
+              }),
+            ),
           }),
         ),
       }),
@@ -193,6 +197,7 @@ export default defineSchema({
     serviceType: v.union(
       v.literal(ProjectServiceType.SELF_SERVICE),
       v.literal(ProjectServiceType.FULL_SERVICE),
+      v.literal(ProjectServiceType.WORKSHOP),
     ),
     material: v.union(
       v.literal(ProjectMaterial.PROVIDE_OWN),

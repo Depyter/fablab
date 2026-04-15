@@ -38,8 +38,7 @@ export default function AddServicePage() {
 
       const {
         availableDays,
-        date,
-        timeSlots,
+        schedules,
         serviceCategory,
         materials,
         ...restValue
@@ -51,8 +50,7 @@ export default function AddServicePage() {
           serviceCategory === "WORKSHOP"
             ? {
                 type: "WORKSHOP",
-                date: date as number,
-                timeSlots: timeSlots ?? [],
+                schedules: schedules ?? [],
               }
             : {
                 type: "FABRICATION",

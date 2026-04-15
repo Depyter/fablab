@@ -46,12 +46,16 @@ export const addService = authMutation({
     serviceCategory: v.union(
       v.object({
         type: v.literal("WORKSHOP"),
-        date: v.number(),
-        timeSlots: v.array(
+        schedules: v.array(
           v.object({
-            startTime: v.number(),
-            endTime: v.number(),
-            maxSlots: v.number(),
+            date: v.number(),
+            timeSlots: v.array(
+              v.object({
+                startTime: v.number(),
+                endTime: v.number(),
+                maxSlots: v.number(),
+              }),
+            ),
           }),
         ),
       }),
@@ -138,12 +142,16 @@ export const updateService = authMutation({
       v.union(
         v.object({
           type: v.literal("WORKSHOP"),
-          date: v.number(),
-          timeSlots: v.array(
+          schedules: v.array(
             v.object({
-              startTime: v.number(),
-              endTime: v.number(),
-              maxSlots: v.number(),
+              date: v.number(),
+              timeSlots: v.array(
+                v.object({
+                  startTime: v.number(),
+                  endTime: v.number(),
+                  maxSlots: v.number(),
+                }),
+              ),
             }),
           ),
         }),

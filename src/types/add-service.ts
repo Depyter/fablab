@@ -31,8 +31,10 @@ export interface AddServiceFormValues {
   resources: string[];
   materials: string[];
   availableDays: number[];
-  date?: number;
-  timeSlots?: { startTime: number; endTime: number; maxSlots: number }[];
+  schedules?: {
+    date: number;
+    timeSlots: { startTime: number; endTime: number; maxSlots: number }[];
+  }[];
 }
 
 export const defaultAddServiceValues: AddServiceFormValues = {
@@ -48,7 +50,7 @@ export const defaultAddServiceValues: AddServiceFormValues = {
   resources: [],
   materials: [],
   availableDays: [],
-  timeSlots: [],
+  schedules: [],
 };
 
 export const addServiceFormOpts = formOptions({

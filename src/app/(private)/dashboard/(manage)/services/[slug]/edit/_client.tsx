@@ -76,13 +76,9 @@ export function EditServiceClient({
       service.serviceCategory.type === "FABRICATION"
         ? (service.serviceCategory.availableDays ?? [])
         : [],
-    date:
+    schedules:
       service.serviceCategory.type === "WORKSHOP"
-        ? service.serviceCategory.date
-        : undefined,
-    timeSlots:
-      service.serviceCategory.type === "WORKSHOP"
-        ? service.serviceCategory.timeSlots
+        ? service.serviceCategory.schedules
         : [],
   };
 
@@ -154,8 +150,7 @@ export function EditServiceClient({
           value.serviceCategory === "WORKSHOP"
             ? {
                 type: "WORKSHOP",
-                date: value.date as number,
-                timeSlots: value.timeSlots ?? [],
+                schedules: value.schedules ?? [],
               }
             : {
                 type: "FABRICATION",
