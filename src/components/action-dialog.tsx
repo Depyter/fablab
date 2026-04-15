@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 
 interface ActionDialogProps {
   onConfirm: () => void;
@@ -34,7 +35,7 @@ export function ActionDialog({
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline" className={`rounded-lg px-10 ${className}`}>
+          <Button variant="outline" className={cn("rounded-lg", className)}>
             {baseActionText || "Back"}
           </Button>
         </DialogTrigger>

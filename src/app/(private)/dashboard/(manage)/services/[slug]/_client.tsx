@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePreloadedQuery, Preloaded, useMutation } from "convex/react";
+import { usePreloadedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { CirclePercent, PhilippinePeso, ChevronLeft } from "lucide-react";
+import { Preloaded } from "convex/react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, PhilippinePeso, CirclePercent } from "lucide-react";
+import { ActionDialog } from "@/components/action-dialog";
+import { useMutation } from "convex/react";
 import { PriceTile } from "@/components/services/price-tile";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export function ServiceDetailClient({
   preloadedService,
@@ -38,98 +41,188 @@ export function ServiceDetailClient({
       <main className="container mx-auto max-w-6xl p-10">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/dashboard/services">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 border-gray-200 rounded-lg"
-            >
-              <ChevronLeft className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Service not found
+          </h1>
         </div>
-        <p className="text-muted-foreground text-center py-10">
-          This service is no longer available.
-        </p>
       </main>
     );
   }
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const deletePromise = deleteService({ service: service._id });
+      toast.promise(deletePromise, {
+        loading: "Deleting service...",
+        success: "Service deleted successfully!",
+        error: "Failed to delete service. Please try again.",
+      });
+      await deletePromise;
+      router.push("/dashboard/services");
+    } catch (error) {
+      console.error("Failed to delete service:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const getPricingDisplays = (pricing: typeof service.pricing) => {
+    const displays = [];
+
+    if (pricing.type === "FIXED") {
+      displays.push({
+        label: "Regular Price",
+        price: pricing.amount,
+        unit: "fixed",
+        isUp: false,
+      });
+      if (pricing.variants) {
+        for (const variant of pricing.variants) {
+          displays.push({
+            label: `${variant.name} Price`,
+            price: variant.amount,
+            unit: "fixed",
+            isUp: true,
+          });
+        }
+      }
+    } else if (pricing.type === "PER_UNIT") {
+      displays.push({
+        label: "Regular Base",
+        price: pricing.baseFee,
+        unit: "base",
+        isUp: false,
+      });
+      displays.push({
+        label: "Regular Rate",
+        price: pricing.ratePerUnit,
+        unit: pricing.unitName,
+        isUp: false,
+      });
+      if (pricing.variants) {
+        for (const variant of pricing.variants) {
+          displays.push({
+            label: `${variant.name} Base`,
+            price: variant.baseFee,
+            unit: "base",
+            isUp: true,
+          });
+          displays.push({
+            label: `${variant.name} Rate`,
+            price: variant.ratePerUnit,
+            unit: pricing.unitName,
+            isUp: true,
+          });
+        }
+      }
+    } else if (pricing.type === "COMPOSITE") {
+      displays.push({
+        label: "Regular Base",
+        price: pricing.baseFee,
+        unit: "base",
+        isUp: false,
+      });
+      displays.push({
+        label: "Regular Time Rate",
+        price: pricing.timeRate,
+        unit: pricing.unitName,
+        isUp: false,
+      });
+      if (pricing.variants) {
+        for (const variant of pricing.variants) {
+          displays.push({
+            label: `${variant.name} Base`,
+            price: variant.baseFee,
+            unit: "base",
+            isUp: true,
+          });
+          displays.push({
+            label: `${variant.name} Time Rate`,
+            price: variant.timeRate,
+            unit: pricing.unitName,
+            isUp: true,
+          });
+        }
+      }
+    }
+
+    return displays;
+  };
+
+  const pricingDisplays = getPricingDisplays(service.pricing);
+
   return (
-    <main className="">
-      <div className="container mx-auto max-w-6xl p-10">
-        {/* Top Navigation & Actions */}
-        <header
-          className={`sticky top-0 z-10 flex items-center justify-between mb-8 bg-white pb-4 ${
-            isScrolled ? "border-b border-gray-200" : "border-b-0"
-          }`}
-        >
+    <main className="container mx-auto max-w-6xl pb-24">
+      {/* Sticky Header Navigation */}
+      <header
+        className={`sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b transition-all duration-300 -mx-4 px-4 sm:mx-0 sm:px-8 py-4 mb-8
+          ${isScrolled ? "border-gray-200 shadow-sm" : "border-transparent"}`}
+      >
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-4">
             <Link href="/dashboard/services">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-10 w-10 border-gray-200 rounded-lg"
+                className="rounded-full hover:bg-gray-100 transition-colors"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">{service.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text">
+              {service.name}
+            </h1>
           </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-              disabled={isDeleting}
-              onClick={async () => {
-                if (!service) return;
-                setIsDeleting(true);
-                try {
-                  await deleteService({
-                    service: service._id as Id<"services">,
-                  });
-                  router.push("/dashboard/services");
-                } catch {
-                  setIsDeleting(false);
-                }
-              }}
-            >
-              {isDeleting ? "Removing..." : "Remove"}
-            </Button>
-            <Link
-              href={service ? `/dashboard/services/${service.name}/edit` : "#"}
-            >
-              <Button className="bg-[#1A8A7E] hover:bg-[#156E65] px-10 font-medium rounded-lg">
-                Edit
+          <div className="flex items-center gap-3">
+            <Link href={`/dashboard/services/${service.slug}/edit`}>
+              <Button variant="outline" className="hidden sm:flex rounded-full">
+                Edit Service
               </Button>
             </Link>
+            <ActionDialog
+              title="Delete Service"
+              description={`Are you sure you want to delete "${service.name}"? This action cannot be undone.`}
+              onConfirm={handleDelete}
+              baseActionText="Delete"
+              className="bg-red-500 hover:bg-red-600 text-white border-transparent"
+              confirmButtonText="Delete"
+            />
           </div>
-        </header>
+        </div>
+      </header>
 
+      <div className="px-4 sm:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Left Gallery */}
+          {/* Left Content - Gallery */}
           <div className="lg:col-span-5 space-y-4">
             <ServiceGallery images={service.imageUrls} />
           </div>
 
           {/* Right Content */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="flex gap-4">
-              <PriceTile
-                label="Regular Price"
-                price={service.regularPrice}
-                unit={service.unitPrice}
-                icon={
-                  <div className="border-gray-200 rounded-full border-2 w-6 h-6 items-center p-0.5 justify-center align-middle">
-                    <PhilippinePeso className="h-4 w-4 text-gray-200 stroke-2.5" />
-                  </div>
-                }
-              />
-              <PriceTile
-                label="UP Rate"
-                price={service.upPrice}
-                unit={service.unitPrice}
-                icon={<CirclePercent className="h-6 w-6 text-gray-200" />}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {pricingDisplays.map((display, idx) => (
+                <PriceTile
+                  key={idx}
+                  label={display.label}
+                  price={display.price}
+                  unit={display.unit}
+                  icon={
+                    display.isUp ? (
+                      <CirclePercent className="h-6 w-6 text-gray-200" />
+                    ) : (
+                      <div className="border-gray-200 rounded-full border-2 w-6 h-6 items-center p-0.5 justify-center align-middle">
+                        <PhilippinePeso className="h-4 w-4 text-gray-200 stroke-2.5" />
+                      </div>
+                    )
+                  }
+                />
+              ))}
             </div>
 
             <div className="border border-gray-200 rounded-xl p-8 relative min-h-125">
@@ -158,41 +251,37 @@ export function ServiceDetailClient({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-400 text-sm">
-                    No requirements listed.
+                  <p className="text-gray-500 text-sm italic">
+                    No special requirements.
                   </p>
                 )}
               </section>
+
+              {service.sampleUrls.length > 0 && (
+                <section className="mt-10">
+                  <h3 className="text-lg font-bold mb-3">Sample Outputs</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {service.sampleUrls.map((url, i) => (
+                      <div
+                        key={i}
+                        className="relative aspect-square rounded-xl overflow-hidden border border-gray-100"
+                      >
+                        <Image
+                          src={url}
+                          alt={`Sample ${i + 1}`}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 33vw"
+                          className="object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Sample Projects */}
-      <section className="mt-8 bg-light-yellow p-10">
-        <h2 className="text-xl font-bold mb-4">Sample Projects</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {service.sampleUrls.map((url, index) => (
-            <div key={index} className="p-1 aspect-square">
-              <Image
-                src={url}
-                alt={`Sample project ${index + 1}`}
-                width={500}
-                height={500}
-                className="w-full h-full object-cover rounded-lg"
-              />
-            </div>
-          ))}
-
-          {service.sampleUrls.length === 0 && (
-            <div className="col-span-full border-dashed border-gray-300 text-center py-10">
-              <p className="text-gray-400">
-                No sample projects available for this service.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
     </main>
   );
 }

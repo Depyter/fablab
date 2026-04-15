@@ -6,12 +6,14 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UploadedFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
+import { toast } from "sonner";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
+  threadId?: Id<"threads">;
 }
 
-export function useChat({ roomId }: UseChatOptions) {
+export function useChat({ roomId, threadId }: UseChatOptions) {
   const [input, setInput] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<
     PendingAttachment[]
@@ -38,11 +40,12 @@ export function useChat({ roomId }: UseChatOptions) {
     loadMore,
   } = usePaginatedQuery(
     api.chat.query.getRoomMessages,
-    { room: roomId },
+    { room: roomId, threadId },
     { initialNumItems: 50 },
   );
 
   const sendMessageMutation = useMutation(api.chat.mutate.sendMessage);
+  const markReadMutation = useMutation(api.chat.mutate.markThreadRead);
 
   // Scroll handling
   const handleScroll = useCallback(() => {
@@ -62,6 +65,12 @@ export function useChat({ roomId }: UseChatOptions) {
       loadMore(50);
     }
   }, [status, loadMore]);
+
+  useEffect(() => {
+    if (threadId) {
+      markReadMutation({ threadId }).catch(console.error);
+    }
+  }, [threadId, messages.length, markReadMutation]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -106,9 +115,14 @@ export function useChat({ roomId }: UseChatOptions) {
             ? (attachments.map((a) => a.storageId) as Id<"_storage">[])
             : undefined,
         room: roomId,
+        threadId,
       });
+      // toast.success("Message sent");
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message",
+      );
       // Restore text; files need to be re-attached (they were already uploaded)
       setInput(content);
     }

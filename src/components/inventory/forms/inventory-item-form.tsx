@@ -1,42 +1,31 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FieldSet } from "@/components/ui/field";
 import { FileUpload } from "@/components/file-upload/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ActionDialog } from "@/components/action-dialog";
+import { FormSection } from "@/components/ui/form-section";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import {
+  ResourceCategoryType,
+  ResourceStatusType,
+  ResourceStatus,
+} from "@convex/constants";
 
-export type InventoryItemType = "machine" | "tool" | "room" | "misc";
+export type InventoryItemType = ResourceCategoryType;
 
 export type InventoryItemFormValues = {
   name: string;
   description: string;
   type: string;
-  status: "Available" | "Unavailable" | "Under Maintenance";
+  status: ResourceStatusType;
   thumbnail: string[]; // storage IDs
 };
 
@@ -104,7 +93,7 @@ export function InventoryItemForm({
   onSuccess,
 }: InventoryItemFormProps) {
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
-  const config = useMemo(() => ITEM_CONFIG[itemType], [itemType]);
+  const config = ITEM_CONFIG[itemType];
   const isEdit = mode === "edit";
 
   const addResource = useMutation(api.resource.mutate.addResource);
@@ -117,17 +106,15 @@ export function InventoryItemForm({
     api.resource.mutate.deleteImageFromResource,
   );
 
-  const handleThumbnailUploading = useCallback(
-    (isUploading: boolean) => setThumbnailUploading(isUploading),
-    [],
-  );
+  const handleThumbnailUploading = (isUploading: boolean) =>
+    setThumbnailUploading(isUploading);
 
   const form = useAppForm({
     defaultValues: {
       name: initialValues?.name ?? "",
       description: initialValues?.description ?? "",
       type: initialValues?.type ?? config.typeOptions[0].value,
-      status: initialValues?.status ?? "Available",
+      status: initialValues?.status ?? ResourceStatus.AVAILABLE,
       thumbnail: initialValues?.thumbnail ?? ([] as string[]),
     } as InventoryItemFormValues,
     onSubmit: async ({ value }) => {
@@ -207,58 +194,35 @@ export function InventoryItemForm({
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-4">
             <FieldSet>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-bold text-lg">
-                    General Information
-                  </CardTitle>
-                  <CardDescription>
-                    Provide details about your {config.title.toLowerCase()}.
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent>
-                  <FieldGroup className="mt-4 space-y-4">
-                    <form.Field
-                      name="name"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>Name</FieldLabel>
-                          <Input
-                            id={field.name}
-                            placeholder={`e.g. ${config.title} Name`}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            required
-                          />
-                        </Field>
-                      )}
+              <FormSection
+                title="General Information"
+                description={`Provide details about your ${config.title.toLowerCase()}.`}
+                className="mt-4 space-y-4"
+              >
+                <form.AppField
+                  name="name"
+                  children={(field) => (
+                    <field.TextInput
+                      label="Name"
+                      placeholder={`e.g. ${config.title} Name`}
+                      required
                     />
+                  )}
+                />
 
-                    <form.Field
-                      name="description"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>
-                            Description
-                          </FieldLabel>
-                          <Textarea
-                            id={field.name}
-                            placeholder={`Describe the ${config.title.toLowerCase()}...`}
-                            className="resize-height w-full"
-                            rows={4}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            required
-                          />
-                        </Field>
-                      )}
+                <form.AppField
+                  name="description"
+                  children={(field) => (
+                    <field.TextareaInput
+                      label="Description"
+                      placeholder={`Describe the ${config.title.toLowerCase()}...`}
+                      className="resize-height w-full"
+                      rows={4}
+                      required
                     />
-                  </FieldGroup>
-                </CardContent>
-              </Card>
+                  )}
+                />
+              </FormSection>
             </FieldSet>
           </div>
 
@@ -268,25 +232,27 @@ export function InventoryItemForm({
               children={(field) => (
                 <FileUpload
                   title="Images"
-                  accept="image/png, image/jpeg, image/jpg"
+                  accept="*/*"
                   multiple={true}
                   value={initialImages}
                   onAddFile={
                     isEdit
-                      ? (file) =>
-                          addImageToResource({
+                      ? async (file) => {
+                          await addImageToResource({
                             resource: initialValues?._id as Id<"resources">,
                             image: file.storageId as Id<"_storage">,
-                          })
+                          });
+                        }
                       : undefined
                   }
                   onRemoveFile={
                     isEdit
-                      ? (file) =>
-                          deleteImageFromResource({
+                      ? async (file) => {
+                          await deleteImageFromResource({
                             resource: initialValues?._id as Id<"resources">,
                             image: file.storageId as Id<"_storage">,
-                          })
+                          });
+                        }
                       : undefined
                   }
                   onFilesChange={(files) =>
@@ -299,79 +265,44 @@ export function InventoryItemForm({
           </div>
 
           <div className="space-y-4">
-            <FieldSet>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-bold text-lg">Details</CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                  <FieldGroup className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <form.Field
-                      name="type"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>
-                            {config.typeLabel}
-                          </FieldLabel>
-                          <Select
-                            value={field.state.value}
-                            onValueChange={field.handleChange}
-                          >
-                            <SelectTrigger id={field.name}>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {config.typeOptions.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                      )}
-                    />
-
-                    <form.Field
-                      name="status"
-                      children={(field) => (
-                        <Field>
-                          <FieldLabel htmlFor={field.name}>Status</FieldLabel>
-                          <Select
-                            value={field.state.value}
-                            onValueChange={(val) =>
-                              field.handleChange(
-                                val as InventoryItemFormValues["status"],
-                              )
-                            }
-                          >
-                            <SelectTrigger id={field.name}>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value="Available">
-                                  Available
-                                </SelectItem>
-                                <SelectItem value="Unavailable">
-                                  Unavailable
-                                </SelectItem>
-                                <SelectItem value="Under Maintenance">
-                                  Under Maintenance
-                                </SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                      )}
-                    />
-                  </FieldGroup>
-                </CardContent>
-              </Card>
-            </FieldSet>
+            <FormSection
+              title="Details"
+              className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <form.AppField
+                name="type"
+                children={(field) => (
+                  <field.SelectInput
+                    label={config.typeLabel}
+                    placeholder="Select type"
+                    options={config.typeOptions}
+                  />
+                )}
+              />
+              <form.AppField
+                name="status"
+                children={(field) => (
+                  <field.SelectInput
+                    label="Status"
+                    placeholder="Select status"
+                    options={[
+                      {
+                        label: ResourceStatus.AVAILABLE,
+                        value: ResourceStatus.AVAILABLE,
+                      },
+                      {
+                        label: ResourceStatus.UNAVAILABLE,
+                        value: ResourceStatus.UNAVAILABLE,
+                      },
+                      {
+                        label: ResourceStatus.UNDER_MAINTENANCE,
+                        value: ResourceStatus.UNDER_MAINTENANCE,
+                      },
+                    ]}
+                  />
+                )}
+              />
+            </FormSection>
           </div>
         </div>
       </form>

@@ -1,15 +1,8 @@
 import { useState } from "react";
 import Image from "next/image";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { ManageCard } from "@/components/manage/manage-card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
   InventoryItemForm,
@@ -22,7 +15,7 @@ export interface InventoryItem {
   description: string;
   type: string;
   category: InventoryItemType;
-  status: "Available" | "Unavailable" | "Under Maintenance";
+  status: import("@convex/constants").ResourceStatusType;
   images: string[];
   imageUrls: string[];
 }
@@ -33,12 +26,11 @@ interface InventoryCardProps {
   className?: string;
 }
 
-const getBadgeVariant = (status: string) => {
-  const s = status.toLowerCase();
-  if (s === "available") return "secondary";
-  if (s === "maintenance" || s === "under maintenance") return "destructive";
-  if (s === "unavailable") return "outline";
-  return "default";
+const STATUS_STYLES: Record<string, string> = {
+  available: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "under maintenance": "bg-amber-100 text-amber-700 border-amber-200",
+  maintenance: "bg-amber-100 text-amber-700 border-amber-200",
+  unavailable: "bg-red-100 text-red-700 border-red-200",
 };
 
 export function InventoryCard({
@@ -47,81 +39,62 @@ export function InventoryCard({
   className = "",
 }: InventoryCardProps) {
   const [open, setOpen] = useState(false);
+  const statusKey = item.status.toLowerCase();
+  const badgeStyle =
+    STATUS_STYLES[statusKey] ?? "bg-muted text-muted-foreground border-border";
 
   return (
-    <Card
-      className={`relative mx-auto w-full max-w-sm pt-5 flex flex-col ${className}`}
-    >
-      <CardAction
-        className={
-          "absolute inset-0 z-40 p-4 flex items-start justify-end pointer-events-none"
-        }
-      >
-        {showBadge && (
-          <Badge
-            variant={getBadgeVariant(item.status)}
-            className="h-8 rounded-lg pointer-events-auto"
-          >
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Badge>
-        )}
-      </CardAction>
-
-      {item.imageUrls && item.imageUrls.length > 0 && (
-        <div className="px-6 mb-4 h-40 w-full relative">
-          <Image
-            src={item.imageUrls[0]}
-            alt={item.name}
-            fill
-            className="object-cover rounded-lg border"
-          />
+    <ManageCard
+      className={className}
+      title={item.name}
+      subtitle={
+        <>
+          {item.category.charAt(0).toUpperCase() + item.category.slice(1)} ·{" "}
+          {item.type}
+        </>
+      }
+      description={item.description}
+      coverUrl={item.imageUrls?.[0] || null}
+      badgeText={showBadge ? item.status : undefined}
+      badgeClassName={badgeStyle}
+      action={
+        <div className="w-full block">
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-8 text-xs"
+              >
+                Edit Details
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden">
+              <InventoryItemForm
+                itemType={item.category}
+                mode="edit"
+                initialValues={{
+                  _id: item._id,
+                  name: item.name,
+                  description: item.description,
+                  type: item.type,
+                  status: item.status,
+                  thumbnail: item.images,
+                }}
+                initialImages={item.images?.map((id, i) => ({
+                  storageId: id,
+                  fileName: `Image ${i + 1}`,
+                  fileType: "image/jpeg",
+                  fileSize: 0,
+                  uploadedAt: new Date(),
+                  url: item.imageUrls?.[i],
+                }))}
+                onSuccess={() => setOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
-      )}
-
-      <CardHeader>
-        <CardTitle className="font-bold text-xl">{item.name}</CardTitle>
-        <CardDescription className="line-clamp-2">
-          {item.description}
-        </CardDescription>
-      </CardHeader>
-
-      <div className="grow" />
-
-      <CardFooter>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="rounded-full px-10 bg-primary hover:bg-primary/80 hover:text-white text-white w-full"
-            >
-              View Details
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden">
-            <InventoryItemForm
-              itemType={item.category}
-              mode="edit"
-              initialValues={{
-                _id: item._id,
-                name: item.name,
-                description: item.description,
-                type: item.type,
-                status: item.status,
-                thumbnail: item.images,
-              }}
-              initialImages={item.images?.map((id, i) => ({
-                storageId: id,
-                fileName: `Image ${i + 1}`,
-                fileType: "image/jpeg",
-                fileSize: 0,
-                uploadedAt: new Date(),
-                url: item.imageUrls?.[i],
-              }))}
-              onSuccess={() => setOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      </CardFooter>
-    </Card>
+      }
+    />
   );
 }

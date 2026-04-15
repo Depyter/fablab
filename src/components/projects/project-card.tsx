@@ -1,44 +1,39 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { Id } from "@convex/_generated/dataModel";
+import { ProjectDetails } from "./project-details";
+import { ManageCard } from "@/components/manage/manage-card";
+
+export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
+  pending: {
+    badge: "bg-amber-100 text-amber-700 border-amber-200",
+    cover: "from-amber-500/20 to-amber-500/5",
+  },
+  approved: {
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+    cover: "from-blue-500/20 to-blue-500/5",
+  },
+  rejected: {
+    badge: "bg-red-100 text-red-700 border-red-200",
+    cover: "from-red-500/20 to-red-500/5",
+  },
+};
 
 interface ProjectCardProps {
-  // required
-  //   slug: string;
-  //   imageSrc: string;
-  clientName: string;
-  serviceName: string;
+  projectId: Id<"projects">;
   title: string;
   description: string;
-
+  clientName: string;
+  serviceName: string;
   bookingDate: number;
   estimatedPrice: number;
   status: string;
-
+  coverUrl?: string | null;
   bookingTime?: number;
-  buttonText?: string;
-  showBadge?: boolean;
-  badgeVariant?:
-    | "default"
-    | "secondary"
-    | "destructive"
-    | "outline"
-    | "ghost"
-    | "link";
   className?: string;
 }
 
 export function ProjectCard({
-  //   slug,
-  //   imageSrc,
+  projectId,
   title,
   description,
   clientName,
@@ -47,63 +42,64 @@ export function ProjectCard({
   bookingTime,
   estimatedPrice,
   status,
-  buttonText = "View Details",
-  showBadge = true,
-  badgeVariant = status === "completed"
-    ? "outline"
-    : status === "active"
-      ? "secondary"
-      : "destructive",
-
-  className = "",
+  coverUrl,
+  className,
 }: ProjectCardProps) {
-  return (
-    <Card className={`relative mx-auto w-full max-w-sm pt-5 ${className}`}>
-      <CardAction
-        className={"absolute inset-0 z-40 p-4 flex items-start justify-end"}
-      >
-        {showBadge && (
-          <Badge variant={badgeVariant} className="h-8 rounded-lg h-8">
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Badge>
-        )}
-      </CardAction>
-      <CardHeader className="px-8 pt-0">
-        <CardTitle className="font-bold text-xl">{title}</CardTitle>
-        <CardDescription>
-          {serviceName} for {clientName}
-          <div className="h-2" />
-          <div className="mt-2 flex flex-col items-start gap-1 text-chart-6">
-            <div className="text-sm">
-              <span className="font-medium text-gray-900">Booking Date: </span>
-              {new Date(bookingDate).toLocaleDateString()}
+  const styles = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
 
-              {bookingTime && (
-                <span className="ml-2 text-gray-500">
-                  at{" "}
-                  {new Date(bookingTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              )}
-            </div>
-            <div className="text-sm">
-              <span className="font-medium text-gray-900">
-                Estimated Price:{" "}
+  return (
+    <ManageCard
+      className={className}
+      title={title}
+      subtitle={`${serviceName} · ${clientName}`}
+      description={description}
+      coverUrl={coverUrl}
+      coverFallback={
+        <div className={cn("h-full w-full bg-linear-to-br", styles.cover)} />
+      }
+      badgeText={status}
+      badgeClassName={styles.badge}
+      footer={
+        <>
+          <div className="flex flex-col items-center justify-between w-full">
+            <div className="flex flex-row items-center justify-between w-full mb-1">
+              <span className="text-muted-foreground">
+                {new Date(bookingDate).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                {bookingTime !== undefined && (
+                  <span className="ml-1 opacity-70">
+                    ·{" "}
+                    {new Date(bookingTime).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
               </span>
-              ₱ {estimatedPrice.toFixed(2)}
+              <span className="font-semibold text-foreground">
+                ₱{estimatedPrice.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="w-full mt-1">
+              <ProjectDetails
+                projectId={projectId}
+                bookingDate={bookingDate}
+                bookingTime={bookingTime}
+                serviceName={serviceName}
+                trigger={
+                  <div className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer">
+                    View Details
+                  </div>
+                }
+              />
             </div>
           </div>
-        </CardDescription>
-      </CardHeader>
-
-      <div className="flex-1/2" />
-      <CardFooter>
-        <Link href={`/dashboard/projects/`} className="w-full">
-          <Button className="w-full">{buttonText}</Button>
-        </Link>
-      </CardFooter>
-    </Card>
+        </>
+      }
+    ></ManageCard>
   );
 }

@@ -4,12 +4,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
+import { resolveFileType } from "./utils";
 
 export interface UseFileUploadOptions {
   maxFiles?: number;
   maxFileSizeMB?: number;
   disabled?: boolean;
   autoUpload?: boolean;
+  allowedTypes?: string[];
   value?: UploadedFile[];
   onAddFile?: (file: UploadedFile) => void;
   onUploadComplete?: (file: UploadedFile) => void;
@@ -41,6 +43,7 @@ export function useFileUpload({
   maxFileSizeMB = 100,
   disabled = false,
   autoUpload = true,
+  allowedTypes,
   value = [],
   onAddFile,
   onUploadComplete,
@@ -104,6 +107,25 @@ export function useFileUpload({
 
   const uploadFile = useCallback(
     async (file: File) => {
+      const mimeType = resolveFileType(file);
+
+      if (
+        allowedTypes &&
+        allowedTypes.length > 0 &&
+        !allowedTypes.includes(mimeType)
+      ) {
+        const error = new Error(`File type ${mimeType} is not allowed`);
+        setUploadingFiles((prev) =>
+          prev.map((f) =>
+            f.file === file
+              ? { ...f, status: "error" as const, error: error.message }
+              : f,
+          ),
+        );
+        onUploadError?.(error, file);
+        return;
+      }
+
       if (file.size > maxFileSizeMB * 1024 * 1024) {
         const error = new Error(`File size exceeds ${maxFileSizeMB}MB`);
         setUploadingFiles((prev) =>
@@ -128,7 +150,7 @@ export function useFileUpload({
 
         const result = await fetch(uploadUrl, {
           method: "POST",
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": mimeType },
           body: file,
         });
 
@@ -140,14 +162,14 @@ export function useFileUpload({
 
         await trackUpload({
           originalName: file.name,
-          type: file.type,
+          type: mimeType,
           upload: storageId,
         });
 
         const uploadedFile: UploadedFile = {
           storageId,
           fileName: file.name,
-          fileType: file.type,
+          fileType: mimeType,
           fileSize: file.size,
           uploadedAt: new Date(),
           url: previewUrlMapRef.current.get(file),
@@ -162,8 +184,8 @@ export function useFileUpload({
         );
 
         setUploadedFiles((prev) => [...prev, uploadedFile]);
-        onAddFile?.(uploadedFile);
-        onUploadComplete?.(uploadedFile);
+        await Promise.resolve(onAddFile?.(uploadedFile));
+        await Promise.resolve(onUploadComplete?.(uploadedFile));
 
         setTimeout(() => {
           setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
@@ -190,6 +212,7 @@ export function useFileUpload({
       generateUploadUrl,
       trackUpload,
       maxFileSizeMB,
+      allowedTypes,
       onAddFile,
       onUploadComplete,
       onUploadError,
@@ -298,11 +321,17 @@ export function useFileUpload({
     );
 
     if (removedFiles.length > 0 && onRemoveFile) {
-      removedFiles.forEach((file) => {
-        if (!deletingFileIdsRef.current.has(file.storageId)) {
+      void (async () => {
+        for (const file of removedFiles) {
+          if (deletingFileIdsRef.current.has(file.storageId)) {
+            continue;
+          }
+
           deletingFileIdsRef.current.add(file.storageId);
-          onRemoveFile(file);
+          await Promise.resolve(onRemoveFile(file));
         }
+      })().catch((error) => {
+        console.error("Failed to remove uploaded file:", error);
       });
     }
 

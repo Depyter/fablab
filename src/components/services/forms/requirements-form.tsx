@@ -3,13 +3,7 @@
 import { useRef } from "react";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
 import {
   Field,
   FieldGroup,
@@ -29,16 +23,18 @@ export const RequirementsForm = withForm({
   ...addServiceFormOpts,
   render: function RequirementsRender({ form }) {
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const focusInputAt = (nextIndex: number) => {
+      requestAnimationFrame(() => {
+        inputRefs.current[nextIndex]?.focus();
+      });
+    };
 
     return (
-      <Card className="w-full sm:max-w-3xl">
-        <CardHeader>
-          <CardTitle className="font-bold text-lg">Requirements</CardTitle>
-          <CardDescription>
-            Specify the requirements for your service.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="w-full sm:max-w-3xl">
+        <FormSection
+          title="Requirements"
+          description="Specify the requirements for your service."
+        >
           <form.Field
             name="requirements"
             mode="array"
@@ -66,12 +62,9 @@ export const RequirementsForm = withForm({
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
+                                    const nextIndex = index + 1;
                                     field.pushValue("");
-                                    setTimeout(() => {
-                                      inputRefs.current[
-                                        field.state.value.length
-                                      ]?.focus();
-                                    }, 50);
+                                    focusInputAt(nextIndex);
                                   }
                                 }}
                               />
@@ -80,7 +73,13 @@ export const RequirementsForm = withForm({
                                   type="button"
                                   variant="ghost"
                                   size="icon-xs"
-                                  onClick={() => field.removeValue(index)}
+                                  onClick={() => {
+                                    if (index === 0) {
+                                      subField.handleChange("");
+                                      return;
+                                    }
+                                    field.removeValue(index);
+                                  }}
                                 >
                                   <XIcon className="h-4 w-4" />
                                 </InputGroupButton>
@@ -97,10 +96,9 @@ export const RequirementsForm = withForm({
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      const nextIndex = field.state.value.length;
                       field.pushValue("");
-                      setTimeout(() => {
-                        inputRefs.current[field.state.value.length]?.focus();
-                      }, 50);
+                      focusInputAt(nextIndex);
                     }}
                   >
                     <CirclePlus className="h-4 w-4 mr-2" />
@@ -110,8 +108,8 @@ export const RequirementsForm = withForm({
               </FieldSet>
             )}
           />
-        </CardContent>
-      </Card>
+        </FormSection>
+      </div>
     );
   },
 });

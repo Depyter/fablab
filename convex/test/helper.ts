@@ -35,10 +35,15 @@ export async function setupProject() {
     name: "3d printing",
     images: [],
     samples: [],
-    regularPrice: 2,
-    upPrice: 1,
-    unitPrice: "min",
+    serviceCategory: { type: "FABRICATION", materials: [] },
+    pricing: {
+      type: "COMPOSITE",
+      baseFee: 1,
+      unitName: "hour",
+      timeRate: 2,
+    },
     requirements: ["design", "model"],
+    fileTypes: [],
     description: "std to 3d printed model",
     status: "Available",
   });
@@ -59,9 +64,9 @@ export async function setupProject() {
     service: serviceId,
     notes: "pls na",
     booking: {
-      startTime: 930,
-      endTime: 1130,
-      date: 2026,
+      startTime: Date.now() + 1000 * 60 * 60,
+      endTime: Date.now() + 1000 * 60 * 60 * 2,
+      date: Date.now() + 1000 * 60 * 60 * 24,
     },
   });
 

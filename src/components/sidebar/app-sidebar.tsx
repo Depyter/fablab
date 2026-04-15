@@ -125,7 +125,7 @@ export function AppSidebar({
   const user = {
     name: profile?.name ?? "",
     email: profile?.email ?? "",
-    avatar: "",
+    avatar: profile?.profilePicUrl ?? "",
   };
 
   return (

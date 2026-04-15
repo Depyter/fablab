@@ -19,8 +19,14 @@ import {
   Paperclip,
 } from "lucide-react";
 import { useFileUpload } from "./use-file-upload";
-import { getFileIcon, formatFileSize } from "./utils";
+import {
+  getFileIcon,
+  formatFileSize,
+  isImageFile,
+  resolveFileType,
+} from "./utils";
 import type { FileUploadProps, UploadedFile, UploadingFile } from "./types";
+import { EXT_MIME } from "@convex/constants";
 
 // ---------------------------------------------------------------------------
 // Thumbnail sub-renders
@@ -35,7 +41,7 @@ function UploadingThumb({
   size: "sm" | "md";
   getFilePreviewUrl: (file: File) => string | undefined;
 }) {
-  const previewUrl = uf.file.type.startsWith("image/")
+  const previewUrl = isImageFile(uf.file)
     ? getFilePreviewUrl(uf.file)
     : undefined;
   const dim = size === "sm" ? "h-10 w-10" : "h-14 w-14";
@@ -66,7 +72,7 @@ function UploadingThumb({
     );
   }
 
-  const fileIcon = getFileIcon(uf.file.type);
+  const fileIcon = getFileIcon(resolveFileType(uf.file));
   return (
     <div className="shrink-0">
       {uf.status === "uploading" && (
@@ -128,6 +134,7 @@ export function FileUpload({
   maxFiles = 10,
   maxFileSizeMB = 100,
   accept,
+  allowedTypes,
   disabled = false,
   className,
   multiple = true,
@@ -154,6 +161,7 @@ export function FileUpload({
     maxFileSizeMB,
     disabled,
     autoUpload,
+    allowedTypes,
     value,
     onAddFile,
     onUploadComplete,
@@ -162,6 +170,14 @@ export function FileUpload({
     onRemoveFile,
     onUploadingChange,
   });
+
+  const readableAllowedTypes =
+    allowedTypes && allowedTypes.length > 0
+      ? Object.entries(EXT_MIME)
+          .filter(([, mime]) => allowedTypes.includes(mime))
+          .map(([ext]) => `.${ext}`)
+          .join(", ")
+      : null;
 
   // Shared hidden file input — rendered once, referenced by all variants.
   const fileInput = (
@@ -172,7 +188,8 @@ export function FileUpload({
       accept={accept}
       multiple={multiple}
       disabled={disabled}
-      className="hidden"
+      className="sr-only"
+      tabIndex={-1}
     />
   );
 
@@ -390,8 +407,12 @@ export function FileUpload({
                   : "Click to upload or drag and drop"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {accept ? `Accepted: ${accept}` : "Any file type"} • Max{" "}
-                {maxFileSizeMB}MB per file
+                {readableAllowedTypes
+                  ? `Accepted: ${readableAllowedTypes}`
+                  : accept && accept !== "*/*"
+                    ? `Accepted: ${accept}`
+                    : "Any file type"}{" "}
+                • Max {maxFileSizeMB}MB per file
               </p>
               {maxFiles > 1 && (
                 <p className="text-xs text-muted-foreground">

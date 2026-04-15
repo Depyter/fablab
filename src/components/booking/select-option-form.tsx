@@ -1,49 +1,40 @@
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { OptionRadioGroup } from "../option-radio-group";
 
 interface RadioGroupChoiceCardProps {
   value: string;
   onValueChange: (value: string) => void;
+  disableBuyFromLab?: boolean;
 }
 
 export function RadioGroupChoiceCard({
   value,
   onValueChange,
+  disableBuyFromLab,
 }: RadioGroupChoiceCardProps) {
+  const options = [
+    {
+      value: "provide-own",
+      id: "provide-own-materials",
+      title: "Provide Materials",
+      description: "For client with their own materials.",
+    },
+    {
+      value: "buy-from-lab",
+      id: "buy-from-fablab",
+      title: "Buy from FabLab",
+      description: `User will choose material in the inventory.${
+        disableBuyFromLab ? " (No materials available for this service)" : ""
+      }`,
+      disabled: disableBuyFromLab,
+    },
+  ];
+
   return (
-    <RadioGroup
+    <OptionRadioGroup
       value={value}
       onValueChange={onValueChange}
+      options={options}
       className="max-w-full"
-    >
-      <FieldLabel htmlFor="plus-plan">
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldTitle>Provide Materials</FieldTitle>
-            <FieldDescription>
-              For client with their own materials.
-            </FieldDescription>
-          </FieldContent>
-          <RadioGroupItem value="provide-own" id="plus-plan" />
-        </Field>
-      </FieldLabel>
-      <FieldLabel htmlFor="pro-plan">
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldTitle>Buy From Fablab</FieldTitle>
-            <FieldDescription>
-              For client with no on hand materials.
-            </FieldDescription>
-          </FieldContent>
-          <RadioGroupItem value="buy-from-lab" id="pro-plan" />
-        </Field>
-      </FieldLabel>
-    </RadioGroup>
+    />
   );
 }

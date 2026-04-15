@@ -9,12 +9,17 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chat_helper from "../chat/helper.js";
 import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
+import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as helper from "../helper.js";
 import type * as http from "../http.js";
+import type * as materials_mutate from "../materials/mutate.js";
+import type * as materials_query from "../materials/query.js";
+import type * as presence from "../presence.js";
 import type * as projects_mutate from "../projects/mutate.js";
 import type * as projects_query from "../projects/query.js";
 import type * as resource_helper from "../resource/helper.js";
@@ -33,12 +38,17 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  "chat/helper": typeof chat_helper;
   "chat/mutate": typeof chat_mutate;
   "chat/query": typeof chat_query;
+  constants: typeof constants;
   crons: typeof crons;
   files: typeof files;
   helper: typeof helper;
   http: typeof http;
+  "materials/mutate": typeof materials_mutate;
+  "materials/query": typeof materials_query;
+  presence: typeof presence;
   "projects/mutate": typeof projects_mutate;
   "projects/query": typeof projects_query;
   "resource/helper": typeof resource_helper;
@@ -2052,6 +2062,68 @@ export declare const components: {
     adapterTest: {
       runCustomTests: FunctionReference<"action", "internal", any, any>;
       runTests: FunctionReference<"action", "internal", any, any>;
+    };
+  };
+  presence: {
+    public: {
+      disconnect: FunctionReference<
+        "mutation",
+        "internal",
+        { sessionToken: string },
+        null
+      >;
+      heartbeat: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          interval?: number;
+          roomId: string;
+          sessionId: string;
+          userId: string;
+        },
+        { roomToken: string; sessionToken: string }
+      >;
+      list: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number; roomToken: string },
+        Array<{
+          data?: any;
+          lastDisconnected: number;
+          online: boolean;
+          userId: string;
+        }>
+      >;
+      listRoom: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number; onlineOnly?: boolean; roomId: string },
+        Array<{ lastDisconnected: number; online: boolean; userId: string }>
+      >;
+      listUser: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number; onlineOnly?: boolean; userId: string },
+        Array<{ lastDisconnected: number; online: boolean; roomId: string }>
+      >;
+      removeRoom: FunctionReference<
+        "mutation",
+        "internal",
+        { roomId: string },
+        null
+      >;
+      removeRoomUser: FunctionReference<
+        "mutation",
+        "internal",
+        { roomId: string; userId: string },
+        null
+      >;
+      updateRoomUser: FunctionReference<
+        "mutation",
+        "internal",
+        { data?: any; roomId: string; userId: string },
+        null
+      >;
     };
   };
 };

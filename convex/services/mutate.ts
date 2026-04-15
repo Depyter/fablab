@@ -1,5 +1,5 @@
 import { internalMutation } from "../_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import {
   authMutation,
   checkAuthority,
@@ -43,9 +43,70 @@ export const addService = authMutation({
     samples: v.array(v.id("_storage")),
     description: v.string(),
     requirements: v.array(v.string()),
-    regularPrice: v.number(),
-    upPrice: v.number(),
-    unitPrice: v.string(),
+    serviceCategory: v.union(
+      v.object({
+        type: v.literal("WORKSHOP"),
+        date: v.number(),
+        timeSlots: v.array(
+          v.object({
+            startTime: v.number(),
+            endTime: v.number(),
+            maxSlots: v.number(),
+          }),
+        ),
+      }),
+      v.object({
+        type: v.literal("FABRICATION"),
+        availableDays: v.optional(v.array(v.number())),
+        materials: v.optional(v.array(v.id("materials"))),
+      }),
+    ),
+    pricing: v.union(
+      v.object({
+        type: v.literal("FIXED"),
+        amount: v.number(),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              amount: v.number(),
+            }),
+          ),
+        ),
+      }),
+      v.object({
+        type: v.literal("PER_UNIT"),
+        baseFee: v.number(),
+        unitName: v.string(),
+        ratePerUnit: v.number(),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              baseFee: v.number(),
+              ratePerUnit: v.number(),
+            }),
+          ),
+        ),
+      }),
+      v.object({
+        type: v.literal("COMPOSITE"),
+        baseFee: v.number(),
+        unitName: v.string(),
+        timeRate: v.number(),
+        variants: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              baseFee: v.number(),
+              timeRate: v.number(),
+            }),
+          ),
+        ),
+      }),
+    ),
+    fileTypes: v.array(v.string()),
+    resources: v.optional(v.array(v.id("resources"))),
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
@@ -54,9 +115,10 @@ export const addService = authMutation({
       slug: slugify(args.name),
       images: args.images,
       description: args.description,
-      regularPrice: args.regularPrice,
-      upPrice: args.upPrice,
-      unitPrice: args.unitPrice,
+      serviceCategory: args.serviceCategory,
+      pricing: args.pricing,
+      fileTypes: args.fileTypes,
+      resources: args.resources,
       status: args.status,
       requirements: args.requirements,
       samples: args.samples,
@@ -72,10 +134,75 @@ export const updateService = authMutation({
   args: {
     service: v.id("services"),
     name: v.optional(v.string()),
-    regularPrice: v.optional(v.number()),
-    upPrice: v.optional(v.number()),
-    unitPrice: v.optional(v.string()),
+    serviceCategory: v.optional(
+      v.union(
+        v.object({
+          type: v.literal("WORKSHOP"),
+          date: v.number(),
+          timeSlots: v.array(
+            v.object({
+              startTime: v.number(),
+              endTime: v.number(),
+              maxSlots: v.number(),
+            }),
+          ),
+        }),
+        v.object({
+          type: v.literal("FABRICATION"),
+          availableDays: v.optional(v.array(v.number())),
+          materials: v.optional(v.array(v.id("materials"))),
+        }),
+      ),
+    ),
+    pricing: v.optional(
+      v.union(
+        v.object({
+          type: v.literal("FIXED"),
+          amount: v.number(),
+          variants: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                amount: v.number(),
+              }),
+            ),
+          ),
+        }),
+        v.object({
+          type: v.literal("PER_UNIT"),
+          baseFee: v.number(),
+          unitName: v.string(),
+          ratePerUnit: v.number(),
+          variants: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                baseFee: v.number(),
+                ratePerUnit: v.number(),
+              }),
+            ),
+          ),
+        }),
+        v.object({
+          type: v.literal("COMPOSITE"),
+          baseFee: v.number(),
+          unitName: v.string(),
+          timeRate: v.number(),
+          variants: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                baseFee: v.number(),
+                timeRate: v.number(),
+              }),
+            ),
+          ),
+        }),
+      ),
+    ),
     requirements: v.optional(v.array(v.string())),
+    fileTypes: v.optional(v.array(v.string())),
+    resources: v.optional(v.array(v.id("resources"))),
     description: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
@@ -83,22 +210,14 @@ export const updateService = authMutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("No identity!");
+    if (!user) throw new ConvexError("No identity!");
 
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
-    if (!authorization) throw new Error("Unauthorized. Cannot add service.");
+    if (!authorization)
+      throw new ConvexError("Unauthorized. Cannot add service.");
 
-    const updates: Partial<{
-      name: string;
-      slug: string;
-      regularPrice: number;
-      upPrice: number;
-      unitPrice: string;
-      requirements: string[];
-      description: string;
-      type: string;
-      status: "Unavailable" | "Available";
-    }> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updates: Record<string, any> = {};
 
     if (args.name !== undefined) {
       updates.name = args.name;
@@ -106,14 +225,15 @@ export const updateService = authMutation({
     }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
-    if (args.regularPrice !== undefined)
-      updates.regularPrice = args.regularPrice;
-    if (args.upPrice !== undefined) updates.upPrice = args.upPrice;
-    if (args.unitPrice !== undefined) updates.unitPrice = args.unitPrice;
+    if (args.serviceCategory !== undefined)
+      updates.serviceCategory = args.serviceCategory;
+    if (args.pricing !== undefined) updates.pricing = args.pricing;
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;
+    if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
+    if (args.resources !== undefined) updates.resources = args.resources;
 
-    await ctx.db.patch("services", args.service, updates);
+    await ctx.db.patch(args.service, updates);
   },
 });
 
@@ -126,7 +246,7 @@ export const addImageToService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
 
     await ctx.db.patch("services", args.service, {
       images: [...service.images, args.image],
@@ -145,7 +265,7 @@ export const addSampleToService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
 
     await ctx.db.patch("services", args.service, {
       samples: [...service.samples, args.sample],
@@ -163,7 +283,7 @@ export const deleteService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service not found!");
+    if (!service) throw new ConvexError("Service not found!");
     await deleteFiles(ctx, service.images);
     await deleteFiles(ctx, service.samples);
     await ctx.db.delete("services", args.service);
@@ -179,7 +299,7 @@ export const deleteImageFromService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
     const updatedList = service.images.filter((id) => id !== args.image);
 
     await ctx.db.patch("services", args.service, {
@@ -199,7 +319,7 @@ export const deleteSampleFromService = authMutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.service);
 
-    if (!service) throw new Error("Service does not exist!");
+    if (!service) throw new ConvexError("Service does not exist!");
     const updatedList = service.samples.filter((id) => id !== args.sample);
 
     await ctx.db.patch("services", args.service, {

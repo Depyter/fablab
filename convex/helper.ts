@@ -23,7 +23,7 @@ export async function checkAuthority(
     .withIndex("by_userId", (q) => q.eq("userId", user.subject))
     .first();
 
-  if (!profile) throw new Error("User profile not found");
+  if (!profile) throw new ConvexError("User profile not found");
 
   return roles.includes(profile.role);
 }
@@ -46,7 +46,7 @@ export async function claimFiles(
         .first();
 
       if (!trackedFile) {
-        throw new Error(`File ${storageId} does not exist.`);
+        throw new ConvexError(`File ${storageId} does not exist.`);
       }
 
       await ctx.db.patch(trackedFile._id, {
@@ -68,7 +68,7 @@ export async function deleteFiles(
         .first();
 
       if (!trackedFile) {
-        throw new Error(`Tracked file ${storageId} does not exist`);
+        throw new ConvexError(`Tracked file ${storageId} does not exist`);
       }
 
       await ctx.storage.delete(trackedFile.storageId);
@@ -94,16 +94,23 @@ export const authQuery = customQuery(query, {
   input: async (ctx, args, opts: { role?: RoleCombo } = {}) => {
     const user = await ensureAuthentication(ctx);
 
+    const profile = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .first();
+
+    if (!profile) throw new ConvexError("User profile not found");
+
     if (opts.role) {
-      const isAuthorized = await checkAuthority(opts.role, user, ctx);
-      if (!isAuthorized) {
+      const roles = Array.isArray(opts.role) ? opts.role : [opts.role];
+      if (!roles.includes(profile.role)) {
         throw new ConvexError(
           "Unauthorized: You do not have the correct permissions to query.",
         );
       }
     }
 
-    return { ctx: { user }, args: {} };
+    return { ctx: { user, profile }, args: {} };
   },
 });
 
@@ -112,16 +119,23 @@ export const authMutation = customMutation(mutation, {
   input: async (ctx, args, opts: { role?: RoleCombo } = {}) => {
     const user = await ensureAuthentication(ctx);
 
+    const profile = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .first();
+
+    if (!profile) throw new ConvexError("User profile not found");
+
     if (opts.role) {
-      const isAuthorized = await checkAuthority(opts.role, user, ctx);
-      if (!isAuthorized) {
+      const roles = Array.isArray(opts.role) ? opts.role : [opts.role];
+      if (!roles.includes(profile.role)) {
         throw new ConvexError(
-          "Unauthorized: You do not the correct permissions to mutate.",
+          "Unauthorized: You do not have the correct permissions to mutate.",
         );
       }
     }
 
-    return { ctx: { user }, args: {} };
+    return { ctx: { user, profile }, args: {} };
   },
 });
 

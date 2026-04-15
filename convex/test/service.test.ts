@@ -19,27 +19,34 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await Promise.all([
-      tAera.mutation(api.files.trackUpload, {
-        upload: storageId,
-        type: "image",
+    await t.run(async (ctx) => {
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-      tAera.mutation(api.files.trackUpload, {
-        upload: sampleStorageId,
-        type: "image",
+        storageId: storageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-    ]);
+        storageId: sampleStorageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+    });
 
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [storageId],
       samples: [sampleStorageId],
-      regularPrice: 4,
-      upPrice: 2,
-      unitPrice: "min",
+      serviceCategory: { type: "FABRICATION", materials: [] },
+      pricing: {
+        type: "PER_UNIT",
+        baseFee: 2,
+        unitName: "min",
+        ratePerUnit: 4,
+      },
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -67,10 +74,15 @@ describe("Service functions", () => {
         name: "3d printing",
         images: [],
         samples: [],
-        regularPrice: 4,
-        upPrice: 2,
-        unitPrice: "min",
+        serviceCategory: { type: "FABRICATION", materials: [] },
+        pricing: {
+          type: "PER_UNIT",
+          baseFee: 2,
+          unitName: "min",
+          ratePerUnit: 4,
+        },
         requirements: ["design", "model"],
+        fileTypes: [],
         description: "printing services",
         status: "Available",
       });
@@ -81,15 +93,20 @@ describe("Service functions", () => {
         name: "3d printing",
         images: [],
         samples: [],
-        regularPrice: 4,
-        upPrice: 2,
-        unitPrice: "min",
+        serviceCategory: { type: "FABRICATION", materials: [] },
+        pricing: {
+          type: "PER_UNIT",
+          baseFee: 2,
+          unitName: "min",
+          ratePerUnit: 4,
+        },
         requirements: ["design", "model"],
+        fileTypes: [],
         description: "printing services",
         status: "Available",
       });
     }).rejects.toThrow(
-      "Unauthorized: You do not the correct permissions to mutate.",
+      "Unauthorized: You do not have the correct permissions to mutate.",
     );
   });
 
@@ -100,10 +117,15 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      regularPrice: 4,
-      upPrice: 2,
-      unitPrice: "min",
+      serviceCategory: { type: "FABRICATION", materials: [] },
+      pricing: {
+        type: "PER_UNIT",
+        baseFee: 2,
+        unitName: "min",
+        ratePerUnit: 4,
+      },
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -135,10 +157,13 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await tAera.mutation(api.files.trackUpload, {
-      upload: storageId,
-      type: "image",
-      originalName: "test",
+    await t.run(async (ctx) => {
+      await ctx.db.insert("files", {
+        originalName: "test",
+        storageId: storageId,
+        type: "image/png",
+        status: "orphaned",
+      });
     });
 
     await tAera.mutation(api.services.mutate.addImageToService, {
@@ -172,27 +197,34 @@ describe("Service functions", () => {
       return storageId;
     });
 
-    await Promise.all([
-      tAera.mutation(api.files.trackUpload, {
-        upload: storageId,
-        type: "image",
+    await t.run(async (ctx) => {
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-      tAera.mutation(api.files.trackUpload, {
-        upload: sampleStorageId,
-        type: "image",
+        storageId: storageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+      await ctx.db.insert("files", {
         originalName: "test",
-      }),
-    ]);
+        storageId: sampleStorageId,
+        type: "image/png",
+        status: "orphaned",
+      });
+    });
 
     await tAera.mutation(api.services.mutate.addService, {
       name: "3d printing",
       images: [storageId],
       samples: [sampleStorageId],
-      regularPrice: 4,
-      upPrice: 2,
-      unitPrice: "min",
+      serviceCategory: { type: "FABRICATION", materials: [] },
+      pricing: {
+        type: "PER_UNIT",
+        baseFee: 2,
+        unitName: "min",
+        ratePerUnit: 4,
+      },
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -222,10 +254,15 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      regularPrice: 4,
-      upPrice: 2,
-      unitPrice: "min",
+      serviceCategory: { type: "FABRICATION", materials: [] },
+      pricing: {
+        type: "PER_UNIT",
+        baseFee: 2,
+        unitName: "min",
+        ratePerUnit: 4,
+      },
       requirements: ["design", "model"],
+      fileTypes: [],
       description: "printing services",
       status: "Available",
     });
@@ -242,7 +279,7 @@ describe("Service functions", () => {
         service: service[0]._id,
       });
     }).rejects.toThrow(
-      "Unauthorized: You do not the correct permissions to mutate.",
+      "Unauthorized: You do not have the correct permissions to mutate.",
     );
   });
 });

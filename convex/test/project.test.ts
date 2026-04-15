@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { setupProject } from "./helper";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 
 describe("Project and Chat functionality", () => {
   test("Initialization", async () => {
@@ -25,7 +25,7 @@ describe("Project and Chat functionality", () => {
       // Check if project was added
       const project = await ctx.db.query("projects").collect();
       expect(project.length).toBe(1);
-      expect(project[0].name).toBe("3d printing - Harley");
+      expect(project[0].name).toBe("test");
       expect(project[0].status).toBe("pending");
       expect(project[0].userId).toBe(userHarley!._id);
 
@@ -33,7 +33,7 @@ describe("Project and Chat functionality", () => {
       const room = await ctx.db.query("rooms").collect();
       expect(room.length).toBe(1);
       expect(room[0].color).toBe("yellow");
-      expect(room[0].name).toBe("3d printing - Harley");
+      expect(room[0].name).toBe("Harley's Channel");
 
       // check room members
       const members = await ctx.db.query("roomMembers").collect();
@@ -42,14 +42,29 @@ describe("Project and Chat functionality", () => {
       expect(members[0].participantId).toBe(userHarley!._id);
       expect(members[1].participantId).toBe(userAera!._id);
 
+      // check thread
+      const thread = await ctx.db.query("threads").collect();
+      expect(thread.length).toBe(2);
+      expect(thread[0].roomId).toBe(room[0]._id);
+      expect(thread[0].title).toBe("General");
+
+      expect(thread[1].roomId).toBe(room[0]._id);
+      expect(thread[1].projectId).toBe(project[0]._id);
+
       // check chat
       const message = await ctx.db.query("messages").collect();
-      expect(message.length).toBe(1);
+      expect(message.length).toBe(2);
       expect(message[0].room).toBe(room[0]._id);
+      expect(message[0].threadId).toBe(thread[0]._id);
       expect(message[0].sender).toBe("System");
       expect(message[0].content).toBe(
-        "Generated room for project: 3d printing - Harley",
+        "Welcome to Harley's Channel! This is your main room for general inquiries.",
       );
+
+      expect(message[1].room).toBe(room[0]._id);
+      expect(message[1].threadId).toBe(thread[1]._id);
+      expect(message[1].sender).toBe("System");
+      expect(message[1].content).toContain("New project created: test");
     });
   });
 
@@ -68,21 +83,61 @@ describe("Project and Chat functionality", () => {
 
     // Check if the message is sent
     await t.run(async (ctx) => {
+      const userAera = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "2"))
+        .first();
+
+      const userHarley = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "1"))
+        .first();
+
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_room", (q) => q.eq("room", roomId))
+        .withIndex("by_room_and_thread", (q) =>
+          q.eq("room", roomId).eq("threadId", undefined),
+        )
         .collect();
 
-      expect(messages.length).toBe(3);
-      // first message is from the system
-      expect(messages[1].sender).toBe("Aera");
-      expect(messages[2].sender).toBe("Harley");
+      expect(messages.length).toBe(2);
+      // system message is in a thread, so these are the first root messages
+      expect(messages[0].sender).toBe(userAera!._id);
+      expect(messages[1].sender).toBe(userHarley!._id);
 
-      expect(messages[1].content).toBe("Hello this project...");
-      expect(messages[2].content).toBe("Hello Aera");
+      expect(messages[0].content).toBe("Hello this project...");
+      expect(messages[1].content).toBe("Hello Aera");
     });
   });
 
-  test("Update Project (Privileged - Owner, Admin, Maker)", async () => {});
+  test("Update Project (Privileged - Owner, Admin, Maker)", async () => {
+    const { t, tAera, projectId } = await setupProject();
+
+    await t.mutation(internal.users.createMaker, {
+      userId: "3",
+      email: "maker@gmail.com",
+      name: "Maker",
+    });
+
+    const makerId = await t.run(async (ctx) => {
+      const maker = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .first();
+      return maker!._id;
+    });
+
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId,
+      status: "approved",
+      makerId,
+    });
+
+    await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectId);
+      expect(project!.status).toBe("approved");
+      expect(project!.assignedMaker).toBe(makerId);
+    });
+  });
   test("Update Project (Non-privileged)", async () => {});
 });

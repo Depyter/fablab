@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface ServiceGalleryProps {
   images: string[];
@@ -12,100 +12,79 @@ interface ServiceGalleryProps {
 /**
  * ServiceGallery
  * Inspired by Blue Bottle Coffee's product gallery:
- * - Vertical thumbnail strip on the left (on desktop)
- * - Large, clean main stage on the right
- * - No heavy borders or shadow boxes
- * - Subtle transitions and high-quality "stage" feel
+ * - Large, clean main stage
+ * - Minimalist horizontal slider with pagination underneath
  */
 export function ServiceGallery({ images }: ServiceGalleryProps) {
   const [current, setCurrent] = React.useState(0);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  const scrollThumbnails = (direction: "up" | "down") => {
-    if (scrollRef.current) {
-      const scrollAmount = 100;
-      scrollRef.current.scrollBy({
-        top: direction === "up" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  };
+  const prev = () => setCurrent((c) => (c === 0 ? images.length - 1 : c - 1));
+  const next = () => setCurrent((c) => (c === images.length - 1 ? 0 : c + 1));
 
   if (!images || images.length === 0) return null;
 
   return (
-    <div className="flex flex-col-reverse lg:flex-row gap-6 w-full group/gallery">
-      {/* Vertical Thumbnails (Desktop) / Horizontal (Mobile) */}
-      {images.length > 1 && (
-        <div className="relative flex lg:flex-col items-center gap-2">
-          {/* Scroll Up Button (Desktop Only) */}
-          <button
-            onClick={() => scrollThumbnails("up")}
-            className="hidden lg:flex items-center justify-center w-full py-1 text-muted-foreground/40 hover:text-primary transition-colors"
-            aria-label="Scroll thumbnails up"
+    <div className="group/carousel relative flex flex-col items-center justify-center w-full aspect-square bg-sidebar-accent/5 overflow-hidden">
+      <div className="absolute inset-0 w-full h-full">
+        {images.map((src, index) => (
+          <div
+            key={src}
+            className={cn(
+              "absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-in-out",
+              current === index ? "opacity-100 z-10" : "opacity-0 z-0",
+            )}
           >
-            <ChevronUp className="h-4 w-4" />
+            <div className="relative w-full h-full p-8 lg:p-12">
+              <Image
+                src={src}
+                alt={`Product Image ${index + 1}`}
+                fill
+                className="object-contain"
+                sizes="(max-width: 1024px) 100vw, 800px"
+                priority={index === 0}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className="absolute -left-8 group-hover/carousel:-left-0.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-6 lg:w-12 lg:h-8 bg-background border border-border text-foreground transition-all duration-500 hover:bg-sidebar-accent opacity-0 group-hover/carousel:opacity-100"
+            aria-label="Previous image"
+          >
+            <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
           </button>
 
-          <div
-            ref={scrollRef}
-            className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto scrollbar-none snap-y snap-mandatory lg:max-h-[450px] pb-2 lg:pb-0"
+          <button
+            onClick={next}
+            className="absolute -right-8 group-hover/carousel:-right-0.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-6 lg:w-12 lg:h-8 bg-background border border-border text-foreground transition-all duration-500 hover:bg-sidebar-accent opacity-0 group-hover/carousel:opacity-100"
+            aria-label="Next image"
           >
-            {images.map((src, index) => (
+            <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
+          </button>
+
+          <div className="absolute bottom-[5%] left-1/2 -translate-x-1/2 z-20 flex items-center gap-4">
+            {images.map((_, idx) => (
               <button
-                key={index}
-                onClick={() => setCurrent(index)}
+                key={idx}
+                onClick={() => setCurrent(idx)}
                 className={cn(
-                  "relative shrink-0 aspect-square w-16 lg:w-20 rounded-sm overflow-hidden transition-all duration-300 snap-start",
-                  "bg-sidebar-accent/10 border",
-                  current === index
-                    ? "border-primary/60 opacity-100 shadow-sm"
-                    : "border-transparent opacity-40 hover:opacity-100",
+                  "text-sm font-sans transition-all",
+                  current === idx
+                    ? "font-black text-foreground opacity-100"
+                    : "font-medium text-muted-foreground opacity-60 hover:opacity-100",
                 )}
+                aria-label={`Go to slide ${idx + 1}`}
               >
-                <Image
-                  src={src}
-                  alt={`Thumbnail ${index + 1}`}
-                  fill
-                  className="object-contain p-2"
-                  sizes="80px"
-                />
+                {String(idx + 1).padStart(2, "0")}
               </button>
             ))}
           </div>
-
-          {/* Scroll Down Button (Desktop Only) */}
-          <button
-            onClick={() => scrollThumbnails("down")}
-            className="hidden lg:flex items-center justify-center w-full py-1 text-muted-foreground/40 hover:text-primary transition-colors"
-            aria-label="Scroll thumbnails down"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </button>
-        </div>
+        </>
       )}
-
-      {/* Main Image Stage */}
-      <div className="relative flex-1 aspect-square bg-sidebar-accent/5 rounded-sm overflow-hidden flex items-center justify-center p-8 lg:p-12 border border-sidebar-border/30">
-        <div className="relative w-full h-full">
-          <Image
-            key={images[current]}
-            src={images[current]}
-            alt="Service main view"
-            fill
-            className="object-contain transition-all duration-700 ease-in-out"
-            sizes="(max-width: 1024px) 100vw, 800px"
-            priority
-          />
-        </div>
-
-        {/* Floating Indicator (Desktop only, minimal) */}
-        {images.length > 1 && (
-          <div className="absolute bottom-6 right-8 text-[9px] font-black uppercase tracking-[0.3em] text-foreground/20 select-none">
-            {current + 1} / {images.length}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

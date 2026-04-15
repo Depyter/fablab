@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { DashboardBreadcrumb } from "@/components/sidebar/dashboard-breadcrumb";
+import { ChatPresenceWidget } from "@/components/chat/presence-indicator";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export function DashboardHeader() {
         <div className="flex-1 overflow-hidden">
           <DashboardBreadcrumb />
         </div>
+        <ChatPresenceWidget />
       </div>
     </header>
   );
