@@ -181,6 +181,7 @@ export function EditServiceClient({
           : "Failed to update service. Please try again.",
       );
       toast.error("Failed to update service. Please try again.");
+      throw error;
     }
   };
 

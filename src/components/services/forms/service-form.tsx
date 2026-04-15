@@ -54,6 +54,7 @@ export function ServiceForm({
   const [isScrolled, setIsScrolled] = useState(false);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
   const resourcesQuery = useQuery(api.resource.query.getResources) || [];
@@ -79,7 +80,13 @@ export function ServiceForm({
   const form = useAppForm({
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
-      await onSubmit(value);
+      try {
+        await onSubmit(value);
+        setIsSuccess(true);
+      } catch (error) {
+        setIsSuccess(false);
+        throw error;
+      }
     },
   });
 
@@ -126,10 +133,15 @@ export function ServiceForm({
               <Button
                 type="button"
                 className="bg-[#1A8A7E] hover:bg-[#156E65] px-8 font-medium rounded-lg"
-                disabled={!canSubmit || isSubmitting || hasUploadsInProgress}
+                disabled={
+                  !canSubmit ||
+                  isSubmitting ||
+                  hasUploadsInProgress ||
+                  isSuccess
+                }
                 onClick={() => form.handleSubmit()}
               >
-                {isSubmitting
+                {isSubmitting || isSuccess
                   ? "Saving..."
                   : hasUploadsInProgress
                     ? "Uploading..."

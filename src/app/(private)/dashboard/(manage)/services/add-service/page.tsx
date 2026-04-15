@@ -117,6 +117,7 @@ export default function AddServicePage() {
           : "Failed to add service. Please try again.",
       );
       toast.error("Failed to add service. Please try again.");
+      throw error;
     }
   };
 

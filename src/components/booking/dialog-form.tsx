@@ -69,6 +69,7 @@ export function BookingDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
 
   const handleUploadingChange = useCallback((uploading: boolean) => {
@@ -93,7 +94,7 @@ export function BookingDialog({
     } as LocalBookingFormValues,
     onSubmit: async ({ value: rawValue }) => {
       const value = rawValue as LocalBookingFormValues;
-      if (isSubmitting) return;
+      if (isSubmitting || isSuccess) return;
 
       if (!value.dateTime.date) {
         toast.error("Please select a date.");
@@ -154,14 +155,14 @@ export function BookingDialog({
             : {}),
         });
 
+        setIsSuccess(true);
         toast.success("Booking request created successfully!");
         router.push(`/dashboard/chat/${roomId}?thread=${threadId}`);
       } catch (error) {
+        setIsSubmitting(false);
         toast.error(
           error instanceof Error ? error.message : "Failed to create booking.",
         );
-      } finally {
-        setIsSubmitting(false);
       }
     },
   });
@@ -186,6 +187,7 @@ export function BookingDialog({
       setTimeout(() => {
         setStep(1);
         setIsSubmitting(false);
+        setIsSuccess(false);
         form.reset();
       }, 300);
     }
@@ -247,7 +249,7 @@ export function BookingDialog({
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (isSubmitting) return;
+              if (isSubmitting || isSuccess) return;
               form.handleSubmit();
             }}
           >
@@ -262,8 +264,8 @@ export function BookingDialog({
                   }}
                   servicePricing={servicePricing}
                   serviceMaterials={serviceMaterials}
-                  isSubmitting={isSubmitting || formIsSubmitting}
-                  canSubmit={canSubmit}
+                  isSubmitting={isSubmitting || formIsSubmitting || isSuccess}
+                  canSubmit={canSubmit && !isSuccess}
                   onBack={handlePrevStep}
                 />
               )}
