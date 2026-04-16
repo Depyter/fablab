@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
-import { PackageOpen, Search, LayoutGrid, Plus } from "lucide-react";
+import { PackageOpen, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -15,13 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ManageHeader,
-  ManageFilterBar,
-  ManageFilterSearch,
-  ManageFilterClear,
-  ManageGrid,
-  ManageEmptyState,
-} from "@/components/manage/manage-layout";
+  DataViewRoot,
+  DataViewToolbar,
+  DataViewFilters,
+  DataViewContent,
+} from "@/components/manage/data-view";
 
 export function ServicesListClient({
   preloadedServices,
@@ -77,41 +75,31 @@ export function ServicesListClient({
   };
 
   return (
-    <>
-      <ManageHeader
+    <DataViewRoot>
+      <DataViewToolbar
         title="Services"
         subtitle={
           filteredServices.length === services.length
             ? `${services.length} service${services.length === 1 ? "" : "s"}`
             : `${filteredServices.length} of ${services.length} services`
         }
+        actions={
+          <Link href="/dashboard/services/add-service">
+            <Button size="sm" className="h-8 gap-1 shrink-0">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Service</span>
+            </Button>
+          </Link>
+        }
+      />
+
+      <DataViewFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search services…"
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
       >
-        <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            title="Gallery View"
-            className="h-8 w-8 rounded-none px-0 bg-muted text-foreground"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </div>
-        <Link href="/dashboard/services/add-service">
-          <Button size="sm" className="h-8 gap-1 shrink-0">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Service</span>
-          </Button>
-        </Link>
-      </ManageHeader>
-
-      <ManageFilterBar>
-        <ManageFilterSearch
-          value={search}
-          onChange={setSearch}
-          placeholder="Search services…"
-          onClear={() => setSearch("")}
-        />
-
         <Select
           value={sortBy}
           onValueChange={(v: "name-az" | "price-high" | "price-low") =>
@@ -133,51 +121,45 @@ export function ServicesListClient({
             </SelectItem>
           </SelectContent>
         </Select>
+      </DataViewFilters>
 
-        <ManageFilterClear
-          activeCount={activeFilterCount}
-          onClear={clearFilters}
-        />
-      </ManageFilterBar>
-
-      {services.length === 0 ? (
-        <ManageEmptyState
-          icon={<PackageOpen className="size-12" />}
-          title="No services found"
-          description="The catalogue is empty. Create your first service to make it available for clients to browse and request."
-          action={
+      <DataViewContent
+        items={filteredServices}
+        totalItems={services.length}
+        renderItem={(service) => (
+          <ServiceCard
+            key={service._id}
+            slug={service.slug}
+            imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
+            title={service.name}
+            description={service.description}
+            pricing={service.pricing}
+          />
+        )}
+        emptyState={{
+          icon: <PackageOpen className="size-12" />,
+          title: "No services found",
+          description:
+            "The catalogue is empty. Create your first service to make it available for clients to browse and request.",
+          action: (
             <Link href="/dashboard/services/add-service">
               <Button variant="outline" size="sm">
                 Add Service
               </Button>
             </Link>
-          }
-        />
-      ) : filteredServices.length === 0 ? (
-        <ManageEmptyState
-          icon={<Search className="size-8" />}
-          title="No matching services"
-          description="Try adjusting your filters."
-          action={
+          ),
+        }}
+        filteredEmptyState={{
+          icon: <Search className="size-8" />,
+          title: "No matching services",
+          description: "Try adjusting your filters.",
+          action: (
             <Button variant="outline" size="sm" onClick={clearFilters}>
               Clear filters
             </Button>
-          }
-        />
-      ) : (
-        <ManageGrid>
-          {filteredServices.map((service) => (
-            <ServiceCard
-              key={service._id}
-              slug={service.slug}
-              imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-              title={service.name}
-              description={service.description}
-              pricing={service.pricing}
-            />
-          ))}
-        </ManageGrid>
-      )}
-    </>
+          ),
+        }}
+      />
+    </DataViewRoot>
   );
 }

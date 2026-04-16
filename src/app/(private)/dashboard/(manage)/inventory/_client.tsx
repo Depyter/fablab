@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, LayoutGrid } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -26,11 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ManageHeader,
-  ManageFilterBar,
-  ManageFilterSearch,
-  ManageFilterClear,
-} from "@/components/manage/manage-layout";
+  DataViewRoot,
+  DataViewToolbar,
+  DataViewFilters,
+} from "@/components/manage/data-view";
 
 interface InventoryClientProps {
   preloadedResources: Preloaded<typeof api.resource.query.getResources>;
@@ -43,6 +42,7 @@ export function InventoryClient({
 }: InventoryClientProps) {
   const resources = usePreloadedQuery(preloadedResources);
   const materials = usePreloadedQuery(preloadedMaterials);
+
   const [machineOpen, setMachineOpen] = useState(false);
   const [toolOpen, setToolOpen] = useState(false);
   const [roomOpen, setRoomOpen] = useState(false);
@@ -107,61 +107,50 @@ export function InventoryClient({
   };
 
   return (
-    <>
-      <ManageHeader
+    <DataViewRoot>
+      <DataViewToolbar
         title="Inventory"
         subtitle={
           filteredTotal === totalItems
             ? `${totalItems} item${totalItems === 1 ? "" : "s"}`
             : `${filteredTotal} of ${totalItems} items`
         }
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-8 gap-1 shrink-0">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Item</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setMachineOpen(true)}>
+                Add Machine
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setToolOpen(true)}>
+                Add Tool
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setRoomOpen(true)}>
+                Add Room
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
+                Add Misc Item
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setMaterialOpen(true)}>
+                Add Material
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+
+      <DataViewFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search inventory…"
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
       >
-        <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            title="Gallery View"
-            className="h-8 w-8 rounded-none px-0 bg-muted text-foreground"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="h-8 gap-1 shrink-0">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Item</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setMachineOpen(true)}>
-              Add Machine
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setToolOpen(true)}>
-              Add Tool
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setRoomOpen(true)}>
-              Add Room
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
-              Add Misc Item
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setMaterialOpen(true)}>
-              Add Material
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </ManageHeader>
-
-      <ManageFilterBar>
-        <ManageFilterSearch
-          value={search}
-          onChange={setSearch}
-          placeholder="Search inventory…"
-          onClear={() => setSearch("")}
-        />
-
         <Select
           value={sortBy}
           onValueChange={(v: "name-az" | "status") => setSortBy(v)}
@@ -178,12 +167,13 @@ export function InventoryClient({
             </SelectItem>
           </SelectContent>
         </Select>
+      </DataViewFilters>
 
-        <ManageFilterClear
-          activeCount={activeFilterCount}
-          onClear={clearFilters}
-        />
-      </ManageFilterBar>
+      {/* Inventory uses a custom tabbed layout instead of the standard DataViewContent grid */}
+      <InventoryTab
+        items={filteredResources ?? []}
+        materials={filteredMaterials ?? []}
+      />
 
       {/* Dialogs rendered outside DropdownMenu to prevent unmounting/hydration issues */}
       <Dialog open={machineOpen} onOpenChange={setMachineOpen}>
@@ -230,10 +220,6 @@ export function InventoryClient({
           <MaterialForm onSuccess={() => setMaterialOpen(false)} />
         </DialogContent>
       </Dialog>
-      <InventoryTab
-        items={filteredResources ?? []}
-        materials={filteredMaterials ?? []}
-      />
-    </>
+    </DataViewRoot>
   );
 }
