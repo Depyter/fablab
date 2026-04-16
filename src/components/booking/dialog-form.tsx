@@ -8,11 +8,13 @@ import { Step2ProjectDetails } from "./step-2-project-details";
 import { ActionDialog } from "../action-dialog";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
+import { useStore } from "@tanstack/react-form";
 import { UploadedFile } from "../file-upload/types";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { FILE_CATEGORIES } from "@convex/constants";
+import { WorkshopSchedule } from "./workshop-time-slot-picker";
 
 interface BookingDialog {
   serviceId: Id<"services">;
@@ -31,14 +33,7 @@ interface BookingDialog {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   servicePricing?: any;
   serviceCategory?: string;
-  schedules?: Array<{
-    date: number;
-    timeSlots: Array<{
-      startTime: number;
-      endTime: number;
-      maxSlots: number;
-    }>;
-  }>;
+  schedules?: WorkshopSchedule[];
 }
 
 type Step = 1 | 2 | 3;
@@ -94,6 +89,9 @@ export function BookingDialog({
         date: undefined,
         startTime: "",
         endTime: "",
+        originalDate: undefined,
+        originalStartTime: undefined,
+        originalEndTime: undefined,
       },
       files: [],
     } as LocalBookingFormValues,
@@ -108,34 +106,62 @@ export function BookingDialog({
 
       setIsSubmitting(true);
       try {
-        const [startHours, startMinutes] = value.dateTime.startTime
-          .split(":")
-          .map(Number);
-        const [endHours, endMinutes] = value.dateTime.endTime
-          .split(":")
-          .map(Number);
+        const year = value.dateTime.date.getFullYear();
+        const month = value.dateTime.date.getMonth() + 1;
+        const day = value.dateTime.date.getDate();
+        const dateString = `${month}/${day}/${year}`;
+        const baseDate = new Date(`${dateString} 00:00:00 GMT+0800`);
+        const bookingDateTs = value.dateTime.originalDate ?? baseDate.getTime();
 
-        const startDate = new Date(value.dateTime.date);
-        startDate.setHours(startHours, startMinutes, 0, 0);
+        const [startH, startM] = value.dateTime.startTime.split(":");
+        const startDate = new Date(
+          `${dateString} ${startH}:${startM}:00 GMT+0800`,
+        );
+        const startTimeTs = startDate.getTime();
 
-        const endDate = new Date(value.dateTime.date);
-        endDate.setHours(endHours, endMinutes, 0, 0);
+        const [endH, endM] = value.dateTime.endTime.split(":");
+        const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
+        const endTimeTs = endDate.getTime();
 
-        if (startDate.getTime() < Date.now()) {
+        console.log("=== DEBUG: dialog-form.tsx onSubmit ===");
+        console.log("Raw form value.dateTime:", value.dateTime);
+        console.log(
+          "Computed bookingDateTs:",
+          bookingDateTs,
+          new Date(bookingDateTs).toString(),
+        );
+        console.log(
+          "Computed startTimeTs:",
+          startTimeTs,
+          new Date(startTimeTs).toString(),
+        );
+        console.log(
+          "Computed endTimeTs:",
+          endTimeTs,
+          new Date(endTimeTs).toString(),
+        );
+        console.log("Date.now() reference:", Date.now(), new Date().toString());
+        console.log(
+          "Comparison (startTimeTs < Date.now()):",
+          startTimeTs < Date.now(),
+        );
+        console.log("=====================================");
+
+        if (startTimeTs < Date.now()) {
           toast.error("Cannot book a date or time in the past.");
           setIsSubmitting(false);
           return;
         }
 
-        if (endDate.getTime() <= startDate.getTime()) {
+        if (endTimeTs <= startTimeTs) {
           toast.error("End time must be after start time.");
           setIsSubmitting(false);
           return;
         }
 
         const { roomId, threadId } = await createProject({
-          name: value.name,
-          description: value.description,
+          name: value.name || `${serviceName} Booking`,
+          description: value.description || `Booking for ${serviceName}`,
           serviceType: value.serviceType,
           material: value.material,
           requestedMaterialId: value.requestedMaterialId as
@@ -146,15 +172,15 @@ export function BookingDialog({
           notes: value.notes,
           files: value.files.map((f) => f.storageId as Id<"_storage">),
           booking: {
-            date: value.dateTime.date.getTime(),
-            startTime: startDate.getTime(),
-            endTime: endDate.getTime(),
+            date: bookingDateTs,
+            startTime: startTimeTs,
+            endTime: endTimeTs,
           },
           ...(serviceCategory === "WORKSHOP"
             ? {
                 selectedTimeSlot: {
-                  startTime: startDate.getTime(),
-                  endTime: endDate.getTime(),
+                  startTime: value.dateTime.originalStartTime ?? startTimeTs,
+                  endTime: value.dateTime.originalEndTime ?? endTimeTs,
                 },
               }
             : {}),
@@ -171,6 +197,42 @@ export function BookingDialog({
       }
     },
   });
+
+  const selectedDateRaw = useStore(
+    form.store,
+    (state: { values: LocalBookingFormValues }) => state.values.dateTime.date,
+  );
+  let queryDateTs: number | undefined;
+  if (selectedDateRaw) {
+    const year = selectedDateRaw.getFullYear();
+    const month = selectedDateRaw.getMonth() + 1;
+    const day = selectedDateRaw.getDate();
+    queryDateTs = new Date(
+      `${month}/${day}/${year} 00:00:00 GMT+0800`,
+    ).getTime();
+  }
+
+  const bookedTimeSlotsRaw = useQuery(
+    api.services.query.getBookedTimeSlots,
+    queryDateTs ? { serviceId, date: queryDateTs } : "skip",
+  );
+
+  const bookedTimeBlocks = (bookedTimeSlotsRaw || []).map(
+    (slot: { startTime: number; endTime: number }) => ({
+      start: new Date(slot.startTime).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Manila",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      end: new Date(slot.endTime).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Manila",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }),
+  );
 
   const is3DPrinting = serviceName.toLowerCase().includes("3d printing");
 
@@ -214,7 +276,7 @@ export function BookingDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="h-auto w-auto min-w-[min(22rem,calc(100%-2rem))] max-w-[calc(100%-2rem)] sm:max-w-[min(80vw,80rem)] rounded-xl">
+      <DialogContent className="flex flex-col h-auto w-full min-w-[min(22rem,calc(100%-2rem))] md:max-w-[80%] lg:max-w-[60vw] sm:max-w-[min(80vw,80rem)] rounded-xl max-h-[90vh] overflow-hidden">
         {step === 1 && serviceCategory !== "WORKSHOP" && (
           <Step1ServiceType
             form={form}
@@ -256,12 +318,13 @@ export function BookingDialog({
             hasUpPricing={hasUpPricing}
             serviceCategory={serviceCategory}
             schedules={schedules}
+            bookedTimeBlocks={bookedTimeBlocks}
           />
         )}
 
         {step === 3 && (
           <form
-            className="w-full"
+            className="w-full flex flex-col h-full min-h-0"
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -287,18 +350,6 @@ export function BookingDialog({
               )}
             />
           </form>
-        )}
-        {((serviceCategory !== "WORKSHOP" && step !== 1) ||
-          (serviceCategory === "WORKSHOP" && step !== 2)) && (
-          <div className="absolute bottom-6 left-4 z-50">
-            <ActionDialog
-              onConfirm={handleConfirmCancel}
-              title="Cancel Project Request?"
-              description="Are you sure you want to cancel this request? All progress will be lost."
-              baseActionText="Cancel"
-              confirmButtonText="Yes, Cancel"
-            />
-          </div>
         )}
       </DialogContent>
     </Dialog>

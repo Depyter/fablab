@@ -163,7 +163,11 @@ export function ProjectCalendarView() {
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "EEE, MMM dd") : <span>Pick a date</span>}
+                {date ? (
+                  `${format(date, "EEE, MMM dd")} (PST)`
+                ) : (
+                  <span>Pick a date (PST)</span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">

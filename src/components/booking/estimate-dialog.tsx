@@ -26,6 +26,9 @@ export type BookingFormValues = {
     date: Date | undefined;
     startTime: string;
     endTime: string;
+    originalDate?: number;
+    originalStartTime?: number;
+    originalEndTime?: number;
   };
   files: UploadedFile[];
 };
@@ -150,35 +153,40 @@ export function EstimateProjectDetails({
 
   const estimatedTotal = basePrice + durationCost + materialCost;
 
+  const formatTime12Hour = (time24: string) => {
+    const [hour, minute] = time24.split(":").map(Number);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`;
+  };
+
   return (
-    <div className="w-full">
-      <DialogHeader>
+    <div className="flex flex-col h-full min-h-0">
+      <DialogHeader className="shrink-0 pb-4">
         <DialogTitle className="text-2xl font-extrabold">
           Review & Estimate Project
         </DialogTitle>
-        <DialogDescription>
+        <DialogDescription className="text-sm">
           Please review all details before submitting.
         </DialogDescription>
       </DialogHeader>
 
-      <FieldSeparator className="mt-4 mb-2" />
-
-      <div className="-mx-4 no-scrollbar max-h-[70vh] overflow-y-auto px-4 py-4">
-        <Card className="rounded-lg">
-          <div className=" divide-y">
+      <div className="-mx-4 flex-1 overflow-y-auto px-4 py-1 no-scrollbar">
+        <Card className="rounded-lg py-4">
+          <div className="divide-y">
             {/* Service Summary */}
-            <div className="p-6 -mt-4">
-              <h3 className="font-semibold text-gray-900 mb-4">
+            <div className="px-4 pb-4">
+              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
                 Service Details
               </h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-gray-600">Service</p>
-                  <p className="font-medium">{serviceName}</p>
+                  <p className="text-gray-600 text-sm">Service</p>
+                  <p className="font-medium text-sm">{serviceName}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Type</p>
-                  <p className="font-medium capitalize">
+                  <p className="text-gray-600 text-sm">Type</p>
+                  <p className="font-medium text-sm capitalize">
                     {data.serviceType?.replace("-", " ")}
                   </p>
                 </div>
@@ -186,11 +194,11 @@ export function EstimateProjectDetails({
             </div>
 
             {/* Project Details */}
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
                 Project Information
               </h3>
-              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="grid grid-cols-2 gap-2 text-sm mb-2">
                 <div>
                   <p className="text-gray-600">Date</p>
                   <p className="font-medium">
@@ -202,16 +210,17 @@ export function EstimateProjectDetails({
                 <div>
                   <p className="text-gray-600">Time</p>
                   <p className="font-medium">
-                    {data.dateTime.startTime} - {data.dateTime.endTime}
+                    {formatTime12Hour(data.dateTime.startTime)} -{" "}
+                    {formatTime12Hour(data.dateTime.endTime)}
                   </p>
                 </div>
               </div>
-              <div className="space-y-3 text-sm">
+              <div className="space-y-2 text-sm">
                 <div>
                   <p className="text-gray-600">Project Name</p>
                   <p className="font-medium">{data.name}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-gray-600">Material</p>
                     <p className="font-medium">
@@ -221,7 +230,6 @@ export function EstimateProjectDetails({
                     </p>
                   </div>
                 </div>
-
                 <div>
                   <p className="text-gray-600">Description</p>
                   <p className="font-medium">{data.description}</p>
@@ -236,8 +244,8 @@ export function EstimateProjectDetails({
             </div>
 
             {/* Files */}
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
                 Uploaded Files
               </h3>
               {data.files.length > 0 ? (
@@ -262,16 +270,16 @@ export function EstimateProjectDetails({
             </div>
 
             {/* Pricing */}
-            <div className="p-6 bg-gray-50">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-900">
+            <div className="p-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold text-gray-900 text-lg">
                   Pricing Estimate
                 </h3>
                 <span className="text-xs font-bold px-2 py-1 rounded-full bg-chart-6/10 text-chart-6 uppercase tracking-wider">
                   {isUp ? "UP Rate" : "Normal Rate"}
                 </span>
               </div>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Base Price</span>
                   <span className="font-medium">₱{basePrice.toFixed(2)}</span>
@@ -296,48 +304,49 @@ export function EstimateProjectDetails({
                     </span>
                   </div>
                 )}
-
                 <div className="flex justify-between pt-2 border-t border-gray-300">
                   <span className="font-semibold">Estimated Total</span>
-                  <span className="font-semibold text-lg text-chart-6">
+                  <span className="font-semibold text-xl text-chart-6">
                     ₱{estimatedTotal.toFixed(2)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-sm text-gray-500 mt-2">
                   Final price may vary based on actual production time and
                   materials used.
                 </p>
               </div>
             </div>
-          </div>
 
-          {/* Terms */}
-          <div className="flex items-start p-6">
-            <input
-              type="checkbox"
-              id="terms"
-              required
-              className="mt-1 h-4 w-4 text-chart-6 rounded"
-              onChange={handleCheckboxChange}
-            />
-            <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
-              I understand that this is a booking request and requires admin
-              approval. I agree to the{" "}
-              <a href="#" className="text-chart-6 hover:underline">
-                terms and conditions
-              </a>{" "}
-              and the{" "}
-              <a href="#" className="text-chart-6 hover:underline">
-                cancellation policy
-              </a>
-              .
-            </label>
+            {/* Terms */}
+            <div className="flex items-start p-4 bg-gray-50/50">
+              <input
+                type="checkbox"
+                id="terms"
+                required
+                className="mt-1 h-4 w-4 text-chart-6 rounded"
+                onChange={handleCheckboxChange}
+              />
+              <label
+                htmlFor="terms"
+                className="ml-3 text-sm text-gray-600 leading-relaxed"
+              >
+                I understand that this is a booking request and requires admin
+                approval. I agree to the{" "}
+                <a href="#" className="text-chart-6 hover:underline">
+                  terms and conditions
+                </a>{" "}
+                and the{" "}
+                <a href="#" className="text-chart-6 hover:underline">
+                  cancellation policy
+                </a>
+                .
+              </label>
+            </div>
           </div>
         </Card>
       </div>
 
-      <FieldSeparator className="mb-4" />
-      <DialogFooter>
+      <div className="shrink-0 pt-4 border-t mt-4 flex items-center justify-end gap-2">
         <Button
           variant="outline"
           className="rounded-lg"
@@ -346,7 +355,6 @@ export function EstimateProjectDetails({
         >
           Back
         </Button>
-
         <Button
           type="submit"
           className="rounded-lg"
@@ -354,7 +362,7 @@ export function EstimateProjectDetails({
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 }

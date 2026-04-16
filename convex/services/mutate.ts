@@ -54,6 +54,7 @@ export const addService = authMutation({
                 startTime: v.number(),
                 endTime: v.number(),
                 maxSlots: v.number(),
+                usedUpSlots: v.optional(v.number()),
               }),
             ),
           }),
@@ -114,12 +115,21 @@ export const addService = authMutation({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
+    const finalServiceCategory = args.serviceCategory;
+    if (finalServiceCategory.type === "WORKSHOP") {
+      finalServiceCategory.schedules.forEach((schedule) => {
+        schedule.timeSlots.forEach((slot) => {
+          slot.usedUpSlots = 0;
+        });
+      });
+    }
+
     await ctx.db.insert("services", {
       name: args.name,
       slug: slugify(args.name),
       images: args.images,
       description: args.description,
-      serviceCategory: args.serviceCategory,
+      serviceCategory: finalServiceCategory,
       pricing: args.pricing,
       fileTypes: args.fileTypes,
       resources: args.resources,
@@ -150,6 +160,7 @@ export const updateService = authMutation({
                   startTime: v.number(),
                   endTime: v.number(),
                   maxSlots: v.number(),
+                  usedUpSlots: v.optional(v.number()),
                 }),
               ),
             }),
@@ -233,8 +244,55 @@ export const updateService = authMutation({
     }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
-    if (args.serviceCategory !== undefined)
+    if (args.serviceCategory !== undefined) {
+      if (args.serviceCategory.type === "WORKSHOP") {
+        const existingService = await ctx.db.get(args.service);
+        if (
+          existingService &&
+          existingService.serviceCategory.type === "WORKSHOP"
+        ) {
+          for (const incomingSchedule of args.serviceCategory.schedules) {
+            const existingSchedule =
+              existingService.serviceCategory.schedules.find(
+                (s) => s.date === incomingSchedule.date,
+              );
+            if (existingSchedule) {
+              for (const incomingSlot of incomingSchedule.timeSlots) {
+                const existingSlot = existingSchedule.timeSlots.find(
+                  (t) =>
+                    t.startTime === incomingSlot.startTime &&
+                    t.endTime === incomingSlot.endTime,
+                );
+                if (existingSlot) {
+                  const usedUp = existingSlot.usedUpSlots || 0;
+                  if (incomingSlot.maxSlots < usedUp) {
+                    throw new ConvexError(
+                      `Cannot reduce max slots below used up slots (${usedUp}) for schedule on ${new Date(
+                        incomingSchedule.date,
+                      ).toLocaleDateString()}`,
+                    );
+                  }
+                  incomingSlot.usedUpSlots = usedUp;
+                } else {
+                  incomingSlot.usedUpSlots = 0;
+                }
+              }
+            } else {
+              for (const incomingSlot of incomingSchedule.timeSlots) {
+                incomingSlot.usedUpSlots = 0;
+              }
+            }
+          }
+        } else {
+          for (const incomingSchedule of args.serviceCategory.schedules) {
+            for (const incomingSlot of incomingSchedule.timeSlots) {
+              incomingSlot.usedUpSlots = 0;
+            }
+          }
+        }
+      }
       updates.serviceCategory = args.serviceCategory;
+    }
     if (args.pricing !== undefined) updates.pricing = args.pricing;
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;

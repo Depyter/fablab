@@ -56,6 +56,7 @@ export default defineSchema({
                 startTime: v.number(),
                 endTime: v.number(),
                 maxSlots: v.number(),
+                usedUpSlots: v.optional(v.number()),
               }),
             ),
           }),

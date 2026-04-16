@@ -7,7 +7,11 @@ export const createProject = authMutation({
   args: {
     name: v.string(),
     description: v.string(),
-    serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
+    serviceType: v.union(
+      v.literal("self-service"),
+      v.literal("full-service"),
+      v.literal("workshop"),
+    ),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     requestedMaterialId: v.optional(v.id("materials")),
     service: v.id("services"),
@@ -105,20 +109,36 @@ export const createProject = authMutation({
       throw new ConvexError("End time must be after start time.");
     }
 
-    if (
-      service.serviceCategory.type === "FABRICATION" &&
-      service.serviceCategory.availableDays &&
-      service.serviceCategory.availableDays.length > 0
-    ) {
-      const localDateString = new Date(finalBooking.date).toLocaleString(
-        "en-US",
-        { timeZone: "Asia/Manila" },
-      );
-      const dayOfWeek = new Date(localDateString).getDay();
-      if (!service.serviceCategory.availableDays.includes(dayOfWeek)) {
-        throw new ConvexError(
-          "Selected date falls on an unavailable day for this service.",
+    if (service.serviceCategory.type === "FABRICATION") {
+      if (
+        service.serviceCategory.availableDays &&
+        service.serviceCategory.availableDays.length > 0
+      ) {
+        const localDateString = new Date(finalBooking.date).toLocaleString(
+          "en-US",
+          { timeZone: "Asia/Manila" },
         );
+        const dayOfWeek = new Date(localDateString).getDay();
+        if (!service.serviceCategory.availableDays.includes(dayOfWeek)) {
+          throw new ConvexError(
+            "Selected date falls on an unavailable day for this service.",
+          );
+        }
+      }
+
+      const existingUsages = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_service", (q) => q.eq("service", args.service))
+        .filter((q) => q.eq(q.field("date"), finalBooking.date))
+        .collect();
+
+      for (const usage of existingUsages) {
+        if (
+          finalBooking.startTime < usage.endTime &&
+          finalBooking.endTime > usage.startTime
+        ) {
+          throw new ConvexError("This timeslot is already booked.");
+        }
       }
     }
 
@@ -132,7 +152,7 @@ export const createProject = authMutation({
         if (variant) amount = variant.amount;
       }
 
-      const baseFee = args.serviceType === "full-service" ? amount : 0;
+      const baseFee = args.serviceType === "self-service" ? 0 : amount;
 
       costBreakdown = {
         baseFee,
@@ -165,14 +185,88 @@ export const createProject = authMutation({
         projects: [...sharedUsage.projects, project],
       });
     } else {
-      // create proposed usage
-      await ctx.db.insert("resourceUsage", {
-        service: args.service,
-        usageMode: "EXCLUSIVE",
-        projects: [project],
-        startTime: finalBooking.startTime,
-        endTime: finalBooking.endTime,
-        date: finalBooking.date,
+      if (service.serviceCategory.type === "WORKSHOP") {
+        const existingUsages = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", args.service))
+          .collect();
+
+        const existingUsage = existingUsages.find(
+          (u) =>
+            u.date === finalBooking.date &&
+            u.startTime === finalBooking.startTime,
+        );
+
+        if (existingUsage) {
+          if (
+            existingUsage.maxCapacity &&
+            existingUsage.projects.length >= existingUsage.maxCapacity
+          ) {
+            throw new ConvexError("This workshop timeslot is fully booked.");
+          }
+          await ctx.db.patch(existingUsage._id, {
+            projects: [...existingUsage.projects, project],
+          });
+        } else {
+          const schedule = service.serviceCategory.schedules.find(
+            (s) => s.date === finalBooking.date,
+          );
+          const timeSlot = schedule?.timeSlots.find(
+            (t) =>
+              t.startTime ===
+              (args.selectedTimeSlot?.startTime ?? finalBooking.startTime),
+          );
+
+          await ctx.db.insert("resourceUsage", {
+            service: args.service,
+            usageMode: "SHARED",
+            projects: [project],
+            startTime: finalBooking.startTime,
+            endTime: finalBooking.endTime,
+            date: finalBooking.date,
+            maxCapacity: timeSlot?.maxSlots,
+          });
+        }
+      } else {
+        // create proposed usage
+        await ctx.db.insert("resourceUsage", {
+          service: args.service,
+          usageMode: "EXCLUSIVE",
+          projects: [project],
+          startTime: finalBooking.startTime,
+          endTime: finalBooking.endTime,
+          date: finalBooking.date,
+        });
+      }
+    }
+
+    if (service.serviceCategory.type === "WORKSHOP") {
+      const updatedSchedules = service.serviceCategory.schedules.map((s) => {
+        if (s.date === finalBooking.date) {
+          return {
+            ...s,
+            timeSlots: s.timeSlots.map((t) => {
+              if (
+                t.startTime ===
+                (args.selectedTimeSlot?.startTime ?? finalBooking.startTime)
+              ) {
+                return {
+                  ...t,
+                  usedUpSlots: (t.usedUpSlots || 0) + 1,
+                };
+              }
+              return t;
+            }),
+          };
+        }
+        return s;
+      });
+
+      await ctx.db.patch(args.service, {
+        serviceCategory: {
+          ...service.serviceCategory,
+          schedules: updatedSchedules,
+        },
       });
     }
 
@@ -234,7 +328,7 @@ export const createProject = authMutation({
       });
     }
 
-    const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(finalBooking.date).toDateString()} from ${new Date(finalBooking.startTime).toLocaleTimeString()} to ${new Date(finalBooking.endTime).toLocaleTimeString()}`;
+    const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(finalBooking.date).toLocaleDateString("en-US", { timeZone: "Asia/Manila", weekday: "short", month: "short", day: "numeric", year: "numeric" })} from ${new Date(finalBooking.startTime).toLocaleTimeString("en-US", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit" })} to ${new Date(finalBooking.endTime).toLocaleTimeString("en-US", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit" })} (PST)`;
 
     // Create a thread for the project
     const threadId = await ctx.db.insert("threads", {
@@ -302,10 +396,67 @@ export const updateProject = authMutation({
       updates.assignedMaker = makerId;
     }
 
+    const existingProject = await ctx.db.get(projectId);
+
     await ctx.db.patch(projectId, updates);
 
+    const project = await ctx.db.get(projectId);
+
+    if (
+      project &&
+      existingProject &&
+      project.serviceType === "workshop" &&
+      (status === "cancelled" || status === "rejected") &&
+      existingProject.status !== "cancelled" &&
+      existingProject.status !== "rejected"
+    ) {
+      const service = await ctx.db.get(project.service);
+      if (service && service.serviceCategory.type === "WORKSHOP") {
+        const usages = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", project.service))
+          .collect();
+        const usage = usages.find((u) => u.projects.includes(project._id));
+
+        if (usage) {
+          const updatedSchedules = service.serviceCategory.schedules.map(
+            (s) => {
+              if (s.date === usage.date) {
+                return {
+                  ...s,
+                  timeSlots: s.timeSlots.map((t) => {
+                    if (
+                      t.startTime ===
+                      (project.selectedTimeSlot?.startTime ?? usage.startTime)
+                    ) {
+                      return {
+                        ...t,
+                        usedUpSlots: Math.max(0, (t.usedUpSlots || 0) - 1),
+                      };
+                    }
+                    return t;
+                  }),
+                };
+              }
+              return s;
+            },
+          );
+
+          await ctx.db.patch(service._id, {
+            serviceCategory: {
+              ...service.serviceCategory,
+              schedules: updatedSchedules,
+            },
+          });
+
+          await ctx.db.patch(usage._id, {
+            projects: usage.projects.filter((p) => p !== project._id),
+          });
+        }
+      }
+    }
+
     if (makerId !== undefined) {
-      const project = await ctx.db.get(projectId);
       if (project) {
         const usages = await ctx.db
           .query("resourceUsage")
@@ -349,6 +500,53 @@ export const cancelOwnProject = authMutation({
     }
 
     await ctx.db.patch(args.projectId, { status: "cancelled" });
+
+    if (project.serviceType === "workshop") {
+      const service = await ctx.db.get(project.service);
+      if (service && service.serviceCategory.type === "WORKSHOP") {
+        const usages = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", project.service))
+          .collect();
+        const usage = usages.find((u) => u.projects.includes(project._id));
+
+        if (usage) {
+          const updatedSchedules = service.serviceCategory.schedules.map(
+            (s) => {
+              if (s.date === usage.date) {
+                return {
+                  ...s,
+                  timeSlots: s.timeSlots.map((t) => {
+                    if (
+                      t.startTime ===
+                      (project.selectedTimeSlot?.startTime ?? usage.startTime)
+                    ) {
+                      return {
+                        ...t,
+                        usedUpSlots: Math.max(0, (t.usedUpSlots || 0) - 1),
+                      };
+                    }
+                    return t;
+                  }),
+                };
+              }
+              return s;
+            },
+          );
+
+          await ctx.db.patch(service._id, {
+            serviceCategory: {
+              ...service.serviceCategory,
+              schedules: updatedSchedules,
+            },
+          });
+
+          await ctx.db.patch(usage._id, {
+            projects: usage.projects.filter((p) => p !== project._id),
+          });
+        }
+      }
+    }
   },
 });
 
@@ -394,7 +592,7 @@ export const completeProject = authMutation({
         }
       }
 
-      if (project.serviceType !== "full-service") {
+      if (project.serviceType === "self-service") {
         baseFee = 0;
       }
 
@@ -425,7 +623,7 @@ export const completeProject = authMutation({
         }
       }
 
-      if (project.serviceType !== "full-service") {
+      if (project.serviceType === "self-service") {
         baseFee = 0;
       }
 
@@ -451,7 +649,7 @@ export const completeProject = authMutation({
         }
       }
 
-      if (project.serviceType !== "full-service") {
+      if (project.serviceType === "self-service") {
         baseFee = 0;
       }
     }

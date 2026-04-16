@@ -22,6 +22,7 @@ import { Textarea } from "../ui/textarea";
 import { FileUpload } from "../file-upload";
 import { DateTimePicker } from "./date-time-picker";
 import { toast } from "sonner";
+import { WorkshopSchedule } from "./workshop-time-slot-picker";
 
 export function Step2ProjectDetails({
   form,
@@ -38,6 +39,7 @@ export function Step2ProjectDetails({
   hasUpPricing,
   serviceCategory,
   schedules,
+  bookedTimeBlocks,
 }: {
   form: any;
   serviceName: string;
@@ -58,22 +60,9 @@ export function Step2ProjectDetails({
   }>;
   hasUpPricing: boolean;
   serviceCategory?: string;
-  schedules?: Array<{
-    date: number;
-    timeSlots: Array<{
-      startTime: number;
-      endTime: number;
-      maxSlots: number;
-    }>;
-  }>;
+  schedules?: WorkshopSchedule[];
+  bookedTimeBlocks?: { start: string; end: string }[];
 }) {
-  const getLocalTimeString = (dateNum: number) => {
-    const d = new Date(dateNum);
-    const h = d.getHours().toString().padStart(2, "0");
-    const m = d.getMinutes().toString().padStart(2, "0");
-    return `${h}:${m}`;
-  };
-
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -89,35 +78,72 @@ export function Step2ProjectDetails({
       return;
     }
 
-    const [startHours, startMinutes] = dateTime.startTime
-      .split(":")
-      .map(Number);
-    const [endHours, endMinutes] = dateTime.endTime.split(":").map(Number);
+    const [startH, startM] = dateTime.startTime.split(":");
+    const [endH, endM] = dateTime.endTime.split(":");
 
-    const startDate = new Date(dateTime.date);
-    startDate.setHours(startHours, startMinutes, 0, 0);
+    let startDateTs = 0;
+    let endDateTs = 0;
 
-    const endDate = new Date(dateTime.date);
-    endDate.setHours(endHours, endMinutes, 0, 0);
+    if (dateTime.originalStartTime && dateTime.originalEndTime) {
+      startDateTs = dateTime.originalStartTime;
+      endDateTs = dateTime.originalEndTime;
+    } else {
+      const year = dateTime.date.getFullYear();
+      const month = dateTime.date.getMonth() + 1;
+      const day = dateTime.date.getDate();
+      const dateString = `${month}/${day}/${year}`;
 
-    if (serviceCategory !== "WORKSHOP" && startDate.getTime() < Date.now()) {
+      const startDate = new Date(
+        `${dateString} ${startH}:${startM}:00 GMT+0800`,
+      );
+      startDateTs = startDate.getTime();
+
+      const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
+      endDateTs = endDate.getTime();
+    }
+
+    if (serviceCategory !== "WORKSHOP" && startDateTs < Date.now()) {
       toast.error("Cannot book a date or time in the past.");
       return;
     }
 
-    if (endDate.getTime() <= startDate.getTime()) {
+    if (endDateTs <= startDateTs) {
       toast.error("End time must be after start time.");
       return;
     }
+
+    console.log("=== DEBUG: Step 2 Form Submission ===");
+    console.log("Raw form.state.values.dateTime:", dateTime);
+    console.log(
+      "Parsed Time Strings - Start:",
+      startH,
+      startM,
+      "End:",
+      endH,
+      endM,
+    );
+    console.log(
+      "Computed startDateTs:",
+      startDateTs,
+      new Date(startDateTs).toString(),
+    );
+    console.log(
+      "Computed endDateTs:",
+      endDateTs,
+      new Date(endDateTs).toString(),
+    );
+    console.log("Date.now() reference:", Date.now(), new Date().toString());
+    console.log(
+      "Comparison (startDateTs < Date.now()):",
+      startDateTs < Date.now(),
+    );
+    console.log("=====================================");
 
     onNext(e);
   };
 
   return (
-    <form
-      onSubmit={handleNext}
-      className="flex flex-col h-full max-h-[80vh] sm:w-2xl"
-    >
+    <form onSubmit={handleNext} className="flex flex-col h-full min-h-0">
       <DialogHeader className="shrink-0 pb-4">
         <DialogTitle className="text-2xl font-extrabold">
           Book {serviceName}
@@ -127,69 +153,75 @@ export function Step2ProjectDetails({
         </DialogDescription>
       </DialogHeader>
 
-      <Card className="border border-gray-200 bg-gray-50 rounded-lg">
-        <CardContent className="pt-2 pb-2">
-          <div className="flex flex-col gap-2 text-gray-500">
-            <p className="font-semibold text-gray-700">File Guidelines</p>
-            {requirements.length > 0 ? (
-              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                {requirements.map((req, i) => (
-                  <li key={i}>{req}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-400 text-sm">
-                No strict requirements listed.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-2 text-gray-500 mb-4">
+        <p className="font-semibold text-gray-700">File Guidelines</p>
+        {requirements.length > 0 ? (
+          <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+            {requirements.map((req, i) => (
+              <li key={i}>{req}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-400 text-sm">
+            No strict requirements listed.
+          </p>
+        )}
+      </div>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
         <FieldGroup>
           <div className="flex flex-col gap-2 mb-2">
-            <Label className="font-bold text-lg">Project Details</Label>
+            <Label className="font-bold text-lg">
+              {serviceCategory === "WORKSHOP"
+                ? "Booking Details"
+                : "Project Details"}
+            </Label>
             <p className="text-sm text-muted-foreground">
-              Tell us about your project.
+              {serviceCategory === "WORKSHOP"
+                ? "Tell us more about your booking."
+                : "Tell us about your project."}
             </p>
           </div>
 
-          <form.Field
-            name="name"
-            children={(field: any) => (
-              <Field>
-                <Label htmlFor="name-1">Project Name</Label>
-                <Input
-                  id="name-1"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  required
-                  className="rounded-lg"
-                  placeholder="e.g. Custom Cup"
-                />
-              </Field>
-            )}
-          />
+          {serviceCategory !== "WORKSHOP" && (
+            <>
+              <form.Field
+                name="name"
+                children={(field: any) => (
+                  <Field>
+                    <Label htmlFor="name-1">Project Name</Label>
+                    <Input
+                      id="name-1"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      required
+                      className="rounded-lg"
+                      placeholder="e.g. Custom Cup"
+                    />
+                  </Field>
+                )}
+              />
 
-          <form.Field
-            name="description"
-            children={(field: any) => (
-              <Field>
-                <Label htmlFor="description-1">Project Description</Label>
-                <Textarea
-                  id="description-1"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  required
-                  className="rounded-lg resize-none h-24"
-                  placeholder="Describe your project, intended use, or specific details..."
-                />
-              </Field>
-            )}
-          />
+              <form.Field
+                name="description"
+                children={(field: any) => (
+                  <Field>
+                    <Label htmlFor="description-1">Project Description</Label>
+                    <Textarea
+                      id="description-1"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      required
+                      className="rounded-lg resize-none h-20 md:h-32"
+                      placeholder="Describe your project, intended use, or specific details..."
+                    />
+                  </Field>
+                )}
+              />
+            </>
+          )}
 
           <form.Field
             name="notes"
@@ -201,7 +233,7 @@ export function Step2ProjectDetails({
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="rounded-lg resize-none h-16"
+                  className="rounded-lg resize-none h-12 md:h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
@@ -239,188 +271,119 @@ export function Step2ProjectDetails({
             />
           )}
 
-          <form.Field
-            name="material"
-            children={(field: any) => (
-              <Field>
-                <Label htmlFor="material-1">Material Preference</Label>
-                <RadioGroupChoiceCard
-                  value={field.state.value}
-                  disableBuyFromLab={serviceMaterials.length === 0}
-                  onValueChange={(val) =>
-                    field.handleChange(val as "provide-own" | "buy-from-lab")
-                  }
-                />
-              </Field>
-            )}
-          />
+          {serviceCategory !== "WORKSHOP" && (
+            <>
+              <form.Field
+                name="material"
+                children={(field: any) => (
+                  <Field>
+                    <Label htmlFor="material-1">Material Preference</Label>
+                    <RadioGroupChoiceCard
+                      value={field.state.value}
+                      disableBuyFromLab={serviceMaterials.length === 0}
+                      onValueChange={(val) =>
+                        field.handleChange(
+                          val as "provide-own" | "buy-from-lab",
+                        )
+                      }
+                    />
+                  </Field>
+                )}
+              />
 
-          <form.Subscribe
-            selector={(state: any) => state.values.material}
-            children={(material: string) =>
-              material === "buy-from-lab" &&
-              serviceMaterials.length > 0 && (
-                <form.Field
-                  name="requestedMaterialId"
-                  children={(field: any) => (
-                    <Field>
-                      <Label htmlFor="requestedMaterialId">
-                        Select Lab Material
-                      </Label>
-                      <div className="relative">
-                        <Select
-                          value={field.state.value || ""}
-                          onValueChange={field.handleChange}
-                        >
-                          <SelectTrigger
-                            id="requestedMaterialId"
-                            className="w-full bg-background border-input"
-                          >
-                            <SelectValue placeholder="Select a material..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {serviceMaterials.map((m) => (
-                              <SelectItem key={m._id} value={m._id}>
-                                {m.name} - ₱
-                                {m.pricePerUnit || m.costPerUnit || 0}/{m.unit}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <input
-                          type="text"
-                          required
-                          value={field.state.value || ""}
-                          className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
-                          tabIndex={-1}
-                          onChange={() => {}}
-                        />
-                      </div>
-                    </Field>
-                  )}
-                />
-              )
-            }
-          />
+              <form.Subscribe
+                selector={(state: any) => state.values.material}
+                children={(material: string) =>
+                  material === "buy-from-lab" &&
+                  serviceMaterials.length > 0 && (
+                    <form.Field
+                      name="requestedMaterialId"
+                      children={(field: any) => (
+                        <Field>
+                          <Label htmlFor="requestedMaterialId">
+                            Select Lab Material
+                          </Label>
+                          <div className="relative">
+                            <Select
+                              value={field.state.value || ""}
+                              onValueChange={field.handleChange}
+                            >
+                              <SelectTrigger
+                                id="requestedMaterialId"
+                                className="w-full bg-background border-input"
+                              >
+                                <SelectValue placeholder="Select a material..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {serviceMaterials.map((m) => (
+                                  <SelectItem key={m._id} value={m._id}>
+                                    {m.name} - ₱
+                                    {m.pricePerUnit || m.costPerUnit || 0}/
+                                    {m.unit}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <input
+                              type="text"
+                              required
+                              value={field.state.value || ""}
+                              className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+                              tabIndex={-1}
+                              onChange={() => {}}
+                            />
+                          </div>
+                        </Field>
+                      )}
+                    />
+                  )
+                }
+              />
+            </>
+          )}
 
           <FieldSeparator className="my-2" />
 
-          <form.Field
+          <form.AppField
             name="dateTime"
             children={(field: any) => (
               <>
                 {serviceCategory === "WORKSHOP" ? (
-                  <>
-                    <div className="flex flex-col gap-1 mb-2">
-                      <Label className="font-bold text-lg">
-                        Select Workshop Time Slot
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Choose an available slot for this workshop.
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-6">
-                      {(schedules || []).map((schedule, sIdx) => (
-                        <div key={sIdx} className="space-y-3">
-                          <h4 className="font-semibold text-gray-900">
-                            {new Date(schedule.date).toLocaleDateString([], {
-                              weekday: "long",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {(schedule.timeSlots || []).map((slot, idx) => {
-                              const startFormatted = getLocalTimeString(
-                                slot.startTime,
-                              );
-                              const endFormatted = getLocalTimeString(
-                                slot.endTime,
-                              );
-
-                              const isSelected =
-                                field.state.value?.date?.getTime() ===
-                                  new Date(schedule.date).getTime() &&
-                                field.state.value?.startTime ===
-                                  startFormatted &&
-                                field.state.value?.endTime === endFormatted;
-
-                              return (
-                                <div
-                                  key={idx}
-                                  onClick={() => {
-                                    field.handleChange({
-                                      date: new Date(schedule.date),
-                                      startTime: startFormatted,
-                                      endTime: endFormatted,
-                                    });
-                                  }}
-                                  className={`cursor-pointer rounded-lg border p-4 transition-colors ${
-                                    isSelected
-                                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                      : "border-gray-200 bg-white hover:border-primary/50"
-                                  }`}
-                                >
-                                  <p className="font-medium text-sm text-gray-900">
-                                    {new Date(
-                                      slot.startTime,
-                                    ).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}{" "}
-                                    -{" "}
-                                    {new Date(slot.endTime).toLocaleTimeString(
-                                      [],
-                                      {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      },
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Max capacity: {slot.maxSlots}
-                                  </p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                      {(!schedules || schedules.length === 0) && (
-                        <p className="text-sm text-muted-foreground">
-                          No schedules available for this workshop.
-                        </p>
-                      )}
-                    </div>
-                  </>
+                  <field.WorkshopTimeSlotPicker schedules={schedules} />
                 ) : is3DPrinting ? (
                   <>
                     <div className="flex flex-col gap-1">
-                      <Label className="font-bold text-lg">Deadline</Label>
+                      <Label className="font-bold text-lg">
+                        Deadline (PST)
+                      </Label>
                       <p className="text-sm text-muted-foreground">
-                        Set the deadline of your project.
+                        Set the deadline of your project. All dates and times
+                        are in Philippine Standard Time (PST).
                       </p>
                     </div>
                     <DateTimePicker
                       value={field.state.value as any}
                       onChange={field.handleChange as any}
                       availableDays={availableDays}
+                      bookedTimeBlocks={bookedTimeBlocks}
                     />
                   </>
                 ) : (
                   <>
                     <div className="flex flex-col gap-1">
                       <Label className="font-bold text-lg">
-                        Booking Date & Time
+                        Booking Date & Time (PST)
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Set the date and time for your booking.
+                        Set the date and time for your booking. All dates and
+                        times are in Philippine Standard Time (PST).
                       </p>
                     </div>
                     <DateTimePicker
                       value={field.state.value as any}
                       onChange={field.handleChange as any}
                       availableDays={availableDays}
+                      bookedTimeBlocks={bookedTimeBlocks}
                     />
                   </>
                 )}

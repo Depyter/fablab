@@ -27,23 +27,33 @@ import {
 const formatTimeForInput = (val: number | undefined) => {
   if (!val) return "";
   const d = new Date(val);
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
+  return d.toLocaleTimeString("en-GB", {
+    timeZone: "Asia/Manila",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
-const handleTimeChange = (val: string, onChange: (time: number) => void) => {
+const handleTimeChange = (
+  val: string,
+  baseDate: number,
+  onChange: (time: number) => void,
+) => {
   if (!val) return;
   const [h, m] = val.split(":");
-  const d = new Date();
-  d.setHours(Number(h), Number(m), 0, 0);
-  onChange(d.getTime());
+  const d = new Date(baseDate || Date.now());
+  const dateString = d.toLocaleDateString("en-US", { timeZone: "Asia/Manila" });
+  const manilaDate = new Date(`${dateString} ${h}:${m}:00 GMT+0800`);
+  onChange(manilaDate.getTime());
 };
 
-const getDefaultTime = (hours: number, minutes: number) => {
-  const d = new Date();
-  d.setHours(hours, minutes, 0, 0);
-  return d.getTime();
+const getDefaultTime = (baseDate: number, hours: number, minutes: number) => {
+  const d = new Date(baseDate || Date.now());
+  const dateString = d.toLocaleDateString("en-US", { timeZone: "Asia/Manila" });
+  const h = String(hours).padStart(2, "0");
+  const m = String(minutes).padStart(2, "0");
+  const manilaDate = new Date(`${dateString} ${h}:${m}:00 GMT+0800`);
+  return manilaDate.getTime();
 };
 
 export const WorkshopScheduleForm = withForm({
@@ -57,7 +67,7 @@ export const WorkshopScheduleForm = withForm({
             serviceCategory === "WORKSHOP" ? (
               <FormSection
                 title="Workshop Schedule"
-                description="Configure dates and time slots for this workshop."
+                description="Configure dates and time slots for this workshop. All dates and times are evaluated in Philippine Standard Time (PST/GMT+8)."
               >
                 <form.Field
                   name="schedules"
@@ -70,18 +80,19 @@ export const WorkshopScheduleForm = withForm({
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() =>
+                          onClick={() => {
+                            const now = Date.now();
                             schedulesField.pushValue({
-                              date: Date.now(),
+                              date: now,
                               timeSlots: [
                                 {
-                                  startTime: getDefaultTime(9, 0),
-                                  endTime: getDefaultTime(10, 0),
+                                  startTime: getDefaultTime(now, 9, 0),
+                                  endTime: getDefaultTime(now, 10, 0),
                                   maxSlots: 1,
                                 },
                               ],
-                            })
-                          }
+                            });
+                          }}
                         >
                           Add Date
                         </Button>
@@ -141,11 +152,84 @@ export const WorkshopScheduleForm = withForm({
                                             ? new Date(dateField.state.value)
                                             : undefined
                                         }
-                                        onSelect={(date) =>
-                                          dateField.handleChange(
-                                            date ? date.getTime() : undefined,
-                                          )
-                                        }
+                                        onSelect={(date) => {
+                                          const newDate = date
+                                            ? date.getTime()
+                                            : undefined;
+                                          if (!newDate) {
+                                            dateField.handleChange(newDate);
+                                            return;
+                                          }
+                                          const schedule = (schedulesField.state
+                                            .value || [])[scheduleIndex];
+                                          const currentSlots =
+                                            schedule.timeSlots || [];
+                                          const updatedSlots = currentSlots.map(
+                                            (slot: {
+                                              startTime: number;
+                                              endTime: number;
+                                              maxSlots: number;
+                                              usedUpSlots?: number;
+                                            }) => {
+                                              const start = new Date(
+                                                slot.startTime,
+                                              );
+                                              const end = new Date(
+                                                slot.endTime,
+                                              );
+
+                                              const startStr =
+                                                start.toLocaleTimeString(
+                                                  "en-GB",
+                                                  {
+                                                    timeZone: "Asia/Manila",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                  },
+                                                );
+                                              const endStr =
+                                                end.toLocaleTimeString(
+                                                  "en-GB",
+                                                  {
+                                                    timeZone: "Asia/Manila",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                  },
+                                                );
+
+                                              const newDateStr = new Date(
+                                                newDate,
+                                              ).toLocaleDateString("en-US", {
+                                                timeZone: "Asia/Manila",
+                                              });
+
+                                              const newStart = new Date(
+                                                `${newDateStr} ${startStr}:00 GMT+0800`,
+                                              );
+                                              const newEnd = new Date(
+                                                `${newDateStr} ${endStr}:00 GMT+0800`,
+                                              );
+
+                                              return {
+                                                ...slot,
+                                                startTime: newStart.getTime(),
+                                                endTime: newEnd.getTime(),
+                                              };
+                                            },
+                                          );
+                                          const allSchedules = [
+                                            ...(schedulesField.state.value ||
+                                              []),
+                                          ];
+                                          allSchedules[scheduleIndex] = {
+                                            ...schedule,
+                                            date: newDate,
+                                            timeSlots: updatedSlots,
+                                          };
+                                          schedulesField.handleChange(
+                                            allSchedules,
+                                          );
+                                        }}
                                         initialFocus
                                       />
                                     </PopoverContent>
@@ -160,18 +244,30 @@ export const WorkshopScheduleForm = withForm({
                               children={(timeSlotsField) => (
                                 <div className="space-y-4">
                                   <div className="flex items-center justify-between">
-                                    <Label>Time Slots</Label>
+                                    <Label>Time Slots (PST)</Label>
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() =>
+                                      onClick={() => {
+                                        const baseDate =
+                                          (schedulesField.state.value || [])[
+                                            scheduleIndex
+                                          ]?.date || Date.now();
                                         timeSlotsField.pushValue({
-                                          startTime: getDefaultTime(9, 0),
-                                          endTime: getDefaultTime(10, 0),
+                                          startTime: getDefaultTime(
+                                            baseDate,
+                                            9,
+                                            0,
+                                          ),
+                                          endTime: getDefaultTime(
+                                            baseDate,
+                                            10,
+                                            0,
+                                          ),
                                           maxSlots: 1,
-                                        })
-                                      }
+                                        });
+                                      }}
                                     >
                                       Add Slot
                                     </Button>
@@ -201,6 +297,10 @@ export const WorkshopScheduleForm = withForm({
                                                       onChange={(e) =>
                                                         handleTimeChange(
                                                           e.target.value,
+                                                          (schedulesField.state
+                                                            .value || [])[
+                                                            scheduleIndex
+                                                          ]?.date || Date.now(),
                                                           subField.handleChange,
                                                         )
                                                       }
@@ -224,6 +324,10 @@ export const WorkshopScheduleForm = withForm({
                                                       onChange={(e) =>
                                                         handleTimeChange(
                                                           e.target.value,
+                                                          (schedulesField.state
+                                                            .value || [])[
+                                                            scheduleIndex
+                                                          ]?.date || Date.now(),
                                                           subField.handleChange,
                                                         )
                                                       }
