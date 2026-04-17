@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { FileUpload } from "@/components/file-upload";
 import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
 import { useChat } from "./use-chat";
+import ReactMarkdown from "react-markdown";
 import { MessageAttachments } from "./parts/message-attachments";
 import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
 import { ChatInterfaceProps, MessageFile } from "./types";
@@ -165,9 +166,9 @@ export function ChatInterface({
                           )}
                         >
                           {message.content && (
-                            <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
-                              {message.content}
-                            </p>
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0.5 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
                           )}
 
                           {messageFiles.length > 0 && (
@@ -299,9 +300,9 @@ export function ChatInterface({
                         )}
                       >
                         {message.content && (
-                          <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
-                            {message.content}
-                          </p>
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0.5 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
+                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                          </div>
                         )}
 
                         {messageFiles.length > 0 && (
