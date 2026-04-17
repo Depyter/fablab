@@ -13,7 +13,11 @@ import { UploadedFile } from "../file-upload/types";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { FILE_CATEGORIES } from "@convex/constants";
+import {
+  FILE_CATEGORIES,
+  ProjectServiceType,
+  ProjectMaterial,
+} from "@convex/constants";
 import { WorkshopSchedule } from "./workshop-time-slot-picker";
 
 interface BookingDialog {
@@ -44,7 +48,9 @@ interface LocalBookingFormValues extends Omit<
   "files" | "material"
 > {
   files: UploadedFile[];
-  material: "provide-own" | "buy-from-lab";
+  material:
+    | typeof ProjectMaterial.PROVIDE_OWN
+    | typeof ProjectMaterial.BUY_FROM_LAB;
   requestedMaterialId?: string;
 }
 
@@ -80,11 +86,14 @@ export function BookingDialog({
 
   const form = useAppForm({
     defaultValues: {
-      serviceType: serviceCategory === "WORKSHOP" ? "workshop" : "self-service",
+      serviceType:
+        serviceCategory === "WORKSHOP"
+          ? ProjectServiceType.WORKSHOP
+          : ProjectServiceType.SELF_SERVICE,
       name: "",
       description: "",
       notes: "",
-      material: "provide-own",
+      material: ProjectMaterial.PROVIDE_OWN,
       pricing: "Default",
       requestedMaterialId: undefined,
       dateTime: {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldSet } from "@/components/ui/field";
+import { MaterialCategory, MaterialUnit } from "@convex/constants";
 import { FileUpload } from "@/components/file-upload/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
@@ -53,8 +54,8 @@ export function MaterialForm({
   const form = useAppForm({
     defaultValues: {
       name: initialValues?.name ?? "",
-      category: initialValues?.category ?? "Filament",
-      unit: initialValues?.unit ?? "grams",
+      category: initialValues?.category ?? MaterialCategory.FILAMENT,
+      unit: initialValues?.unit ?? MaterialUnit.GRAMS,
       currentStock: initialValues?.currentStock ?? 0,
       costPerUnit: initialValues?.costPerUnit ?? 0,
       pricePerUnit: initialValues?.pricePerUnit ?? 0,
@@ -169,10 +170,13 @@ export function MaterialForm({
                   <form.AppField
                     name="category"
                     children={(field) => (
-                      <field.TextInput
+                      <field.SelectInput
                         label="Category"
-                        placeholder="e.g. Filament, Wood, Kits"
-                        required
+                        placeholder="Select category"
+                        options={Object.values(MaterialCategory).map((c) => ({
+                          label: c,
+                          value: c,
+                        }))}
                       />
                     )}
                   />
@@ -216,10 +220,13 @@ export function MaterialForm({
               <form.AppField
                 name="unit"
                 children={(field) => (
-                  <field.TextInput
+                  <field.SelectInput
                     label="Unit"
-                    placeholder="e.g. grams, pcs"
-                    required
+                    placeholder="Select unit"
+                    options={Object.values(MaterialUnit).map((u) => ({
+                      label: u,
+                      value: u,
+                    }))}
                   />
                 )}
               />

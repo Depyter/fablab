@@ -163,7 +163,7 @@ export default function ProjectsList() {
     loadMore,
   } = usePaginatedQuery(
     api.projects.query.getProjects,
-    {},
+    { statusFilter, dateFilter, sortBy },
     { initialNumItems: 24 },
   );
 
@@ -200,34 +200,8 @@ export default function ProjectsList() {
       );
     }
 
-    if (statusFilter !== "all") {
-      result = result.filter((p) => p.status === statusFilter);
-    }
-
-    if (dateFilter !== "all") {
-      result = result.filter((p) => {
-        if (!p.bookingDate) return false;
-        const d = new Date(p.bookingDate);
-        if (dateFilter === "today") return isToday(d);
-        if (dateFilter === "week") return isThisWeek(d, { weekStartsOn: 1 });
-        if (dateFilter === "month") return isThisMonth(d);
-        return true;
-      });
-    }
-
-    result.sort((a, b) => {
-      if (sortBy === "newest")
-        return (b.bookingDate ?? 0) - (a.bookingDate ?? 0);
-      if (sortBy === "oldest")
-        return (a.bookingDate ?? 0) - (b.bookingDate ?? 0);
-      if (sortBy === "price-high") return b.estimatedPrice - a.estimatedPrice;
-      if (sortBy === "price-low") return a.estimatedPrice - b.estimatedPrice;
-      if (sortBy === "name-az") return a.name.localeCompare(b.name);
-      return 0;
-    });
-
     return result;
-  }, [projects, search, statusFilter, dateFilter, sortBy]);
+  }, [projects, search]);
 
   return (
     <DataViewRoot defaultView="gallery">
@@ -235,9 +209,7 @@ export default function ProjectsList() {
         title="Your Projects"
         subtitle={
           !isLoading
-            ? filteredProjects.length === projects.length
-              ? `${projects.length} project${projects.length === 1 ? "" : "s"}`
-              : `${filteredProjects.length} of ${projects.length} projects`
+            ? `${filteredProjects.length} project${filteredProjects.length === 1 ? "" : "s"}`
             : undefined
         }
         views={["calendar", "gallery", "list"]}

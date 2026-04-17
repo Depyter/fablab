@@ -3,21 +3,27 @@ import { authMutation, claimFiles } from "../helper";
 import { Id, Doc } from "../_generated/dataModel";
 import {
   BookingWindow,
+  ProjectStatus,
   resolveService,
   validateFileTypes,
   resolveBookingFromSharedUsage,
   validateBookingTiming,
   validateFabricationAvailability,
-  computeSharedFixedCostBreakdown,
+  computeProvisionalCostBreakdown,
   handleSharedResourceUsage,
   handleWorkshopResourceUsage,
   handleExclusiveResourceUsage,
   incrementWorkshopSlot,
-  decrementWorkshopSlot,
   ensureProjectRoom,
   createProjectThread,
   computeCompletionCost,
   consumeMaterials,
+  findProjectUsage,
+  sendProjectSystemMessage,
+  applyStatusChange,
+  applyMakerAssignment,
+  applyResourceAssignment,
+  applyMaterialAssignment,
 } from "./helper";
 
 // ============================================================================
@@ -83,10 +89,14 @@ export const createProject = authMutation({
     validateBookingTiming(booking);
     await validateFabricationAvailability(ctx, args.service, service, booking);
 
-    // ── 4. Compute provisional cost (shared + fixed only) ───────────────────
-    const costBreakdown = args.sharedUsageId
-      ? computeSharedFixedCostBreakdown(service, args.pricing, args.serviceType)
-      : undefined;
+    // ── 4. Compute provisional cost for all pricing types ───────────────────
+    const bookingDurationMs = booking.endTime - booking.startTime;
+    const costBreakdown = computeProvisionalCostBreakdown(
+      service,
+      args.pricing,
+      args.serviceType,
+      bookingDurationMs,
+    );
 
     // ── 5. Insert the project record ─────────────────────────────────────────
     const now = Date.now();
@@ -123,9 +133,16 @@ export const createProject = authMutation({
         booking,
         args.selectedTimeSlot,
         projectId,
+        args.requestedMaterialId,
       );
     } else {
-      await handleExclusiveResourceUsage(ctx, args.service, booking, projectId);
+      await handleExclusiveResourceUsage(
+        ctx,
+        args.service,
+        booking,
+        projectId,
+        args.requestedMaterialId,
+      );
     }
 
     // ── 7. Increment workshop slot counter ───────────────────────────────────
@@ -169,6 +186,7 @@ export const updateProject = authMutation({
   role: ["admin", "maker"],
   args: {
     projectId: v.id("projects"),
+    // Status transition
     status: v.optional(
       v.union(
         v.literal("pending"),
@@ -178,88 +196,144 @@ export const updateProject = authMutation({
         v.literal("cancelled"),
       ),
     ),
+    // Assignments
     makerId: v.optional(v.id("userProfile")),
+    resourceId: v.optional(v.id("resources")),
+    materialId: v.optional(v.id("materials")),
   },
   handler: async (ctx, args) => {
-    const { projectId, status, makerId } = args;
+    const existingProject = await ctx.db.get(args.projectId);
+    if (!existingProject) throw new ConvexError("Project not found.");
 
-    const updates: Partial<{
-      status: "pending" | "approved" | "rejected" | "completed" | "cancelled";
-      assignedMaker: Id<"userProfile">;
-    }> = {};
+    const messagelines: string[] = [];
 
-    if (status !== undefined) updates.status = status;
-
-    if (makerId !== undefined) {
-      const makerProfile = await ctx.db.get(makerId);
-      if (!makerProfile || makerProfile.role !== "maker") {
-        throw new ConvexError("Assigned user must be a maker");
-      }
-      updates.assignedMaker = makerId;
+    // ── Status change ────────────────────────────────────────────────────────
+    if (args.status !== undefined) {
+      const lines = await applyStatusChange(
+        ctx,
+        existingProject,
+        existingProject,
+        args.status as ProjectStatus,
+      );
+      messagelines.push(...lines);
     }
 
-    const existingProject = await ctx.db.get(projectId);
-    await ctx.db.patch(projectId, updates);
-    const project = await ctx.db.get(projectId);
+    // Re-fetch after potential status patch
+    const project = (await ctx.db.get(args.projectId))!;
 
-    // ── Insert system message on status change ───────────────────────────────
-    if (status !== undefined && project) {
-      const projectThread = await ctx.db
-        .query("threads")
-        .withIndex("projectId", (q) => q.eq("projectId", projectId))
-        .first();
-      if (projectThread) {
-        await ctx.db.insert("messages", {
-          room: projectThread.roomId,
-          threadId: projectThread._id,
-          content: `Project status updated to: ${status}`,
-          sender: "System",
+    // ── Maker assignment ─────────────────────────────────────────────────────
+    if (args.makerId !== undefined) {
+      const lines = await applyMakerAssignment(ctx, project, args.makerId);
+      messagelines.push(...lines);
+    }
+
+    // ── Resource assignment ──────────────────────────────────────────────────
+    if (args.resourceId !== undefined) {
+      const lines = await applyResourceAssignment(
+        ctx,
+        project,
+        args.resourceId,
+      );
+      messagelines.push(...lines);
+    }
+
+    // ── Material assignment ──────────────────────────────────────────────────
+    if (args.materialId !== undefined) {
+      const lines = await applyMaterialAssignment(
+        ctx,
+        project,
+        args.materialId,
+      );
+      messagelines.push(...lines);
+    }
+
+    // ── System message ───────────────────────────────────────────────────────
+    await sendProjectSystemMessage(ctx, args.projectId, messagelines);
+  },
+});
+
+export const updateCostBreakdown = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    setupFee: v.number(),
+    timeCost: v.number(),
+    materialCost: v.number(),
+    amountUsed: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+
+    const total = args.setupFee + args.timeCost + args.materialCost;
+
+    // ── Detect what actually changed ─────────────────────────────────────────
+    const existing = project.costBreakdown;
+
+    const feeChanged = existing?.setupFee !== args.setupFee;
+    const timeChanged = existing?.timeCost !== args.timeCost;
+    const materialCostChanged = existing?.materialCost !== args.materialCost;
+    const breakdownChanged = feeChanged || timeChanged || materialCostChanged;
+
+    // Resolve existing amountUsed from the usage record
+    let existingAmountUsed2: number | undefined;
+    let usage = null;
+    if (args.amountUsed !== undefined && project.requestedMaterialId) {
+      usage = await findProjectUsage(ctx, project);
+      existingAmountUsed2 = usage?.materialsUsed?.find(
+        (m) => m.materialId === project.requestedMaterialId,
+      )?.amountUsed;
+    }
+    const amountChanged =
+      args.amountUsed !== undefined && args.amountUsed !== existingAmountUsed2;
+
+    if (!breakdownChanged && !amountChanged) return;
+
+    // ── Persist changes ──────────────────────────────────────────────────────
+    if (breakdownChanged) {
+      await ctx.db.patch(args.projectId, {
+        costBreakdown: {
+          setupFee: args.setupFee,
+          timeCost: args.timeCost,
+          materialCost: args.materialCost,
+          total,
+        },
+      });
+    }
+
+    // ── Update amountUsed on the resource usage record ───────────────────────
+    if (amountChanged && project.requestedMaterialId) {
+      const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
+      if (resolvedUsage) {
+        await ctx.db.patch(resolvedUsage._id, {
+          materialsUsed: [
+            {
+              materialId: project.requestedMaterialId as Id<"materials">,
+              amountUsed: args.amountUsed!,
+            },
+          ],
         });
       }
     }
 
-    // ── Workshop cancellation / rejection: release the slot ─────────────────
-    if (
-      project &&
-      existingProject &&
-      project.serviceType === "workshop" &&
-      (status === "cancelled" || status === "rejected") &&
-      existingProject.status !== "cancelled" &&
-      existingProject.status !== "rejected"
-    ) {
-      const service = await ctx.db.get(project.service);
-      if (service && service.serviceCategory.type === "WORKSHOP") {
-        const usages = await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", project.service))
-          .collect();
-        const usage = usages.find((u) => u.projects.includes(project._id));
-
-        if (usage) {
-          await decrementWorkshopSlot(
-            ctx,
-            service,
-            usage,
-            project.selectedTimeSlot,
-          );
-          await ctx.db.patch(usage._id, {
-            projects: usage.projects.filter((p) => p !== project._id),
-          });
-        }
-      }
+    // ── System message ───────────────────────────────────────────────────────
+    const lines: string[] = [];
+    if (breakdownChanged) {
+      lines.push(
+        `Cost breakdown updated:`,
+        `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
+        `- Time cost: ₱${args.timeCost.toFixed(2)}`,
+        `- Material cost: ₱${args.materialCost.toFixed(2)}`,
+        `- **Total: ₱${total.toFixed(2)}**`,
+      );
     }
-
-    // ── Assign maker to resource usage ───────────────────────────────────────
-    if (makerId !== undefined && project) {
-      const usages = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_service", (q) => q.eq("service", project.service))
-        .collect();
-      const usage = usages.find((u) => u.projects.includes(project._id));
-      if (usage) {
-        await ctx.db.patch(usage._id, { maker: makerId });
-      }
+    if (amountChanged && project.requestedMaterialId) {
+      const materialDoc = await ctx.db.get(project.requestedMaterialId);
+      lines.push(
+        `- Material used: ${args.amountUsed} ${materialDoc?.unit ?? "units"} of ${materialDoc?.name ?? "material"}`,
+      );
     }
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });
 
@@ -288,45 +362,9 @@ export const cancelOwnProject = authMutation({
       throw new ConvexError("Cannot cancel a project in its current status.");
     }
 
-    await ctx.db.patch(args.projectId, { status: "cancelled" });
-
-    // ── Insert system message for cancellation ───────────────────────────────
-    const projectThread = await ctx.db
-      .query("threads")
-      .withIndex("projectId", (q) => q.eq("projectId", args.projectId))
-      .first();
-    if (projectThread) {
-      await ctx.db.insert("messages", {
-        room: projectThread.roomId,
-        threadId: projectThread._id,
-        content: `Project status updated to: cancelled`,
-        sender: "System",
-      });
-    }
-
-    // ── Workshop: release the slot ────────────────────────────────────────────
-    if (project.serviceType === "workshop") {
-      const service = await ctx.db.get(project.service);
-      if (service && service.serviceCategory.type === "WORKSHOP") {
-        const usages = await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", project.service))
-          .collect();
-        const usage = usages.find((u) => u.projects.includes(project._id));
-
-        if (usage) {
-          await decrementWorkshopSlot(
-            ctx,
-            service,
-            usage,
-            project.selectedTimeSlot,
-          );
-          await ctx.db.patch(usage._id, {
-            projects: usage.projects.filter((p) => p !== project._id),
-          });
-        }
-      }
-    }
+    // applyStatusChange handles the patch, workshop slot release, and returns log lines
+    const lines = await applyStatusChange(ctx, project, project, "cancelled");
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });
 
@@ -376,14 +414,30 @@ export const completeProject = authMutation({
 
     // ── 4. Record materials on the usage log ─────────────────────────────────
     if (args.materialsUsed) {
-      const usages = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_service", (q) => q.eq("service", project.service))
-        .collect();
-      const usage = usages.find((u) => u.projects.includes(project._id));
+      const usage = await findProjectUsage(ctx, project);
       if (usage) {
         await ctx.db.patch(usage._id, { materialsUsed: args.materialsUsed });
       }
     }
+
+    // ── 5. System message ────────────────────────────────────────────────────
+    const durationHours = (args.actualDurationMs / (1000 * 60 * 60)).toFixed(2);
+    const lines: string[] = [
+      `Project marked as **completed**.`,
+      `- Actual duration: ${durationHours} hours`,
+      `- Setup fee: ₱${setupFee.toFixed(2)}`,
+      `- Time cost: ₱${timeCost.toFixed(2)}`,
+      `- Material cost: ₱${materialCost.toFixed(2)}`,
+      `- **Total: ₱${total.toFixed(2)}**`,
+    ];
+    if (args.materialsUsed && args.materialsUsed.length > 0) {
+      for (const m of args.materialsUsed) {
+        const materialDoc = await ctx.db.get(m.materialId);
+        lines.push(
+          `- Material consumed: ${m.amountUsed} ${materialDoc?.unit ?? "units"} of ${materialDoc?.name ?? m.materialId}`,
+        );
+      }
+    }
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });

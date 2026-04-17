@@ -8,6 +8,53 @@ export const ServiceStatus = {
   UNAVAILABLE: "Unavailable",
 } as const;
 
+export const MaterialCategory = {
+  FILAMENT: "Filament",
+  RESIN: "Resin",
+  WOOD: "Wood",
+  ACRYLIC: "Acrylic",
+  FOAM: "Foam",
+  FABRIC: "Fabric",
+  METAL: "Metal",
+  PAPER: "Paper",
+  VINYL: "Vinyl",
+  ELECTRONICS: "Electronics",
+  KITS: "Kits",
+  MISC: "Misc",
+} as const;
+
+export const MaterialUnit = {
+  // Weight
+  GRAMS: "g",
+  KILOGRAMS: "kg",
+  // Length
+  METERS: "m",
+  CENTIMETERS: "cm",
+  MILLIMETERS: "mm",
+  // Area
+  SQUARE_METERS: "m²",
+  // Volume
+  MILLILITERS: "mL",
+  LITERS: "L",
+  // Count
+  PIECES: "pcs",
+  SHEETS: "sheets",
+  ROLLS: "rolls",
+  SETS: "sets",
+} as const;
+
+export const MaterialStatus = {
+  IN_STOCK: "IN_STOCK",
+  LOW_STOCK: "LOW_STOCK",
+  OUT_OF_STOCK: "OUT_OF_STOCK",
+} as const;
+
+export const ResourceUnit = {
+  MINUTE: "minute",
+  HOUR: "hour",
+  DAY: "day",
+} as const;
+
 export const ResourceCategory = {
   ROOM: "room",
   MACHINE: "machine",
@@ -171,6 +218,12 @@ export const ALLOWED_MIME_TYPES = new Set([
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 // Type helpers for extracting the union types from the constants
+export type MaterialCategoryType =
+  (typeof MaterialCategory)[keyof typeof MaterialCategory];
+export type MaterialUnitType = (typeof MaterialUnit)[keyof typeof MaterialUnit];
+export type MaterialStatusType =
+  (typeof MaterialStatus)[keyof typeof MaterialStatus];
+export type ResourceUnitType = (typeof ResourceUnit)[keyof typeof ResourceUnit];
 export type FileStatusType = (typeof FileStatus)[keyof typeof FileStatus];
 export type ServiceStatusType =
   (typeof ServiceStatus)[keyof typeof ServiceStatus];

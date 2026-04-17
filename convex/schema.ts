@@ -2,6 +2,8 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
   FileStatus,
+  MaterialStatus,
+  ResourceUnit,
   PaymentMode,
   ProjectMaterial,
   ProjectServiceType,
@@ -86,9 +88,9 @@ export default defineSchema({
         type: v.literal("PER_UNIT"),
         setupFee: v.number(),
         unitName: v.union(
-          v.literal("minute"),
-          v.literal("hour"),
-          v.literal("day"),
+          v.literal(ResourceUnit.MINUTE),
+          v.literal(ResourceUnit.HOUR),
+          v.literal(ResourceUnit.DAY),
         ),
         ratePerUnit: v.number(),
         variants: v.optional(
@@ -105,9 +107,9 @@ export default defineSchema({
         type: v.literal("COMPOSITE"), // e.g., 3D Printing
         setupFee: v.number(),
         unitName: v.union(
-          v.literal("minute"),
-          v.literal("hour"),
-          v.literal("day"),
+          v.literal(ResourceUnit.MINUTE),
+          v.literal(ResourceUnit.HOUR),
+          v.literal(ResourceUnit.DAY),
         ),
         timeRate: v.number(),
         variants: v.optional(
@@ -157,9 +159,9 @@ export default defineSchema({
     reorderThreshold: v.optional(v.number()),
     color: v.optional(v.string()),
     status: v.union(
-      v.literal("IN_STOCK"),
-      v.literal("LOW_STOCK"),
-      v.literal("OUT_OF_STOCK"),
+      v.literal(MaterialStatus.IN_STOCK),
+      v.literal(MaterialStatus.LOW_STOCK),
+      v.literal(MaterialStatus.OUT_OF_STOCK),
     ),
     image: v.optional(v.id("_storage")),
   })
@@ -245,7 +247,15 @@ export default defineSchema({
         endTime: v.number(),
       }),
     ),
-  }).index("by_userProfile", ["userId"]),
+  })
+    .index("by_userProfile", ["userId"])
+    .index("by_startTime", ["selectedTimeSlot.startTime"])
+    .index("by_status_startTime", ["status", "selectedTimeSlot.startTime"])
+    .index("by_totalCost_startTime", [
+      "costBreakdown.total",
+      "selectedTimeSlot.startTime",
+    ])
+    .index("by_name_startTime", ["name", "selectedTimeSlot.startTime"]),
 
   // --------------------------------------------------------
   // EXISTING TABLES: Keep existing unmodified

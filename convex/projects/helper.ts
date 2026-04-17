@@ -3,6 +3,13 @@ import { Id, Doc } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
 import { FILE_CATEGORIES } from "../constants";
 
+export type ProjectStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "completed"
+  | "cancelled";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -156,6 +163,72 @@ export function computeSharedFixedCostBreakdown(
   return { setupFee, materialCost: 0, timeCost: 0, total: setupFee };
 }
 
+export function computeProvisionalCostBreakdown(
+  service: ServiceDoc,
+  pricingVariant: string,
+  serviceType: string,
+  bookingDurationMs: number,
+): { setupFee: number; materialCost: number; timeCost: number; total: number } {
+  const durationMinutes = bookingDurationMs / (1000 * 60);
+
+  const unitToMinutes = (unit: string): number => {
+    if (unit === "hour") return 60;
+    if (unit === "day") return 60 * 24;
+    return 1;
+  };
+
+  const isSelfService = serviceType === "self-service";
+
+  let setupFee = 0;
+  let timeCost = 0;
+
+  if (service.pricing.type === "FIXED") {
+    let amount = service.pricing.amount;
+    if (service.pricing.variants) {
+      const variant = service.pricing.variants.find(
+        (v) => v.name === pricingVariant,
+      );
+      if (variant) amount = variant.amount;
+    }
+    setupFee = isSelfService ? 0 : amount;
+  } else if (service.pricing.type === "PER_UNIT") {
+    setupFee = service.pricing.setupFee;
+    let ratePerUnit = service.pricing.ratePerUnit;
+    if (service.pricing.variants) {
+      const variant = service.pricing.variants.find(
+        (v) => v.name === pricingVariant,
+      );
+      if (variant) {
+        setupFee = variant.setupFee;
+        ratePerUnit = variant.ratePerUnit;
+      }
+    }
+    if (isSelfService) setupFee = 0;
+    const durationInUnit =
+      durationMinutes / unitToMinutes(service.pricing.unitName);
+    timeCost = durationInUnit * ratePerUnit;
+  } else if (service.pricing.type === "COMPOSITE") {
+    setupFee = service.pricing.setupFee;
+    let timeRate = service.pricing.timeRate;
+    if (service.pricing.variants) {
+      const variant = service.pricing.variants.find(
+        (v) => v.name === pricingVariant,
+      );
+      if (variant) {
+        setupFee = variant.setupFee;
+        timeRate = variant.timeRate;
+      }
+    }
+    if (isSelfService) setupFee = 0;
+    const durationInUnit =
+      durationMinutes / unitToMinutes(service.pricing.unitName);
+    timeCost = durationInUnit * timeRate;
+  }
+
+  const total = setupFee + timeCost;
+  return { setupFee, materialCost: 0, timeCost, total };
+}
+
 // ============================================================================
 // Helpers — Resource Usage
 // ============================================================================
@@ -178,6 +251,7 @@ export async function handleWorkshopResourceUsage(
   booking: BookingWindow,
   selectedTimeSlot: { startTime: number; endTime: number } | undefined,
   projectId: Id<"projects">,
+  requestedMaterialId?: Id<"materials">,
 ): Promise<void> {
   const existingUsages = await ctx.db
     .query("resourceUsage")
@@ -216,6 +290,9 @@ export async function handleWorkshopResourceUsage(
       endTime: booking.endTime,
       date: booking.date,
       maxCapacity: timeSlot?.maxSlots,
+      materialsUsed: requestedMaterialId
+        ? [{ materialId: requestedMaterialId, amountUsed: 0 }]
+        : undefined,
     });
   }
 }
@@ -225,6 +302,7 @@ export async function handleExclusiveResourceUsage(
   serviceId: Id<"services">,
   booking: BookingWindow,
   projectId: Id<"projects">,
+  requestedMaterialId?: Id<"materials">,
 ): Promise<void> {
   await ctx.db.insert("resourceUsage", {
     service: serviceId,
@@ -233,6 +311,9 @@ export async function handleExclusiveResourceUsage(
     startTime: booking.startTime,
     endTime: booking.endTime,
     date: booking.date,
+    materialsUsed: requestedMaterialId
+      ? [{ materialId: requestedMaterialId, amountUsed: 0 }]
+      : undefined,
   });
 }
 
@@ -507,6 +588,160 @@ export function computeCompletionCost(
 
   return { setupFee, timeCost };
 }
+
+// ============================================================================
+// Helpers — Project Updates
+// ============================================================================
+
+/**
+ * Finds the resourceUsage record that contains the given project.
+ */
+export async function findProjectUsage(
+  ctx: MutationCtx,
+  project: Doc<"projects">,
+): Promise<Doc<"resourceUsage"> | null> {
+  const usages = await ctx.db
+    .query("resourceUsage")
+    .withIndex("by_service", (q) => q.eq("service", project.service))
+    .collect();
+  return usages.find((u) => u.projects.includes(project._id)) ?? null;
+}
+
+/**
+ * Sends a system message into the project's thread.
+ * Lines should already be formatted (markdown supported).
+ */
+export async function sendProjectSystemMessage(
+  ctx: MutationCtx,
+  projectId: Id<"projects">,
+  lines: string[],
+): Promise<void> {
+  if (lines.length === 0) return;
+  const thread = await ctx.db
+    .query("threads")
+    .withIndex("projectId", (q) => q.eq("projectId", projectId))
+    .first();
+  if (!thread) return;
+  await ctx.db.insert("messages", {
+    room: thread.roomId,
+    threadId: thread._id,
+    content: lines.join("\n"),
+    sender: "System",
+  });
+}
+
+/**
+ * Applies a status change to the project and handles workshop slot
+ * release when the project is cancelled or rejected.
+ * Returns change-log lines for the system message.
+ */
+export async function applyStatusChange(
+  ctx: MutationCtx,
+  project: Doc<"projects">,
+  existingProject: Doc<"projects">,
+  status: ProjectStatus,
+): Promise<string[]> {
+  if (project.status === status) return [];
+
+  await ctx.db.patch(project._id, { status });
+
+  const lines: string[] = [`Status updated to: **${status}**`];
+
+  // Release workshop slot on cancellation / rejection
+  if (
+    project.serviceType === "workshop" &&
+    (status === "cancelled" || status === "rejected") &&
+    existingProject.status !== "cancelled" &&
+    existingProject.status !== "rejected"
+  ) {
+    const service = await ctx.db.get(project.service);
+    if (service && service.serviceCategory.type === "WORKSHOP") {
+      const usage = await findProjectUsage(ctx, project);
+      if (usage) {
+        await decrementWorkshopSlot(
+          ctx,
+          service,
+          usage,
+          project.selectedTimeSlot,
+        );
+        await ctx.db.patch(usage._id, {
+          projects: usage.projects.filter((p) => p !== project._id),
+        });
+      }
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * Assigns a maker to the project record and its resource usage record.
+ * Returns change-log lines for the system message.
+ */
+export async function applyMakerAssignment(
+  ctx: MutationCtx,
+  project: Doc<"projects">,
+  makerId: Id<"userProfile">,
+): Promise<string[]> {
+  const makerProfile = await ctx.db.get(makerId);
+  if (!makerProfile || makerProfile.role !== "maker") {
+    throw new ConvexError("Assigned user must be a maker");
+  }
+
+  if (project.assignedMaker === makerId) return [];
+
+  await ctx.db.patch(project._id, { assignedMaker: makerId });
+
+  const usage = await findProjectUsage(ctx, project);
+  if (usage) {
+    await ctx.db.patch(usage._id, { maker: makerId });
+  }
+
+  return [`- Assigned maker updated to: **${makerProfile.name}**`];
+}
+
+/**
+ * Assigns a resource to the project's resource usage record.
+ * Returns change-log lines for the system message.
+ */
+export async function applyResourceAssignment(
+  ctx: MutationCtx,
+  project: Doc<"projects">,
+  resourceId: Id<"resources">,
+): Promise<string[]> {
+  const resourceDoc = await ctx.db.get(resourceId);
+  if (!resourceDoc) throw new ConvexError("Resource not found.");
+
+  const usage = await findProjectUsage(ctx, project);
+  if (usage?.resource === resourceId) return [];
+
+  if (usage) {
+    await ctx.db.patch(usage._id, { resource: resourceId });
+  }
+
+  return [`- Resource updated to: **${resourceDoc.name}**`];
+}
+
+/**
+ * Updates the requested material on the project record.
+ * Returns change-log lines for the system message.
+ */
+export async function applyMaterialAssignment(
+  ctx: MutationCtx,
+  project: Doc<"projects">,
+  materialId: Id<"materials">,
+): Promise<string[]> {
+  const materialDoc = await ctx.db.get(materialId);
+  if (!materialDoc) throw new ConvexError("Material not found.");
+
+  if (project.requestedMaterialId === materialId) return [];
+
+  await ctx.db.patch(project._id, { requestedMaterialId: materialId });
+
+  return [`- Material updated to: **${materialDoc.name}**`];
+}
+
+// ============================================================================
 
 export async function consumeMaterials(
   ctx: MutationCtx,

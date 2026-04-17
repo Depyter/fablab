@@ -108,6 +108,7 @@ export const createMaker = internalMutation({
 });
 
 export const getMakers = authQuery({
+  role: ["admin", "maker"],
   args: {},
   handler: async (ctx) => {
     const makers = await ctx.db

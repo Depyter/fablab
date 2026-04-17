@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,7 +26,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { ActionDialog } from "../action-dialog";
 import { api } from "@/../convex/_generated/api";
 
@@ -34,7 +35,7 @@ export type ProjectData = NonNullable<
 
 interface ProjectDetailsContentProps {
   project: ProjectData;
-  styles: { badge: string; cover: string };
+  styles?: { badge?: string; cover?: string };
   timelineSteps: ProjectTimelineStep[];
   onOpenAssignView: () => void;
   onUpdateStatus: (
@@ -53,15 +54,16 @@ interface ProjectDetailsContentProps {
 
 export function ProjectDetailsContent({
   project,
-  styles,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  styles: _styles,
   timelineSteps,
   onOpenAssignView,
   onUpdateStatus,
   isClient,
   onCancelProject,
 }: ProjectDetailsContentProps) {
-  // Derive booking date and time range from primary resourceUsage
   const primaryUsage = project.resourceUsages?.[0];
+
   const bookingDateStr = primaryUsage?.date
     ? new Date(primaryUsage.date).toLocaleDateString("en-US", {
         weekday: "short",
@@ -70,6 +72,7 @@ export function ProjectDetailsContent({
         year: "numeric",
       })
     : "Not specified";
+
   const bookingTimeRange = primaryUsage
     ? `${new Date(primaryUsage.startTime).toLocaleTimeString("en-US", {
         hour: "2-digit",
@@ -173,23 +176,10 @@ export function ProjectDetailsContent({
       <ProjectTimeline steps={timelineSteps} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 xl:gap-10 min-w-0">
+        {/* ── Left column ──────────────────────────────────────────────── */}
         <div className="lg:col-span-7 space-y-4 min-w-0">
           <Card>
             <CardContent className="space-y-3 sm:min-w-0">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-base font-semibold sm:text-lg">
-                  Project Overview
-                </h3>
-                <span
-                  className={cn(
-                    "text-sm font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-sm bg-background/70",
-                    styles.badge,
-                  )}
-                >
-                  {project.status}
-                </span>
-              </div>
-
               <FieldGroup>
                 <Field className="gap-1">
                   <Label className="text-muted-foreground text-xs font-normal">
@@ -200,7 +190,9 @@ export function ProjectDetailsContent({
                   </p>
                 </Field>
               </FieldGroup>
+
               <FieldSeparator className="mb-2" />
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
                 <FieldGroup>
                   <Field className="gap-1">
@@ -238,24 +230,7 @@ export function ProjectDetailsContent({
                   </Field>
                 </FieldGroup>
               </div>
-              <FieldGroup>
-                <Field className="gap-1">
-                  <Label className="text-muted-foreground text-xs font-normal">
-                    Estimated Duration
-                  </Label>
-                  <p className="text-sm">
-                    {project.resourceUsages && project.resourceUsages.length > 0
-                      ? `${(
-                          project.resourceUsages.reduce(
-                            (acc: number, u) => acc + (u.endTime - u.startTime),
-                            0,
-                          ) /
-                          (1000 * 60 * 60)
-                        ).toFixed(1)} hours`
-                      : "Not specified"}
-                  </p>
-                </Field>
-              </FieldGroup>
+
               <FieldGroup>
                 <Field>
                   <p className="text-sm text-muted-foreground">
@@ -291,93 +266,18 @@ export function ProjectDetailsContent({
           </Card>
         </div>
 
+        {/* ── Right column ─────────────────────────────────────────────── */}
         <div className="lg:col-span-5 space-y-6 min-w-0">
-          <Card>
-            <CardContent className="space-y-4 sm:min-w-0">
-              <h3 className="text-base font-semibold sm:text-lg">
-                Assigned Maker
-              </h3>
-              {!project.assignedMaker ? (
-                <p className="text-sm text-muted-foreground">
-                  No maker assigned yet.
-                </p>
-              ) : (
-                <div className="flex items-center gap-3 rounded-md bg-muted/80 p-3 min-w-0">
-                  {project.assignedMaker.pfpUrl ? (
-                    <img
-                      src={project.assignedMaker.pfpUrl}
-                      alt={project.assignedMaker.name}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-medium">
-                      {project.assignedMaker.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <p className="wrap-break-word text-sm font-medium">
-                    {project.assignedMaker.name}
-                  </p>
-                </div>
-              )}
-
-              <FieldSeparator className="my-2" />
-
-              <h3 className="text-base font-semibold sm:text-lg">
-                Resource Usage
-              </h3>
-              {project.resourceUsages.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No usage records yet.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {project.resourceUsages.map((usage) => (
-                    <div
-                      key={usage._id}
-                      className="flex gap-4 rounded-md bg-muted/80 p-3 min-w-0"
-                    >
-                      {usage.resourceDetails?.imageUrls?.[0] ? (
-                        <img
-                          src={usage.resourceDetails.imageUrls[0]}
-                          alt={usage.resourceDetails.name}
-                          className="h-16 w-16 shrink-0 rounded-md border object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border bg-secondary/50 text-xs text-muted-foreground">
-                          No Image
-                        </div>
-                      )}
-
-                      <div className="flex min-w-0 flex-col">
-                        <p className="wrap-break-word text-sm font-medium">
-                          {usage.resourceDetails?.name ?? "Unassigned resource"}
-                        </p>
-                        {usage.resourceDetails?.category && (
-                          <p className="text-xs capitalize text-muted-foreground">
-                            {usage.resourceDetails.category}
-                          </p>
-                        )}
-
-                        {usage.materialsUsed &&
-                          usage.materialsUsed.length > 0 && (
-                            <p className="mt-1.5 wrap-break-word text-xs text-muted-foreground">
-                              Material used: {usage.materialsUsed[0].amountUsed}{" "}
-                              units
-                            </p>
-                          )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           <PricingEstimateCard
+            projectId={project._id}
             material={project.material}
+            costBreakdown={project.costBreakdown ?? undefined}
             service={project.service ?? undefined}
             resourceUsages={project.resourceUsages}
             projectPricing={project.pricing}
+            requestedMaterial={project.requestedMaterial ?? undefined}
+            requestedMaterialId={project.requestedMaterialId ?? undefined}
+            assignedMaker={project.assignedMaker ?? undefined}
             readOnly={isClient}
           />
 
