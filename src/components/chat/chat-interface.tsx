@@ -114,6 +114,89 @@ export function ChatInterface({
                       ]
                     : [];
 
+              if (message.sender === "System") {
+                return (
+                  <div
+                    key={message._id}
+                    className={cn(
+                      "flex flex-col",
+                      isFirstInGroup && !showSeparator ? "mt-4" : "mt-0.5",
+                    )}
+                  >
+                    {showSeparator && (
+                      <div className="flex items-center gap-4 my-6">
+                        <div className="h-px flex-1 bg-border/30" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/35 whitespace-nowrap">
+                          {new Date(message._creationTime).toLocaleDateString(
+                            [],
+                            {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
+                        </span>
+                        <div className="h-px flex-1 bg-border/30" />
+                      </div>
+                    )}
+
+                    <div className="flex justify-center">
+                      <div className="flex flex-col items-center max-w-[60%]">
+                        {isFirstInGroup && (
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-1 px-1">
+                            {message.sender}
+                          </span>
+                        )}
+
+                        <div
+                          onClick={() =>
+                            setShowTimeId(
+                              showTimeId === message._id ? null : message._id,
+                            )
+                          }
+                          className={cn(
+                            "text-sm cursor-pointer overflow-hidden bg-muted/50 border border-border/30 text-foreground",
+                            message.content
+                              ? "px-3.5 py-2.5 rounded-2xl"
+                              : messageFiles.length > 0
+                                ? "p-1 rounded-2xl"
+                                : "px-3.5 py-2.5 rounded-2xl",
+                          )}
+                        >
+                          {message.content && (
+                            <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
+                              {message.content}
+                            </p>
+                          )}
+
+                          {messageFiles.length > 0 && (
+                            <div className={cn(message.content ? "mt-2" : "")}>
+                              <MessageAttachments
+                                files={messageFiles}
+                                isCurrentUser={false}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {showTimeId === message._id && (
+                          <span className="text-[10px] mt-1 font-bold uppercase tracking-widest text-muted-foreground/35 px-1">
+                            {new Date(message._creationTime).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={message._id}

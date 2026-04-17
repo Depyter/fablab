@@ -202,6 +202,22 @@ export const updateProject = authMutation({
     await ctx.db.patch(projectId, updates);
     const project = await ctx.db.get(projectId);
 
+    // ── Insert system message on status change ───────────────────────────────
+    if (status !== undefined && project) {
+      const projectThread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectId))
+        .first();
+      if (projectThread) {
+        await ctx.db.insert("messages", {
+          room: projectThread.roomId,
+          threadId: projectThread._id,
+          content: `Project status updated to: ${status}`,
+          sender: "System",
+        });
+      }
+    }
+
     // ── Workshop cancellation / rejection: release the slot ─────────────────
     if (
       project &&
@@ -273,6 +289,20 @@ export const cancelOwnProject = authMutation({
     }
 
     await ctx.db.patch(args.projectId, { status: "cancelled" });
+
+    // ── Insert system message for cancellation ───────────────────────────────
+    const projectThread = await ctx.db
+      .query("threads")
+      .withIndex("projectId", (q) => q.eq("projectId", args.projectId))
+      .first();
+    if (projectThread) {
+      await ctx.db.insert("messages", {
+        room: projectThread.roomId,
+        threadId: projectThread._id,
+        content: `Project status updated to: cancelled`,
+        sender: "System",
+      });
+    }
 
     // ── Workshop: release the slot ────────────────────────────────────────────
     if (project.serviceType === "workshop") {
