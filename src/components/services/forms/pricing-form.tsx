@@ -10,11 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupText,
 } from "@/components/ui/input-group";
+import { Button } from "@/components/ui/button";
+import { Plus, Trash2 } from "lucide-react";
+
+type TimeUnit = "minute" | "hour" | "day";
+const TIME_UNITS: { value: TimeUnit; label: string }[] = [
+  { value: "minute", label: "Minute" },
+  { value: "hour", label: "Hour" },
+  { value: "day", label: "Day" },
+];
 
 export const PricingForm = withForm({
   ...addServiceFormOpts,
@@ -59,30 +69,82 @@ export const PricingForm = withForm({
 
             const handleTypeChange = (newType: string) => {
               if (newType === "FIXED") {
-                field.handleChange({
-                  type: "FIXED",
-                  amount: 0,
-                  upAmount: undefined,
-                });
+                field.handleChange({ type: "FIXED", amount: 0, variants: [] });
               } else if (newType === "PER_UNIT") {
                 field.handleChange({
                   type: "PER_UNIT",
-                  baseFee: 0,
-                  upBaseFee: undefined,
-                  unitName: "hour",
+                  setupFee: 0,
+                  unitName: "hour" as TimeUnit,
                   ratePerUnit: 0,
-                  upRatePerUnit: undefined,
+                  variants: [],
                 });
               } else if (newType === "COMPOSITE") {
                 field.handleChange({
                   type: "COMPOSITE",
-                  baseFee: 0,
-                  upBaseFee: undefined,
-                  unitName: "hour",
+                  setupFee: 0,
+                  unitName: "hour" as TimeUnit,
                   timeRate: 0,
-                  upTimeRate: undefined,
+                  variants: [],
                 });
               }
+            };
+
+            const addVariant = () => {
+              if (pricing.type === "FIXED") {
+                field.handleChange({
+                  ...pricing,
+                  variants: [...pricing.variants, { name: "", amount: 0 }],
+                });
+              } else if (pricing.type === "PER_UNIT") {
+                field.handleChange({
+                  ...pricing,
+                  variants: [
+                    ...pricing.variants,
+                    {
+                      name: "",
+                      setupFee: pricing.setupFee,
+                      ratePerUnit: pricing.ratePerUnit,
+                    },
+                  ],
+                });
+              } else if (pricing.type === "COMPOSITE") {
+                field.handleChange({
+                  ...pricing,
+                  variants: [
+                    ...pricing.variants,
+                    {
+                      name: "",
+                      setupFee: pricing.setupFee,
+                      timeRate: pricing.timeRate,
+                    },
+                  ],
+                });
+              }
+            };
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const getVariants = () => pricing.variants as any[];
+
+            const removeVariant = (index: number) => {
+              field.handleChange({
+                ...pricing,
+                variants: getVariants().filter((_, i) => i !== index),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any);
+            };
+
+            const updateVariant = (
+              index: number,
+              patch: Record<string, unknown>,
+            ) => {
+              const updated = getVariants().map((v, i) =>
+                i === index ? { ...v, ...patch } : v,
+              );
+              field.handleChange({
+                ...pricing,
+                variants: updated,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any);
             };
 
             return (
@@ -103,11 +165,14 @@ export const PricingForm = withForm({
                   </Select>
                 </Field>
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-6">
+                  {/* ── FIXED ──────────────────────────────────────────── */}
                   {pricingType === "FIXED" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <Field>
-                        <FieldLabel htmlFor="fixedAmount">Amount</FieldLabel>
+                        <FieldLabel htmlFor="fixedAmount">
+                          Default Amount
+                        </FieldLabel>
                         <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
                           <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                             <InputGroupText>₱</InputGroupText>
@@ -128,283 +193,433 @@ export const PricingForm = withForm({
                         </InputGroup>
                       </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="fixedUpAmount">
-                          UP Amount (Optional)
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="fixedUpAmount"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.upAmount ?? ""}
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                upAmount:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
+                      {/* Variants */}
+                      {pricing.variants.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Pricing Variants
+                          </p>
+                          {pricing.variants.map((variant, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end p-3 rounded-lg border border-dashed border-input bg-muted/30"
+                            >
+                              <Field>
+                                <FieldLabel>Variant Name</FieldLabel>
+                                <Input
+                                  placeholder="e.g. UP, Senior, Staff"
+                                  value={variant.name}
+                                  onChange={(e) =>
+                                    updateVariant(i, { name: e.target.value })
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Amount</FieldLabel>
+                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                  <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                                    <InputGroupText>₱</InputGroupText>
+                                  </InputGroupAddon>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                                    value={
+                                      variant.amount === 0 ? "" : variant.amount
+                                    }
+                                    onChange={(e) =>
+                                      updateVariant(i, {
+                                        amount: Number(e.target.value) || 0,
+                                      })
+                                    }
+                                  />
+                                </InputGroup>
+                              </Field>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive mb-0.5"
+                                onClick={() => removeVariant(i)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={addVariant}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Pricing Variant
+                      </Button>
                     </div>
                   )}
 
+                  {/* ── PER_UNIT ────────────────────────────────────────── */}
                   {pricingType === "PER_UNIT" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field>
-                        <FieldLabel htmlFor="perUnitBaseFee">
-                          Base Fee
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="perUnitBaseFee"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.baseFee === 0 ? "" : pricing.baseFee}
-                            onChange={(e) =>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Field>
+                          <FieldLabel htmlFor="perUnitSetupFee">
+                            Default Setup Fee
+                          </FieldLabel>
+                          <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                            <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                              <InputGroupText>₱</InputGroupText>
+                            </InputGroupAddon>
+                            <Input
+                              id="perUnitSetupFee"
+                              type="number"
+                              placeholder="0.00"
+                              className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                              value={
+                                pricing.setupFee === 0 ? "" : pricing.setupFee
+                              }
+                              onChange={(e) =>
+                                field.handleChange({
+                                  ...pricing,
+                                  setupFee: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </InputGroup>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel htmlFor="perUnitRate">
+                            Default Rate per Unit
+                          </FieldLabel>
+                          <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                            <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                              <InputGroupText>₱</InputGroupText>
+                            </InputGroupAddon>
+                            <Input
+                              id="perUnitRate"
+                              type="number"
+                              placeholder="0.00"
+                              className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                              value={
+                                pricing.ratePerUnit === 0
+                                  ? ""
+                                  : pricing.ratePerUnit
+                              }
+                              onChange={(e) =>
+                                field.handleChange({
+                                  ...pricing,
+                                  ratePerUnit: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </InputGroup>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel htmlFor="perUnitName">
+                            Time Unit
+                          </FieldLabel>
+                          <Select
+                            value={pricing.unitName}
+                            onValueChange={(val) =>
                               field.handleChange({
                                 ...pricing,
-                                baseFee: Number(e.target.value) || 0,
+                                unitName: val as TimeUnit,
                               })
                             }
-                          />
-                        </InputGroup>
-                      </Field>
+                          >
+                            <SelectTrigger id="perUnitName">
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_UNITS.map((u) => (
+                                <SelectItem key={u.value} value={u.value}>
+                                  {u.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      </div>
 
-                      <Field>
-                        <FieldLabel htmlFor="perUnitUpBaseFee">
-                          UP Base Fee (Optional)
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="perUnitUpBaseFee"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.upBaseFee ?? ""}
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                upBaseFee:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
+                      {/* Variants */}
+                      {pricing.variants.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Pricing Variants
+                          </p>
+                          {pricing.variants.map((variant, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end p-3 rounded-lg border border-dashed border-input bg-muted/30"
+                            >
+                              <Field>
+                                <FieldLabel>Variant Name</FieldLabel>
+                                <Input
+                                  placeholder="e.g. UP, Senior"
+                                  value={variant.name}
+                                  onChange={(e) =>
+                                    updateVariant(i, { name: e.target.value })
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Setup Fee</FieldLabel>
+                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                  <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                                    <InputGroupText>₱</InputGroupText>
+                                  </InputGroupAddon>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                                    value={
+                                      variant.setupFee === 0
+                                        ? ""
+                                        : variant.setupFee
+                                    }
+                                    onChange={(e) =>
+                                      updateVariant(i, {
+                                        setupFee: Number(e.target.value) || 0,
+                                      })
+                                    }
+                                  />
+                                </InputGroup>
+                              </Field>
+                              <Field>
+                                <FieldLabel>
+                                  Rate per {pricing.unitName || "unit"}
+                                </FieldLabel>
+                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                  <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                                    <InputGroupText>₱</InputGroupText>
+                                  </InputGroupAddon>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                                    value={
+                                      variant.ratePerUnit === 0
+                                        ? ""
+                                        : variant.ratePerUnit
+                                    }
+                                    onChange={(e) =>
+                                      updateVariant(i, {
+                                        ratePerUnit:
+                                          Number(e.target.value) || 0,
+                                      })
+                                    }
+                                  />
+                                </InputGroup>
+                              </Field>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive mb-0.5"
+                                onClick={() => removeVariant(i)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                      <Field>
-                        <FieldLabel htmlFor="perUnitRate">
-                          Rate per Unit
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="perUnitRate"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={
-                              pricing.ratePerUnit === 0
-                                ? ""
-                                : pricing.ratePerUnit
-                            }
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                ratePerUnit: Number(e.target.value) || 0,
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
-
-                      <Field>
-                        <FieldLabel htmlFor="perUnitUpRate">
-                          UP Rate per Unit (Optional)
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="perUnitUpRate"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.upRatePerUnit ?? ""}
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                upRatePerUnit:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
-
-                      <Field className="sm:col-span-2">
-                        <FieldLabel htmlFor="perUnitName">Unit Name</FieldLabel>
-                        <Input
-                          id="perUnitName"
-                          placeholder="e.g. hour, sqft, piece"
-                          value={pricing.unitName}
-                          onChange={(e) =>
-                            field.handleChange({
-                              ...pricing,
-                              unitName: e.target.value,
-                            })
-                          }
-                        />
-                      </Field>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={addVariant}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Pricing Variant
+                      </Button>
                     </div>
                   )}
 
+                  {/* ── COMPOSITE ───────────────────────────────────────── */}
                   {pricingType === "COMPOSITE" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field className="sm:col-span-2">
-                        <FieldLabel htmlFor="compositeUnitName">
-                          Time Unit
-                        </FieldLabel>
-                        <Input
-                          id="compositeUnitName"
-                          placeholder="e.g. hour, min, day"
-                          className="bg-transparent"
-                          value={pricing.unitName ?? "hour"}
-                          onChange={(e) =>
-                            field.handleChange({
-                              ...pricing,
-                              unitName: e.target.value,
-                            })
-                          }
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldLabel htmlFor="compositeBaseFee">
-                          Base Fee
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="compositeBaseFee"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.baseFee === 0 ? "" : pricing.baseFee}
-                            onChange={(e) =>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Field>
+                          <FieldLabel htmlFor="compositeUnitName">
+                            Time Unit
+                          </FieldLabel>
+                          <Select
+                            value={pricing.unitName ?? "hour"}
+                            onValueChange={(val) =>
                               field.handleChange({
                                 ...pricing,
-                                baseFee: Number(e.target.value) || 0,
+                                unitName: val as TimeUnit,
                               })
                             }
-                          />
-                        </InputGroup>
-                      </Field>
+                          >
+                            <SelectTrigger id="compositeUnitName">
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_UNITS.map((u) => (
+                                <SelectItem key={u.value} value={u.value}>
+                                  {u.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="compositeUpBaseFee">
-                          UP Base Fee (Optional)
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="compositeUpBaseFee"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.upBaseFee ?? ""}
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                upBaseFee:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
+                        <Field>
+                          <FieldLabel htmlFor="compositeSetupFee">
+                            Default Setup Fee
+                          </FieldLabel>
+                          <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                            <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                              <InputGroupText>₱</InputGroupText>
+                            </InputGroupAddon>
+                            <Input
+                              id="compositeSetupFee"
+                              type="number"
+                              placeholder="0.00"
+                              className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                              value={
+                                pricing.setupFee === 0 ? "" : pricing.setupFee
+                              }
+                              onChange={(e) =>
+                                field.handleChange({
+                                  ...pricing,
+                                  setupFee: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </InputGroup>
+                        </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="compositeTimeRate">
-                          Time Rate per Unit
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="compositeTimeRate"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={
-                              pricing.timeRate === 0 ? "" : pricing.timeRate
-                            }
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                timeRate: Number(e.target.value) || 0,
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
+                        <Field>
+                          <FieldLabel htmlFor="compositeTimeRate">
+                            Default Time Rate per Unit
+                          </FieldLabel>
+                          <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                            <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                              <InputGroupText>₱</InputGroupText>
+                            </InputGroupAddon>
+                            <Input
+                              id="compositeTimeRate"
+                              type="number"
+                              placeholder="0.00"
+                              className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                              value={
+                                pricing.timeRate === 0 ? "" : pricing.timeRate
+                              }
+                              onChange={(e) =>
+                                field.handleChange({
+                                  ...pricing,
+                                  timeRate: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </InputGroup>
+                        </Field>
+                      </div>
 
-                      <Field>
-                        <FieldLabel htmlFor="compositeUpTimeRate">
-                          UP Time Rate (Optional)
-                        </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
-                          <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
-                            <InputGroupText>₱</InputGroupText>
-                          </InputGroupAddon>
-                          <Input
-                            id="compositeUpTimeRate"
-                            type="number"
-                            placeholder="0.00"
-                            className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
-                            value={pricing.upTimeRate ?? ""}
-                            onChange={(e) =>
-                              field.handleChange({
-                                ...pricing,
-                                upTimeRate:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Field>
+                      {/* Variants */}
+                      {pricing.variants.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Pricing Variants
+                          </p>
+                          {pricing.variants.map((variant, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end p-3 rounded-lg border border-dashed border-input bg-muted/30"
+                            >
+                              <Field>
+                                <FieldLabel>Variant Name</FieldLabel>
+                                <Input
+                                  placeholder="e.g. UP, Senior"
+                                  value={variant.name}
+                                  onChange={(e) =>
+                                    updateVariant(i, { name: e.target.value })
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Setup Fee</FieldLabel>
+                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                  <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                                    <InputGroupText>₱</InputGroupText>
+                                  </InputGroupAddon>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                                    value={
+                                      variant.setupFee === 0
+                                        ? ""
+                                        : variant.setupFee
+                                    }
+                                    onChange={(e) =>
+                                      updateVariant(i, {
+                                        setupFee: Number(e.target.value) || 0,
+                                      })
+                                    }
+                                  />
+                                </InputGroup>
+                              </Field>
+                              <Field>
+                                <FieldLabel>
+                                  Time Rate per {pricing.unitName || "unit"}
+                                </FieldLabel>
+                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                  <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
+                                    <InputGroupText>₱</InputGroupText>
+                                  </InputGroupAddon>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent pl-1"
+                                    value={
+                                      variant.timeRate === 0
+                                        ? ""
+                                        : variant.timeRate
+                                    }
+                                    onChange={(e) =>
+                                      updateVariant(i, {
+                                        timeRate: Number(e.target.value) || 0,
+                                      })
+                                    }
+                                  />
+                                </InputGroup>
+                              </Field>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive mb-0.5"
+                                onClick={() => removeVariant(i)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={addVariant}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Pricing Variant
+                      </Button>
                     </div>
                   )}
                 </div>

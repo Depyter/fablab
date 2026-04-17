@@ -81,14 +81,18 @@ export const addService = authMutation({
       }),
       v.object({
         type: v.literal("PER_UNIT"),
-        baseFee: v.number(),
-        unitName: v.string(),
+        setupFee: v.number(),
+        unitName: v.union(
+          v.literal("minute"),
+          v.literal("hour"),
+          v.literal("day"),
+        ),
         ratePerUnit: v.number(),
         variants: v.optional(
           v.array(
             v.object({
               name: v.string(),
-              baseFee: v.number(),
+              setupFee: v.number(),
               ratePerUnit: v.number(),
             }),
           ),
@@ -96,14 +100,18 @@ export const addService = authMutation({
       }),
       v.object({
         type: v.literal("COMPOSITE"),
-        baseFee: v.number(),
-        unitName: v.string(),
+        setupFee: v.number(),
+        unitName: v.union(
+          v.literal("minute"),
+          v.literal("hour"),
+          v.literal("day"),
+        ),
         timeRate: v.number(),
         variants: v.optional(
           v.array(
             v.object({
               name: v.string(),
-              baseFee: v.number(),
+              setupFee: v.number(),
               timeRate: v.number(),
             }),
           ),
@@ -189,14 +197,18 @@ export const updateService = authMutation({
         }),
         v.object({
           type: v.literal("PER_UNIT"),
-          baseFee: v.number(),
-          unitName: v.string(),
+          setupFee: v.number(),
+          unitName: v.union(
+            v.literal("minute"),
+            v.literal("hour"),
+            v.literal("day"),
+          ),
           ratePerUnit: v.number(),
           variants: v.optional(
             v.array(
               v.object({
                 name: v.string(),
-                baseFee: v.number(),
+                setupFee: v.number(),
                 ratePerUnit: v.number(),
               }),
             ),
@@ -204,14 +216,18 @@ export const updateService = authMutation({
         }),
         v.object({
           type: v.literal("COMPOSITE"),
-          baseFee: v.number(),
-          unitName: v.string(),
+          setupFee: v.number(),
+          unitName: v.union(
+            v.literal("minute"),
+            v.literal("hour"),
+            v.literal("day"),
+          ),
           timeRate: v.number(),
           variants: v.optional(
             v.array(
               v.object({
                 name: v.string(),
-                baseFee: v.number(),
+                setupFee: v.number(),
                 timeRate: v.number(),
               }),
             ),

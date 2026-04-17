@@ -84,14 +84,18 @@ export default defineSchema({
       }),
       v.object({
         type: v.literal("PER_UNIT"),
-        baseFee: v.number(),
-        unitName: v.string(), // e.g., "hour", "sqft"
+        setupFee: v.number(),
+        unitName: v.union(
+          v.literal("minute"),
+          v.literal("hour"),
+          v.literal("day"),
+        ),
         ratePerUnit: v.number(),
         variants: v.optional(
           v.array(
             v.object({
               name: v.string(),
-              baseFee: v.number(),
+              setupFee: v.number(),
               ratePerUnit: v.number(),
             }),
           ),
@@ -99,14 +103,18 @@ export default defineSchema({
       }),
       v.object({
         type: v.literal("COMPOSITE"), // e.g., 3D Printing
-        baseFee: v.number(),
-        unitName: v.string(),
+        setupFee: v.number(),
+        unitName: v.union(
+          v.literal("minute"),
+          v.literal("hour"),
+          v.literal("day"),
+        ),
         timeRate: v.number(),
         variants: v.optional(
           v.array(
             v.object({
               name: v.string(),
-              baseFee: v.number(),
+              setupFee: v.number(),
               timeRate: v.number(),
             }),
           ),
@@ -213,7 +221,7 @@ export default defineSchema({
     // Frozen calculated cost breakdown for history/receipts
     costBreakdown: v.optional(
       v.object({
-        baseFee: v.number(),
+        setupFee: v.number(),
         materialCost: v.number(),
         timeCost: v.number(),
         total: v.number(),

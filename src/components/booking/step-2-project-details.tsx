@@ -37,6 +37,7 @@ export function Step2ProjectDetails({
   availableDays,
   serviceMaterials,
   hasUpPricing,
+  pricingVariants = [],
   serviceCategory,
   schedules,
   bookedTimeBlocks,
@@ -59,6 +60,7 @@ export function Step2ProjectDetails({
     unit?: string;
   }>;
   hasUpPricing: boolean;
+  pricingVariants?: Array<{ name: string }>;
   serviceCategory?: string;
   schedules?: WorkshopSchedule[];
   bookedTimeBlocks?: { start: string; end: string }[];
@@ -240,7 +242,7 @@ export function Step2ProjectDetails({
             )}
           />
 
-          {hasUpPricing && (
+          {hasUpPricing && pricingVariants.length > 0 && (
             <form.Field
               name="pricing"
               children={(field: any) => (
@@ -248,9 +250,7 @@ export function Step2ProjectDetails({
                   <Label htmlFor="pricing-tier">Pricing Tier</Label>
                   <Select
                     value={field.state.value as string}
-                    onValueChange={(val) =>
-                      field.handleChange(val as "normal" | "UP")
-                    }
+                    onValueChange={(val) => field.handleChange(val)}
                     required
                   >
                     <SelectTrigger
@@ -260,10 +260,12 @@ export function Step2ProjectDetails({
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="normal">Normal Pricing</SelectItem>
-                      <SelectItem value="UP">
-                        UP Constituent / Affiliated
-                      </SelectItem>
+                      <SelectItem value="Default">Default Pricing</SelectItem>
+                      {pricingVariants.map((v) => (
+                        <SelectItem key={v.name} value={v.name}>
+                          {v.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </Field>

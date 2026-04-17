@@ -38,7 +38,7 @@ export async function setupProject() {
     serviceCategory: { type: "FABRICATION", materials: [] },
     pricing: {
       type: "COMPOSITE",
-      baseFee: 1,
+      setupFee: 1,
       unitName: "hour",
       timeRate: 2,
     },

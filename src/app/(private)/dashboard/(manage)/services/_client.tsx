@@ -47,9 +47,9 @@ export function ServicesListClient({
     const getSortPrice = (pricing: (typeof services)[number]["pricing"]) => {
       if (pricing.type === "FIXED") return pricing.amount;
       if (pricing.type === "PER_UNIT")
-        return pricing.baseFee + pricing.ratePerUnit;
+        return pricing.setupFee + pricing.ratePerUnit;
       if (pricing.type === "COMPOSITE")
-        return pricing.baseFee + pricing.timeRate;
+        return pricing.setupFee + pricing.timeRate;
       return 0;
     };
 

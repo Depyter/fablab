@@ -145,13 +145,18 @@ export function ServiceDetailClient({
                           Base Fee
                         </h4>
                         <p className="text-xl font-black tracking-tight">
-                          ₱{service.pricing.baseFee.toLocaleString()}
+                          ₱{service.pricing.setupFee.toLocaleString()}
                         </p>
                       </div>
                       <div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
                           <CirclePercent className="h-3 w-3" />
-                          Rate Per {service.pricing.unitName}
+                          Rate Per{" "}
+                          {service.pricing.unitName === "minute"
+                            ? "Minute"
+                            : service.pricing.unitName === "hour"
+                              ? "Hour"
+                              : "Day"}
                         </h4>
                         <div className="flex flex-col items-start gap-1">
                           <p className="text-xl font-black tracking-tight text-primary">
@@ -174,7 +179,7 @@ export function ServiceDetailClient({
                             className="text-xs font-bold text-muted-foreground mt-2 flex items-center gap-1"
                           >
                             {variant.name} Base Fee: ₱
-                            {variant.baseFee.toLocaleString()}
+                            {variant.setupFee.toLocaleString()}
                           </p>
                         ))}
                       </div>
@@ -189,7 +194,7 @@ export function ServiceDetailClient({
                           Base Fee
                         </h4>
                         <p className="text-xl font-black tracking-tight">
-                          ₱{service.pricing.baseFee.toLocaleString()}
+                          ₱{service.pricing.setupFee.toLocaleString()}
                         </p>
                       </div>
                       <div>
@@ -201,7 +206,12 @@ export function ServiceDetailClient({
                           <p className="text-xl font-black tracking-tight text-primary flex items-baseline gap-2">
                             ₱{service.pricing.timeRate.toLocaleString()}
                             <span className="text-xs font-bold text-muted-foreground/60">
-                              /{service.pricing.unitName}
+                              /
+                              {service.pricing.unitName === "minute"
+                                ? "min"
+                                : service.pricing.unitName === "hour"
+                                  ? "hr"
+                                  : "day"}
                             </span>
                           </p>
                           {service.pricing.variants?.map((variant) => (
@@ -212,10 +222,19 @@ export function ServiceDetailClient({
                               <CirclePercent className="h-3 w-3" />
                               {variant.name}: ₱
                               {variant.timeRate.toLocaleString()}/
-                              {
-                                (service.pricing as { unitName: string })
-                                  .unitName
-                              }
+                              {(
+                                service.pricing as {
+                                  unitName: "minute" | "hour" | "day";
+                                }
+                              ).unitName === "minute"
+                                ? "min"
+                                : (
+                                      service.pricing as {
+                                        unitName: "minute" | "hour" | "day";
+                                      }
+                                    ).unitName === "hour"
+                                  ? "hr"
+                                  : "day"}
                             </span>
                           ))}
                           {service.pricing.variants?.map((variant) => (
@@ -224,7 +243,7 @@ export function ServiceDetailClient({
                               className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1"
                             >
                               {variant.name} Base Fee: ₱
-                              {variant.baseFee.toLocaleString()}
+                              {variant.setupFee.toLocaleString()}
                             </p>
                           ))}
                         </div>
@@ -249,6 +268,7 @@ export function ServiceDetailClient({
                     service.pricing.variants !== undefined &&
                     service.pricing.variants.length > 0
                   }
+                  pricingVariants={service.pricing.variants ?? []}
                   servicePricing={service.pricing}
                   serviceCategory={service.serviceCategory.type}
                   schedules={

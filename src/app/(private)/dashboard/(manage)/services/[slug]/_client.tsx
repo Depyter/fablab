@@ -94,7 +94,7 @@ export function ServiceDetailClient({
     } else if (pricing.type === "PER_UNIT") {
       displays.push({
         label: "Regular Base",
-        price: pricing.baseFee,
+        price: pricing.setupFee,
         unit: "base",
         isUp: false,
       });
@@ -108,7 +108,7 @@ export function ServiceDetailClient({
         for (const variant of pricing.variants) {
           displays.push({
             label: `${variant.name} Base`,
-            price: variant.baseFee,
+            price: variant.setupFee,
             unit: "base",
             isUp: true,
           });
@@ -123,7 +123,7 @@ export function ServiceDetailClient({
     } else if (pricing.type === "COMPOSITE") {
       displays.push({
         label: "Regular Base",
-        price: pricing.baseFee,
+        price: pricing.setupFee,
         unit: "base",
         isUp: false,
       });
@@ -137,7 +137,7 @@ export function ServiceDetailClient({
         for (const variant of pricing.variants) {
           displays.push({
             label: `${variant.name} Base`,
-            price: variant.baseFee,
+            price: variant.setupFee,
             unit: "base",
             isUp: true,
           });

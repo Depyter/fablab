@@ -24,18 +24,6 @@ export default function AddServicePage() {
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
-      const getVal = (key: string) => {
-        const entry = Object.entries(value.pricing).find(([k]) => k === key);
-        return entry && entry[1] !== undefined && entry[1] !== ""
-          ? Number(entry[1])
-          : undefined;
-      };
-
-      const upAmount = getVal("upAmount");
-      const upBaseFee = getVal("upBaseFee");
-      const upRatePerUnit = getVal("upRatePerUnit");
-      const upTimeRate = getVal("upTimeRate");
-
       const {
         availableDays,
         schedules,
@@ -48,13 +36,10 @@ export default function AddServicePage() {
         ...restValue,
         serviceCategory:
           serviceCategory === "WORKSHOP"
-            ? {
-                type: "WORKSHOP",
-                schedules: schedules ?? [],
-              }
+            ? { type: "WORKSHOP", schedules: schedules ?? [] }
             : {
                 type: "FABRICATION",
-                availableDays: availableDays,
+                availableDays,
                 materials: materials as Id<"materials">[],
               },
         images: value.images as Id<"_storage">[],
@@ -67,45 +52,33 @@ export default function AddServicePage() {
                 type: "FIXED",
                 amount: value.pricing.amount,
                 variants:
-                  upAmount !== undefined
-                    ? [{ name: "UP", amount: upAmount }]
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
                     : undefined,
               }
             : value.pricing.type === "PER_UNIT"
               ? {
                   type: "PER_UNIT",
-                  baseFee: value.pricing.baseFee,
+                  setupFee: value.pricing.setupFee,
                   unitName: value.pricing.unitName,
                   ratePerUnit: value.pricing.ratePerUnit,
                   variants:
-                    upBaseFee !== undefined || upRatePerUnit !== undefined
-                      ? [
-                          {
-                            name: "UP",
-                            baseFee: upBaseFee ?? value.pricing.baseFee,
-                            ratePerUnit:
-                              upRatePerUnit ?? value.pricing.ratePerUnit,
-                          },
-                        ]
+                    value.pricing.variants.length > 0
+                      ? value.pricing.variants
                       : undefined,
                 }
               : {
                   type: "COMPOSITE",
-                  baseFee: value.pricing.baseFee,
+                  setupFee: value.pricing.setupFee,
                   unitName: value.pricing.unitName,
                   timeRate: value.pricing.timeRate,
                   variants:
-                    upBaseFee !== undefined || upTimeRate !== undefined
-                      ? [
-                          {
-                            name: "UP",
-                            baseFee: upBaseFee ?? value.pricing.baseFee,
-                            timeRate: upTimeRate ?? value.pricing.timeRate,
-                          },
-                        ]
+                    value.pricing.variants.length > 0
+                      ? value.pricing.variants
                       : undefined,
                 },
       });
+
       toast.success("Service added successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
     } catch (error) {

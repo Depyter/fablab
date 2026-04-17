@@ -377,6 +377,7 @@ export function ProjectDetailsContent({
             material={project.material}
             service={project.service ?? undefined}
             resourceUsages={project.resourceUsages}
+            projectPricing={project.pricing}
             readOnly={isClient}
           />
 

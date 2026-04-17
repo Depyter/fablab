@@ -19,26 +19,36 @@ interface PricingEstimateCardProps {
   material: string;
   service?: {
     pricing:
-      | { type: "FIXED"; amount: number; upAmount?: number }
+      | {
+          type: "FIXED";
+          amount: number;
+          variants?: Array<{ name: string; amount: number }>;
+        }
       | {
           type: "PER_UNIT";
-          baseFee: number;
-          upBaseFee?: number;
+          setupFee: number;
           unitName: string;
           ratePerUnit: number;
-          upRatePerUnit?: number;
+          variants?: Array<{
+            name: string;
+            setupFee: number;
+            ratePerUnit: number;
+          }>;
         }
       | {
           type: "COMPOSITE";
-          baseFee: number;
-          upBaseFee?: number;
+          setupFee: number;
           unitName: string;
           timeRate: number;
-          upTimeRate?: number;
+          variants?: Array<{
+            name: string;
+            setupFee: number;
+            timeRate: number;
+          }>;
         };
     name?: string;
   };
-  projectPricing?: "normal" | "UP" | "Special";
+  projectPricing?: string; // variant name, e.g. "Default", "UP", "Senior"
   resourceUsages?: Array<{
     startTime: number;
     endTime: number;
@@ -55,7 +65,7 @@ export function PricingEstimateCard({
   resourceUsages,
   initialValues,
   onSave,
-  projectPricing = "normal",
+  projectPricing = "Default",
   readOnly = false,
 }: PricingEstimateCardProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -66,50 +76,44 @@ export function PricingEstimateCard({
   let defaultDuration = 0;
   let unitName = "unit";
   let defaultRate = 0;
-  let baseFee = 0;
+  let setupFee = 0;
+
+  const unitToMinutes = (unit: string) => {
+    if (unit === "hour") return 60;
+    if (unit === "day") return 60 * 24;
+    return 1; // "minute"
+  };
 
   if (service?.pricing) {
-    const isUp = projectPricing === "UP";
+    const selectedVariant =
+      projectPricing && projectPricing !== "Default" ? projectPricing : null;
+
     if (service.pricing.type === "FIXED") {
       defaultDuration = 1;
-      baseFee =
-        isUp && service.pricing.upAmount !== undefined
-          ? service.pricing.upAmount
-          : service.pricing.amount;
+      const variant = selectedVariant
+        ? service.pricing.variants?.find((v) => v.name === selectedVariant)
+        : undefined;
+      setupFee = variant ? variant.amount : service.pricing.amount;
     } else if (service.pricing.type === "PER_UNIT") {
       unitName = service.pricing.unitName;
-      defaultRate =
-        isUp && service.pricing.upRatePerUnit !== undefined
-          ? service.pricing.upRatePerUnit
-          : service.pricing.ratePerUnit;
-      baseFee =
-        isUp && service.pricing.upBaseFee !== undefined
-          ? service.pricing.upBaseFee
-          : service.pricing.baseFee;
-      if (unitName === "min" || unitName === "minute") {
-        defaultDuration = defaultDurationMs / (1000 * 60);
-      } else if (unitName === "hr" || unitName === "hour") {
-        defaultDuration = defaultDurationMs / (1000 * 60 * 60);
-      } else {
-        defaultDuration = 1;
-      }
+      const variant = selectedVariant
+        ? service.pricing.variants?.find((v) => v.name === selectedVariant)
+        : undefined;
+      defaultRate = variant ? variant.ratePerUnit : service.pricing.ratePerUnit;
+      setupFee = variant ? variant.setupFee : service.pricing.setupFee;
+      const durationMins = defaultDurationMs / (1000 * 60);
+      defaultDuration =
+        durationMins > 0 ? durationMins / unitToMinutes(unitName) : 1;
     } else if (service.pricing.type === "COMPOSITE") {
       unitName = service.pricing.unitName;
-      defaultRate =
-        isUp && service.pricing.upTimeRate !== undefined
-          ? service.pricing.upTimeRate
-          : service.pricing.timeRate;
-      baseFee =
-        isUp && service.pricing.upBaseFee !== undefined
-          ? service.pricing.upBaseFee
-          : service.pricing.baseFee;
-      if (unitName === "min" || unitName === "minute") {
-        defaultDuration = defaultDurationMs / (1000 * 60);
-      } else if (unitName === "hr" || unitName === "hour") {
-        defaultDuration = defaultDurationMs / (1000 * 60 * 60);
-      } else {
-        defaultDuration = 1;
-      }
+      const variant = selectedVariant
+        ? service.pricing.variants?.find((v) => v.name === selectedVariant)
+        : undefined;
+      defaultRate = variant ? variant.timeRate : service.pricing.timeRate;
+      setupFee = variant ? variant.setupFee : service.pricing.setupFee;
+      const durationMins = defaultDurationMs / (1000 * 60);
+      defaultDuration =
+        durationMins > 0 ? durationMins / unitToMinutes(unitName) : 1;
     }
   }
 
@@ -120,7 +124,7 @@ export function PricingEstimateCard({
   const defaultMaterialType = "units";
 
   const [values, setValues] = useState<EstimationValues>({
-    basePrice: initialValues?.basePrice ?? baseFee,
+    basePrice: initialValues?.basePrice ?? setupFee,
     duration: initialValues?.duration ?? defaultDuration,
     durationRate: initialValues?.durationRate ?? defaultRate,
     materialCost: initialValues?.materialCost ?? 0,
@@ -180,7 +184,10 @@ export function PricingEstimateCard({
         </div>
 
         <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-muted-foreground">Duration ({unitName})</span>
+          <span className="text-muted-foreground">
+            Duration ({unitName}
+            {values.duration !== 1 ? "s" : ""})
+          </span>
           {isEditing ? (
             <Input
               type="number"

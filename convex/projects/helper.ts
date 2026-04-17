@@ -140,7 +140,7 @@ export function computeSharedFixedCostBreakdown(
   pricingVariant: string,
   serviceType: string,
 ):
-  | { baseFee: number; materialCost: number; timeCost: number; total: number }
+  | { setupFee: number; materialCost: number; timeCost: number; total: number }
   | undefined {
   if (service.pricing.type !== "FIXED") return undefined;
 
@@ -152,8 +152,8 @@ export function computeSharedFixedCostBreakdown(
     if (variant) amount = variant.amount;
   }
 
-  const baseFee = serviceType === "self-service" ? 0 : amount;
-  return { baseFee, materialCost: 0, timeCost: 0, total: baseFee };
+  const setupFee = serviceType === "self-service" ? 0 : amount;
+  return { setupFee, materialCost: 0, timeCost: 0, total: setupFee };
 }
 
 // ============================================================================
@@ -441,14 +441,21 @@ export function computeCompletionCost(
   service: ServiceDoc,
   project: Doc<"projects">,
   actualDurationMs: number,
-): { baseFee: number; timeCost: number } {
-  const hours = actualDurationMs / (1000 * 60 * 60);
-  const minutes = actualDurationMs / (1000 * 60);
-  let baseFee = 0;
+): { setupFee: number; timeCost: number } {
+  // All rates are stored per their unit; convert duration to that unit for cost.
+  const durationMinutes = actualDurationMs / (1000 * 60);
+
+  const unitToMinutes = (unit: string): number => {
+    if (unit === "hour") return 60;
+    if (unit === "day") return 60 * 24;
+    return 1; // "minute" — rate is already per minute
+  };
+
+  let setupFee = 0;
   let timeCost = 0;
 
   if (service.pricing.type === "COMPOSITE") {
-    baseFee = service.pricing.baseFee;
+    setupFee = service.pricing.setupFee;
     let timeRate = service.pricing.timeRate;
 
     if (service.pricing.variants) {
@@ -456,20 +463,18 @@ export function computeCompletionCost(
         (v) => v.name === project.pricing,
       );
       if (variant) {
-        baseFee = variant.baseFee;
+        setupFee = variant.setupFee;
         timeRate = variant.timeRate;
       }
     }
 
-    if (project.serviceType === "self-service") baseFee = 0;
+    if (project.serviceType === "self-service") setupFee = 0;
 
-    const unit = service.pricing.unitName;
-    timeCost =
-      unit === "minute" || unit === "min"
-        ? minutes * timeRate
-        : hours * timeRate;
+    const durationInUnit =
+      durationMinutes / unitToMinutes(service.pricing.unitName);
+    timeCost = durationInUnit * timeRate;
   } else if (service.pricing.type === "PER_UNIT") {
-    baseFee = service.pricing.baseFee;
+    setupFee = service.pricing.setupFee;
     let ratePerUnit = service.pricing.ratePerUnit;
 
     if (service.pricing.variants) {
@@ -477,32 +482,30 @@ export function computeCompletionCost(
         (v) => v.name === project.pricing,
       );
       if (variant) {
-        baseFee = variant.baseFee;
+        setupFee = variant.setupFee;
         ratePerUnit = variant.ratePerUnit;
       }
     }
 
-    if (project.serviceType === "self-service") baseFee = 0;
+    if (project.serviceType === "self-service") setupFee = 0;
 
-    const unit = service.pricing.unitName;
-    timeCost =
-      unit === "minute" || unit === "min"
-        ? minutes * ratePerUnit
-        : hours * ratePerUnit;
+    const durationInUnit =
+      durationMinutes / unitToMinutes(service.pricing.unitName);
+    timeCost = durationInUnit * ratePerUnit;
   } else if (service.pricing.type === "FIXED") {
-    baseFee = service.pricing.amount;
+    setupFee = service.pricing.amount;
 
     if (service.pricing.variants) {
       const variant = service.pricing.variants.find(
         (v) => v.name === project.pricing,
       );
-      if (variant) baseFee = variant.amount;
+      if (variant) setupFee = variant.amount;
     }
 
-    if (project.serviceType === "self-service") baseFee = 0;
+    if (project.serviceType === "self-service") setupFee = 0;
   }
 
-  return { baseFee, timeCost };
+  return { setupFee, timeCost };
 }
 
 export async function consumeMaterials(

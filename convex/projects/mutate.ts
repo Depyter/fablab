@@ -324,7 +324,7 @@ export const completeProject = authMutation({
     if (!service) throw new ConvexError("Service not found.");
 
     // ── 1. Time-based cost ───────────────────────────────────────────────────
-    const { baseFee, timeCost } = computeCompletionCost(
+    const { setupFee, timeCost } = computeCompletionCost(
       service,
       project,
       args.actualDurationMs,
@@ -337,11 +337,11 @@ export const completeProject = authMutation({
         : 0;
 
     // ── 3. Persist final cost breakdown ─────────────────────────────────────
-    const total = baseFee + timeCost + materialCost;
+    const total = setupFee + timeCost + materialCost;
 
     await ctx.db.patch(args.projectId, {
       status: "completed",
-      costBreakdown: { baseFee, timeCost, materialCost, total },
+      costBreakdown: { setupFee, timeCost, materialCost, total },
     });
 
     // ── 4. Record materials on the usage log ─────────────────────────────────

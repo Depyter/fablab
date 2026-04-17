@@ -21,7 +21,7 @@ export type BookingFormValues = {
   notes: string;
   material: string;
   requestedMaterialId?: string;
-  pricing: "normal" | "UP";
+  pricing: string; // variant name, e.g. "Default", "UP", "Senior"
   dateTime: {
     date: Date | undefined;
     startTime: string;
@@ -37,22 +37,28 @@ interface EstimateProjectDetailsProps {
   serviceName: string;
   data: BookingFormValues;
   servicePricing?:
-    | { type: "FIXED"; amount: number; upAmount?: number }
+    | {
+        type: "FIXED";
+        amount: number;
+        variants?: Array<{ name: string; amount: number }>;
+      }
     | {
         type: "PER_UNIT";
-        baseFee: number;
-        upBaseFee?: number;
+        setupFee: number;
         unitName: string;
         ratePerUnit: number;
-        upRatePerUnit?: number;
+        variants?: Array<{
+          name: string;
+          setupFee: number;
+          ratePerUnit: number;
+        }>;
       }
     | {
         type: "COMPOSITE";
-        baseFee: number;
-        upBaseFee?: number;
+        setupFee: number;
         unitName: string;
         timeRate: number;
-        upTimeRate?: number;
+        variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
       };
   serviceMaterials?: Array<{
     _id: string;
@@ -80,7 +86,12 @@ export function EstimateProjectDetails({
     const [endH, endM] = data.dateTime.endTime.split(":").map(Number);
     durationMins = endH * 60 + endM - (startH * 60 + startM);
   }
-  const durationHours = durationMins / 60;
+
+  const unitToMinutes = (unit: string) => {
+    if (unit === "hour") return 60;
+    if (unit === "day") return 60 * 24;
+    return 1; // "minute"
+  };
 
   const [isChecked, setIsChecked] = useState(false);
 
@@ -93,48 +104,32 @@ export function EstimateProjectDetails({
   let materialCost = 0;
   let unitName = "hour";
 
-  const isUp = data.pricing === "UP";
+  // "Default" / empty string means no variant (use base rates)
+  const selectedVariant =
+    data.pricing && data.pricing !== "Default" ? data.pricing : null;
 
   if (servicePricing) {
     if (servicePricing.type === "FIXED") {
-      basePrice =
-        isUp && servicePricing.upAmount !== undefined
-          ? servicePricing.upAmount
-          : servicePricing.amount;
+      const variant = selectedVariant
+        ? servicePricing.variants?.find((v) => v.name === selectedVariant)
+        : undefined;
+      basePrice = variant ? variant.amount : servicePricing.amount;
     } else if (servicePricing.type === "PER_UNIT") {
-      basePrice =
-        isUp && servicePricing.upBaseFee !== undefined
-          ? servicePricing.upBaseFee
-          : servicePricing.baseFee;
-      const rate =
-        isUp && servicePricing.upRatePerUnit !== undefined
-          ? servicePricing.upRatePerUnit
-          : servicePricing.ratePerUnit;
+      const variant = selectedVariant
+        ? servicePricing.variants?.find((v) => v.name === selectedVariant)
+        : undefined;
+      basePrice = variant ? variant.setupFee : servicePricing.setupFee;
+      const rate = variant ? variant.ratePerUnit : servicePricing.ratePerUnit;
       unitName = servicePricing.unitName;
-
-      if (unitName === "hour" || unitName === "hr") {
-        durationCost = durationHours * rate;
-      } else if (unitName === "minute" || unitName === "min") {
-        durationCost = durationMins * rate;
-      }
+      durationCost = (durationMins / unitToMinutes(unitName)) * rate;
     } else if (servicePricing.type === "COMPOSITE") {
-      basePrice =
-        isUp && servicePricing.upBaseFee !== undefined
-          ? servicePricing.upBaseFee
-          : servicePricing.baseFee;
-      const timeRate =
-        isUp && servicePricing.upTimeRate !== undefined
-          ? servicePricing.upTimeRate
-          : servicePricing.timeRate;
+      const variant = selectedVariant
+        ? servicePricing.variants?.find((v) => v.name === selectedVariant)
+        : undefined;
+      basePrice = variant ? variant.setupFee : servicePricing.setupFee;
+      const timeRate = variant ? variant.timeRate : servicePricing.timeRate;
       unitName = servicePricing.unitName;
-
-      if (unitName === "hour" || unitName === "hr") {
-        durationCost = durationHours * timeRate;
-      } else if (unitName === "minute" || unitName === "min") {
-        durationCost = durationMins * timeRate;
-      } else {
-        durationCost = durationHours * timeRate;
-      }
+      durationCost = (durationMins / unitToMinutes(unitName)) * timeRate;
     }
   }
 
@@ -276,7 +271,7 @@ export function EstimateProjectDetails({
                   Pricing Estimate
                 </h3>
                 <span className="text-xs font-bold px-2 py-1 rounded-full bg-chart-6/10 text-chart-6 uppercase tracking-wider">
-                  {isUp ? "UP Rate" : "Normal Rate"}
+                  {selectedVariant ? `${selectedVariant} Rate` : "Default Rate"}
                 </span>
               </div>
               <div className="space-y-1 text-sm">
@@ -287,7 +282,21 @@ export function EstimateProjectDetails({
                 {durationCost > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">
-                      Duration ({durationMins} mins)
+                      Duration (
+                      {unitName === "day"
+                        ? (durationMins / (60 * 24)).toFixed(2)
+                        : unitName === "hour"
+                          ? (durationMins / 60).toFixed(2)
+                          : durationMins.toFixed(0)}{" "}
+                      {unitName}
+                      {(unitName === "day"
+                        ? durationMins / (60 * 24)
+                        : unitName === "hour"
+                          ? durationMins / 60
+                          : durationMins) !== 1
+                        ? "s"
+                        : ""}
+                      )
                     </span>
                     <span className="font-medium">
                       ₱{durationCost.toFixed(2)}

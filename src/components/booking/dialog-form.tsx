@@ -30,6 +30,7 @@ interface BookingDialog {
     unit?: string;
   }>;
   hasUpPricing?: boolean;
+  pricingVariants?: Array<{ name: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   servicePricing?: any;
   serviceCategory?: string;
@@ -55,6 +56,7 @@ export function BookingDialog({
   availableDays = [],
   serviceMaterials = [],
   hasUpPricing = false,
+  pricingVariants = [] as Array<{ name: string }>,
   servicePricing,
   serviceCategory,
   schedules,
@@ -83,7 +85,7 @@ export function BookingDialog({
       description: "",
       notes: "",
       material: "provide-own",
-      pricing: "normal",
+      pricing: "Default",
       requestedMaterialId: undefined,
       dateTime: {
         date: undefined,
@@ -316,6 +318,7 @@ export function BookingDialog({
             availableDays={availableDays}
             serviceMaterials={serviceMaterials}
             hasUpPricing={hasUpPricing}
+            pricingVariants={pricingVariants}
             serviceCategory={serviceCategory}
             schedules={schedules}
             bookedTimeBlocks={bookedTimeBlocks}

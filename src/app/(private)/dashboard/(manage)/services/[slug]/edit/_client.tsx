@@ -56,8 +56,39 @@ export function EditServiceClient({
     name: service.name,
     description: service.description,
     serviceCategory: service.serviceCategory.type as "WORKSHOP" | "FABRICATION",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing: service.pricing as any,
+    pricing:
+      service.pricing.type === "FIXED"
+        ? {
+            type: "FIXED" as const,
+            amount: service.pricing.amount,
+            variants: (service.pricing.variants ?? []) as Array<{
+              name: string;
+              amount: number;
+            }>,
+          }
+        : service.pricing.type === "PER_UNIT"
+          ? {
+              type: "PER_UNIT" as const,
+              setupFee: service.pricing.setupFee,
+              unitName: service.pricing.unitName,
+              ratePerUnit: service.pricing.ratePerUnit,
+              variants: (service.pricing.variants ?? []) as Array<{
+                name: string;
+                setupFee: number;
+                ratePerUnit: number;
+              }>,
+            }
+          : {
+              type: "COMPOSITE" as const,
+              setupFee: service.pricing.setupFee,
+              unitName: service.pricing.unitName,
+              timeRate: service.pricing.timeRate,
+              variants: (service.pricing.variants ?? []) as Array<{
+                name: string;
+                setupFee: number;
+                timeRate: number;
+              }>,
+            },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: service.status as any,
     images: service.images as string[],
@@ -85,60 +116,35 @@ export function EditServiceClient({
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
-      const getVal = (key: string) => {
-        const entry = Object.entries(value.pricing).find(([k]) => k === key);
-        return entry && entry[1] !== undefined && entry[1] !== ""
-          ? Number(entry[1])
-          : undefined;
-      };
-
-      const upAmount = getVal("upAmount");
-      const upBaseFee = getVal("upBaseFee");
-      const upRatePerUnit = getVal("upRatePerUnit");
-      const upTimeRate = getVal("upTimeRate");
-
       const pricing =
         value.pricing.type === "FIXED"
           ? {
               type: "FIXED" as const,
               amount: value.pricing.amount,
               variants:
-                upAmount !== undefined
-                  ? [{ name: "UP", amount: upAmount }]
+                value.pricing.variants.length > 0
+                  ? value.pricing.variants
                   : undefined,
             }
           : value.pricing.type === "PER_UNIT"
             ? {
                 type: "PER_UNIT" as const,
-                baseFee: value.pricing.baseFee,
+                setupFee: value.pricing.setupFee,
                 unitName: value.pricing.unitName,
                 ratePerUnit: value.pricing.ratePerUnit,
                 variants:
-                  upBaseFee !== undefined || upRatePerUnit !== undefined
-                    ? [
-                        {
-                          name: "UP",
-                          baseFee: upBaseFee ?? value.pricing.baseFee,
-                          ratePerUnit:
-                            upRatePerUnit ?? value.pricing.ratePerUnit,
-                        },
-                      ]
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
                     : undefined,
               }
             : {
                 type: "COMPOSITE" as const,
-                baseFee: value.pricing.baseFee,
+                setupFee: value.pricing.setupFee,
                 unitName: value.pricing.unitName,
                 timeRate: value.pricing.timeRate,
                 variants:
-                  upBaseFee !== undefined || upTimeRate !== undefined
-                    ? [
-                        {
-                          name: "UP",
-                          baseFee: upBaseFee ?? value.pricing.baseFee,
-                          timeRate: upTimeRate ?? value.pricing.timeRate,
-                        },
-                      ]
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
                     : undefined,
               };
 
