@@ -14,7 +14,7 @@ export default async function PublicLayout({
       <div className="min-h-full flex flex-col">
         <header className="sticky top-0 z-20 h-[8vh] bg-primary border-b border-sidebar-border/10">
           <div className="mx-auto h-full max-w-7xl px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-4">
-            <Link href="/home" className="flex items-center min-w-0">
+            <Link href="/" className="flex items-center min-w-0">
               <Image
                 src="/fablab.svg"
                 alt="Fablab Logo"

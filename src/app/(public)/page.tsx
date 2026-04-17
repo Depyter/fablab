@@ -125,7 +125,7 @@ export default function HomePage() {
 
   return (
     <main className="bg-background font-sans">
-      <section className="relative h-[calc(100svh-4rem)] shrink-2 overflow-hidden bg-primary-muted">
+      <section className="relative h-[calc(100svh-8vh)] shrink-2 overflow-hidden bg-primary-muted">
         <Image
           src="/fablab_mural.png"
           alt="Hero Image"
