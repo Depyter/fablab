@@ -24,11 +24,12 @@ interface ProjectCardProps {
   description: string;
   clientName: string;
   serviceName: string;
-  bookingDate: number;
+  bookingDate: number | null;
+  bookingStartTime: number | null;
+  bookingEndTime: number | null;
   estimatedPrice: number;
   status: string;
   coverUrl?: string | null;
-  bookingTime?: number;
   className?: string;
 }
 
@@ -39,13 +40,32 @@ export function ProjectCard({
   clientName,
   serviceName,
   bookingDate,
-  bookingTime,
+  bookingStartTime,
+  bookingEndTime,
   estimatedPrice,
   status,
   coverUrl,
   className,
 }: ProjectCardProps) {
   const styles = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
+
+  const bookingDateStr = bookingDate
+    ? new Date(bookingDate).toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+  const bookingTimeStr =
+    bookingStartTime && bookingEndTime
+      ? `${new Date(bookingStartTime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} – ${new Date(bookingEndTime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      : null;
 
   return (
     <ManageCard
@@ -63,20 +83,10 @@ export function ProjectCard({
         <>
           <div className="flex flex-col items-center justify-between w-full">
             <div className="flex flex-row items-center justify-between w-full mb-1">
-              <span className="text-muted-foreground">
-                {new Date(bookingDate).toLocaleDateString([], {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-                {bookingTime !== undefined && (
-                  <span className="ml-1 opacity-70">
-                    ·{" "}
-                    {new Date(bookingTime).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
+              <span className="text-muted-foreground text-xs">
+                {bookingDateStr}
+                {bookingTimeStr && (
+                  <span className="ml-1 opacity-70">· {bookingTimeStr}</span>
                 )}
               </span>
               <span className="font-semibold text-foreground">
@@ -87,8 +97,6 @@ export function ProjectCard({
             <div className="w-full mt-1">
               <ProjectDetails
                 projectId={projectId}
-                bookingDate={bookingDate}
-                bookingTime={bookingTime}
                 serviceName={serviceName}
                 trigger={
                   <div className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer">

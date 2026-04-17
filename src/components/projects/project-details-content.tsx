@@ -34,8 +34,6 @@ export type ProjectData = NonNullable<
 
 interface ProjectDetailsContentProps {
   project: ProjectData;
-  bookingDate?: number;
-  bookingTime?: number;
   styles: { badge: string; cover: string };
   timelineSteps: ProjectTimelineStep[];
   onOpenAssignView: () => void;
@@ -55,8 +53,6 @@ interface ProjectDetailsContentProps {
 
 export function ProjectDetailsContent({
   project,
-  bookingDate,
-  bookingTime,
   styles,
   timelineSteps,
   onOpenAssignView,
@@ -64,6 +60,26 @@ export function ProjectDetailsContent({
   isClient,
   onCancelProject,
 }: ProjectDetailsContentProps) {
+  // Derive booking date and time range from primary resourceUsage
+  const primaryUsage = project.resourceUsages?.[0];
+  const bookingDateStr = primaryUsage?.date
+    ? new Date(primaryUsage.date).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Not specified";
+  const bookingTimeRange = primaryUsage
+    ? `${new Date(primaryUsage.startTime).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} - ${new Date(primaryUsage.endTime).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    : "Not specified";
+
   return (
     <div className="space-y-4">
       <DialogHeader className="space-y-3">
@@ -159,7 +175,7 @@ export function ProjectDetailsContent({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 xl:gap-10 min-w-0">
         <div className="lg:col-span-7 space-y-4 min-w-0">
           <Card>
-            <CardContent className="space-y-3 sm: min-w-0">
+            <CardContent className="space-y-3 sm:min-w-0">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-base font-semibold sm:text-lg">
                   Project Overview
@@ -208,25 +224,17 @@ export function ProjectDetailsContent({
                 <FieldGroup>
                   <Field className="gap-1">
                     <Label className="text-muted-foreground text-xs font-normal">
-                      Requested Date
+                      Booking Date
                     </Label>
-                    <p className="text-sm uppercase">
-                      {bookingDate
-                        ? new Date(bookingDate).toLocaleDateString()
-                        : "Not specified"}
-                    </p>
+                    <p className="text-sm">{bookingDateStr}</p>
                   </Field>
                 </FieldGroup>
                 <FieldGroup>
                   <Field className="gap-1">
                     <Label className="text-muted-foreground text-xs font-normal">
-                      Deadline
+                      Time Range
                     </Label>
-                    <p className="text-sm uppercase">
-                      {bookingTime
-                        ? new Date(bookingTime).toLocaleTimeString()
-                        : "Not specified"}
-                    </p>
+                    <p className="text-sm">{bookingTimeRange}</p>
                   </Field>
                 </FieldGroup>
               </div>

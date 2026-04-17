@@ -40,8 +40,9 @@ type EnrichedProject = {
   description: string;
   clientName: string;
   serviceName: string;
-  bookingDate: number;
-  bookingTime?: number;
+  bookingDate: number | null;
+  bookingStartTime: number | null;
+  bookingEndTime: number | null;
   estimatedPrice: number;
   status: string;
   coverUrl?: string | null;
@@ -111,11 +112,13 @@ function ProjectListRow({ project }: { project: EnrichedProject }) {
             {/* Right-side meta */}
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-xs text-muted-foreground hidden md:block whitespace-nowrap">
-                {new Date(project.bookingDate).toLocaleDateString([], {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {project.bookingDate
+                  ? new Date(project.bookingDate).toLocaleDateString([], {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—"}
               </span>
               <span className="text-sm font-semibold whitespace-nowrap hidden sm:block">
                 ₱{project.estimatedPrice.toFixed(2)}
@@ -203,6 +206,7 @@ export default function ProjectsList() {
 
     if (dateFilter !== "all") {
       result = result.filter((p) => {
+        if (!p.bookingDate) return false;
         const d = new Date(p.bookingDate);
         if (dateFilter === "today") return isToday(d);
         if (dateFilter === "week") return isThisWeek(d, { weekStartsOn: 1 });
@@ -212,8 +216,10 @@ export default function ProjectsList() {
     }
 
     result.sort((a, b) => {
-      if (sortBy === "newest") return b.bookingDate - a.bookingDate;
-      if (sortBy === "oldest") return a.bookingDate - b.bookingDate;
+      if (sortBy === "newest")
+        return (b.bookingDate ?? 0) - (a.bookingDate ?? 0);
+      if (sortBy === "oldest")
+        return (a.bookingDate ?? 0) - (b.bookingDate ?? 0);
       if (sortBy === "price-high") return b.estimatedPrice - a.estimatedPrice;
       if (sortBy === "price-low") return a.estimatedPrice - b.estimatedPrice;
       if (sortBy === "name-az") return a.name.localeCompare(b.name);
@@ -356,9 +362,10 @@ export default function ProjectsList() {
             clientName={project.clientName}
             serviceName={project.serviceName}
             bookingDate={project.bookingDate}
+            bookingStartTime={project.bookingStartTime}
+            bookingEndTime={project.bookingEndTime}
             estimatedPrice={project.estimatedPrice}
             status={project.status}
-            bookingTime={project.bookingTime}
             coverUrl={project.coverUrl ?? null}
           />
         )}

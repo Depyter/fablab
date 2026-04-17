@@ -98,7 +98,7 @@ export function DataViewToolbar({
   return (
     <ManageHeader title={title} subtitle={subtitle}>
       {views && views.length > 0 && (
-        <div className="flex items-center border rounded-md overflow-hidden h-8 shrink-0">
+        <div className="flex items-center border rounded-md h-8 shrink-0">
           {views.map((v, i) => (
             <Button
               key={v}
@@ -310,7 +310,7 @@ export function DataViewLoadMore({
   if (hideInViews?.includes(view)) return null;
 
   return (
-    <div className="flex justify-center p-6 shrink-0">
+    <div className="flex justify-center p-6">
       <Button variant="outline" onClick={onLoadMore}>
         {label}
       </Button>

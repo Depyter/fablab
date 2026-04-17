@@ -8,23 +8,14 @@ export const getProjects = authQuery({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const userProfile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
-      .first();
-
-    if (!userProfile) throw new ConvexError("User not authorized");
+    const { role, _id: callerId } = ctx.profile;
+    const isPrivileged = role === "admin" || role === "maker";
 
     const baseQuery = ctx.db.query("projects");
 
-    const isPrivileged =
-      userProfile.role === "admin" || userProfile.role === "maker";
-
     const scopedQuery = isPrivileged
       ? baseQuery
-      : baseQuery.withIndex("by_userProfile", (q) =>
-          q.eq("userId", userProfile._id),
-        );
+      : baseQuery.withIndex("by_userProfile", (q) => q.eq("userId", callerId));
 
     const result = await scopedQuery
       .order("desc")
@@ -32,10 +23,12 @@ export const getProjects = authQuery({
 
     const enrichedPage = await Promise.all(
       result.page.map(async (project) => {
-        const clientProfile = await ctx.db.get(project.userId);
-        const service = await ctx.db.get(project.service);
+        const [clientProfile, service] = await Promise.all([
+          ctx.db.get(project.userId),
+          ctx.db.get(project.service),
+        ]);
 
-        // Find resource usage for date/time
+        // Resource usage is the source of truth for booking window
         const usages = await ctx.db
           .query("resourceUsage")
           .withIndex("by_service", (q) => q.eq("service", project.service))
@@ -65,13 +58,13 @@ export const getProjects = authQuery({
                 pfpUrl: makerPfpUrl,
               }
             : null,
-          bookingDate:
-            usage?.date ?? project.selectedTimeSlot?.startTime ?? Date.now(),
-          bookingTime:
-            project.selectedTimeSlot?.startTime ??
-            usage?.startTime ??
-            Date.now(),
-          estimatedPrice: 0, // Fallback price calculation
+          // Booking window from resourceUsage
+          bookingDate: usage?.date ?? null,
+          bookingStartTime: usage?.startTime ?? null,
+          bookingEndTime: usage?.endTime ?? null,
+          // Audit dates
+          requestedDate: project._creationTime,
+          estimatedPrice: project.costBreakdown?.total ?? 0,
           coverUrl,
         };
       }),
@@ -90,11 +83,9 @@ export const getProject = authQuery({
   },
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
-
     if (!project) throw new ConvexError("Project not found.");
 
-    // Access control: admins and makers see all projects; a client can only
-    // access a project they initiated.
+    // Access control: admins and makers see all; clients only their own
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === "admin" || role === "maker";
 
@@ -103,7 +94,7 @@ export const getProject = authQuery({
     }
 
     // -------------------------------------------------------------------------
-    // Client profile — name + profile picture URL
+    // Client profile
     // -------------------------------------------------------------------------
     const clientProfile = await ctx.db.get(project.userId);
     const clientPfpUrl = clientProfile?.profilePic
@@ -111,7 +102,7 @@ export const getProject = authQuery({
       : null;
 
     // -------------------------------------------------------------------------
-    // Service — surface level only (name + status)
+    // Service
     // -------------------------------------------------------------------------
     const serviceDoc = await ctx.db.get(project.service);
     const service = serviceDoc
@@ -124,8 +115,7 @@ export const getProject = authQuery({
       : null;
 
     // -------------------------------------------------------------------------
-    // Files — metadata from the `files` table + signed storage URL
-    // The project stores these as plain strings (storage IDs from the frontend).
+    // Files
     // -------------------------------------------------------------------------
     const resolvedFiles = project.files
       ? await Promise.all(
@@ -140,7 +130,7 @@ export const getProject = authQuery({
               ctx.storage.getUrl(storageId),
             ]);
 
-            if (!fileDoc)
+            if (!fileDoc) {
               return {
                 storageId,
                 url,
@@ -148,6 +138,7 @@ export const getProject = authQuery({
                 type: null,
                 status: null,
               };
+            }
 
             const { originalName, type, status } = fileDoc;
             return { storageId, url, originalName, type, status };
@@ -156,12 +147,12 @@ export const getProject = authQuery({
       : [];
 
     // -------------------------------------------------------------------------
-    // Receipt — full document
+    // Receipt
     // -------------------------------------------------------------------------
     const receipt = project.receipt ? await ctx.db.get(project.receipt) : null;
 
     // -------------------------------------------------------------------------
-    // Resource usages for this project — includes resolved maker and resource
+    // Resource usages — source of truth for booking window, maker, resource
     // -------------------------------------------------------------------------
     const allUsagesForService = await ctx.db
       .query("resourceUsage")
@@ -174,20 +165,21 @@ export const getProject = authQuery({
 
     const resourceUsages = await Promise.all(
       usageDocs.map(async (usage) => {
-        const makerProfile = usage.maker ? await ctx.db.get(usage.maker) : null;
-        const resourceDoc = usage.resource
-          ? await ctx.db.get(usage.resource)
-          : null;
+        const [makerProfile, resourceDoc] = await Promise.all([
+          usage.maker ? ctx.db.get(usage.maker) : null,
+          usage.resource ? ctx.db.get(usage.resource) : null,
+        ]);
 
-        const resourceImageUrls = resourceDoc?.images
-          ? await Promise.all(
-              resourceDoc.images.map((id) => ctx.storage.getUrl(id)),
-            )
-          : [];
-
-        const makerPfpUrl = makerProfile?.profilePic
-          ? await ctx.storage.getUrl(makerProfile.profilePic)
-          : null;
+        const [resourceImageUrls, makerPfpUrl] = await Promise.all([
+          resourceDoc?.images
+            ? Promise.all(
+                resourceDoc.images.map((id) => ctx.storage.getUrl(id)),
+              )
+            : Promise.resolve([]),
+          makerProfile?.profilePic
+            ? ctx.storage.getUrl(makerProfile.profilePic)
+            : Promise.resolve(null),
+        ]);
 
         return {
           ...usage,
@@ -203,6 +195,9 @@ export const getProject = authQuery({
       }),
     );
 
+    // Derive the primary booking window from the first matching usage
+    const primaryUsage = usageDocs[0] ?? null;
+
     // -------------------------------------------------------------------------
     // Thread
     // -------------------------------------------------------------------------
@@ -212,7 +207,7 @@ export const getProject = authQuery({
       .first();
 
     // -------------------------------------------------------------------------
-    // Assigned Maker
+    // Assigned maker
     // -------------------------------------------------------------------------
     const assignedMakerProfile = project.assignedMaker
       ? await ctx.db.get(project.assignedMaker)
@@ -226,6 +221,13 @@ export const getProject = authQuery({
     // -------------------------------------------------------------------------
     return {
       ...project,
+      // Audit / tracking dates
+      requestedDate: project._creationTime,
+      // Booking window derived from resourceUsage
+      bookingDate: primaryUsage?.date ?? null,
+      bookingStartTime: primaryUsage?.startTime ?? null,
+      bookingEndTime: primaryUsage?.endTime ?? null,
+      // Relations
       client: {
         _id: clientProfile?._id ?? null,
         name: clientProfile?.name ?? "Unknown Client",

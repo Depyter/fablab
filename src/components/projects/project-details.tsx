@@ -14,8 +14,6 @@ import { ProjectDetailsContent } from "./project-details-content";
 
 interface ProjectDetailsProps {
   projectId: Id<"projects">;
-  bookingDate?: number;
-  bookingTime?: number;
   serviceName?: string;
   trigger?: ReactNode;
   triggerClassName?: string;
@@ -24,8 +22,6 @@ interface ProjectDetailsProps {
 
 export function ProjectDetails({
   projectId,
-  bookingDate,
-  bookingTime,
   trigger,
   triggerClassName,
   buttonLabel = "View Details",
@@ -224,8 +220,6 @@ export function ProjectDetails({
         ) : (
           <ProjectDetailsContent
             project={project}
-            bookingDate={bookingDate}
-            bookingTime={bookingTime}
             styles={styles}
             timelineSteps={timelineSteps}
             onOpenAssignView={handleOpenAssignView}
