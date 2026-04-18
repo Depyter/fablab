@@ -3,6 +3,21 @@ import { Id, Doc } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
 import { FILE_CATEGORIES } from "../constants";
 
+/**
+ * Builds the denormalized search text for a project.
+ * Concatenates name, description, and notes so the search index covers all free-text fields.
+ */
+export function buildSearchText(fields: {
+  name: string;
+  description: string;
+  notes: string;
+}): string {
+  return [fields.name, fields.description, fields.notes]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
 export type ProjectStatus =
   | "pending"
   | "approved"

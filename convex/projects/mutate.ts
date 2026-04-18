@@ -4,6 +4,7 @@ import { Id, Doc } from "../_generated/dataModel";
 import {
   BookingWindow,
   ProjectStatus,
+  buildSearchText,
   resolveService,
   validateFileTypes,
   resolveBookingFromSharedUsage,
@@ -115,6 +116,11 @@ export const createProject = authMutation({
       notes: args.notes,
       selectedTimeSlot: args.selectedTimeSlot,
       costBreakdown,
+      searchText: buildSearchText({
+        name: args.name,
+        description: args.description,
+        notes: args.notes,
+      }),
     });
 
     // ── 6. Update resource usage records ────────────────────────────────────

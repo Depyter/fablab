@@ -247,6 +247,7 @@ export default defineSchema({
         endTime: v.number(),
       }),
     ),
+    searchText: v.string(), // name,
   })
     .index("by_userProfile", ["userId"])
     .index("by_startTime", ["selectedTimeSlot.startTime"])
@@ -255,7 +256,11 @@ export default defineSchema({
       "costBreakdown.total",
       "selectedTimeSlot.startTime",
     ])
-    .index("by_name_startTime", ["name", "selectedTimeSlot.startTime"]),
+    .index("by_name_startTime", ["name", "selectedTimeSlot.startTime"])
+    .searchIndex("search_body", {
+      searchField: "searchText",
+      filterFields: ["status"],
+    }),
 
   // --------------------------------------------------------
   // EXISTING TABLES: Keep existing unmodified

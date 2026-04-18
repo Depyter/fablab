@@ -1,6 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
-import { Id } from "../_generated/dataModel";
+import { Id, Doc } from "../_generated/dataModel";
+import { QueryCtx } from "../_generated/server";
 import { authQuery } from "../helper";
 
 export const getProjects = authQuery({
@@ -9,12 +10,11 @@ export const getProjects = authQuery({
     statusFilter: v.optional(v.string()),
     dateFilter: v.optional(v.string()),
     sortBy: v.optional(v.string()),
+    searchText: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === "admin" || role === "maker";
-
-    const baseQuery = ctx.db.query("projects");
 
     const hasStatusFilter =
       args.statusFilter !== undefined && args.statusFilter !== "all";
@@ -25,6 +25,31 @@ export const getProjects = authQuery({
       | "rejected"
       | "completed"
       | "cancelled";
+
+    // ── Search path: uses the search index, applies status as a filter field ─
+    if (args.searchText && args.searchText.trim() !== "") {
+      let searchQuery = ctx.db
+        .query("projects")
+        .withSearchIndex("search_body", (q) => {
+          const base = q.search("searchText", args.searchText!);
+          return hasStatusFilter
+            ? base.eq("status", args.statusFilter as StatusUnion)
+            : base;
+        });
+
+      if (!isPrivileged) {
+        searchQuery = searchQuery.filter((q) =>
+          q.eq(q.field("userId"), callerId),
+        );
+      }
+
+      const result = await searchQuery.paginate(args.paginationOpts);
+      const enrichedPage = await enrichProjects(ctx, result.page);
+      return { ...result, page: enrichedPage };
+    }
+
+    // ── Sorted / filtered path ────────────────────────────────────────────────
+    const baseQuery = ctx.db.query("projects");
 
     let orderedQuery;
     switch (args.sortBy) {
@@ -121,62 +146,63 @@ export const getProjects = authQuery({
     }
 
     const result = await query.paginate(args.paginationOpts);
-
-    const enrichedPage = await Promise.all(
-      result.page.map(async (project) => {
-        const [clientProfile, service] = await Promise.all([
-          ctx.db.get(project.userId as Id<"userProfile">),
-          ctx.db.get(project.service as Id<"services">),
-        ]);
-
-        // Resource usage is the source of truth for booking window
-        const usages = await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", project.service))
-          .collect();
-        const usage = usages.find((u) => u.projects.includes(project._id));
-
-        const coverUrl =
-          service?.images && service.images.length > 0
-            ? await ctx.storage.getUrl(service.images[0])
-            : null;
-
-        const makerProfile = project.assignedMaker
-          ? await ctx.db.get(project.assignedMaker as Id<"userProfile">)
-          : null;
-        const makerPfpUrl = makerProfile?.profilePic
-          ? await ctx.storage.getUrl(makerProfile.profilePic)
-          : null;
-
-        return {
-          ...project,
-          clientName: clientProfile?.name ?? "Unknown Client",
-          serviceName: service?.name ?? "Unknown Service",
-          assignedMaker: makerProfile
-            ? {
-                _id: makerProfile._id,
-                name: makerProfile.name,
-                pfpUrl: makerPfpUrl,
-              }
-            : null,
-          // Booking window from resourceUsage
-          bookingDate: usage?.date ?? null,
-          bookingStartTime: usage?.startTime ?? null,
-          bookingEndTime: usage?.endTime ?? null,
-          // Audit dates
-          requestedDate: project._creationTime,
-          estimatedPrice: project.costBreakdown?.total ?? 0,
-          coverUrl,
-        };
-      }),
-    );
-
-    return {
-      ...result,
-      page: enrichedPage,
-    };
+    const enrichedPage = await enrichProjects(ctx, result.page);
+    return { ...result, page: enrichedPage };
   },
 });
+
+// ── Shared enrichment helper ──────────────────────────────────────────────────
+
+async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
+  return Promise.all(
+    projects.map(async (project) => {
+      const [clientProfile, service] = await Promise.all([
+        ctx.db.get(project.userId as Id<"userProfile">),
+        ctx.db.get(project.service as Id<"services">),
+      ]);
+
+      // Resource usage is the source of truth for booking window
+      const usages = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_service", (q) => q.eq("service", project.service))
+        .collect();
+      const usage = usages.find((u) => u.projects.includes(project._id));
+
+      const coverUrl =
+        service?.images && service.images.length > 0
+          ? await ctx.storage.getUrl(service.images[0])
+          : null;
+
+      const makerProfile = project.assignedMaker
+        ? await ctx.db.get(project.assignedMaker as Id<"userProfile">)
+        : null;
+      const makerPfpUrl = makerProfile?.profilePic
+        ? await ctx.storage.getUrl(makerProfile.profilePic)
+        : null;
+
+      return {
+        ...project,
+        clientName: clientProfile?.name ?? "Unknown Client",
+        serviceName: service?.name ?? "Unknown Service",
+        assignedMaker: makerProfile
+          ? {
+              _id: makerProfile._id,
+              name: makerProfile.name,
+              pfpUrl: makerPfpUrl,
+            }
+          : null,
+        // Booking window from resourceUsage
+        bookingDate: usage?.date ?? null,
+        bookingStartTime: usage?.startTime ?? null,
+        bookingEndTime: usage?.endTime ?? null,
+        // Audit dates
+        requestedDate: project._creationTime,
+        estimatedPrice: project.costBreakdown?.total ?? 0,
+        coverUrl,
+      };
+    }),
+  );
+}
 
 export const getProject = authQuery({
   args: {

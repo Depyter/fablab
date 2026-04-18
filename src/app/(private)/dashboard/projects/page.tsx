@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { PackageOpen, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import { ProjectDetails } from "@/components/projects/project-details";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { isToday, isThisWeek, isThisMonth } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -157,13 +157,21 @@ export default function ProjectsList() {
   const [dateFilter, setDateFilter] = React.useState<DateFilter>("all");
   const [sortBy, setSortBy] = React.useState<SortOption>("newest");
 
+  const debouncedSearch = useDebounce(search, 300);
+  const isSearching = debouncedSearch.trim() !== "";
+
   const {
     results: rawResults,
     status: queryStatus,
     loadMore,
   } = usePaginatedQuery(
     api.projects.query.getProjects,
-    { statusFilter, dateFilter, sortBy },
+    {
+      statusFilter,
+      dateFilter: isSearching ? "all" : dateFilter,
+      sortBy: isSearching ? "newest" : sortBy,
+      searchText: debouncedSearch.trim() || undefined,
+    },
     { initialNumItems: 24 },
   );
 
@@ -187,21 +195,7 @@ export default function ProjectsList() {
     setSortBy("newest");
   };
 
-  const filteredProjects = React.useMemo(() => {
-    let result = [...projects];
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.clientName.toLowerCase().includes(q) ||
-          p.serviceName.toLowerCase().includes(q),
-      );
-    }
-
-    return result;
-  }, [projects, search]);
+  const filteredProjects = projects;
 
   return (
     <DataViewRoot defaultView="gallery">

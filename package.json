@@ -6,7 +6,7 @@
     "build": "next build",
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "next dev",
-    "dev:backend": "convex dev",
+    "convex": "bunx convex dev --once",
     "predev": "convex dev --until-success && convex dashboard",
     "start": "next start",
     "lint": "eslint .",
