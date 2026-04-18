@@ -5,8 +5,8 @@ Here's a ready-to-use prompt you can drop into Claude (or any AI coding assistan
 **Prompt:**
 
 ```
-You are redesigning the visual layer of an existing React + shadcn/ui + Convex chat application. 
-Do NOT change any logic, data fetching, Convex queries/mutations, hooks, or component structure. 
+You are redesigning the visual layer of an existing React + shadcn/ui + Convex chat application.
+Do NOT change any logic, data fetching, Convex queries/mutations, hooks, or component structure.
 Only modify className values, CSS variables, Tailwind utility classes, and shadcn theme tokens.
 
 ## Design System to Apply
@@ -44,7 +44,7 @@ Override the shadcn CSS variables to match:
 ### Typography
 - Use 'Syne' (Google Font) for headings, channel names, usernames, workspace name, and all-caps labels
 - Use 'DM Sans' for body text, messages, timestamps, sidebar items
-- Add to your layout: 
+- Add to your layout:
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 
 ### Layout Rules
@@ -72,7 +72,7 @@ Messages:
 - Message avatar: 34px × 34px, rounded-[8px] square (not circle), colored with brand palette colors cycling through [var(--fab-magenta), #534AB7, var(--fab-teal), #854F0B, #3B6D11, #185FA5]
 - Username: font Syne, font-weight 700
 - Timestamp: font DM Sans, color var(--fab-text-dim), text-[11px]
-- Role badges: 
+- Role badges:
     Admin → bg var(--fab-magenta-light), text var(--fab-magenta)
     Maker → bg var(--fab-teal-light), text var(--fab-teal)
     Designer → bg var(--fab-amber-light), text var(--fab-amber)

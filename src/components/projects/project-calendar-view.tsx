@@ -200,16 +200,25 @@ export function ProjectCalendarView() {
             </span>
             <div className="h-3 w-px bg-border" />
             <span className="font-semibold">
-              {new Set([
-                ...filteredResourceUsages.map((u) => u.projectId),
-                ...filteredServiceUsages.map((u) => u.projectId),
-              ].filter(Boolean)).size}
+              {
+                new Set(
+                  [
+                    ...filteredResourceUsages.map((u) => u.projectId),
+                    ...filteredServiceUsages.map((u) => u.projectId),
+                  ].filter(Boolean),
+                ).size
+              }
             </span>
             <span className="text-muted-foreground">
-              {new Set([
-                ...filteredResourceUsages.map((u) => u.projectId),
-                ...filteredServiceUsages.map((u) => u.projectId),
-              ].filter(Boolean)).size === 1 ? "project" : "projects"} today
+              {new Set(
+                [
+                  ...filteredResourceUsages.map((u) => u.projectId),
+                  ...filteredServiceUsages.map((u) => u.projectId),
+                ].filter(Boolean),
+              ).size === 1
+                ? "project"
+                : "projects"}{" "}
+              today
             </span>
           </div>
         </div>

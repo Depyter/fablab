@@ -1,28 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { FieldSeparator } from "@/components/ui/field";
 import {
   ProjectTimeline,
   ProjectTimelineStep,
 } from "@/components/projects/project-timeline";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
+import { FileUpload } from "@/components/file-upload/file-upload";
+import { UploadedFile } from "@/components/file-upload/types";
 import { PricingEstimateCard } from "./pricing-estimate-card";
 import {
-  CheckCircle,
-  XCircle,
   MessageSquare,
-  ChevronDown,
-  CheckCircle2,
-  Circle,
-  Banknote,
-  MoreHorizontal,
+  Pencil,
+  X as XIcon,
+  Save,
 } from "lucide-react";
 import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -51,6 +53,13 @@ interface ProjectDetailsContentProps {
   onMarkPaid: () => void;
   isClient: boolean;
   onCancelProject: () => void;
+  onUpdateDetails?: (args: {
+    description?: string;
+    notes?: string;
+    material?: "provide-own" | "buy-from-lab";
+    serviceType?: "self-service" | "full-service" | "workshop";
+    files?: string[];
+  }) => Promise<void>;
 }
 
 const STATUS_PILL: Record<
@@ -105,7 +114,66 @@ export function ProjectDetailsContent({
   onMarkPaid,
   isClient,
   onCancelProject,
+  onUpdateDetails,
 }: ProjectDetailsContentProps) {
+  // ── Edit state (client only, pending projects) ──────────────────────────
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDescription, setEditDescription] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editMaterial, setEditMaterial] = useState<
+    "provide-own" | "buy-from-lab"
+  >("provide-own");
+  const [editServiceType, setEditServiceType] = useState<
+    "self-service" | "full-service" | "workshop"
+  >("self-service");
+  const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const canEdit = isClient && project.status === "pending" && !!onUpdateDetails;
+
+  function openEdit() {
+    setEditDescription(project.description ?? "");
+    setEditNotes(project.notes ?? "");
+    setEditMaterial(project.material as "provide-own" | "buy-from-lab");
+    setEditServiceType(
+      project.serviceType as "self-service" | "full-service" | "workshop",
+    );
+    setEditFiles(
+      (project.resolvedFiles ?? [])
+        .filter((f) => !!f.url)
+        .map((f) => ({
+          storageId: f.storageId as string,
+          url: f.url ?? undefined,
+          fileName: f.originalName ?? "file",
+          fileType: f.type ?? "",
+          fileSize: 0,
+          uploadedAt: new Date(),
+        })),
+    );
+    setIsEditing(true);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+  }
+
+  async function saveEdit() {
+    if (!onUpdateDetails) return;
+    setIsSaving(true);
+    try {
+      await onUpdateDetails({
+        description: editDescription,
+        notes: editNotes,
+        material: editMaterial,
+        serviceType: editServiceType,
+        files: editFiles.map((f) => f.storageId),
+      });
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const primaryUsage = project.resourceUsages?.[0];
 
   const bookingDateStr = primaryUsage?.date
@@ -134,7 +202,7 @@ export function ProjectDetailsContent({
     <div className="min-w-0 space-y-0">
       <div className="space-y-5 pt-5">
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <DialogHeader className="space-y-0">
+        <DialogHeader className="space-y-0 mb-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             {/* Title + meta chips */}
             <div className="min-w-0 space-y-2">
@@ -199,81 +267,39 @@ export function ProjectDetailsContent({
                   className="w-full sm:w-auto"
                 />
               ) : (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onOpenAssignView}
-                    disabled={project.status === "approved"}
-                    className="gap-1.5 h-8 text-xs"
+                <Select
+                  value={project.status}
+                  onValueChange={(val) => {
+                    if (val === "approved") onOpenAssignView();
+                    else if (val === "paid") onMarkPaid();
+                    else onUpdateStatus(val);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-auto gap-2 px-3 text-xs font-semibold"
+                    style={{
+                      background: pill.bg,
+                      color: pill.color,
+                      border: `1px solid ${pill.border}`,
+                    }}
                   >
-                    <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onUpdateStatus("completed")}
-                    disabled={
-                      project.status === "completed" ||
-                      project.status === "paid"
-                    }
-                    className="gap-1.5 h-8 text-xs"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    Complete
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={onMarkPaid}
-                    disabled={
-                      project.status !== "completed" &&
-                      project.status !== "paid"
-                    }
-                    className="gap-1.5 h-8 text-xs"
-                    style={{ background: "var(--fab-teal)", color: "#fff" }}
-                  >
-                    <Banknote className="h-3.5 w-3.5" />
-                    {project.status === "paid"
-                      ? "Update Payment"
-                      : "Mark as Paid"}
-                  </Button>
-                  {/* Overflow: Pending + Reject */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        aria-label="More actions"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => onUpdateStatus("pending")}
-                        disabled={project.status === "pending"}
-                      >
-                        <Circle className="mr-2 h-4 w-4" /> Mark as Pending
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onUpdateStatus("rejected")}
-                        disabled={project.status === "rejected"}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <XCircle className="mr-2 h-4 w-4" /> Reject Request
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
 
               {project.roomId && project.threadId ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1.5 h-8 text-xs w-full sm:w-auto"
+                  className="gap-1.5 h-8 text-xs"
                   asChild
                 >
                   <Link
@@ -287,7 +313,7 @@ export function ProjectDetailsContent({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1.5 h-8 text-xs w-full sm:w-auto"
+                  className="gap-1.5 h-8 text-xs"
                   disabled
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
@@ -318,11 +344,49 @@ export function ProjectDetailsContent({
                 }}
               >
                 <span
-                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em]"
                   style={{ color: "var(--fab-text-dim)" }}
                 >
                   Project Details
                 </span>
+                {canEdit && !isEditing && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={openEdit}
+                    aria-label="Edit project details"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {isEditing && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={cancelEdit}
+                      disabled={isSaving}
+                      aria-label="Cancel edit"
+                    >
+                      <XIcon className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={saveEdit}
+                      disabled={isSaving}
+                      aria-label="Save changes"
+                      style={{ background: "var(--fab-teal)", color: "#fff" }}
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <div
                 className="space-y-4 px-4 py-4"
@@ -336,12 +400,22 @@ export function ProjectDetailsContent({
                   >
                     Description
                   </p>
-                  <p
-                    className="wrap-break-word whitespace-pre-line text-sm"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {project.description}
-                  </p>
+                  {isEditing ? (
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={3}
+                      className="text-sm"
+                      placeholder="Project description…"
+                    />
+                  ) : (
+                    <p
+                      className="wrap-break-word whitespace-pre-line text-sm"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {project.description}
+                    </p>
+                  )}
                 </div>
 
                 <div
@@ -358,12 +432,36 @@ export function ProjectDetailsContent({
                     >
                       Service Type
                     </p>
-                    <p
-                      className="text-sm capitalize"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {project.serviceType}
-                    </p>
+                    {isEditing ? (
+                      <Select
+                        value={editServiceType}
+                        onValueChange={(v) =>
+                          setEditServiceType(
+                            v as "self-service" | "full-service" | "workshop",
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="self-service">
+                            Self Service
+                          </SelectItem>
+                          <SelectItem value="full-service">
+                            Full Service
+                          </SelectItem>
+                          <SelectItem value="workshop">Workshop</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p
+                        className="text-sm capitalize"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {project.serviceType}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p
@@ -372,12 +470,33 @@ export function ProjectDetailsContent({
                     >
                       Material
                     </p>
-                    <p
-                      className="text-sm capitalize"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {project.material}
-                    </p>
+                    {isEditing ? (
+                      <Select
+                        value={editMaterial}
+                        onValueChange={(v) =>
+                          setEditMaterial(v as "provide-own" | "buy-from-lab")
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="provide-own">
+                            Provide Own
+                          </SelectItem>
+                          <SelectItem value="buy-from-lab">
+                            Buy from Lab
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p
+                        className="text-sm capitalize"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {project.material}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -425,16 +544,26 @@ export function ProjectDetailsContent({
                   >
                     Notes
                   </p>
-                  <p
-                    className="text-sm"
-                    style={{
-                      color: project.notes
-                        ? "var(--fab-text-muted)"
-                        : "var(--fab-text-dim)",
-                    }}
-                  >
-                    {project.notes || "No notes provided"}
-                  </p>
+                  {isEditing ? (
+                    <Textarea
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      rows={2}
+                      className="text-sm"
+                      placeholder="Additional notes…"
+                    />
+                  ) : (
+                    <p
+                      className="text-sm"
+                      style={{
+                        color: project.notes
+                          ? "var(--fab-text-muted)"
+                          : "var(--fab-text-dim)",
+                      }}
+                    >
+                      {project.notes || "No notes provided"}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -470,15 +599,25 @@ export function ProjectDetailsContent({
                 className="px-4 py-3"
                 style={{ background: "var(--fab-bg-card)" }}
               >
-                <ProjectAttachments
-                  files={(project.resolvedFiles ?? [])
-                    .filter((f) => !!f.url)
-                    .map((f) => ({
-                      url: f.url!,
-                      type: f.type,
-                      originalName: f.originalName,
-                    }))}
-                />
+                {isEditing ? (
+                  <FileUpload
+                    value={editFiles}
+                    onFilesChange={setEditFiles}
+                    variant="minimal"
+                    title="Add files"
+                    multiple
+                  />
+                ) : (
+                  <ProjectAttachments
+                    files={(project.resolvedFiles ?? [])
+                      .filter((f) => !!f.url)
+                      .map((f) => ({
+                        url: f.url!,
+                        type: f.type,
+                        originalName: f.originalName,
+                      }))}
+                  />
+                )}
               </div>
             </div>
 

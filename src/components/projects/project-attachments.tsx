@@ -21,9 +21,7 @@ interface ProjectAttachmentsProps {
  */
 export function ProjectAttachments({ files }: ProjectAttachmentsProps) {
   if (files.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">No files uploaded.</p>
-    );
+    return <p className="text-sm text-muted-foreground">No files uploaded.</p>;
   }
 
   const mediaFiles: MediaFile[] = files
@@ -56,9 +54,7 @@ export function ProjectAttachments({ files }: ProjectAttachmentsProps) {
           {docFiles.map((f, i) => {
             const name =
               f.originalName ||
-              decodeURIComponent(
-                f.url.split("/").pop()?.split("?")[0] ?? "",
-              ) ||
+              decodeURIComponent(f.url.split("/").pop()?.split("?")[0] ?? "") ||
               "attachment";
             const { Icon } = getFileInfo(name, f.type ?? null);
             return (

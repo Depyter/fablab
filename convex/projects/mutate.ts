@@ -505,3 +505,89 @@ export const completeProject = authMutation({
     await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });
+
+// ============================================================================
+
+export const updateOwnProjectDetails = authMutation({
+  args: {
+    projectId: v.id("projects"),
+    description: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    material: v.optional(
+      v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
+    ),
+    serviceType: v.optional(
+      v.union(
+        v.literal("self-service"),
+        v.literal("full-service"),
+        v.literal("workshop"),
+      ),
+    ),
+    files: v.optional(v.array(v.id("_storage"))),
+  },
+  handler: async (ctx, args) => {
+    const userProfile = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
+      .first();
+
+    if (!userProfile) throw new ConvexError("User not authorized");
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+
+    if (project.userId !== userProfile._id) {
+      throw new ConvexError("You do not own this project.");
+    }
+
+    if (project.status !== "pending") {
+      throw new ConvexError(
+        "Project details can only be updated while pending review.",
+      );
+    }
+
+    const patch: Partial<typeof project> = {};
+    const changed: string[] = [];
+
+    if (
+      args.description !== undefined &&
+      args.description !== project.description
+    ) {
+      patch.description = args.description;
+      changed.push("description");
+    }
+    if (args.notes !== undefined && args.notes !== project.notes) {
+      patch.notes = args.notes;
+      changed.push("notes");
+    }
+    if (args.material !== undefined && args.material !== project.material) {
+      patch.material = args.material;
+      changed.push("material");
+    }
+    if (
+      args.serviceType !== undefined &&
+      args.serviceType !== project.serviceType
+    ) {
+      patch.serviceType = args.serviceType;
+      changed.push("service type");
+    }
+    if (args.files !== undefined) {
+      patch.files = args.files;
+      changed.push("attachments");
+      await claimFiles(ctx, args.files);
+    }
+
+    if (Object.keys(patch).length === 0) return;
+
+    patch.searchText = buildSearchText({
+      name: project.name,
+      description: patch.description ?? project.description,
+      notes: patch.notes ?? project.notes,
+    });
+
+    await ctx.db.patch(args.projectId, patch);
+    await sendProjectSystemMessage(ctx, args.projectId, [
+      `Client updated: ${changed.join(", ")}.`,
+    ]);
+  },
+});

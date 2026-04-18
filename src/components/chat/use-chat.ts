@@ -151,7 +151,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   };
 
   const removeAttachment = (index: number) => {
-
     const remaining = pendingAttachments.filter((_, i) => i !== index);
     const remainingAsUploadedFiles: UploadedFile[] = remaining.map((a) => ({
       storageId: a.storageId,

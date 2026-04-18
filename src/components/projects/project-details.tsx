@@ -65,6 +65,9 @@ export function ProjectDetails({
   const updateProject = useMutation(api.projects.mutate.updateProject);
   const cancelOwnProject = useMutation(api.projects.mutate.cancelOwnProject);
   const markProjectPaid = useMutation(api.projects.mutate.markProjectPaid);
+  const updateOwnProjectDetails = useMutation(
+    api.projects.mutate.updateOwnProjectDetails,
+  );
   const role = useQuery(api.users.getRole, {});
   const isClient = role === "client";
 
@@ -99,6 +102,28 @@ export function ProjectDetails({
       toast.success("Project request cancelled.");
     } catch {
       toast.error("Failed to cancel project request.");
+    }
+  };
+
+  const handleUpdateDetails = async (args: {
+    description?: string;
+    notes?: string;
+    material?: "provide-own" | "buy-from-lab";
+    serviceType?: "self-service" | "full-service" | "workshop";
+    files?: string[];
+  }) => {
+    try {
+      await updateOwnProjectDetails({
+        projectId,
+        ...args,
+        files: args.files as Parameters<
+          typeof updateOwnProjectDetails
+        >[0]["files"],
+      });
+      toast.success("Project details updated.");
+    } catch {
+      toast.error("Failed to update project details.");
+      throw new Error("Update failed");
     }
   };
 
@@ -173,23 +198,6 @@ export function ProjectDetails({
             project.status === "rejected" || project.status === "cancelled",
         },
         {
-          title: "Maker assignment",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "approved" ||
-                  project.status === "completed" ||
-                  project.status === "paid"
-                ? "Completed"
-                : "Pending",
-          byLabel: project.assignedMaker
-            ? project.assignedMaker.name
-            : "Waiting",
-          active: project.status === "approved",
-          completed:
-            project.status === "completed" || project.status === "paid",
-        },
-        {
           title: "Project execution",
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
@@ -200,7 +208,7 @@ export function ProjectDetails({
           byLabel: project.assignedMaker
             ? project.assignedMaker.name
             : "Waiting",
-          active: project.status === "completed",
+          active: project.status === "approved",
           completed:
             project.status === "completed" || project.status === "paid",
         },
@@ -218,8 +226,7 @@ export function ProjectDetails({
               : project.status === "completed"
                 ? "Waiting"
                 : "—",
-          active:
-            project.status === "completed" && !project.receipt,
+          active: project.status === "completed" && !project.receipt,
           completed: project.status === "paid",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
@@ -301,7 +308,7 @@ export function ProjectDetails({
         </DialogTrigger>
       )}
 
-      <DialogContent className="max-h-[92vh] sm:max-w-6xl overflow-x-hidden overflow-y-auto rounded-xl p-4 sm:p-6">
+      <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
         {!project ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             Loading project details...
@@ -326,10 +333,14 @@ export function ProjectDetails({
               onMarkPaid={() => handleOpenPaymentDialog()}
               isClient={isClient}
               onCancelProject={handleCancelProject}
+              onUpdateDetails={isClient ? handleUpdateDetails : undefined}
             />
 
             {/* ── Mark as Paid dialog ─────────────────────────────────── */}
-            <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+            <Dialog
+              open={paymentDialogOpen}
+              onOpenChange={setPaymentDialogOpen}
+            >
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>

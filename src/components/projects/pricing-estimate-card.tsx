@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pencil } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -356,7 +357,10 @@ export function PricingEstimateCard({
       >
         <h3
           className="text-[13px] font-bold tracking-tight"
-          style={{ fontFamily: "Syne, sans-serif", color: "var(--fab-text-primary)" }}
+          style={{
+            fontFamily: "Syne, sans-serif",
+            color: "var(--fab-text-primary)",
+          }}
         >
           {hasFinalBreakdown ? "Confirmed Pricing" : "Pricing Estimate"}
         </h3>
@@ -387,20 +391,36 @@ export function PricingEstimateCard({
             <span
               className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
               style={{
-                background: "color-mix(in srgb, var(--fab-teal) 10%, var(--fab-bg-sidebar))",
+                background:
+                  "color-mix(in srgb, var(--fab-teal) 10%, var(--fab-bg-sidebar))",
                 color: "var(--fab-teal)",
-                border: "1px solid color-mix(in srgb, var(--fab-teal) 25%, transparent)",
+                border:
+                  "1px solid color-mix(in srgb, var(--fab-teal) 25%, transparent)",
               }}
             >
               Final
             </span>
           )}
+          {!readOnly && !isEditing && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 ml-1"
+              onClick={handleEdit}
+              aria-label="Edit pricing breakdown"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div className="px-4 py-3 space-y-3" style={{ background: "var(--fab-bg-card)" }}>
-
+      <div
+        className="px-4 py-3 space-y-3"
+        style={{ background: "var(--fab-bg-card)" }}
+      >
         {/* ── Assignment section (non-clients only) ── */}
         {!readOnly && (
           <>
@@ -413,7 +433,10 @@ export function PricingEstimateCard({
                 Assigned Maker
               </p>
               {isEditing ? (
-                <Select value={selectedMakerId} onValueChange={setSelectedMakerId}>
+                <Select
+                  value={selectedMakerId}
+                  onValueChange={setSelectedMakerId}
+                >
                   <SelectTrigger className="text-sm h-8">
                     <SelectValue placeholder="Select a maker" />
                   </SelectTrigger>
@@ -438,7 +461,8 @@ export function PricingEstimateCard({
                     <div
                       className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
                       style={{
-                        background: "color-mix(in srgb, var(--fab-teal) 15%, var(--fab-bg-sidebar))",
+                        background:
+                          "color-mix(in srgb, var(--fab-teal) 15%, var(--fab-bg-sidebar))",
                         color: "var(--fab-teal)",
                       }}
                     >
@@ -461,7 +485,10 @@ export function PricingEstimateCard({
                   </div>
                 </div>
               ) : (
-                <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
+                <p
+                  className="text-[12px]"
+                  style={{ color: "var(--fab-text-muted)" }}
+                >
                   No maker assigned yet.
                 </p>
               )}
@@ -476,7 +503,10 @@ export function PricingEstimateCard({
                 Resource
               </p>
               {isEditing ? (
-                <Select value={selectedResourceId} onValueChange={setSelectedResourceId}>
+                <Select
+                  value={selectedResourceId}
+                  onValueChange={setSelectedResourceId}
+                >
                   <SelectTrigger className="text-sm h-8">
                     <SelectValue placeholder="Select a resource" />
                   </SelectTrigger>
@@ -512,7 +542,8 @@ export function PricingEstimateCard({
                     >
                       {primaryUsage.resourceDetails.name}
                     </p>
-                    {(primaryUsage.resourceDetails.category || primaryUsage.resourceDetails.type) && (
+                    {(primaryUsage.resourceDetails.category ||
+                      primaryUsage.resourceDetails.type) && (
                       <p
                         className="text-[10px] mt-0.5"
                         style={{ color: "var(--fab-text-muted)" }}
@@ -529,7 +560,10 @@ export function PricingEstimateCard({
                   </div>
                 </div>
               ) : (
-                <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
+                <p
+                  className="text-[12px]"
+                  style={{ color: "var(--fab-text-muted)" }}
+                >
                   No resource assigned.
                 </p>
               )}
@@ -545,7 +579,10 @@ export function PricingEstimateCard({
                   Material
                 </p>
                 {isEditing ? (
-                  <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
+                  <Select
+                    value={selectedMaterialId}
+                    onValueChange={setSelectedMaterialId}
+                  >
                     <SelectTrigger className="text-sm h-8">
                       <SelectValue placeholder="Select a material" />
                     </SelectTrigger>
@@ -553,7 +590,9 @@ export function PricingEstimateCard({
                       {materials?.map((m) => (
                         <SelectItem key={m._id} value={m._id}>
                           {m.name}{" "}
-                          <span className="text-muted-foreground">({m.unit})</span>
+                          <span className="text-muted-foreground">
+                            ({m.unit})
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -588,14 +627,18 @@ export function PricingEstimateCard({
                             className="text-[10px] shrink-0"
                             style={{ color: "var(--fab-text-muted)" }}
                           >
-                            ₱{requestedMaterial.pricePerUnit.toFixed(2)} / {requestedMaterial.unit}
+                            ₱{requestedMaterial.pricePerUnit.toFixed(2)} /{" "}
+                            {requestedMaterial.unit}
                           </p>
                         )}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
+                  <p
+                    className="text-[12px]"
+                    style={{ color: "var(--fab-text-muted)" }}
+                  >
                     No material selected.
                   </p>
                 )}
@@ -624,7 +667,10 @@ export function PricingEstimateCard({
                 step="0.01"
                 value={editValues.setupFee}
                 onChange={(e) =>
-                  setEditValues((prev) => ({ ...prev, setupFee: Number(e.target.value || 0) }))
+                  setEditValues((prev) => ({
+                    ...prev,
+                    setupFee: Number(e.target.value || 0),
+                  }))
                 }
                 className="h-7 w-32 text-right text-sm"
               />
@@ -656,7 +702,10 @@ export function PricingEstimateCard({
                   step="0.01"
                   value={editValues.setupFee}
                   onChange={(e) =>
-                    setEditValues((prev) => ({ ...prev, setupFee: Number(e.target.value || 0) }))
+                    setEditValues((prev) => ({
+                      ...prev,
+                      setupFee: Number(e.target.value || 0),
+                    }))
                   }
                   className="h-7 w-32 text-right text-sm"
                 />
@@ -684,7 +733,10 @@ export function PricingEstimateCard({
                   step="0.1"
                   value={editValues.duration}
                   onChange={(e) =>
-                    setEditValues((prev) => ({ ...prev, duration: Number(e.target.value || 0) }))
+                    setEditValues((prev) => ({
+                      ...prev,
+                      duration: Number(e.target.value || 0),
+                    }))
                   }
                   className="h-7 w-32 text-right text-sm"
                 />
@@ -712,7 +764,10 @@ export function PricingEstimateCard({
                   step="0.01"
                   value={editValues.rate}
                   onChange={(e) =>
-                    setEditValues((prev) => ({ ...prev, rate: Number(e.target.value || 0) }))
+                    setEditValues((prev) => ({
+                      ...prev,
+                      rate: Number(e.target.value || 0),
+                    }))
                   }
                   className="h-7 w-32 text-right text-sm"
                 />
@@ -735,7 +790,11 @@ export function PricingEstimateCard({
               </span>
               <span
                 className="text-[13px] font-medium"
-                style={{ color: isEditing ? "var(--fab-text-muted)" : "var(--fab-text-primary)" }}
+                style={{
+                  color: isEditing
+                    ? "var(--fab-text-muted)"
+                    : "var(--fab-text-primary)",
+                }}
               >
                 ₱{displayTimeCost.toFixed(2)}
               </span>
@@ -838,7 +897,7 @@ export function PricingEstimateCard({
       </div>
 
       {/* ── Footer actions ────────────────────────────────────────────────── */}
-      {!readOnly && (
+      {!readOnly && isEditing && (
         <div
           className="flex flex-col gap-2 px-4 py-3"
           style={{
@@ -846,40 +905,23 @@ export function PricingEstimateCard({
             borderTop: "1px solid var(--fab-border-md)",
           }}
         >
-          {isEditing ? (
-            <>
-              <ActionDialog
-                title="Discard Changes"
-                description="Are you sure you want to discard your edits?"
-                onConfirm={handleDiscard}
-                cancelButtonText="Back"
-                confirmButtonText="Discard"
-                className="w-full"
-                baseActionText="Cancel"
-              />
-              <Button
-                size="sm"
-                onClick={handleSave}
-                className="w-full rounded-[6px] text-white font-semibold"
-                style={{ background: "var(--fab-teal)", border: "none" }}
-              >
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleEdit}
-              className="w-full rounded-[6px] font-semibold"
-              style={{
-                border: "1px solid var(--fab-border-md)",
-                color: "var(--fab-text-primary)",
-              }}
-            >
-              {hasFinalBreakdown ? "Edit Breakdown" : "Update Estimate"}
-            </Button>
-          )}
+          <ActionDialog
+            title="Discard Changes"
+            description="Are you sure you want to discard your edits?"
+            onConfirm={handleDiscard}
+            cancelButtonText="Back"
+            confirmButtonText="Discard"
+            className="w-full"
+            baseActionText="Cancel"
+          />
+          <Button
+            size="sm"
+            onClick={handleSave}
+            className="w-full rounded-[6px] text-white font-semibold"
+            style={{ background: "var(--fab-teal)", border: "none" }}
+          >
+            Save Changes
+          </Button>
         </div>
       )}
     </div>

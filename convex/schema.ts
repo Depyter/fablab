@@ -26,6 +26,7 @@ export default defineSchema({
       v.literal(FileStatus.CLAIMED),
       v.literal(FileStatus.ORPHANED),
     ),
+    uploadedBy: v.optional(v.id("userProfile")),
   })
     .index("by_storageId", ["storageId"])
     .index("status", ["status"]),
