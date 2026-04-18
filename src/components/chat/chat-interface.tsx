@@ -486,7 +486,7 @@ export function ChatInterface({
                           </span>
                           {"senderRole" in message && message.senderRole && (
                             <span
-                              className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] leading-none"
+                              className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md leading-none"
                               style={{
                                 background:
                                   message.senderRole === "admin"
