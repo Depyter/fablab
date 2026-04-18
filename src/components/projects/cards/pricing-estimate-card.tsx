@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldSeparator } from "@/components/ui/field";
-import { ActionDialog } from "../action-dialog";
+import { DetailCard, DetailChip } from "@/components/projects/cards/detail-card";
+import { ActionDialog } from "../../action-dialog";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
@@ -342,85 +342,42 @@ export function PricingEstimateCard({
   const hasFinalBreakdown = !!costBreakdown;
 
   // ── Render ───────────────────────────────────────────────────────────────
-  return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ border: "1px solid var(--fab-border-md)" }}
-    >
-      {/* ── Card header ──────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center justify-between gap-2 px-4 py-3"
-        style={{
-          background: "var(--fab-bg-sidebar)",
-          borderBottom: "1px solid var(--fab-border-md)",
-        }}
-      >
-        <h3
-          className="text-[13px] font-bold tracking-tight"
-          style={{
-            fontFamily: "Syne, sans-serif",
-            color: "var(--fab-text-primary)",
-          }}
-        >
-          {hasFinalBreakdown ? "Confirmed Pricing" : "Pricing Estimate"}
-        </h3>
-        <div className="flex items-center gap-1.5">
-          {projectPricing && projectPricing !== "Default" && (
-            <span
-              className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
-              style={{
-                background: "var(--fab-amber-light)",
-                color: "var(--fab-amber)",
-                border: "1px solid rgba(235,170,87,0.3)",
-              }}
-            >
-              {projectPricing}
-            </span>
-          )}
-          <span
-            className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
-            style={{
-              background: "var(--fab-bg-card)",
-              color: "var(--fab-text-muted)",
-              border: "1px solid var(--fab-border-md)",
-            }}
-          >
-            {pricingType.replace("_", " ")}
-          </span>
-          {hasFinalBreakdown && !isEditing && (
-            <span
-              className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
-              style={{
-                background:
-                  "color-mix(in srgb, var(--fab-teal) 10%, var(--fab-bg-sidebar))",
-                color: "var(--fab-teal)",
-                border:
-                  "1px solid color-mix(in srgb, var(--fab-teal) 25%, transparent)",
-              }}
-            >
-              Final
-            </span>
-          )}
-          {!readOnly && !isEditing && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 ml-1"
-              onClick={handleEdit}
-              aria-label="Edit pricing breakdown"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
-      </div>
+  const headerChips = (
+    <>
+      {projectPricing && projectPricing !== "Default" && (
+        <DetailChip
+          label={projectPricing}
+          bg="var(--fab-amber-light)"
+          color="var(--fab-amber)"
+          border="rgba(235,170,87,0.3)"
+        />
+      )}
+      <DetailChip
+        label={pricingType.replace("_", " ")}
+        bg="var(--fab-bg-card)"
+        color="var(--fab-text-muted)"
+        border="var(--fab-border-md)"
+      />
+      {hasFinalBreakdown && !isEditing && (
+        <DetailChip
+          label="Final"
+          bg="color-mix(in srgb, var(--fab-teal) 10%, var(--fab-bg-sidebar))"
+          color="var(--fab-teal)"
+          border="color-mix(in srgb, var(--fab-teal) 25%, transparent)"
+        />
+      )}
+    </>
+  );
 
-      {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div
-        className="px-4 py-3 space-y-3"
-        style={{ background: "var(--fab-bg-card)" }}
-      >
+  return (
+    <DetailCard
+      title={hasFinalBreakdown ? "Confirmed Pricing" : "Pricing Estimate"}
+      titleClassName="text-[13px] tracking-tight normal-case"
+      titleColor="var(--fab-text-primary)"
+      headerRight={headerChips}
+      onEdit={!readOnly && !isEditing ? handleEdit : undefined}
+      bodyClassName="space-y-3 py-3"
+    >
         {/* ── Assignment section (non-clients only) ── */}
         {!readOnly && (
           <>
@@ -894,36 +851,30 @@ export function PricingEstimateCard({
             ₱{displayTotal.toFixed(2)}
           </span>
         </div>
-      </div>
 
-      {/* ── Footer actions ────────────────────────────────────────────────── */}
-      {!readOnly && isEditing && (
-        <div
-          className="flex flex-col gap-2 px-4 py-3"
-          style={{
-            background: "var(--fab-bg-sidebar)",
-            borderTop: "1px solid var(--fab-border-md)",
-          }}
-        >
-          <ActionDialog
-            title="Discard Changes"
-            description="Are you sure you want to discard your edits?"
-            onConfirm={handleDiscard}
-            cancelButtonText="Back"
-            confirmButtonText="Discard"
-            className="w-full"
-            baseActionText="Cancel"
-          />
-          <Button
-            size="sm"
-            onClick={handleSave}
-            className="w-full rounded-[6px] text-white font-semibold"
-            style={{ background: "var(--fab-teal)", border: "none" }}
-          >
-            Save Changes
-          </Button>
-        </div>
-      )}
-    </div>
+        {/* ── Footer actions (inside body when editing) ────────────────────── */}
+        {!readOnly && isEditing && (
+          <>
+            <FieldSeparator className="my-1" />
+            <ActionDialog
+              title="Discard Changes"
+              description="Are you sure you want to discard your edits?"
+              onConfirm={handleDiscard}
+              cancelButtonText="Back"
+              confirmButtonText="Discard"
+              className="w-full"
+              baseActionText="Cancel"
+            />
+            <Button
+              size="sm"
+              onClick={handleSave}
+              className="w-full rounded-[6px] text-white font-semibold"
+              style={{ background: "var(--fab-teal)", border: "none" }}
+            >
+              Save Changes
+            </Button>
+          </>
+        )}
+    </DetailCard>
   );
 }

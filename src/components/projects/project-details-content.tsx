@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -10,22 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { FieldSeparator } from "@/components/ui/field";
 import {
   ProjectTimeline,
   ProjectTimelineStep,
 } from "@/components/projects/project-timeline";
-import { ProjectAttachments } from "@/components/projects/project-attachments";
-import { FileUpload } from "@/components/file-upload/file-upload";
 import { UploadedFile } from "@/components/file-upload/types";
-import { PricingEstimateCard } from "./pricing-estimate-card";
-import {
-  MessageSquare,
-  Pencil,
-  X as XIcon,
-  Save,
-} from "lucide-react";
+import { ProjectInfoCard } from "./cards/project-info-card";
+import { AttachmentsCard } from "./cards/attachments-card";
+import { ReceiptCard } from "./cards/receipt-card";
+import { PricingEstimateCard } from "./cards/pricing-estimate-card";
+import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActionDialog } from "../action-dialog";
@@ -196,7 +190,6 @@ export function ProjectDetailsContent({
     : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
-  const fileCount = (project.resolvedFiles ?? []).filter((f) => !!f.url).length;
 
   return (
     <div className="min-w-0 space-y-0">
@@ -331,375 +324,47 @@ export function ProjectDetailsContent({
         <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
           {/* ── Left column ───────────────────────────────────────────── */}
           <div className="min-w-0 space-y-4 lg:col-span-7">
-            {/* Project details card */}
-            <div
-              className="overflow-hidden rounded-xl"
-              style={{ border: "1px solid var(--fab-border-md)" }}
-            >
-              <div
-                className="flex items-center px-4 py-2.5"
-                style={{
-                  background: "var(--fab-bg-sidebar)",
-                  borderBottom: "1px solid var(--fab-border-md)",
-                }}
-              >
-                <span
-                  className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em]"
-                  style={{ color: "var(--fab-text-dim)" }}
-                >
-                  Project Details
-                </span>
-                {canEdit && !isEditing && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={openEdit}
-                    aria-label="Edit project details"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-                {isEditing && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={cancelEdit}
-                      disabled={isSaving}
-                      aria-label="Cancel edit"
-                    >
-                      <XIcon className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={saveEdit}
-                      disabled={isSaving}
-                      aria-label="Save changes"
-                      style={{ background: "var(--fab-teal)", color: "#fff" }}
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <div
-                className="space-y-4 px-4 py-4"
-                style={{ background: "var(--fab-bg-card)" }}
-              >
-                {/* Description */}
-                <div className="space-y-1">
-                  <p
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Description
-                  </p>
-                  {isEditing ? (
-                    <Textarea
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      rows={3}
-                      className="text-sm"
-                      placeholder="Project description…"
-                    />
-                  ) : (
-                    <p
-                      className="wrap-break-word whitespace-pre-line text-sm"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {project.description}
-                    </p>
-                  )}
-                </div>
+            <ProjectInfoCard
+              description={project.description}
+              serviceType={project.serviceType}
+              material={project.material}
+              notes={project.notes}
+              bookingDateStr={bookingDateStr}
+              bookingTimeRange={bookingTimeRange}
+              canEdit={canEdit}
+              isEditing={isEditing}
+              isSaving={isSaving}
+              onEdit={openEdit}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              editDescription={editDescription}
+              setEditDescription={setEditDescription}
+              editNotes={editNotes}
+              setEditNotes={setEditNotes}
+              editMaterial={editMaterial}
+              setEditMaterial={setEditMaterial}
+              editServiceType={editServiceType}
+              setEditServiceType={setEditServiceType}
+            />
 
-                <div
-                  className="h-px"
-                  style={{ background: "var(--fab-border-soft)" }}
-                />
+            <AttachmentsCard
+              resolvedFiles={project.resolvedFiles}
+              canEdit={canEdit}
+              isEditing={isEditing}
+              isSaving={isSaving}
+              onEdit={openEdit}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              editFiles={editFiles}
+              setEditFiles={setEditFiles}
+            />
 
-                {/* Service type + material */}
-                <div className="grid min-w-0 grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Service Type
-                    </p>
-                    {isEditing ? (
-                      <Select
-                        value={editServiceType}
-                        onValueChange={(v) =>
-                          setEditServiceType(
-                            v as "self-service" | "full-service" | "workshop",
-                          )
-                        }
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="self-service">
-                            Self Service
-                          </SelectItem>
-                          <SelectItem value="full-service">
-                            Full Service
-                          </SelectItem>
-                          <SelectItem value="workshop">Workshop</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p
-                        className="text-sm capitalize"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {project.serviceType}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Material
-                    </p>
-                    {isEditing ? (
-                      <Select
-                        value={editMaterial}
-                        onValueChange={(v) =>
-                          setEditMaterial(v as "provide-own" | "buy-from-lab")
-                        }
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="provide-own">
-                            Provide Own
-                          </SelectItem>
-                          <SelectItem value="buy-from-lab">
-                            Buy from Lab
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p
-                        className="text-sm capitalize"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {project.material}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Booking date + time */}
-                <div className="grid min-w-0 grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Booking Date
-                    </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {bookingDateStr}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Time Range
-                    </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {bookingTimeRange}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div
-                  className="h-px"
-                  style={{ background: "var(--fab-border-soft)" }}
-                />
-                <div className="space-y-1">
-                  <p
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Notes
-                  </p>
-                  {isEditing ? (
-                    <Textarea
-                      value={editNotes}
-                      onChange={(e) => setEditNotes(e.target.value)}
-                      rows={2}
-                      className="text-sm"
-                      placeholder="Additional notes…"
-                    />
-                  ) : (
-                    <p
-                      className="text-sm"
-                      style={{
-                        color: project.notes
-                          ? "var(--fab-text-muted)"
-                          : "var(--fab-text-dim)",
-                      }}
-                    >
-                      {project.notes || "No notes provided"}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Attachments card */}
-            <div
-              className="overflow-hidden rounded-xl"
-              style={{ border: "1px solid var(--fab-border-md)" }}
-            >
-              <div
-                className="flex items-center justify-between px-4 py-2.5"
-                style={{
-                  background: "var(--fab-bg-sidebar)",
-                  borderBottom: "1px solid var(--fab-border-md)",
-                }}
-              >
-                <span
-                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                  style={{ color: "var(--fab-text-dim)" }}
-                >
-                  Attachments
-                </span>
-                {fileCount > 0 && (
-                  <span
-                    className="text-[10px]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    {fileCount}
-                  </span>
-                )}
-              </div>
-              <div
-                className="px-4 py-3"
-                style={{ background: "var(--fab-bg-card)" }}
-              >
-                {isEditing ? (
-                  <FileUpload
-                    value={editFiles}
-                    onFilesChange={setEditFiles}
-                    variant="minimal"
-                    title="Add files"
-                    multiple
-                  />
-                ) : (
-                  <ProjectAttachments
-                    files={(project.resolvedFiles ?? [])
-                      .filter((f) => !!f.url)
-                      .map((f) => ({
-                        url: f.url!,
-                        type: f.type,
-                        originalName: f.originalName,
-                      }))}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Receipt card */}
-            {project.receipt && (
-              <div
-                className="overflow-hidden rounded-xl"
-                style={{ border: "1px solid var(--fab-border-md)" }}
-              >
-                <div
-                  className="flex items-center gap-2 px-4 py-2.5"
-                  style={{
-                    background:
-                      "color-mix(in srgb, var(--fab-teal) 7%, var(--fab-bg-sidebar))",
-                    borderBottom: "1px solid var(--fab-border-md)",
-                  }}
-                >
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-teal)" }}
-                  >
-                    Payment Receipt
-                  </span>
-                  <span
-                    className="ml-auto inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[10px] font-bold uppercase tracking-[0.08em]"
-                    style={{
-                      background:
-                        "color-mix(in srgb, var(--fab-teal) 14%, white)",
-                      color: "var(--fab-teal)",
-                    }}
-                  >
-                    Paid
-                  </span>
-                </div>
-                <div
-                  className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-4"
-                  style={{ background: "var(--fab-bg-card)" }}
-                >
-                  <div className="space-y-0.5">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Receipt Number
-                    </p>
-                    <p
-                      className="wrap-break-word text-sm font-medium"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {project.receipt.receiptNumber.toString()}
-                    </p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Payment Mode
-                    </p>
-                    <p
-                      className="text-sm capitalize"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {project.receipt.paymentMode}
-                    </p>
-                  </div>
-                  <div className="col-span-2 space-y-0.5">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Proof
-                    </p>
-                    <p
-                      className="wrap-break-word text-sm"
-                      style={{ color: "var(--fab-text-muted)" }}
-                    >
-                      {project.receipt.proof || "No proof details"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {!isClient && (
+              <ReceiptCard
+                receipt={project.receipt}
+                status={project.status}
+                onMarkPaid={onMarkPaid}
+              />
             )}
           </div>
 

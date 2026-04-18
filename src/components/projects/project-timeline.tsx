@@ -57,16 +57,14 @@ function StepDot({
 }
 
 function connectorCn(
-  completed?: boolean,
-  rejected?: boolean,
-  active?: boolean,
+  nextCompleted?: boolean,
+  nextRejected?: boolean,
+  nextActive?: boolean,
 ) {
-  return cn(
-    rejected && "bg-[var(--fab-timeline-rejected)]/50",
-    completed && !rejected && "bg-[var(--fab-timeline-complete)]/50",
-    active && !completed && !rejected && "bg-[var(--fab-timeline-active)]/50",
-    !completed && !rejected && !active && "bg-[var(--fab-border-md)]",
-  );
+  if (nextRejected) return "bg-[var(--fab-timeline-rejected)]/50";
+  if (nextCompleted) return "bg-[var(--fab-timeline-complete)]/50";
+  if (nextActive) return "bg-[var(--fab-timeline-active)]/50";
+  return "bg-[var(--fab-border-md)]";
 }
 
 export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
@@ -87,13 +85,17 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                 {!isLast && (
                   <div
                     className={cn(
-                      "my-5 w-px flex-1",
-                      connectorCn(step.completed, step.rejected, step.active),
+                      "w-px min-h-8 flex-1",
+                      connectorCn(
+                        steps[index + 1].completed,
+                        steps[index + 1].rejected,
+                        steps[index + 1].active,
+                      ),
                     )}
                   />
                 )}
               </div>
-              <div className={cn("min-w-0 flex-1", !isLast && "pb-3")}>
+              <div className={cn("min-w-0 flex-1", !isLast && "pb-6")}>
                 <h4 className="flex h-9 items-center text-sm font-semibold leading-tight text-[var(--fab-text-primary)]">
                   {step.title}
                 </h4>
@@ -126,7 +128,11 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                   <div
                     className={cn(
                       "mt-4 h-0.5 min-w-12 flex-1 rounded-full sm:mt-5 sm:min-w-20",
-                      connectorCn(step.completed, step.rejected, step.active),
+                      connectorCn(
+                        steps[index + 1].completed,
+                        steps[index + 1].rejected,
+                        steps[index + 1].active,
+                      ),
                     )}
                   />
                 )}

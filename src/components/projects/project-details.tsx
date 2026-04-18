@@ -198,7 +198,7 @@ export function ProjectDetails({
             project.status === "rejected" || project.status === "cancelled",
         },
         {
-          title: "Project execution",
+          title: "Fabrication",
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
@@ -211,6 +211,8 @@ export function ProjectDetails({
           active: project.status === "approved",
           completed:
             project.status === "completed" || project.status === "paid",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
         },
         {
           title: "Payment",
@@ -226,7 +228,7 @@ export function ProjectDetails({
               : project.status === "completed"
                 ? "Waiting"
                 : "—",
-          active: project.status === "completed" && !project.receipt,
+          active: project.status === "completed",
           completed: project.status === "paid",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
