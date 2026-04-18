@@ -14,7 +14,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Plus,
   Calendar as CalendarIcon,
 } from "lucide-react";
 
@@ -195,10 +194,24 @@ export function ProjectCalendarView() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          <Button variant="default" size="sm" className="h-8 gap-1">
-            <Plus className="h-4 w-4" />
-            Add Usage
-          </Button>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium text-muted-foreground">
+              {format(new Date(), "hh:mm a")}
+            </span>
+            <div className="h-3 w-px bg-border" />
+            <span className="font-semibold">
+              {new Set([
+                ...filteredResourceUsages.map((u) => u.projectId),
+                ...filteredServiceUsages.map((u) => u.projectId),
+              ].filter(Boolean)).size}
+            </span>
+            <span className="text-muted-foreground">
+              {new Set([
+                ...filteredResourceUsages.map((u) => u.projectId),
+                ...filteredServiceUsages.map((u) => u.projectId),
+              ].filter(Boolean)).size === 1 ? "project" : "projects"} today
+            </span>
+          </div>
         </div>
 
         {/* Table content */}

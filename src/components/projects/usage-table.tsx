@@ -11,13 +11,6 @@ import { Card } from "@/components/ui/card";
 
 import { cn } from "@/lib/utils";
 import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,19 +20,34 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-/**
- * Interface representing a Machine (Resource) in the system.
- */
+// ─── Shared layout constants ─────────────────────────────────────────────────
+const ROW_HEIGHT = 40; // px — every machine row
+const SECTION_HEIGHT = 26; // px — section divider rows
+const DAY_START = 9; // 9:00 AM
+const DAY_END = 18; // 6:00 PM
+const TOTAL_SLOTS = (DAY_END - DAY_START) * 2; // 18 bookable half-hour slots
+const RESOURCES_COL_WIDTH = 160; // px — sticky left column
+
+/** Header slots: 9:00, 9:30, …, 17:30, 18:00 — includes 6 PM boundary label */
+const HEADER_SLOTS = Array.from(
+  { length: TOTAL_SLOTS + 1 },
+  (_, i) => DAY_START + i * 0.5,
+);
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type MachineStatus = "active" | "maintenance" | "free";
+
+/** Interface representing a Machine (Resource) in the system. */
 export interface Machine {
   id: string;
   name: string;
   status: typeof ResourceStatus.AVAILABLE | typeof ResourceStatus.UNAVAILABLE;
   description: string;
+  /** Optional group label for section dividers */
+  group?: string;
 }
 
-/**
- * Interface representing a Machine Usage (Booking).
- */
+/** Interface representing a Machine Usage (Booking). */
 export interface MachineUsage {
   id: string;
   machineId: string;
@@ -55,7 +63,12 @@ export interface MachineUsage {
   date: number; // Unix timestamp (seconds)
   startTime: number; // Decimal hours (e.g., 7.5 for 07:30)
   endTime: number;
-  color?: string; // Optional UI specific field for category differentiation
+  color?: string;
+}
+
+interface MachineSection {
+  label: string;
+  machines: Machine[];
 }
 
 interface UsageTableProps {
@@ -63,14 +76,23 @@ interface UsageTableProps {
   usages: MachineUsage[];
 }
 
-/**
- * Generates 30-minute intervals from 09:00 to 18:00
- */
-const SLOTS = Array.from({ length: 19 }, (_, i) => 9 + i * 0.5);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Formats a decimal hour into a readable time string
- */
+function getMachineStatus(
+  machine: Machine,
+  usages: MachineUsage[],
+  nowDecimal: number,
+): MachineStatus {
+  if (machine.status === ResourceStatus.UNAVAILABLE) return "maintenance";
+  const active = usages.find(
+    (u) =>
+      u.machineId === machine.id &&
+      u.startTime <= nowDecimal &&
+      u.endTime > nowDecimal,
+  );
+  return active ? "active" : "free";
+}
+
 const formatDecimalTime = (decimalHour: number) => {
   const hours = Math.floor(decimalHour);
   const minutes = (decimalHour % 1) * 60;
@@ -110,145 +132,363 @@ function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
   return tracks.length > 0 ? tracks : [[]];
 }
 
+// ─── Main UsageTable component ────────────────────────────────────────────────
 export function UsageTable({ machines, usages }: UsageTableProps) {
+  // Live time — updates every 60 s
+  const [nowDate, setNowDate] = React.useState<Date>(() => new Date());
+  const nowDecimal = nowDate.getHours() + nowDate.getMinutes() / 60;
+
+  React.useEffect(() => {
+    const tick = setInterval(() => setNowDate(new Date()), 60_000);
+    return () => clearInterval(tick);
+  }, []);
+
+  // Total unique projects scheduled today
+  const totalProjects = React.useMemo(
+    () => new Set(usages.map((u) => u.projectId).filter(Boolean)).size,
+    [usages],
+  );
+
+  // Group machines by optional `group` field
+  const sections: MachineSection[] = React.useMemo(() => {
+    const grouped = new Map<string, Machine[]>();
+    for (const m of machines) {
+      const key = m.group ?? "";
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(m);
+    }
+    return Array.from(grouped.entries()).map(([label, ms]) => ({
+      label,
+      machines: ms,
+    }));
+  }, [machines]);
+
+  // Live indicator values
+  const nowInRange = nowDecimal >= DAY_START && nowDecimal < DAY_END;
+  const currentSlotIdx = Math.floor((nowDecimal - DAY_START) * 2);
+  // Fraction across the slot grid for the now-line
+  const nowFraction = nowInRange
+    ? (nowDecimal - DAY_START) / (DAY_END - DAY_START)
+    : null;
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
-      {/* Desktop Table View (Visible on md and up) */}
-      <div className="hidden md:block bg-background relative text-xs max-h-full overflow-y-auto overflow-x-hidden px-4">
-        <table className="w-full caption-bottom border-collapse table-fixed">
-          <TableHeader className="sticky top-0 z-40 shadow-sm bg-muted">
-            <TableRow className="hover:bg-transparent bg-muted h-10">
-              <TableHead className="w-28 sticky left-0 top-0 z-50 bg-muted border-b border-r font-bold h-10">
-                Machines
-              </TableHead>
-              {SLOTS.map((slot) => (
-                <TableHead
-                  key={slot}
-                  className="text-left pl-1 font-semibold border-b border-r sticky top-0 z-40 bg-muted h-10 whitespace-nowrap"
+      {/* ── Desktop view ──────────────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-col flex-1 overflow-hidden">
+        {/* Scrollable table — fills remaining space */}
+        <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
+          {/* Now-line — spans full scrollable height, positioned via calc */}
+          {nowFraction !== null && (
+            <div
+              aria-label="Now indicator"
+              style={{
+                position: "absolute",
+                left: `calc(${RESOURCES_COL_WIDTH}px + (100% - ${RESOURCES_COL_WIDTH}px) * ${nowFraction})`,
+                top: 0,
+                bottom: 0,
+                width: 2,
+                background: "var(--fab-magenta)",
+                zIndex: 6,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: -1,
+                  left: -4,
+                  width: 0,
+                  height: 0,
+                  borderLeft: "5px solid transparent",
+                  borderRight: "5px solid transparent",
+                  borderTop: "7px solid var(--fab-magenta)",
+                }}
+              />
+            </div>
+          )}
+
+          {/* Table: table-fixed + w-full fills the container width */}
+          <table
+            style={{
+              width: "100%",
+              tableLayout: "fixed",
+              borderCollapse: "collapse",
+              fontSize: 12,
+            }}
+          >
+            {/* Sticky time header */}
+            <thead>
+              <tr
+                style={{
+                  height: 44,
+                  background: "var(--fab-bg-sidebar)",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 10,
+                }}
+              >
+                {/* Resources column header */}
+                <th
+                  style={{
+                    width: RESOURCES_COL_WIDTH,
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 20,
+                    background: "var(--fab-bg-sidebar)",
+                    borderBottom: "1px solid var(--fab-border-md)",
+                    borderRight: "1px solid var(--fab-border-md)",
+                    textAlign: "left",
+                    paddingLeft: 12,
+                    fontWeight: 700,
+                    fontSize: 10,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--fab-text-muted)",
+                  }}
                 >
-                  {formatShortTime(slot)}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {machines.map((machine) => {
-              const machineUsages = usages.filter(
-                (u) => u.machineId === machine.id,
-              );
-              const tracks = computeTracks(machineUsages);
+                  RESOURCES
+                </th>
 
-              return (
-                <React.Fragment key={machine.id}>
-                  {tracks.map((track, trackIdx) => (
-                    <TableRow
-                      key={`${machine.id}-track-${trackIdx}`}
-                      className="hover:bg-transparent h-16 max-h-16 overflow-hidden"
+                {/* Slot header cells */}
+                {HEADER_SLOTS.map((slot, i) => {
+                  const isHighlighted = nowInRange && i === currentSlotIdx;
+                  const isHour = slot % 1 === 0;
+                  return (
+                    <th
+                      key={slot}
+                      style={{
+                        background: isHighlighted
+                          ? "rgba(157,26,88,0.06)"
+                          : "var(--fab-bg-sidebar)",
+                        borderBottom: "1px solid var(--fab-border-md)",
+                        borderLeft: "1px solid var(--fab-border)",
+                        textAlign: "left",
+                        paddingLeft: 4,
+                        overflow: "hidden",
+                        fontSize: 10,
+                        fontWeight: isHighlighted ? 700 : 500,
+                        color: isHighlighted
+                          ? "var(--fab-magenta)"
+                          : "var(--fab-text-muted)",
+                        whiteSpace: "nowrap",
+                      }}
                     >
-                      {trackIdx === 0 && (
-                        <TableCell
-                          rowSpan={tracks.length}
-                          className="sticky left-0 z-20 bg-background border-b border-r font-semibold shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs whitespace-normal break-words p-0 h-16 max-h-16 overflow-hidden w-28"
-                        >
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <button
-                                className="w-full h-full p-1.5 flex items-start gap-1.5 text-left hover:bg-muted/50 transition-colors"
-                                title="View Resource Details"
+                      {isHour ? formatShortTime(slot) : ""}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+
+            <tbody>
+              {sections.map((section) => (
+                <React.Fragment key={section.label || "__default"}>
+                  {/* Section divider — spans all columns */}
+                  {section.label && (
+                    <tr style={{ height: SECTION_HEIGHT }}>
+                      <td
+                        colSpan={TOTAL_SLOTS + 2}
+                        style={{
+                          background: "rgba(220,215,245,0.55)",
+                          borderTop: "1px solid var(--fab-border-md)",
+                          borderBottom: "1px solid var(--fab-border-md)",
+                          paddingLeft: 12,
+                          fontWeight: 700,
+                          fontSize: 9,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: "var(--fab-text-dim)",
+                        }}
+                      >
+                        {section.label}
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Machine rows */}
+                  {section.machines.map((machine) => {
+                    const machineUsages = usages.filter(
+                      (u) => u.machineId === machine.id,
+                    );
+                    const tracks = computeTracks(machineUsages);
+                    const status = getMachineStatus(
+                      machine,
+                      usages,
+                      nowDecimal,
+                    );
+
+                    return tracks.map((track, trackIdx) => (
+                      <tr
+                        key={`${machine.id}-${trackIdx}`}
+                        style={{ height: ROW_HEIGHT }}
+                      >
+                        {/* Resources cell — only on first track, rowSpan covers all tracks */}
+                        {trackIdx === 0 && (
+                          <td
+                            rowSpan={tracks.length}
+                            style={{
+                              position: "sticky",
+                              left: 0,
+                              zIndex: 4,
+                              background: "var(--fab-bg-main)",
+                              borderBottom: "1px solid var(--fab-border-md)",
+                              borderRight: "1px solid var(--fab-border-md)",
+                              verticalAlign: "middle",
+                              padding: 0,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 7,
+                                paddingLeft: 12,
+                                paddingRight: 8,
+                                height: "100%",
+                              }}
+                            >
+                              {/* Status dot */}
+                              <div
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: "50%",
+                                  flexShrink: 0,
+                                  background:
+                                    status === "active"
+                                      ? "var(--fab-teal)"
+                                      : status === "maintenance"
+                                        ? "var(--fab-amber)"
+                                        : "var(--fab-text-dim)",
+                                  animation:
+                                    status === "active"
+                                      ? "dotPulse 2.2s ease infinite"
+                                      : "none",
+                                }}
+                              />
+                              {/* Machine name */}
+                              <span
+                                style={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  fontSize: 11.5,
+                                  color: "var(--fab-text-primary)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
                               >
-                                <div
-                                  className={cn(
-                                    "mt-1 h-2 w-2 rounded-full shrink-0",
-                                    machine.status === ResourceStatus.AVAILABLE
-                                      ? "bg-emerald-500"
-                                      : "bg-red-500",
-                                  )}
-                                />
-                                <span className="leading-tight">
-                                  {machine.name}
+                                {machine.name}
+                              </span>
+                              {/* Status badge */}
+                              {status !== "free" && (
+                                <span
+                                  style={{
+                                    fontWeight: 700,
+                                    fontSize: 9,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.04em",
+                                    padding: "1px 5px",
+                                    borderRadius: 3,
+                                    flexShrink: 0,
+                                    background:
+                                      status === "active"
+                                        ? "var(--fab-teal-light)"
+                                        : "var(--fab-amber-light)",
+                                    color:
+                                      status === "active"
+                                        ? "var(--fab-teal)"
+                                        : "var(--fab-amber)",
+                                  }}
+                                >
+                                  {status === "active" ? "On" : "Maint"}
                                 </span>
-                              </button>
-                            </DialogTrigger>
-                            <MachineDetailsDialog machine={machine} />
-                          </Dialog>
-                        </TableCell>
-                      )}
+                              )}
+                            </div>
+                          </td>
+                        )}
 
-                      {SLOTS.map((slot, index) => {
-                        const usage = track.find((u) => u.startTime === slot);
+                        {/* Slot cells */}
+                        {HEADER_SLOTS.map((slot, i) => {
+                          const usage = track.find((u) => u.startTime === slot);
 
-                        if (usage) {
-                          const durationInSlots =
-                            (usage.endTime - usage.startTime) / 0.5;
-                          const clampedColSpan = Math.min(
-                            durationInSlots,
-                            SLOTS.length - index,
+                          if (usage) {
+                            const durationSlots =
+                              (usage.endTime - usage.startTime) / 0.5;
+                            const clampedColSpan = Math.min(
+                              durationSlots,
+                              TOTAL_SLOTS - i,
+                            );
+                            const isPending = usage.projectStatus === "pending";
+
+                            return (
+                              <td
+                                key={slot}
+                                colSpan={clampedColSpan}
+                                style={{
+                                  padding: "3px 2px",
+                                  borderBottom:
+                                    "1px solid var(--fab-border-soft)",
+                                  borderLeft: "1px solid var(--fab-border)",
+                                  height: ROW_HEIGHT,
+                                }}
+                              >
+                                <ProjectDetails
+                                  projectId={usage.projectId as Id<"projects">}
+                                  trigger={
+                                    <Card
+                                      className={cn(
+                                        "h-full border shadow-sm rounded-md px-2 py-1 flex items-center justify-center overflow-hidden transition-all cursor-pointer hover:ring-2 hover:ring-primary/20",
+                                        usage.color ||
+                                          "bg-blue-500/10 border-blue-500 text-blue-700",
+                                        isPending &&
+                                          "border-dashed border-2 opacity-80",
+                                      )}
+                                    >
+                                      <span className="font-semibold text-xs leading-tight truncate w-full text-center">
+                                        {usage.projectAlias}
+                                      </span>
+                                    </Card>
+                                  }
+                                />
+                              </td>
+                            );
+                          }
+
+                          const isCovered = track.some(
+                            (u) => slot > u.startTime && slot < u.endTime,
                           );
+                          if (isCovered) return null;
 
-                          const isPending = usage.projectStatus === "pending";
+                          const isHighlightedSlot =
+                            nowInRange && i === currentSlotIdx;
+                          // 6 PM boundary cell — label only, no content
+                          const isBoundary = slot >= DAY_END;
 
                           return (
-                            <TableCell
-                              key={`${machine.id}-track-${trackIdx}-${slot}`}
-                              className="p-0.5 border-b border-r bg-muted/5 align-top h-16 max-h-16 overflow-hidden"
-                              colSpan={clampedColSpan}
-                            >
-                              <ProjectDetails
-                                projectId={usage.projectId as Id<"projects">}
-                                trigger={
-                                  <Card
-                                    className={cn(
-                                      "h-full border shadow-sm rounded-md px-2 py-1 flex items-center justify-center overflow-hidden transition-all cursor-pointer hover:ring-2 hover:ring-primary/20",
-                                      usage.color ||
-                                        "bg-blue-500/10 border-blue-500 text-blue-700",
-                                      isPending &&
-                                        "border-dashed border-2 opacity-80",
-                                    )}
-                                  >
-                                    <span className="font-semibold text-sm leading-tight truncate w-full text-center">
-                                      {usage.projectAlias}
-                                    </span>
-                                  </Card>
-                                }
-                              />
-                            </TableCell>
+                            <td
+                              key={slot}
+                              style={{
+                                borderBottom:
+                                  "1px solid var(--fab-border-soft)",
+                                borderLeft: "1px solid var(--fab-border)",
+                                background: isBoundary
+                                  ? "var(--fab-bg-sidebar)"
+                                  : isHighlightedSlot
+                                    ? "rgba(181,32,79,0.03)"
+                                    : "transparent",
+                              }}
+                            />
                           );
-                        }
-
-                        const isCovered = track.some(
-                          (u) => slot > u.startTime && slot < u.endTime,
-                        );
-
-                        if (isCovered) return null;
-
-                        return (
-                          <TableCell
-                            key={`${machine.id}-track-${trackIdx}-${slot}`}
-                            className="group relative p-0.5 border-b border-r h-16 max-h-16 overflow-hidden transition-colors hover:bg-muted/10"
-                          >
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="opacity-0 group-hover:opacity-100 absolute inset-2 h-auto text-[10px] font-semibold text-muted-foreground gap-1 border-dashed border-2 hover:bg-background hover:text-primary transition-all duration-200"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                  Add Usage
-                                </Button>
-                              </DialogTrigger>
-                              <AddUsageDialog machine={machine} slot={slot} />
-                            </Dialog>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
+                        })}
+                      </tr>
+                    ));
+                  })}
                 </React.Fragment>
-              );
-            })}
-          </TableBody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Mobile View (Visible below md) */}
@@ -283,18 +523,15 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                   </DialogTrigger>
                   <MachineDetailsDialog machine={machine} />
                 </Dialog>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </DialogTrigger>
-                  <AddUsageDialog machine={machine} />
-                </Dialog>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[11px] text-muted-foreground">
+                    {format(nowDate, "hh:mm a")}
+                  </span>
+                  <span className="text-[10px] font-semibold text-muted-foreground/60 border rounded px-1.5 py-0.5">
+                    {totalProjects}{" "}
+                    {totalProjects === 1 ? "project" : "projects"}
+                  </span>
+                </div>
               </div>
 
               {/* Usage rows */}
