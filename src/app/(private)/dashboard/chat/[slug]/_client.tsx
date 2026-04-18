@@ -4,7 +4,7 @@ import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat/chat-interface";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, HashIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 export function ChatRoomClient({
@@ -32,17 +32,77 @@ export function ChatRoomClient({
               showBackButton={true}
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground/60">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <ArrowLeftIcon className="h-6 w-6" />
+            <div
+              className="relative flex h-full flex-col items-center justify-center overflow-hidden p-8 text-center"
+              style={{ background: "var(--fab-bg-main)" }}
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(var(--fab-grid) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--fab-grid) 1px, transparent 1px)
+                  `,
+                  backgroundSize: "28px 28px",
+                }}
+              />
+              <div
+                className="relative flex max-w-md flex-col items-center rounded-[28px] px-8 py-10"
+                style={{
+                  background: "var(--fab-chat-empty-card)",
+                  border: "1px solid var(--fab-border-md)",
+                  boxShadow: `0 20px 60px var(--fab-chat-empty-glow)`,
+                }}
+              >
+                <div className="mb-5 flex items-center gap-3">
+                  <div
+                    className="flex size-12 items-center justify-center rounded-2xl"
+                    style={{ background: "var(--fab-amber-light)" }}
+                  >
+                    <HashIcon
+                      className="h-5 w-5"
+                      style={{ color: "var(--fab-amber)" }}
+                    />
+                  </div>
+                  <div
+                    className="flex size-12 items-center justify-center rounded-2xl"
+                    style={{ background: "var(--fab-magenta-light)" }}
+                  >
+                    <ArrowLeftIcon
+                      className="h-5 w-5"
+                      style={{ color: "var(--fab-magenta)" }}
+                    />
+                  </div>
+                </div>
+                <span
+                  className="mb-3 text-[11px] font-black uppercase tracking-[0.18em]"
+                  style={{
+                    color: "var(--fab-amber)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  Select a conversation
+                </span>
+                <h3
+                  className="font-mono mb-3 text-2xl font-semibold"
+                  style={{
+                    color: "var(--fab-text-primary)",
+                  }}
+                >
+                  No thread selected
+                </h3>
+                <p
+                  className="max-w-sm text-sm leading-6"
+                  style={{
+                    color: "var(--fab-text-muted)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  Pick a thread from the sidebar to read updates, reply to your
+                  team, or jump back into the conversation.
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-foreground/80 mb-2">
-                No thread selected
-              </h3>
-              <p className="text-sm max-w-sm">
-                Select a thread from the sidebar to view messages or join the
-                conversation.
-              </p>
             </div>
           )}
         </div>

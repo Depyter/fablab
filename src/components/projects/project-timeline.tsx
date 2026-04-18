@@ -31,16 +31,19 @@ function StepDot({
     <div
       className={cn(
         "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-background shadow-sm sm:h-10 sm:w-10",
-        completed && !rejected && "border-chart-6 bg-secondary/10 text-chart-6",
-        rejected && "border-red-500 bg-red-50 text-red-500",
+        completed &&
+          !rejected &&
+          "border-[var(--fab-timeline-complete)] bg-[var(--fab-timeline-complete-soft)] text-[var(--fab-timeline-complete)]",
+        rejected &&
+          "border-[var(--fab-timeline-rejected)] bg-[var(--fab-timeline-rejected-soft)] text-[var(--fab-timeline-rejected)]",
         active &&
           !completed &&
           !rejected &&
-          "border-primary bg-primary-muted text-primary",
+          "border-[var(--fab-timeline-active)] bg-[var(--fab-timeline-active-soft)] text-[var(--fab-timeline-active)]",
         !active &&
           !completed &&
           !rejected &&
-          "border-muted-foreground/20 bg-muted text-muted-foreground",
+          "border-[var(--fab-border-md)] bg-[var(--fab-bg-sidebar)] text-[var(--fab-text-dim)]",
       )}
     >
       {rejected ? (
@@ -63,21 +66,23 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
         <button
           type="button"
           onClick={() => setMobileOpen((prev) => !prev)}
-          className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-left"
+          className="flex w-full items-center justify-between rounded-lg border border-[var(--fab-border-md)] bg-background px-3 py-2 text-left"
         >
           <div>
-            <p className="text-sm font-semibold">Project Timeline</p>
+            <p className="text-sm font-semibold text-[var(--fab-text-primary)]">
+              Project Timeline
+            </p>
           </div>
           <ChevronDown
             className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform",
+              "h-4 w-4 text-[var(--fab-text-dim)] transition-transform",
               mobileOpen && "rotate-180",
             )}
           />
         </button>
 
         {mobileOpen && (
-          <div className="mt-3 rounded-xl border bg-background p-3">
+          <div className="mt-3 rounded-xl border border-[var(--fab-border-md)] bg-background p-3">
             <div className="space-y-0">
               {steps.map((step, index) => {
                 const isLast = index === steps.length - 1;
@@ -90,27 +95,48 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                         rejected={step.rejected}
                       />
                       {!isLast && (
-                        <div className="my-2 h-full w-px flex-1 bg-muted-foreground/20" />
+                        <div
+                          className={cn(
+                            "my-2 h-full w-px flex-1 bg-[var(--fab-border-md)]",
+                            step.rejected &&
+                              "bg-[var(--fab-timeline-rejected)]/35",
+                            step.completed &&
+                              !step.rejected &&
+                              "bg-[var(--fab-timeline-complete)]/35",
+                            step.active &&
+                              !step.completed &&
+                              !step.rejected &&
+                              "bg-[var(--fab-timeline-active)]/35",
+                          )}
+                        />
                       )}
                     </div>
 
                     <div className="min-w-0 flex-1 pb-4">
-                      <h4 className="text-sm font-semibold leading-tight wrap-break-word">
+                      <h4 className="text-sm font-semibold leading-tight text-[var(--fab-text-primary)] wrap-break-word">
                         {step.title}
                       </h4>
                       <p
                         className={cn(
                           "text-xs",
-                          step.completed && "text-chart-6",
-                          step.active && !step.completed && "text-primary",
+                          step.rejected &&
+                            "text-[var(--fab-timeline-rejected)]",
+                          step.completed &&
+                            !step.rejected &&
+                            "text-[var(--fab-timeline-complete)]",
+                          step.active &&
+                            !step.completed &&
+                            !step.rejected &&
+                            "text-[var(--fab-timeline-active)]",
                           !step.active &&
                             !step.completed &&
-                            "text-muted-foreground",
+                            !step.rejected &&
+                            "text-[var(--fab-text-muted)]",
                         )}
                       >
                         {step.statusLabel}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[var(--fab-text-dim)]">
                         By: {step.byLabel}
                       </p>
                     </div>
@@ -140,17 +166,25 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                   />
 
                   <div className="mt-3 space-y-1">
-                    <h4 className="text-[11px] font-semibold leading-tight sm:text-sm wrap-break-word">
+                    <h4 className="text-[11px] font-semibold leading-tight text-[var(--fab-text-primary)] sm:text-sm wrap-break-word">
                       {step.title}
                     </h4>
                     <p
                       className={cn(
                         "text-[10px] sm:text-xs",
-                        step.completed && "text-chart-6",
-                        step.active && !step.completed && "text-primary",
+                        step.rejected &&
+                          "text-[var(--fab-timeline-rejected)]",
+                        step.completed &&
+                          !step.rejected &&
+                          "text-[var(--fab-timeline-complete)]",
+                        step.active &&
+                          !step.completed &&
+                          !step.rejected &&
+                          "text-[var(--fab-timeline-active)]",
                         !step.active &&
                           !step.completed &&
-                          "text-muted-foreground",
+                          !step.rejected &&
+                          "text-[var(--fab-text-muted)]",
                       )}
                     >
                       {step.statusLabel}
@@ -162,9 +196,16 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
                   <div className="mt-4 min-w-12 flex-1 sm:mt-5 sm:min-w-20">
                     <div
                       className={cn(
-                        "h-0.5 rounded-full bg-muted-foreground/20",
-                        step.completed && "bg-chart-6/70",
-                        step.active && !step.completed && "bg-primary/70",
+                        "h-0.5 rounded-full bg-[var(--fab-border-md)]",
+                        step.rejected &&
+                          "bg-[var(--fab-timeline-rejected)]/70",
+                        step.completed &&
+                          !step.rejected &&
+                          "bg-[var(--fab-timeline-complete)]/70",
+                        step.active &&
+                          !step.completed &&
+                          !step.rejected &&
+                          "bg-[var(--fab-timeline-active)]/70",
                       )}
                     />
                   </div>

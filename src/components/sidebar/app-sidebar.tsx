@@ -12,9 +12,6 @@ import {
   WrenchIcon,
   PackageIcon,
   BarChart2Icon,
-  TrendingUpIcon,
-  ActivityIcon,
-  DownloadIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -36,6 +33,8 @@ type NavItem = {
   title: string;
   url: string;
   icon: React.ReactNode;
+  iconBackground: string;
+  iconColor: string;
   roles: Role[];
   group: "main" | "manage" | "reports";
 };
@@ -46,6 +45,8 @@ const allNavItems: NavItem[] = [
     title: "Messages",
     url: "/dashboard/chat",
     icon: <MessageSquareIcon />,
+    iconBackground: "var(--fab-magenta-light)",
+    iconColor: "var(--fab-magenta)",
     roles: ["admin", "maker", "client"],
     group: "main",
   },
@@ -53,6 +54,8 @@ const allNavItems: NavItem[] = [
     title: "Projects",
     url: "/dashboard/projects",
     icon: <FolderIcon />,
+    iconBackground: "var(--fab-bg-main)",
+    iconColor: "var(--chart-4)",
     roles: ["admin", "maker", "client"],
     group: "main",
   },
@@ -61,6 +64,8 @@ const allNavItems: NavItem[] = [
     title: "Services",
     url: "/dashboard/services",
     icon: <WrenchIcon />,
+    iconBackground: "var(--fab-timeline-complete-soft)",
+    iconColor: "var(--fab-teal)",
     roles: ["admin", "maker"],
     group: "manage",
   },
@@ -68,6 +73,8 @@ const allNavItems: NavItem[] = [
     title: "Inventory",
     url: "/dashboard/inventory",
     icon: <PackageIcon />,
+    iconBackground: "var(--fab-amber-light)",
+    iconColor: "var(--fab-amber)",
     roles: ["admin", "maker"],
     group: "manage",
   },
@@ -76,6 +83,8 @@ const allNavItems: NavItem[] = [
     title: "Reports",
     url: "#",
     icon: <BarChart2Icon />,
+    iconBackground: "var(--fab-bg-deep)",
+    iconColor: "var(--fab-text-muted)",
     roles: ["admin", "maker"],
     group: "reports",
   },
@@ -170,7 +179,7 @@ export function AppSidebar({
                 <Separator style={{ background: "var(--fab-border-md)" }} />
               </div>
             )}
-            <SidebarGroup>
+            <SidebarGroup className="py-0">
               <SidebarGroupContent className="px-1.5 md:px-0">
                 <SidebarMenu>
                   {group.items.map((item) => {
@@ -185,7 +194,15 @@ export function AppSidebar({
                           isActive={isActive}
                           className="px-2.5 md:px-2"
                         >
-                          <Link href={item.url}>
+                          <Link
+                            href={item.url}
+                            style={
+                              {
+                                "--sidebar-icon-bg": item.iconBackground,
+                                "--sidebar-icon-color": item.iconColor,
+                              } as React.CSSProperties
+                            }
+                          >
                             {item.icon}
                             <span>{item.title}</span>
                           </Link>

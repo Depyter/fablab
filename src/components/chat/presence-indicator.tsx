@@ -89,7 +89,7 @@ export function PresenceIndicator({
                   className="text-[9px] font-black leading-none select-none"
                   style={{
                     color: "var(--fab-text-muted)",
-                    fontFamily: "var(--font-display)",
+                    fontFamily: "var(--font-body)",
                   }}
                 >
                   {getInitials(presence.userId)}
@@ -104,7 +104,7 @@ export function PresenceIndicator({
               className="text-[9px] font-black leading-none"
               style={{
                 color: "var(--fab-text-muted)",
-                fontFamily: "var(--font-display)",
+                fontFamily: "var(--font-body)",
               }}
             >
               +{overflow}
@@ -129,7 +129,7 @@ export function PresenceIndicator({
           className="text-[9px] font-black uppercase tracking-[0.15em] opacity-40"
           style={{
             color: "var(--fab-text-muted)",
-            fontFamily: "var(--font-display)",
+            fontFamily: "var(--font-body)",
           }}
         >
           {online.length}

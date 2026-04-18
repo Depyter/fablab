@@ -209,7 +209,7 @@ export function FileAttachmentCard({
               "text-[9px] font-black uppercase tracking-[0.15em] opacity-70",
               isCurrentUser ? "text-white/90" : "text-muted-foreground",
             )}
-            style={{ fontFamily: "var(--font-display)" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             {label}
           </span>

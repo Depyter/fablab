@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -11,8 +10,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-mono);
   --font-mono: var(--font-mono);
-  --font-display: "Syne", sans-serif;
-  --font-body: "DM Sans", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -67,12 +64,37 @@
   --fab-magenta-light: #fcedf2;
   --fab-amber: #ebaa57;
   --fab-amber-light: #fef3dc;
+  --fab-timeline-complete: var(--fab-teal);
+  --fab-timeline-complete-soft: color-mix(in srgb, var(--fab-teal) 18%, white);
+  --fab-timeline-active: var(--fab-amber);
+  --fab-timeline-active-soft: var(--fab-amber-light);
+  --fab-timeline-rejected: var(--fab-magenta);
+  --fab-timeline-rejected-soft: var(--fab-magenta-light);
   --fab-text-primary: #14112b;
   --fab-text-muted: #5a5478;
   --fab-text-dim: #9d99b8;
   --fab-border: rgba(80, 60, 160, 0.1);
   --fab-border-md: rgba(80, 60, 160, 0.15);
   --fab-grid: rgba(100, 80, 200, 0.06);
+  --fab-sidebar-hover: color-mix(in srgb, var(--fab-bg-main) 88%, white);
+  --fab-sidebar-active: color-mix(
+    in srgb,
+    var(--fab-magenta-light) 72%,
+    var(--fab-bg-main)
+  );
+  --fab-chat-thread-hover: color-mix(
+    in srgb,
+    var(--fab-amber-light) 20%,
+    var(--fab-bg-main)
+  );
+  --fab-chat-empty-card: color-mix(in srgb, var(--fab-bg-card) 84%, white);
+  --fab-chat-empty-glow: color-mix(in srgb, var(--fab-amber) 14%, transparent);
+  --fab-chat-system-bg: color-mix(in srgb, var(--fab-bg-sidebar) 52%, white);
+  --fab-chat-system-pill: color-mix(
+    in srgb,
+    var(--fab-magenta-light) 48%,
+    var(--fab-bg-main)
+  );
 
   /* ── shadcn overrides ────────────────────────────────────────────────── */
   --background: #f0eeff;
@@ -81,8 +103,8 @@
   --card-foreground: #14112b;
   --popover: #ffffff;
   --popover-foreground: #14112b;
-  --primary: #0fa896;
-  --primary-muted: #e0f6f3;
+  --primary: #9d1a58;
+  --primary-muted: #9d1a58;
   --primary-foreground: #ffffff;
   --secondary: #e8e4fb;
   --secondary-muted: #f0eeff;
@@ -107,7 +129,7 @@
   --sidebar-foreground: #14112b;
   --sidebar-primary: #0fa896;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #dddaf5;
+  --sidebar-accent: var(--fab-sidebar-hover);
   --sidebar-accent-foreground: #14112b;
   --sidebar-border: rgba(80, 60, 160, 0.15);
   --sidebar-ring: #0fa896;
@@ -145,6 +167,13 @@
   --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --fab-timeline-complete-soft: color-mix(in srgb, var(--fab-teal) 22%, black);
+  --fab-timeline-active-soft: color-mix(in srgb, var(--fab-amber) 20%, black);
+  --fab-timeline-rejected-soft: color-mix(
+    in srgb,
+    var(--fab-magenta) 24%,
+    black
+  );
 }
 
 @layer base {

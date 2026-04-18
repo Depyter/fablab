@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Send, User, Hash, Settings2, ArrowLeft } from "lucide-react";
+import { Loader2, Send, User, Hash, ArrowLeft } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
@@ -16,8 +16,8 @@ import ReactMarkdown from "react-markdown";
 import { MessageAttachments } from "./parts/message-attachments";
 import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
 import { PresenceIndicator } from "./presence-indicator";
-import { RoomSettingsDialog } from "./room-settings-dialog";
 import { ChatInterfaceProps, MessageFile } from "./types";
+import Image from "next/image";
 
 const AVATAR_COLORS = [
   "var(--fab-magenta)",
@@ -63,9 +63,8 @@ function ThreadTitle({
         />
       </div>
       <span
-        className="text-[14px] font-black uppercase tracking-wider truncate"
+        className="font-mono text-[18px] font-semibold truncate"
         style={{
-          fontFamily: "var(--font-display)",
           color: "var(--fab-text-primary)",
         }}
       >
@@ -146,29 +145,6 @@ export function ChatInterface({
             roomId={roomId}
           />
         )}
-
-        {/* Settings */}
-        <RoomSettingsDialog
-          roomId={roomId}
-          roomName=""
-          trigger={
-            <button
-              aria-label="Room settings"
-              className="flex items-center justify-center h-8 w-8 rounded-[7px] transition-colors shrink-0"
-              style={{ color: "var(--fab-text-dim)" }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.background =
-                  "rgba(80,60,160,0.08)")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.background =
-                  "transparent")
-              }
-            >
-              <Settings2 className="h-4 w-4" />
-            </button>
-          }
-        />
       </div>
       {/* ── Grid background ───────────────────────────────────────────────── */}
       <div
@@ -189,7 +165,7 @@ export function ChatInterface({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-4 relative z-[2]"
+        className="flex-1 overflow-y-auto px-4 py-4 relative z-2"
       >
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
@@ -289,12 +265,12 @@ export function ChatInterface({
                     style={{ background: "var(--fab-teal)" }}
                   />
                   <span
-                    className="rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm"
+                    className="rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em]"
                     style={{
-                      background: "var(--fab-magenta-light)",
-                      border: "1px solid var(--fab-magenta-light)",
+                      background: "var(--fab-chat-system-pill)",
+                      border: "1px solid var(--fab-border)",
                       color: "var(--fab-magenta)",
-                      fontFamily: "var(--font-display)",
+                      fontFamily: "var(--font-body)",
                     }}
                   >
                     {new Date(message._creationTime).toLocaleDateString([], {
@@ -313,29 +289,89 @@ export function ChatInterface({
               // ── System message ─────────────────────────────────────────
               if (message.sender === "System") {
                 return (
-                  <div
-                    key={message._id}
-                    className={cn(
-                      "flex flex-col message-enter",
-                      isFirstInGroup && !showSeparator ? "mt-6" : "mt-1",
-                    )}
-                  >
+                  <div key={message._id}>
                     {DateSeparator}
 
-                    <div className="flex justify-center">
-                      <div className="flex flex-col items-center max-w-[85%] sm:max-w-[70%]">
-                        {isFirstInGroup && (
+                    <div
+                      className={cn(
+                        "group message-enter flex items-start gap-3 rounded-sm px-4 transition-colors",
+                        isFirstInGroup ? "mt-2" : "mt-0.5",
+                      )}
+                      style={{
+                        paddingTop: isFirstInGroup ? 4 : 0,
+                        paddingBottom: isFirstInGroup ? 1 : 0,
+                      }}
+                    >
+                      <div
+                        className="w-8.5 shrink-0"
+                        style={{ marginTop: isFirstInGroup ? 2 : 0 }}
+                      >
+                        {isFirstInGroup ? (
+                          <div
+                            className="flex size-8.5 items-center justify-center overflow-hidden rounded-xl"
+                            style={{ background: "var(--fab-magenta)" }}
+                          >
+                            <Image
+                              src="/fablab.svg"
+                              alt="System"
+                              className="h-7.5 w-7.5"
+                              width="30"
+                              height="30"
+                            />
+                          </div>
+                        ) : (
                           <span
-                            className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 px-2 py-0.5 rounded-full"
+                            className="flex w-full items-center justify-end pt-1 text-[9px] leading-none tabular-nums opacity-0 transition-opacity group-hover:opacity-100"
                             style={{
                               color: "var(--fab-text-dim)",
-                              fontFamily: "var(--font-display)",
-                              background: "var(--fab-bg-sidebar)",
+                              fontFamily: "var(--font-body)",
                             }}
                           >
-                            {message.sender}
+                            {new Date(message._creationTime).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </span>
                         )}
+                      </div>
+
+                      <div className="flex max-w-2xl min-w-0 flex-1 flex-col">
+                        {isFirstInGroup ? (
+                          <div className="mb-0.5 flex items-baseline gap-2">
+                            <span
+                              className="text-[14px] font-bold leading-snug"
+                              style={{
+                                fontFamily: "var(--font-body)",
+                                color: "var(--fab-text-primary)",
+                              }}
+                            >
+                              System
+                            </span>
+                            <span
+                              className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] leading-none font-black uppercase tracking-wider text-amber-700"
+                              style={{ fontFamily: "var(--font-body)" }}
+                            >
+                              System
+                            </span>
+                            <span
+                              className="text-[11px] tabular-nums"
+                              style={{
+                                color: "var(--fab-text-dim)",
+                                fontFamily: "var(--font-body)",
+                              }}
+                            >
+                              {new Date(
+                                message._creationTime,
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        ) : null}
 
                         <div
                           onClick={() =>
@@ -343,29 +379,20 @@ export function ChatInterface({
                               showTimeId === message._id ? null : message._id,
                             )
                           }
-                          className={cn(
-                            "text-[13px] cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-sm",
-                            message.content
-                              ? "px-5 py-3 rounded-2xl"
-                              : messageFiles.length > 0
-                                ? "p-1.5 rounded-2xl"
-                                : "px-5 py-3 rounded-2xl",
-                          )}
+                          className="rounded-2xl bg-(--fab-bg-main)/50 px-4 py-3 text-sm leading-relaxed"
                           style={{
-                            background: "var(--fab-bg-sidebar)",
-                            border: "1px solid var(--fab-border-md)",
-                            color: "var(--fab-text-muted)",
+                            color: "var(--fab-text-primary)",
                             fontFamily: "var(--font-body)",
                           }}
                         >
                           {message.content && (
-                            <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-bold prose-strong:text-inherit prose-ul:my-1 prose-ol:my-1 prose-li:my-0 opacity-90">
+                            <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
                               <ReactMarkdown>{message.content}</ReactMarkdown>
                             </div>
                           )}
 
                           {messageFiles.length > 0 && (
-                            <div className={cn(message.content ? "mt-3" : "")}>
+                            <div className={cn(message.content ? "mt-2" : "")}>
                               <MessageAttachments
                                 files={messageFiles}
                                 isCurrentUser={false}
@@ -422,7 +449,7 @@ export function ChatInterface({
                   >
                     {/* Avatar column — fixed 34px width */}
                     <div
-                      className="shrink-0 w-[34px]"
+                      className="shrink-0 w-8.5"
                       style={{ marginTop: isFirstInGroup ? 2 : 0 }}
                     >
                       {isFirstInGroup ? (
@@ -469,14 +496,14 @@ export function ChatInterface({
                     </div>
 
                     {/* Content column */}
-                    <div className="flex flex-col flex-1 min-w-0 max-w-2xl">
+                    <div className="flex flex-col flex-1 min-w-0 max-w-2xl bg-(--fab-bg-main)/50">
                       {/* Header row: name + timestamp — first message in group only */}
                       {isFirstInGroup ? (
                         <div className="flex items-baseline gap-2 mb-0.5">
                           <span
                             className="text-[14px] font-bold leading-snug"
                             style={{
-                              fontFamily: "var(--font-display)",
+                              fontFamily: "var(--font-body)",
                               color: isCurrentUser
                                 ? "var(--fab-teal)"
                                 : "var(--fab-text-primary)",
@@ -500,7 +527,7 @@ export function ChatInterface({
                                     : message.senderRole === "maker"
                                       ? "var(--fab-teal)"
                                       : "var(--fab-amber)",
-                                fontFamily: "var(--font-display)",
+                                fontFamily: "var(--font-body)",
                               }}
                             >
                               {message.senderRole}

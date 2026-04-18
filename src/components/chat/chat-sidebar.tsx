@@ -92,7 +92,7 @@ export function ChatSidebar({
             className="text-[12px] font-black uppercase tracking-[0.15em]"
             style={{
               color: "var(--fab-text-primary)",
-              fontFamily: "var(--font-display)",
+              fontFamily: "var(--font-body)",
             }}
           >
             Messaging
@@ -113,7 +113,7 @@ export function ChatSidebar({
                   style={{ fontFamily: "var(--font-body)" }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background =
-                      "rgba(15, 168, 150, 0.08)")
+                      "var(--fab-chat-thread-hover)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -131,7 +131,7 @@ export function ChatSidebar({
                       )}
                     </div>
                     <span
-                      className="text-[15px] font-semibold truncate flex-1 leading-tight"
+                      className="text-[15px] font-medium font-body truncate flex-1 leading-tight"
                       style={{ color: "var(--fab-text-primary)" }}
                     >
                       {room.name}
@@ -188,7 +188,7 @@ export function ChatSidebar({
                               onMouseEnter={(e) => {
                                 if (!isThreadActive)
                                   e.currentTarget.style.background =
-                                    "rgba(15, 168, 150, 0.05)";
+                                    "var(--fab-chat-thread-hover)";
                               }}
                               onMouseLeave={(e) => {
                                 if (!isThreadActive)
@@ -210,8 +210,12 @@ export function ChatSidebar({
                                 className={cn(
                                   "text-[14px] truncate flex-1",
                                   isThreadActive && "font-bold text-foreground",
-                                  hasUnreads && !isThreadActive && "font-extrabold",
-                                  !hasUnreads && !isThreadActive && "font-medium",
+                                  hasUnreads &&
+                                    !isThreadActive &&
+                                    "font-extrabold",
+                                  !hasUnreads &&
+                                    !isThreadActive &&
+                                    "font-medium",
                                 )}
                                 style={{
                                   fontFamily: "var(--font-body)",
@@ -294,7 +298,7 @@ export function ChatSidebar({
                                       onMouseEnter={(e) => {
                                         if (!isThreadActive)
                                           e.currentTarget.style.background =
-                                            "rgba(15, 168, 150, 0.05)";
+                                            "var(--fab-chat-thread-hover)";
                                       }}
                                       onMouseLeave={(e) => {
                                         if (!isThreadActive)
@@ -313,7 +317,8 @@ export function ChatSidebar({
                                       <span
                                         className={cn(
                                           "text-[13px] truncate flex-1 opacity-70",
-                                          isThreadActive && "font-bold opacity-100",
+                                          isThreadActive &&
+                                            "font-bold opacity-100",
                                           !isThreadActive && "font-medium",
                                         )}
                                         style={{
