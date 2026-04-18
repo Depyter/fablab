@@ -49,9 +49,9 @@ A web application for managing fabrication lab services, project bookings, and c
 ### Phase 3: Operations & Dashboarding (In Progress)
 
 - [ ] **Dashboard Overview** — Replace placeholder UI with interactive summary widgets on the main dashboard.
-- [ ] **Project Management** — Project tracking (Schema defined, UI pending).
-- [ ] **Inventory Management** — Machine and material tracking (Schema defined, UI pending).
-- [ ] **Receipts & Payments** — Proof of payment tracking and receipt generation (Schema defined, mutations pending).
+- [x] **Project Management** — Project tracking.
+- [x] **Inventory Management** — Machine and material tracking.
+- [x] **Receipts & Payments** — Proof of payment tracking and receipt generation.
 
 ### Phase 4: Analytics, Notifications & QA (Planned)
 
