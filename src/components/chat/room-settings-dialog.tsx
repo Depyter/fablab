@@ -22,11 +22,13 @@ import { Label } from "@/components/ui/label";
 interface RoomSettingsDialogProps {
   roomId: Id<"rooms">;
   roomName: string;
+  trigger?: React.ReactNode;
 }
 
 export function RoomSettingsDialog({
   roomId,
   roomName,
+  trigger,
 }: RoomSettingsDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,15 +77,19 @@ export function RoomSettingsDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-sidebar-accent/50 text-sidebar-foreground/50 hover:text-sidebar-foreground z-10"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Settings className="h-3.5 w-3.5" />
-          <span className="sr-only">Manage Members</span>
-        </Button>
+        {trigger ? (
+          <>{trigger}</>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-sidebar-accent/50 text-sidebar-foreground/50 hover:text-sidebar-foreground z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            <span className="sr-only">Manage Members</span>
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent

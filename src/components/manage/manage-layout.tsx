@@ -1,8 +1,11 @@
+"use client";
+
 import React, { ReactNode } from "react";
 import { SlidersHorizontal, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/sidebar/page-header-context";
 
 // ---------------------------------------------------------------------------
 // Header
@@ -16,17 +19,21 @@ interface ManageHeaderProps {
 
 export function ManageHeader({ title, subtitle, children }: ManageHeaderProps) {
   return (
-    <div className="flex items-center gap-2 px-4 py-3 border-b shrink-0">
-      <div className="flex-1 min-w-0">
-        <h1 className="font-bold text-base leading-tight truncate">{title}</h1>
-        {subtitle && (
-          <div className="text-[11px] text-muted-foreground hidden sm:block">
-            {subtitle}
-          </div>
-        )}
+    <PageHeader>
+      <div className="flex flex-1 items-center gap-2 min-w-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="font-bold text-base leading-tight truncate">
+            {title}
+          </h1>
+          {subtitle && (
+            <div className="text-[11px] text-muted-foreground hidden sm:block">
+              {subtitle}
+            </div>
+          )}
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
+    </PageHeader>
   );
 }
 

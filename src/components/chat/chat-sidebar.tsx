@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Hash, ChevronDown, ChevronRight } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { Id } from "@convex/_generated/dataModel";
 
 import { RoomSettingsDialog } from "./room-settings-dialog";
@@ -75,56 +76,62 @@ export function ChatSidebar({
 
   return (
     <div
-      className={cn(
-        "flex flex-col h-full bg-sidebar text-sidebar-foreground",
-        className,
-      )}
+      className={cn("flex flex-col h-full", className)}
+      style={{
+        background: "var(--fab-bg-sidebar)",
+        borderRight: "1px solid var(--fab-border-md)",
+      }}
     >
-      {/* Header */}
-      <div className="flex flex-col gap-3 px-4 py-4 shrink-0">
-        <div className="flex w-full items-center justify-between">
-          <span className="text-sm font-semibold uppercase tracking-wide text-sidebar-foreground/50">
-            Messages
-          </span>
-          <Label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-xs font-bold uppercase tracking-widest text-sidebar-foreground/40">
-              Unreads
-            </span>
-            <Switch
-              className="scale-75 shadow-none data-[state=checked]:bg-primary"
-              checked={unreadsOnly}
-              onCheckedChange={setUnreadsOnly}
-            />
-          </Label>
-        </div>
-        <Input
-          placeholder="Search…"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="h-9 bg-sidebar-accent/30 border-none shadow-none text-sm placeholder:text-sidebar-foreground/40 focus-visible:ring-1 focus-visible:ring-primary/30"
-        />
+      {/* ── Header ───────────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-2 px-3 py-2 shrink-0"
+        style={{ borderBottom: "1px solid var(--fab-border)" }}
+      >
+        <SidebarTrigger className="text-[var(--fab-text-dim)] hover:text-[var(--fab-text-primary)] transition-colors" />
+        <span
+          className="text-[10px] font-bold tracking-[0.12em] uppercase flex-1"
+          style={{
+            color: "var(--fab-text-dim)",
+            fontFamily: "var(--font-body)",
+          }}
+        >
+          Messages
+        </span>
       </div>
 
-      {/* Room list */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Room list ────────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto py-1">
         {filteredRooms && filteredRooms.length > 0 ? (
           filteredRooms.map((room: RoomWithLastMessage) => {
             return (
               <div key={room._id} className="flex flex-col">
+                {/* Room header row */}
                 <div
                   onClick={(e) => toggleRoom(e, room._id!)}
-                  className="relative flex flex-col gap-0.5 px-3 py-2 mx-1 rounded-md transition-colors hover:bg-white/5 w-full text-left cursor-pointer group"
+                  className="relative flex flex-col gap-0.5 px-3 py-2 mx-1 rounded-md transition-colors cursor-pointer group"
+                  style={{ fontFamily: "var(--font-body)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(80,60,160,0.06)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
-                  {/* Room name */}
                   <div className="flex w-full items-center gap-2 min-w-0">
-                    <div className="p-0.5 rounded text-sidebar-foreground/50 -ml-1 shrink-0 group-hover:text-sidebar-foreground transition-colors">
+                    <div
+                      className="p-0.5 rounded -ml-1 shrink-0 transition-colors"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
                       {collapsedRooms[room._id!] ? (
                         <ChevronRight className="h-5 w-5" />
                       ) : (
                         <ChevronDown className="h-5 w-5" />
                       )}
                     </div>
-                    <span className="text-base font-medium truncate flex-1 leading-tight text-sidebar-foreground/80 group-hover:text-sidebar-foreground transition-colors">
+                    <span
+                      className="text-[15px] font-semibold truncate flex-1 leading-tight"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
                       {room.name}
                     </span>
                     {room._id && room.name && (
@@ -141,48 +148,69 @@ export function ChatSidebar({
                   room.threads.length > 0 &&
                   !collapsedRooms[room._id!] &&
                   (() => {
-                    const activeThreads = room.threads.filter(
+                    const activeThreads = room.threads!.filter(
                       (t) => t.archived !== "Archived",
                     );
-                    const archivedThreads = room.threads.filter(
+                    const archivedThreads = room.threads!.filter(
                       (t) => t.archived === "Archived",
                     );
 
                     return (
                       <div className="flex flex-col pb-2 relative">
+                        {/* ── Active threads ── */}
                         {activeThreads.map((thread) => {
                           const isThreadActive = activeThreadId === thread._id;
                           return (
                             <Link
                               href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
                               key={thread._id}
-                              className={cn(
-                                "relative flex items-center gap-2 pl-7 pr-3 py-1.5 mx-1 rounded-md transition-colors duration-150 group",
+                              className="relative flex items-center gap-2 pl-7 pr-3 py-1.5 mx-1 rounded-md transition-colors duration-150 group"
+                              style={
                                 isThreadActive
-                                  ? "bg-primary/15 text-primary"
-                                  : "hover:bg-white/5",
-                              )}
+                                  ? {
+                                      background: "var(--fab-teal-light)",
+                                      borderLeft: "3px solid var(--fab-teal)",
+                                      paddingLeft: "calc(1.75rem - 3px)",
+                                    }
+                                  : undefined
+                              }
+                              onMouseEnter={(e) => {
+                                if (!isThreadActive)
+                                  e.currentTarget.style.background =
+                                    "rgba(80,60,160,0.06)";
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isThreadActive)
+                                  e.currentTarget.style.background =
+                                    "transparent";
+                              }}
                             >
-                              {/* Active indicator */}
-                              {isThreadActive && (
-                                <div className="absolute left-0 top-1 bottom-1 w-0.75 bg-primary rounded-r-full" />
-                              )}
-
-                              <Hash className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
+                              <Hash
+                                className="h-4 w-4 shrink-0"
+                                style={{
+                                  color: isThreadActive
+                                    ? "var(--fab-teal)"
+                                    : "var(--fab-text-dim)",
+                                }}
+                              />
                               <span
-                                className={cn(
-                                  "text-[15px] font-medium truncate flex-1",
-                                  isThreadActive
-                                    ? "text-primary"
-                                    : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground",
-                                )}
+                                className="text-[14px] font-medium truncate flex-1"
+                                style={{
+                                  fontFamily: "var(--font-body)",
+                                  color: isThreadActive
+                                    ? "var(--fab-teal)"
+                                    : "var(--fab-text-muted)",
+                                }}
                               >
                                 {thread.title}
                               </span>
 
                               {thread.unreadCount &&
                               thread._id !== activeThreadId ? (
-                                <div className="h-4 px-1.5 min-w-4 rounded-full bg-primary/90 text-white text-[10px] font-semibold flex items-center justify-center shrink-0">
+                                <div
+                                  className="h-4 px-1.5 min-w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                                  style={{ background: "var(--fab-magenta)" }}
+                                >
                                   {thread.unreadCount}
                                 </div>
                               ) : null}
@@ -190,21 +218,38 @@ export function ChatSidebar({
                           );
                         })}
 
+                        {/* ── Archived section ── */}
                         {archivedThreads.length > 0 && (
                           <div className="flex flex-col mt-1">
                             <button
                               onClick={(e) => toggleArchived(e, room._id!)}
-                              className="flex items-center gap-2 pl-7 pr-3 py-1.5 mx-1 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-white/5 transition-colors"
+                              className="flex items-center gap-2 pl-7 pr-3 py-1.5 mx-1 rounded-md transition-colors"
+                              style={{
+                                color: "var(--fab-text-dim)",
+                                fontFamily: "var(--font-body)",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.background =
+                                  "rgba(80,60,160,0.06)")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.background =
+                                  "transparent")
+                              }
                             >
                               {!expandedArchived[room._id!] ? (
                                 <ChevronRight className="h-4 w-4 shrink-0" />
                               ) : (
                                 <ChevronDown className="h-4 w-4 shrink-0" />
                               )}
-                              <span className="text-[15px] font-medium">
+                              <span
+                                className="text-[10px] font-bold tracking-[0.12em] uppercase"
+                                style={{ color: "var(--fab-text-dim)" }}
+                              >
                                 Archived
                               </span>
                             </button>
+
                             {expandedArchived[room._id!] && (
                               <div className="flex flex-col mt-0.5">
                                 {archivedThreads.map((thread) => {
@@ -214,33 +259,59 @@ export function ChatSidebar({
                                     <Link
                                       href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
                                       key={thread._id}
-                                      className={cn(
-                                        "relative flex items-center gap-2 pl-11 pr-3 py-1.5 mx-1 rounded-md transition-colors duration-150 group",
+                                      className="relative flex items-center gap-2 pl-11 pr-3 py-1.5 mx-1 rounded-md transition-colors duration-150 group"
+                                      style={
                                         isThreadActive
-                                          ? "bg-primary/15 text-primary"
-                                          : "hover:bg-white/5",
-                                      )}
+                                          ? {
+                                              background:
+                                                "var(--fab-teal-light)",
+                                              borderLeft:
+                                                "3px solid var(--fab-teal)",
+                                              paddingLeft:
+                                                "calc(2.75rem - 3px)",
+                                            }
+                                          : undefined
+                                      }
+                                      onMouseEnter={(e) => {
+                                        if (!isThreadActive)
+                                          e.currentTarget.style.background =
+                                            "rgba(80,60,160,0.06)";
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!isThreadActive)
+                                          e.currentTarget.style.background =
+                                            "transparent";
+                                      }}
                                     >
-                                      {/* Active indicator */}
-                                      {isThreadActive && (
-                                        <div className="absolute left-0 top-1 bottom-1 w-0.75 bg-primary rounded-r-full" />
-                                      )}
-
-                                      <Hash className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
+                                      <Hash
+                                        className="h-4 w-4 shrink-0"
+                                        style={{
+                                          color: isThreadActive
+                                            ? "var(--fab-teal)"
+                                            : "var(--fab-text-dim)",
+                                        }}
+                                      />
                                       <span
-                                        className={cn(
-                                          "text-[14px] font-medium truncate flex-1 opacity-70",
-                                          isThreadActive
-                                            ? "text-primary opacity-100"
-                                            : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground",
-                                        )}
+                                        className="text-[13px] font-medium truncate flex-1 opacity-70"
+                                        style={{
+                                          fontFamily: "var(--font-body)",
+                                          color: isThreadActive
+                                            ? "var(--fab-teal)"
+                                            : "var(--fab-text-muted)",
+                                          opacity: isThreadActive ? 1 : 0.7,
+                                        }}
                                       >
                                         {thread.title}
                                       </span>
 
                                       {thread.unreadCount &&
                                       thread._id !== activeThreadId ? (
-                                        <div className="h-4 px-1.5 min-w-4 rounded-full bg-white/90 text-black text-[10px] font-semibold flex items-center justify-center shrink-0">
+                                        <div
+                                          className="h-4 px-1.5 min-w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                                          style={{
+                                            background: "var(--fab-magenta)",
+                                          }}
+                                        >
                                           {thread.unreadCount}
                                         </div>
                                       ) : null}
@@ -259,7 +330,13 @@ export function ChatSidebar({
           })
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-2">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/40">
+            <p
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{
+                color: "var(--fab-text-dim)",
+                fontFamily: "var(--font-body)",
+              }}
+            >
               {rooms === undefined ? "Loading…" : "No conversations found"}
             </p>
           </div>
