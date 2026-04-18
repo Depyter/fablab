@@ -451,7 +451,7 @@ export function ChatInterface({
                     </div>
 
                     {/* Content column */}
-                    <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex flex-col flex-1 min-w-0 max-w-2xl">
                       {/* Header row: name + timestamp — first message in group only */}
                       {isFirstInGroup && (
                         <div className="flex items-baseline gap-2 mb-0.5">

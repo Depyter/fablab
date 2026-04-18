@@ -319,9 +319,10 @@ export function MediaGallery({
               fileName={f.originalName || "File"}
               fileType={f.fileType}
               isCurrentUser={isCurrentUser}
+              className="max-w-md"
             />
           ) : f.fileType?.startsWith("video/") ? (
-            <div className="relative rounded-xl overflow-hidden bg-black/10">
+            <div className="relative rounded-xl overflow-hidden bg-black/10 max-w-md">
               <video
                 src={f.fileUrl}
                 className="max-w-full max-h-56 object-cover w-full"
@@ -340,21 +341,23 @@ export function MediaGallery({
               className="rounded-xl max-w-full max-h-56 object-contain bg-muted/20 p-3"
             />
           ) : (
-            <Image
-              src={f.fileUrl}
-              alt="Image attachment"
-              width={0}
-              height={0}
-              sizes="(max-width: 1024px) 320px, 448px"
-              className="rounded-xl"
-              style={{
-                width: "100%",
-                height: "auto",
-                maxWidth: "100%",
-                maxHeight: "224px",
-                objectFit: "cover",
-              }}
-            />
+            <div className="max-w-md">
+              <Image
+                src={f.fileUrl}
+                alt="Image attachment"
+                width={0}
+                height={0}
+                sizes="(max-width: 1024px) 320px, 448px"
+                className="rounded-xl"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  maxWidth: "100%",
+                  maxHeight: "224px",
+                  objectFit: "cover",
+                }}
+              />
+            </div>
           )}
         </button>
 
