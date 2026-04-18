@@ -23,7 +23,8 @@ export type ProjectStatus =
   | "approved"
   | "rejected"
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "paid";
 
 // ============================================================================
 // Types

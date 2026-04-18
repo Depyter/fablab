@@ -85,6 +85,7 @@ export const ProjectStatus = {
   REJECTED: "rejected",
   COMPLETED: "completed",
   CANCELLED: "cancelled",
+  PAID: "paid",
 } as const;
 
 export const PaymentMode = {

@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 
 import { FieldSeparator } from "@/components/ui/field";
-import { MediaGallery } from "../chat/media-gallery";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { UploadedFile } from "../file-upload/types";
 
 export type BookingFormValues = {
@@ -243,25 +243,13 @@ export function EstimateProjectDetails({
               <h3 className="font-semibold text-gray-900 mb-2 text-lg">
                 Uploaded Files
               </h3>
-              {data.files.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {data.files.map((f, i) => (
-                    <MediaGallery
-                      key={i}
-                      mediaFiles={[
-                        {
-                          fileUrl: f.url || "",
-                          fileType: f.fileType,
-                          originalName: f.fileName,
-                        },
-                      ]}
-                      isCurrentUser={false}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No files uploaded.</p>
-              )}
+              <ProjectAttachments
+                files={data.files.map((f) => ({
+                  url: f.url || "",
+                  type: f.fileType,
+                  originalName: f.fileName,
+                }))}
+              />
             </div>
 
             {/* Pricing */}

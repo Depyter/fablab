@@ -200,6 +200,7 @@ export const updateProject = authMutation({
         v.literal("rejected"),
         v.literal("completed"),
         v.literal("cancelled"),
+        v.literal("paid"),
       ),
     ),
     // Assignments
@@ -339,6 +340,63 @@ export const updateCostBreakdown = authMutation({
         `- Material used: ${args.amountUsed} ${materialDoc?.unit ?? "units"} of ${materialDoc?.name ?? "material"}`,
       );
     }
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
+  },
+});
+
+export const markProjectPaid = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    receiptNumber: v.int64(),
+    paymentMode: v.union(
+      v.literal("cash"),
+      v.literal("gcash"),
+      v.literal("bank transfer"),
+      v.literal("others"),
+    ),
+    proof: v.string(),
+    proofImage: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+    if (project.status !== "completed" && project.status !== "paid") {
+      throw new ConvexError(
+        "Only completed or paid projects can have payment details set.",
+      );
+    }
+
+    let receiptId: Id<"receipts">;
+    if (project.receipt) {
+      // Update existing receipt record
+      await ctx.db.patch(project.receipt, {
+        receiptNumber: args.receiptNumber,
+        paymentMode: args.paymentMode,
+        proof: args.proof,
+        ...(args.proofImage !== undefined ? { image: args.proofImage } : {}),
+      });
+      receiptId = project.receipt as Id<"receipts">;
+    } else {
+      receiptId = await ctx.db.insert("receipts", {
+        receiptNumber: args.receiptNumber,
+        paymentMode: args.paymentMode,
+        proof: args.proof,
+        image: args.proofImage,
+      });
+    }
+
+    await ctx.db.patch(args.projectId, {
+      status: "paid",
+      receipt: receiptId,
+    });
+
+    const lines: string[] = [
+      `Project marked as **paid**.`,
+      `- Receipt #: ${args.receiptNumber.toString()}`,
+      `- Payment mode: ${args.paymentMode}`,
+      ...(args.proof ? [`- Proof: ${args.proof}`] : []),
+    ];
     await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });

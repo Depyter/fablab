@@ -58,7 +58,8 @@ export interface MachineUsage {
     | "approved"
     | "rejected"
     | "completed"
-    | "cancelled";
+    | "cancelled"
+    | "paid";
   makerName: string;
   date: number; // Unix timestamp (seconds)
   startTime: number; // Decimal hours (e.g., 7.5 for 07:30)

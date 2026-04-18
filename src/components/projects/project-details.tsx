@@ -1,7 +1,14 @@
 "use client";
 import { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { STATUS_STYLES } from "./project-card";
 import { useQuery, useMutation } from "convex/react";
@@ -11,6 +18,16 @@ import { Id } from "@convex/_generated/dataModel";
 import { OptionRadioGroupItem } from "../option-radio-group";
 import { AssignMakerContent } from "./assign-maker-content";
 import { ProjectDetailsContent } from "./project-details-content";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProjectDetailsProps {
   projectId: Id<"projects">;
@@ -32,12 +49,22 @@ export function ProjectDetails({
   );
   const [selectedMaker, setSelectedMaker] = useState("");
 
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [receiptNumber, setReceiptNumber] = useState("");
+  const [paymentMode, setPaymentMode] = useState<
+    "cash" | "gcash" | "bank transfer" | "others"
+  >("cash");
+  const [proof, setProof] = useState("");
+  const [isPaying, setIsPaying] = useState(false);
+
   const project = useQuery(api.projects.query.getProject, {
     projectId,
   });
 
   const updateProject = useMutation(api.projects.mutate.updateProject);
   const cancelOwnProject = useMutation(api.projects.mutate.cancelOwnProject);
+  const markProjectPaid = useMutation(api.projects.mutate.markProjectPaid);
   const role = useQuery(api.users.getRole, {});
   const isClient = role === "client";
 
@@ -75,6 +102,36 @@ export function ProjectDetails({
     }
   };
 
+  const handleMarkPaid = async () => {
+    const num = parseInt(receiptNumber, 10);
+    if (!receiptNumber || isNaN(num) || num <= 0) {
+      toast.error("Please enter a valid receipt number.");
+      return;
+    }
+    if (!proof.trim()) {
+      toast.error("Please describe the proof of payment.");
+      return;
+    }
+    setIsPaying(true);
+    try {
+      await markProjectPaid({
+        projectId,
+        receiptNumber: BigInt(num),
+        paymentMode,
+        proof: proof.trim(),
+      });
+      toast.success("Project marked as paid!");
+      setPaymentDialogOpen(false);
+      setReceiptNumber("");
+      setProof("");
+      setPaymentMode("cash");
+    } catch {
+      toast.error("Failed to mark project as paid.");
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   let styles = project
     ? (STATUS_STYLES[project.status] ?? STATUS_STYLES.pending)
     : STATUS_STYLES.pending;
@@ -109,7 +166,9 @@ export function ProjectDetails({
           byLabel: project.status === "pending" ? "Waiting" : "Admin",
           active: project.status === "pending",
           completed:
-            project.status === "approved" || project.status === "completed",
+            project.status === "approved" ||
+            project.status === "completed" ||
+            project.status === "paid",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -118,30 +177,52 @@ export function ProjectDetails({
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
-              : project.status === "approved"
+              : project.status === "approved" ||
+                  project.status === "completed" ||
+                  project.status === "paid"
                 ? "Completed"
-                : project.status === "completed"
-                  ? "Completed"
-                  : "Pending",
+                : "Pending",
           byLabel: project.assignedMaker
             ? project.assignedMaker.name
             : "Waiting",
           active: project.status === "approved",
-          completed: project.status === "completed",
+          completed:
+            project.status === "completed" || project.status === "paid",
         },
         {
           title: "Project execution",
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
-              : project.status === "completed"
+              : project.status === "completed" || project.status === "paid"
                 ? "Completed"
                 : "Pending",
           byLabel: project.assignedMaker
             ? project.assignedMaker.name
             : "Waiting",
           active: project.status === "completed",
-          completed: project.status === "completed",
+          completed:
+            project.status === "completed" || project.status === "paid",
+        },
+        {
+          title: "Payment",
+          statusLabel:
+            project.status === "rejected" || project.status === "cancelled"
+              ? "Cancelled"
+              : project.status === "paid"
+                ? "Paid"
+                : "Awaiting payment",
+          byLabel:
+            project.status === "paid"
+              ? "Admin"
+              : project.status === "completed"
+                ? "Waiting"
+                : "—",
+          active:
+            project.status === "completed" && !project.receipt,
+          completed: project.status === "paid",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
         },
       ]
     : [];
@@ -161,7 +242,24 @@ export function ProjectDetails({
     if (!open) {
       setDialogView("details");
       setSelectedMaker("");
+      setPaymentDialogOpen(false);
     }
+  };
+
+  const handleOpenPaymentDialog = () => {
+    // Pre-populate from existing receipt when updating
+    if (project?.receipt) {
+      setReceiptNumber(project.receipt.receiptNumber?.toString() ?? "");
+      setPaymentMode(
+        (project.receipt.paymentMode as typeof paymentMode) ?? "cash",
+      );
+      setProof(project.receipt.proof ?? "");
+    } else {
+      setReceiptNumber("");
+      setPaymentMode("cash");
+      setProof("");
+    }
+    setPaymentDialogOpen(true);
   };
 
   const handleOpenAssignView = () => {
@@ -218,15 +316,97 @@ export function ProjectDetails({
             onConfirm={handleAssignMaker}
           />
         ) : (
-          <ProjectDetailsContent
-            project={project}
-            styles={styles}
-            timelineSteps={timelineSteps}
-            onOpenAssignView={handleOpenAssignView}
-            onUpdateStatus={handleUpdateStatus}
-            isClient={isClient}
-            onCancelProject={handleCancelProject}
-          />
+          <>
+            <ProjectDetailsContent
+              project={project}
+              styles={styles}
+              timelineSteps={timelineSteps}
+              onOpenAssignView={handleOpenAssignView}
+              onUpdateStatus={handleUpdateStatus}
+              onMarkPaid={() => handleOpenPaymentDialog()}
+              isClient={isClient}
+              onCancelProject={handleCancelProject}
+            />
+
+            {/* ── Mark as Paid dialog ─────────────────────────────────── */}
+            <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {project?.receipt
+                      ? "Update Payment Details"
+                      : "Mark Project as Paid"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="receipt-number">Receipt Number</Label>
+                    <Input
+                      id="receipt-number"
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 10042"
+                      value={receiptNumber}
+                      onChange={(e) => setReceiptNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="payment-mode">Payment Mode</Label>
+                    <Select
+                      value={paymentMode}
+                      onValueChange={(v) =>
+                        setPaymentMode(
+                          v as "cash" | "gcash" | "bank transfer" | "others",
+                        )
+                      }
+                    >
+                      <SelectTrigger id="payment-mode" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="gcash">GCash</SelectItem>
+                        <SelectItem value="bank transfer">
+                          Bank Transfer
+                        </SelectItem>
+                        <SelectItem value="others">Others</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="proof">Proof of Payment</Label>
+                    <Textarea
+                      id="proof"
+                      placeholder="Reference number, transaction ID, or other details…"
+                      rows={3}
+                      value={proof}
+                      onChange={(e) => setProof(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPaymentDialogOpen(false)}
+                    disabled={isPaying}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleMarkPaid}
+                    disabled={isPaying}
+                    style={{ background: "var(--fab-teal)", color: "#fff" }}
+                  >
+                    {isPaying
+                      ? "Saving…"
+                      : project?.receipt
+                        ? "Update Payment"
+                        : "Confirm Payment"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
       </DialogContent>
     </Dialog>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -343,39 +342,79 @@ export function PricingEstimateCard({
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <Card>
-      <CardContent className="space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold">
-            {hasFinalBreakdown ? "Confirmed Pricing" : "Pricing Estimate"}
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground capitalize bg-muted px-2 py-0.5 rounded-full">
-              {pricingType.replace("_", " ")}
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: "1px solid var(--fab-border-md)" }}
+    >
+      {/* ── Card header ──────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center justify-between gap-2 px-4 py-3"
+        style={{
+          background: "var(--fab-bg-sidebar)",
+          borderBottom: "1px solid var(--fab-border-md)",
+        }}
+      >
+        <h3
+          className="text-[13px] font-bold tracking-tight"
+          style={{ fontFamily: "Syne, sans-serif", color: "var(--fab-text-primary)" }}
+        >
+          {hasFinalBreakdown ? "Confirmed Pricing" : "Pricing Estimate"}
+        </h3>
+        <div className="flex items-center gap-1.5">
+          {projectPricing && projectPricing !== "Default" && (
+            <span
+              className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
+              style={{
+                background: "var(--fab-amber-light)",
+                color: "var(--fab-amber)",
+                border: "1px solid rgba(235,170,87,0.3)",
+              }}
+            >
+              {projectPricing}
             </span>
-            {hasFinalBreakdown && !isEditing && (
-              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                Final
-              </span>
-            )}
-          </div>
+          )}
+          <span
+            className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
+            style={{
+              background: "var(--fab-bg-card)",
+              color: "var(--fab-text-muted)",
+              border: "1px solid var(--fab-border-md)",
+            }}
+          >
+            {pricingType.replace("_", " ")}
+          </span>
+          {hasFinalBreakdown && !isEditing && (
+            <span
+              className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
+              style={{
+                background: "color-mix(in srgb, var(--fab-teal) 10%, var(--fab-bg-sidebar))",
+                color: "var(--fab-teal)",
+                border: "1px solid color-mix(in srgb, var(--fab-teal) 25%, transparent)",
+              }}
+            >
+              Final
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* ── Body ─────────────────────────────────────────────────────────── */}
+      <div className="px-4 py-3 space-y-3" style={{ background: "var(--fab-bg-card)" }}>
 
         {/* ── Assignment section (non-clients only) ── */}
         {!readOnly && (
           <>
             {/* Maker */}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p
+                className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
                 Assigned Maker
               </p>
               {isEditing ? (
-                <Select
-                  value={selectedMakerId}
-                  onValueChange={setSelectedMakerId}
-                >
-                  <SelectTrigger className="text-sm">
+                <Select value={selectedMakerId} onValueChange={setSelectedMakerId}>
+                  <SelectTrigger className="text-sm h-8">
                     <SelectValue placeholder="Select a maker" />
                   </SelectTrigger>
                   <SelectContent>
@@ -387,25 +426,42 @@ export function PricingEstimateCard({
                   </SelectContent>
                 </Select>
               ) : assignedMaker ? (
-                <div className="flex items-center gap-2 rounded-md bg-muted/60 px-3 py-2">
+                <div className="flex items-center gap-2.5">
                   {assignedMaker.pfpUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={assignedMaker.pfpUrl}
                       alt={assignedMaker.name}
-                      className="h-6 w-6 rounded-full object-cover shrink-0"
+                      className="h-7 w-7 rounded-[6px] object-cover shrink-0"
                     />
                   ) : (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-medium shrink-0">
+                    <div
+                      className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
+                      style={{
+                        background: "color-mix(in srgb, var(--fab-teal) 15%, var(--fab-bg-sidebar))",
+                        color: "var(--fab-teal)",
+                      }}
+                    >
                       {assignedMaker.name.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <p className="text-sm font-medium truncate">
-                    {assignedMaker.name}
-                  </p>
+                  <div className="min-w-0">
+                    <p
+                      className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Maker
+                    </p>
+                    <p
+                      className="text-[12px] font-medium truncate"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {assignedMaker.name}
+                    </p>
+                  </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
                   No maker assigned yet.
                 </p>
               )}
@@ -413,15 +469,15 @@ export function PricingEstimateCard({
 
             {/* Resource */}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p
+                className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
                 Resource
               </p>
               {isEditing ? (
-                <Select
-                  value={selectedResourceId}
-                  onValueChange={setSelectedResourceId}
-                >
-                  <SelectTrigger className="text-sm">
+                <Select value={selectedResourceId} onValueChange={setSelectedResourceId}>
+                  <SelectTrigger className="text-sm h-8">
                     <SelectValue placeholder="Select a resource" />
                   </SelectTrigger>
                   <SelectContent>
@@ -433,30 +489,47 @@ export function PricingEstimateCard({
                   </SelectContent>
                 </Select>
               ) : primaryUsage?.resourceDetails ? (
-                <div className="rounded-md bg-muted/60 px-3 py-2">
-                  <p className="text-sm font-medium truncate">
-                    {primaryUsage.resourceDetails.name}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                    {primaryUsage.resourceDetails.category && (
-                      <span className="text-xs capitalize text-muted-foreground">
-                        {primaryUsage.resourceDetails.category}
-                      </span>
-                    )}
-                    {primaryUsage.resourceDetails.type && (
-                      <span className="text-xs text-muted-foreground">
-                        · {primaryUsage.resourceDetails.type}
-                      </span>
-                    )}
-                    {primaryUsage.resourceDetails.status && (
-                      <span className="text-xs text-muted-foreground">
-                        · {primaryUsage.resourceDetails.status}
-                      </span>
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold mt-0.5"
+                    style={{
+                      background: "rgba(83,74,183,0.12)",
+                      color: "#534AB7",
+                    }}
+                  >
+                    {primaryUsage.resourceDetails.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p
+                      className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Resource
+                    </p>
+                    <p
+                      className="text-[12px] font-medium truncate"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {primaryUsage.resourceDetails.name}
+                    </p>
+                    {(primaryUsage.resourceDetails.category || primaryUsage.resourceDetails.type) && (
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: "var(--fab-text-muted)" }}
+                      >
+                        {[
+                          primaryUsage.resourceDetails.category,
+                          primaryUsage.resourceDetails.type,
+                          primaryUsage.resourceDetails.status,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
                   No resource assigned.
                 </p>
               )}
@@ -465,41 +538,64 @@ export function PricingEstimateCard({
             {/* Material (only relevant for buy-from-lab) */}
             {isBuyFromLab && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">
+                <p
+                  className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
+                >
                   Material
                 </p>
                 {isEditing ? (
-                  <Select
-                    value={selectedMaterialId}
-                    onValueChange={setSelectedMaterialId}
-                  >
-                    <SelectTrigger className="text-sm">
+                  <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
+                    <SelectTrigger className="text-sm h-8">
                       <SelectValue placeholder="Select a material" />
                     </SelectTrigger>
                     <SelectContent>
                       {materials?.map((m) => (
                         <SelectItem key={m._id} value={m._id}>
                           {m.name}{" "}
-                          <span className="text-muted-foreground">
-                            ({m.unit})
-                          </span>
+                          <span className="text-muted-foreground">({m.unit})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : requestedMaterial ? (
-                  <div className="rounded-md bg-muted/60 px-3 py-2 flex items-center justify-between">
-                    <p className="text-sm font-medium truncate">
-                      {requestedMaterial.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground shrink-0 ml-2">
-                      {requestedMaterial.pricePerUnit != null
-                        ? `₱${requestedMaterial.pricePerUnit.toFixed(2)} / ${requestedMaterial.unit}`
-                        : requestedMaterial.unit}
-                    </p>
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
+                      style={{
+                        background: "var(--fab-amber-light)",
+                        color: "var(--fab-amber)",
+                      }}
+                    >
+                      {requestedMaterial.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        Material
+                      </p>
+                      <div className="flex items-baseline gap-2">
+                        <p
+                          className="text-[12px] font-medium truncate"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {requestedMaterial.name}
+                        </p>
+                        {requestedMaterial.pricePerUnit != null && (
+                          <p
+                            className="text-[10px] shrink-0"
+                            style={{ color: "var(--fab-text-muted)" }}
+                          >
+                            ₱{requestedMaterial.pricePerUnit.toFixed(2)} / {requestedMaterial.unit}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
                     No material selected.
                   </p>
                 )}
@@ -510,17 +606,17 @@ export function PricingEstimateCard({
           </>
         )}
 
-        {/* Pricing variant label */}
-        {projectPricing && projectPricing !== "Default" && (
-          <p className="text-xs text-muted-foreground">
-            Variant: <span className="font-medium">{projectPricing}</span>
-          </p>
-        )}
+        {/* ── Cost rows ────────────────────────────────────────────────────── */}
 
-        {/* ── FIXED ── */}
+        {/* FIXED */}
         {pricingType === "FIXED" && (
-          <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-muted-foreground">Amount</span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Amount
+            </span>
             {isEditing ? (
               <Input
                 type="number"
@@ -528,24 +624,31 @@ export function PricingEstimateCard({
                 step="0.01"
                 value={editValues.setupFee}
                 onChange={(e) =>
-                  setEditValues((prev) => ({
-                    ...prev,
-                    setupFee: Number(e.target.value || 0),
-                  }))
+                  setEditValues((prev) => ({ ...prev, setupFee: Number(e.target.value || 0) }))
                 }
-                className="h-8 w-full text-right sm:w-36"
+                className="h-7 w-32 text-right text-sm"
               />
             ) : (
-              <span>₱{displaySetupFee.toFixed(2)}</span>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                ₱{displaySetupFee.toFixed(2)}
+              </span>
             )}
           </div>
         )}
 
-        {/* ── PER_UNIT / COMPOSITE ── */}
+        {/* PER_UNIT / COMPOSITE */}
         {isTimeBased && (
           <>
-            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">Setup Fee</span>
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Setup Fee
+              </span>
               {isEditing ? (
                 <Input
                   type="number"
@@ -553,20 +656,25 @@ export function PricingEstimateCard({
                   step="0.01"
                   value={editValues.setupFee}
                   onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      setupFee: Number(e.target.value || 0),
-                    }))
+                    setEditValues((prev) => ({ ...prev, setupFee: Number(e.target.value || 0) }))
                   }
-                  className="h-8 w-full text-right sm:w-36"
+                  className="h-7 w-32 text-right text-sm"
                 />
               ) : (
-                <span>₱{displaySetupFee.toFixed(2)}</span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  ₱{displaySetupFee.toFixed(2)}
+                </span>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
                 Duration ({derived.unitName}s)
               </span>
               {isEditing ? (
@@ -576,22 +684,25 @@ export function PricingEstimateCard({
                   step="0.1"
                   value={editValues.duration}
                   onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      duration: Number(e.target.value || 0),
-                    }))
+                    setEditValues((prev) => ({ ...prev, duration: Number(e.target.value || 0) }))
                   }
-                  className="h-8 w-full text-right sm:w-36"
+                  className="h-7 w-32 text-right text-sm"
                 />
               ) : (
-                <span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
                   {derived.duration.toFixed(2)} {derived.unitName}s
                 </span>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
                 Rate / {derived.unitName}
               </span>
               {isEditing ? (
@@ -601,41 +712,57 @@ export function PricingEstimateCard({
                   step="0.01"
                   value={editValues.rate}
                   onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      rate: Number(e.target.value || 0),
-                    }))
+                    setEditValues((prev) => ({ ...prev, rate: Number(e.target.value || 0) }))
                   }
-                  className="h-8 w-full text-right sm:w-36"
+                  className="h-7 w-32 text-right text-sm"
                 />
               ) : (
-                <span>₱{derived.rate.toFixed(2)}</span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  ₱{derived.rate.toFixed(2)}
+                </span>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">Time Cost</span>
-              <span className={isEditing ? "text-muted-foreground" : ""}>
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Time Cost
+              </span>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: isEditing ? "var(--fab-text-muted)" : "var(--fab-text-primary)" }}
+              >
                 ₱{displayTimeCost.toFixed(2)}
               </span>
             </div>
           </>
         )}
 
-        {/* ── Material Usage (buy-from-lab only) ── */}
+        {/* Material Usage (buy-from-lab only) */}
         {isBuyFromLab && (
           <>
-            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
                 Material Used
                 {materialName && (
-                  <span className="ml-1 text-xs text-muted-foreground/70">
+                  <span
+                    className="ml-1 normal-case text-[9px] tracking-normal font-normal"
+                    style={{ color: "var(--fab-text-muted)" }}
+                  >
                     ({materialName})
                   </span>
                 )}
               </span>
               {isEditing ? (
-                <div className="flex items-center gap-1.5 sm:justify-end">
+                <div className="flex items-center gap-1.5">
                   <Input
                     type="number"
                     min={0}
@@ -647,48 +774,78 @@ export function PricingEstimateCard({
                         amountUsed: Number(e.target.value || 0),
                       }))
                     }
-                    className="h-8 w-24 text-right"
+                    className="h-7 w-24 text-right text-sm"
                   />
-                  <span className="text-muted-foreground shrink-0">
+                  <span
+                    className="text-[11px] shrink-0"
+                    style={{ color: "var(--fab-text-muted)" }}
+                  >
                     {materialUnit}
                   </span>
                 </div>
               ) : (
-                <span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
                   {displayAmountUsed} {materialUnit}
                 </span>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
                 Material Cost
                 {pricePerUnit > 0 && (
-                  <span className="ml-1 text-xs text-muted-foreground/70">
+                  <span
+                    className="ml-1 normal-case text-[9px] tracking-normal font-normal"
+                    style={{ color: "var(--fab-text-muted)" }}
+                  >
                     (₱{pricePerUnit.toFixed(2)} / {materialUnit})
                   </span>
                 )}
               </span>
-              <span>₱{displayMaterialCost.toFixed(2)}</span>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                ₱{displayMaterialCost.toFixed(2)}
+              </span>
             </div>
           </>
         )}
 
-        <FieldSeparator className="my-2" />
+        <FieldSeparator className="my-1" />
 
         {/* Total */}
-        <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-lg font-bold">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: "var(--fab-text-dim)" }}
+          >
             {hasFinalBreakdown && !isEditing ? "Total" : "Estimated Total"}
           </span>
-          <span className="font-bold text-primary text-lg">
+          <span
+            className="text-[21px] font-extrabold leading-none"
+            style={{ fontFamily: "Syne, sans-serif", color: "var(--fab-teal)" }}
+          >
             ₱{displayTotal.toFixed(2)}
           </span>
         </div>
-      </CardContent>
+      </div>
 
+      {/* ── Footer actions ────────────────────────────────────────────────── */}
       {!readOnly && (
-        <CardFooter className="pt-0 flex flex-col gap-2 sm:justify-end">
+        <div
+          className="flex flex-col gap-2 px-4 py-3"
+          style={{
+            background: "var(--fab-bg-sidebar)",
+            borderTop: "1px solid var(--fab-border-md)",
+          }}
+        >
           {isEditing ? (
             <>
               <ActionDialog
@@ -703,23 +860,28 @@ export function PricingEstimateCard({
               <Button
                 size="sm"
                 onClick={handleSave}
-                className="w-full rounded-md"
+                className="w-full rounded-[6px] text-white font-semibold"
+                style={{ background: "var(--fab-teal)", border: "none" }}
               >
                 Save Changes
               </Button>
             </>
           ) : (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={handleEdit}
-              className="w-full rounded-md"
+              className="w-full rounded-[6px] font-semibold"
+              style={{
+                border: "1px solid var(--fab-border-md)",
+                color: "var(--fab-text-primary)",
+              }}
             >
               {hasFinalBreakdown ? "Edit Breakdown" : "Update Estimate"}
             </Button>
           )}
-        </CardFooter>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }

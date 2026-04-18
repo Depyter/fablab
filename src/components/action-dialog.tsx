@@ -49,7 +49,7 @@ export function ActionDialog({
           </DialogHeader>
           <FieldGroup></FieldGroup>
           <DialogFooter>
-            <DialogClose>
+            <DialogClose asChild>
               <Button variant="outline" className="rounded-lg">
                 {cancelButtonText || "Go Back"}
               </Button>

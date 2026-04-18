@@ -16,6 +16,14 @@ export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
     badge: "bg-red-100 text-red-700 border-red-200",
     cover: "from-red-500/20 to-red-500/5",
   },
+  completed: {
+    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    cover: "from-emerald-500/20 to-emerald-500/5",
+  },
+  paid: {
+    badge: "bg-teal-100 text-teal-700 border-teal-200",
+    cover: "from-teal-500/20 to-teal-500/5",
+  },
 };
 
 interface ProjectCardProps {
