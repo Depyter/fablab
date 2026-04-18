@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Send, User, Hash, Settings2 } from "lucide-react";
+import { Loader2, Send, User, Hash, Settings2, ArrowLeft } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FileUpload } from "@/components/file-upload";
 import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
@@ -19,11 +21,11 @@ import { ChatInterfaceProps, MessageFile } from "./types";
 
 const AVATAR_COLORS = [
   "var(--fab-magenta)",
-  "#534AB7",
+  "var(--chart-4)", // Purple
   "var(--fab-teal)",
-  "#854F0B",
-  "#3B6D11",
-  "#185FA5",
+  "var(--fab-amber)",
+  "#534AB7",
+  "#0FA896",
 ];
 
 function getAvatarColor(name: string): string {
@@ -54,15 +56,17 @@ function ThreadTitle({
 
   return (
     <div className="flex items-center gap-1.5 min-w-0 flex-1">
-      <Hash
-        className="h-4 w-4 shrink-0"
-        style={{ color: "var(--fab-text-dim)" }}
-      />
+      <div className="h-6 w-6 rounded-lg flex items-center justify-center shrink-0">
+        <Hash
+          className="h-3.5 w-3.5"
+          style={{ color: "var(--fab-text-primary)" }}
+        />
+      </div>
       <span
-        className="text-[13px] font-extrabold uppercase tracking-wide truncate"
+        className="text-[14px] font-black uppercase tracking-wider truncate"
         style={{
           fontFamily: "var(--font-display)",
-          color: threadId ? "var(--fab-text-primary)" : "var(--fab-text-dim)",
+          color: "var(--fab-text-primary)",
         }}
       >
         {title ?? (threadId ? "channel" : "select a channel")}
@@ -75,6 +79,7 @@ export function ChatInterface({
   roomId,
   threadId,
   currentUserName,
+  showBackButton,
 }: ChatInterfaceProps) {
   const [showTimeId, setShowTimeId] = useState<string | null>(null);
 
@@ -96,6 +101,7 @@ export function ChatInterface({
     handleSendMessage,
     handleKeyPress,
     handleFilesChange,
+    handleUploadError,
     removeAttachment,
   } = useChat({ roomId, threadId });
 
@@ -108,17 +114,26 @@ export function ChatInterface({
       <div
         className="sticky top-0 z-10 flex items-center gap-3 px-4 h-14 shrink-0"
         style={{
-          background: "rgba(250,249,255,0.85)",
-          backdropFilter: "blur(10px)",
+          background:
+            "linear-gradient(to right, rgba(250,249,255,0.96), rgba(232,228,251,0.85))",
+          backdropFilter: "blur(12px)",
           borderBottom: "1px solid var(--fab-border-md)",
-          WebkitBackdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(12px)",
         }}
       >
-        {/* Left accent bar */}
-        <div
-          className="w-1 h-6 rounded-sm shrink-0"
-          style={{ background: "var(--fab-teal)" }}
-        />
+        {/* Back button — mobile only */}
+        {showBackButton && (
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="md:hidden -ml-2 shrink-0"
+          >
+            <Link href="/dashboard/chat">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+        )}
 
         {/* Thread name */}
         <ThreadTitle roomId={roomId} threadId={threadId} />
@@ -268,30 +283,29 @@ export function ChatInterface({
 
               // ── Date separator ─────────────────────────────────────────
               const DateSeparator = showSeparator ? (
-                <div className="flex items-center gap-3 my-6">
+                <div className="flex items-center gap-4 my-8">
                   <div
-                    className="h-px flex-1"
-                    style={{ background: "var(--fab-border-md)" }}
+                    className="h-px flex-1 opacity-40"
+                    style={{ background: "var(--fab-teal)" }}
                   />
                   <span
-                    className="rounded-full px-3 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+                    className="rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm"
                     style={{
-                      background: "#ffffff",
-                      border: "1px solid var(--fab-border-md)",
-                      color: "var(--fab-text-muted)",
-                      fontFamily: "var(--font-body)",
+                      background: "var(--fab-magenta-light)",
+                      border: "1px solid var(--fab-magenta-light)",
+                      color: "var(--fab-magenta)",
+                      fontFamily: "var(--font-display)",
                     }}
                   >
                     {new Date(message._creationTime).toLocaleDateString([], {
                       month: "short",
                       day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
+                      year: "numeric",
                     })}
                   </span>
                   <div
-                    className="h-px flex-1"
-                    style={{ background: "var(--fab-border-md)" }}
+                    className="h-px flex-1 opacity-40"
+                    style={{ background: "var(--fab-teal)" }}
                   />
                 </div>
               ) : null;
@@ -303,19 +317,20 @@ export function ChatInterface({
                     key={message._id}
                     className={cn(
                       "flex flex-col message-enter",
-                      isFirstInGroup && !showSeparator ? "mt-4" : "mt-0.5",
+                      isFirstInGroup && !showSeparator ? "mt-6" : "mt-1",
                     )}
                   >
                     {DateSeparator}
 
                     <div className="flex justify-center">
-                      <div className="flex flex-col items-center max-w-[60%]">
+                      <div className="flex flex-col items-center max-w-[85%] sm:max-w-[70%]">
                         {isFirstInGroup && (
                           <span
-                            className="text-[10px] font-bold uppercase tracking-widest mb-1 px-1"
+                            className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 px-2 py-0.5 rounded-full"
                             style={{
                               color: "var(--fab-text-dim)",
-                              fontFamily: "var(--font-body)",
+                              fontFamily: "var(--font-display)",
+                              background: "var(--fab-bg-sidebar)",
                             }}
                           >
                             {message.sender}
@@ -329,28 +344,28 @@ export function ChatInterface({
                             )
                           }
                           className={cn(
-                            "text-sm cursor-pointer overflow-hidden",
+                            "text-[13px] cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-sm",
                             message.content
-                              ? "px-3.5 py-2.5 rounded-2xl"
+                              ? "px-5 py-3 rounded-2xl"
                               : messageFiles.length > 0
-                                ? "p-1 rounded-2xl"
-                                : "px-3.5 py-2.5 rounded-2xl",
+                                ? "p-1.5 rounded-2xl"
+                                : "px-5 py-3 rounded-2xl",
                           )}
                           style={{
-                            background: "rgba(80,60,160,0.06)",
-                            border: "1px solid var(--fab-border)",
+                            background: "var(--fab-bg-sidebar)",
+                            border: "1px solid var(--fab-border-md)",
                             color: "var(--fab-text-muted)",
                             fontFamily: "var(--font-body)",
                           }}
                         >
                           {message.content && (
-                            <div className="prose prose-sm max-w-none prose-p:my-0.5 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0">
+                            <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-bold prose-strong:text-inherit prose-ul:my-1 prose-ol:my-1 prose-li:my-0 opacity-90">
                               <ReactMarkdown>{message.content}</ReactMarkdown>
                             </div>
                           )}
 
                           {messageFiles.length > 0 && (
-                            <div className={cn(message.content ? "mt-2" : "")}>
+                            <div className={cn(message.content ? "mt-3" : "")}>
                               <MessageAttachments
                                 files={messageFiles}
                                 isCurrentUser={false}
@@ -361,7 +376,7 @@ export function ChatInterface({
 
                         {showTimeId === message._id && (
                           <span
-                            className="text-[11px] mt-1 font-semibold px-1"
+                            className="text-[10px] mt-1.5 font-bold uppercase tracking-widest opacity-50"
                             style={{
                               color: "var(--fab-text-dim)",
                               fontFamily: "var(--font-body)",
@@ -391,22 +406,25 @@ export function ChatInterface({
                   <div
                     className={cn(
                       "group message-enter flex items-start gap-3 px-4 rounded-sm transition-colors",
-                      isFirstInGroup ? "mt-3" : "mt-0",
+                      isFirstInGroup ? "mt-2" : "mt-0.5",
                     )}
                     style={{
-                      paddingTop: isFirstInGroup ? 6 : 2,
-                      paddingBottom: 2,
+                      paddingTop: isFirstInGroup ? 4 : 0,
+                      paddingBottom: isFirstInGroup ? 1 : 0,
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
-                        "rgba(80,60,160,0.04)")
+                        "rgba(15, 168, 150, 0.04)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
                     }
                   >
                     {/* Avatar column — fixed 34px width */}
-                    <div className="shrink-0 w-[34px]" style={{ marginTop: 2 }}>
+                    <div
+                      className="shrink-0 w-[34px]"
+                      style={{ marginTop: isFirstInGroup ? 2 : 0 }}
+                    >
                       {isFirstInGroup ? (
                         <div
                           className="flex items-center justify-center overflow-hidden text-white text-[11px] font-bold select-none"
@@ -433,7 +451,7 @@ export function ChatInterface({
                       ) : (
                         /* Grouped rows: show timestamp on hover in place of avatar */
                         <span
-                          className="flex items-center justify-end w-full opacity-0 group-hover:opacity-100 transition-opacity text-[10px] tabular-nums leading-[1.6rem]"
+                          className="flex items-center justify-end w-full opacity-0 group-hover:opacity-100 transition-opacity text-[9px] tabular-nums leading-none pt-1"
                           style={{
                             color: "var(--fab-text-dim)",
                             fontFamily: "var(--font-body)",
@@ -453,7 +471,7 @@ export function ChatInterface({
                     {/* Content column */}
                     <div className="flex flex-col flex-1 min-w-0 max-w-2xl">
                       {/* Header row: name + timestamp — first message in group only */}
-                      {isFirstInGroup && (
+                      {isFirstInGroup ? (
                         <div className="flex items-baseline gap-2 mb-0.5">
                           <span
                             className="text-[14px] font-bold leading-snug"
@@ -466,16 +484,26 @@ export function ChatInterface({
                           >
                             {message.sender}
                           </span>
-                          {isCurrentUser && (
+                          {"senderRole" in message && message.senderRole && (
                             <span
-                              className="text-[10px] font-bold tracking-[0.06em] uppercase rounded-[4px] px-[5px] py-[2px]"
+                              className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] leading-none"
                               style={{
-                                background: "var(--fab-teal-light)",
-                                color: "var(--fab-teal)",
-                                fontFamily: "var(--font-body)",
+                                background:
+                                  message.senderRole === "admin"
+                                    ? "var(--fab-magenta-light)"
+                                    : message.senderRole === "maker"
+                                      ? "var(--fab-teal-light)"
+                                      : "var(--fab-amber-light)",
+                                color:
+                                  message.senderRole === "admin"
+                                    ? "var(--fab-magenta)"
+                                    : message.senderRole === "maker"
+                                      ? "var(--fab-teal)"
+                                      : "var(--fab-amber)",
+                                fontFamily: "var(--font-display)",
                               }}
                             >
-                              you
+                              {message.senderRole}
                             </span>
                           )}
                           <span
@@ -494,7 +522,7 @@ export function ChatInterface({
                             )}
                           </span>
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Message body — plain text, no bubble */}
                       <div
@@ -600,6 +628,7 @@ export function ChatInterface({
             disabled={isLoading}
             value={fileUploadInitialFiles}
             onFilesChange={handleFilesChange}
+            onUploadError={handleUploadError}
             onUploadingChange={setIsUploading}
           />
 

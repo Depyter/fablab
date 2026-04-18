@@ -1,13 +1,10 @@
 "use client";
 
-import { usePreloadedQuery, Preloaded, useQuery } from "convex/react";
+import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat/chat-interface";
-import { PresenceIndicator } from "@/components/chat/presence-indicator";
 import { ArrowLeftIcon } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 
 export function ChatRoomClient({
@@ -23,41 +20,16 @@ export function ChatRoomClient({
     | Id<"threads">
     | undefined;
 
-  const threads = useQuery(api.chat.query.getThreads, { roomId });
-  const activeThread = activeThreadId
-    ? threads?.find((t) => t._id === activeThreadId)
-    : null;
-
   return (
     <div className="flex h-full overflow-hidden min-h-0 relative">
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
-        {/* Mobile-only header */}
-        <div className="md:hidden flex items-center gap-2 px-2 py-2 border-b bg-background shrink-0">
-          <Button variant="ghost" size="icon" asChild className="shrink-0">
-            <Link href="/dashboard/chat">
-              <ArrowLeftIcon className="h-5 w-5" />
-            </Link>
-          </Button>
-          {activeThread && (
-            <span className="font-semibold truncate flex-1">
-              {activeThread.title}
-            </span>
-          )}
-          {activeThreadId && currentUser?.name && (
-            <PresenceIndicator
-              threadId={activeThreadId}
-              userId={currentUser.name}
-              roomId={roomId}
-            />
-          )}
-        </div>
-
         <div className="flex-1 min-h-0 bg-background">
           {activeThreadId ? (
             <ChatInterface
               roomId={roomId}
               threadId={activeThreadId}
               currentUserName={currentUser?.name ?? ""}
+              showBackButton={true}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground/60">

@@ -228,7 +228,10 @@ export function useFileUpload({
       const totalFiles =
         uploadingFiles.length + uploadedFiles.length + fileArray.length;
       if (totalFiles > maxFiles) {
-        alert(`You can only upload up to ${maxFiles} files at a time`);
+        onUploadError?.(
+          new Error(`You can only upload up to ${maxFiles} files at a time`),
+          fileArray[0],
+        );
         return;
       }
 

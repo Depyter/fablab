@@ -11,8 +11,7 @@ import type { Id } from "@convex/_generated/dataModel";
 
 import { RoomSettingsDialog } from "./room-settings-dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { MessageCircle, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RoomWithLastMessage {
@@ -76,27 +75,29 @@ export function ChatSidebar({
 
   return (
     <div
-      className={cn("flex flex-col h-full", className)}
+      className={cn("flex flex-col h-full overflow-hidden", className)}
       style={{
-        background: "var(--fab-bg-sidebar)",
-        borderRight: "1px solid var(--fab-border-md)",
+        background:
+          "linear-gradient(180deg, var(--fab-bg-sidebar) 0%, rgba(250,249,255,0.8) 100%)",
       }}
     >
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-2 px-3 py-2 shrink-0"
-        style={{ borderBottom: "1px solid var(--fab-border)" }}
+        className="flex items-center gap-2 px-3 h-14 shrink-0"
+        style={{ borderBottom: "1px solid var(--fab-border-md)" }}
       >
         <SidebarTrigger className="text-[var(--fab-text-dim)] hover:text-[var(--fab-text-primary)] transition-colors" />
-        <span
-          className="text-[10px] font-bold tracking-[0.12em] uppercase flex-1"
-          style={{
-            color: "var(--fab-text-dim)",
-            fontFamily: "var(--font-body)",
-          }}
-        >
-          Messages
-        </span>
+        <div className="flex-1 flex items-center gap-2">
+          <span
+            className="text-[12px] font-black uppercase tracking-[0.15em]"
+            style={{
+              color: "var(--fab-text-primary)",
+              fontFamily: "var(--font-display)",
+            }}
+          >
+            Messaging
+          </span>
+        </div>
       </div>
 
       {/* ── Room list ────────────────────────────────────────────────────── */}
@@ -111,7 +112,8 @@ export function ChatSidebar({
                   className="relative flex flex-col gap-0.5 px-3 py-2 mx-1 rounded-md transition-colors cursor-pointer group"
                   style={{ fontFamily: "var(--font-body)" }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(80,60,160,0.06)")
+                    (e.currentTarget.style.background =
+                      "rgba(15, 168, 150, 0.08)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -134,6 +136,12 @@ export function ChatSidebar({
                     >
                       {room.name}
                     </span>
+                    {room.unreadCount !== undefined && room.unreadCount > 0 && (
+                      <div
+                        className="h-2 w-2 rounded-full shrink-0 mr-1"
+                        style={{ background: "var(--fab-magenta)" }}
+                      />
+                    )}
                     {room._id && room.name && (
                       <RoomSettingsDialog
                         roomId={room._id as Id<"rooms">}
@@ -160,24 +168,27 @@ export function ChatSidebar({
                         {/* ── Active threads ── */}
                         {activeThreads.map((thread) => {
                           const isThreadActive = activeThreadId === thread._id;
+                          const hasUnreads =
+                            thread.unreadCount && thread.unreadCount > 0;
+
                           return (
                             <Link
                               href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
                               key={thread._id}
-                              className="relative flex items-center gap-2 pl-7 pr-3 py-1.5 mx-1 rounded-md transition-colors duration-150 group"
+                              className="relative flex items-center gap-2 pl-7 pr-3 py-2 transition-colors duration-150 group"
                               style={
                                 isThreadActive
                                   ? {
-                                      background: "var(--fab-teal-light)",
-                                      borderLeft: "3px solid var(--fab-teal)",
-                                      paddingLeft: "calc(1.75rem - 3px)",
+                                      background: "var(--fab-amber-light)",
+                                      borderLeft: "4px solid var(--fab-amber)",
+                                      paddingLeft: "calc(1.75rem - 4px)",
                                     }
                                   : undefined
                               }
                               onMouseEnter={(e) => {
                                 if (!isThreadActive)
                                   e.currentTarget.style.background =
-                                    "rgba(80,60,160,0.06)";
+                                    "rgba(15, 168, 150, 0.05)";
                               }}
                               onMouseLeave={(e) => {
                                 if (!isThreadActive)
@@ -189,24 +200,32 @@ export function ChatSidebar({
                                 className="h-4 w-4 shrink-0"
                                 style={{
                                   color: isThreadActive
-                                    ? "var(--fab-teal)"
-                                    : "var(--fab-text-dim)",
+                                    ? "var(--foreground)"
+                                    : hasUnreads
+                                      ? "var(--fab-magenta)"
+                                      : "var(--fab-text-dim)",
                                 }}
                               />
                               <span
-                                className="text-[14px] font-medium truncate flex-1"
+                                className={cn(
+                                  "text-[14px] truncate flex-1",
+                                  isThreadActive && "font-bold text-foreground",
+                                  hasUnreads && !isThreadActive && "font-extrabold",
+                                  !hasUnreads && !isThreadActive && "font-medium",
+                                )}
                                 style={{
                                   fontFamily: "var(--font-body)",
                                   color: isThreadActive
-                                    ? "var(--fab-teal)"
-                                    : "var(--fab-text-muted)",
+                                    ? "var(--foreground)"
+                                    : hasUnreads
+                                      ? "var(--fab-text-primary)"
+                                      : "var(--fab-text-muted)",
                                 }}
                               >
                                 {thread.title}
                               </span>
 
-                              {thread.unreadCount &&
-                              thread._id !== activeThreadId ? (
+                              {hasUnreads && thread._id !== activeThreadId ? (
                                 <div
                                   className="h-4 px-1.5 min-w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
                                   style={{ background: "var(--fab-magenta)" }}
@@ -259,23 +278,23 @@ export function ChatSidebar({
                                     <Link
                                       href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
                                       key={thread._id}
-                                      className="relative flex items-center gap-2 pl-11 pr-3 py-1.5 mx-1 rounded-md transition-colors duration-150 group"
+                                      className="relative flex items-center gap-2 pl-11 pr-3 py-2 transition-colors duration-150 group"
                                       style={
                                         isThreadActive
                                           ? {
                                               background:
-                                                "var(--fab-teal-light)",
+                                                "var(--fab-amber-light)",
                                               borderLeft:
-                                                "3px solid var(--fab-teal)",
+                                                "4px solid var(--fab-amber)",
                                               paddingLeft:
-                                                "calc(2.75rem - 3px)",
+                                                "calc(2.75rem - 4px)",
                                             }
                                           : undefined
                                       }
                                       onMouseEnter={(e) => {
                                         if (!isThreadActive)
                                           e.currentTarget.style.background =
-                                            "rgba(80,60,160,0.06)";
+                                            "rgba(15, 168, 150, 0.05)";
                                       }}
                                       onMouseLeave={(e) => {
                                         if (!isThreadActive)
@@ -287,16 +306,20 @@ export function ChatSidebar({
                                         className="h-4 w-4 shrink-0"
                                         style={{
                                           color: isThreadActive
-                                            ? "var(--fab-teal)"
+                                            ? "var(--fab-text-primary)"
                                             : "var(--fab-text-dim)",
                                         }}
                                       />
                                       <span
-                                        className="text-[13px] font-medium truncate flex-1 opacity-70"
+                                        className={cn(
+                                          "text-[13px] truncate flex-1 opacity-70",
+                                          isThreadActive && "font-bold opacity-100",
+                                          !isThreadActive && "font-medium",
+                                        )}
                                         style={{
                                           fontFamily: "var(--font-body)",
                                           color: isThreadActive
-                                            ? "var(--fab-teal)"
+                                            ? "var(--fab-text-primary)"
                                             : "var(--fab-text-muted)",
                                           opacity: isThreadActive ? 1 : 0.7,
                                         }}

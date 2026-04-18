@@ -146,7 +146,12 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     );
   };
 
+  const handleUploadError = (error: Error) => {
+    toast.error(error.message || "Failed to upload file");
+  };
+
   const removeAttachment = (index: number) => {
+
     const remaining = pendingAttachments.filter((_, i) => i !== index);
     const remainingAsUploadedFiles: UploadedFile[] = remaining.map((a) => ({
       storageId: a.storageId,
@@ -187,6 +192,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     handleSendMessage,
     handleKeyPress,
     handleFilesChange,
+    handleUploadError,
     removeAttachment,
   };
 }

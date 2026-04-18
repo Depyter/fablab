@@ -17,4 +17,5 @@ export interface ChatInterfaceProps {
   roomId: Id<"rooms">;
   threadId?: Id<"threads">;
   currentUserName: string;
+  showBackButton?: boolean;
 }
