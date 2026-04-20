@@ -24,6 +24,8 @@ import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActionDialog } from "../action-dialog";
 import { api } from "@/../convex/_generated/api";
 import {
+  PROJECT_STATUS_LABELS,
+  PROJECT_STATUS_TRANSITIONS,
   ProjectStatusType,
   ProjectMaterialType,
   ProjectServiceTypeType,
@@ -59,25 +61,25 @@ const STATUS_PILL: Record<
     bg: "var(--fab-amber-light)",
     color: "var(--fab-amber)",
     border: "rgba(235,170,87,0.35)",
-    label: "Pending",
+    label: "Review",
   },
   approved: {
     bg: "rgba(59,130,246,0.1)",
     color: "#1d4ed8",
     border: "rgba(59,130,246,0.25)",
-    label: "Approved",
+    label: "Fabrication",
   },
   completed: {
     bg: "rgba(16,185,129,0.1)",
     color: "#059669",
     border: "rgba(16,185,129,0.25)",
-    label: "Completed",
+    label: "Payment",
   },
   paid: {
     bg: "color-mix(in srgb, var(--fab-teal) 12%, white)",
     color: "var(--fab-teal)",
     border: "color-mix(in srgb, var(--fab-teal) 30%, transparent)",
-    label: "Paid",
+    label: "Claim",
   },
   rejected: {
     bg: "var(--fab-magenta-light)",
@@ -105,7 +107,7 @@ export function ProjectDetailsContent({
   onCancelProject,
   onUpdateDetails,
 }: ProjectDetailsContentProps) {
-  // ── Edit state (client only, pending projects) ──────────────────────────
+  // ── Edit state (client only, review stage) ─────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -118,7 +120,8 @@ export function ProjectDetailsContent({
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const canEdit = isClient && project.status === "pending" && !!onUpdateDetails;
+  const canEdit =
+    isClient && project.status === "pending" && !!onUpdateDetails;
 
   function openEdit() {
     setEditDescription(project.description ?? "");
@@ -183,6 +186,12 @@ export function ProjectDetailsContent({
     : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
+  const statusOptions = [
+    project.status,
+    ...PROJECT_STATUS_TRANSITIONS[project.status].filter(
+      (status) => status !== "cancelled",
+    ),
+  ];
 
   return (
     <div className="min-w-0 space-y-0">
@@ -272,11 +281,11 @@ export function ProjectDetailsContent({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {PROJECT_STATUS_LABELS[status]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               )}

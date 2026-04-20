@@ -148,13 +148,13 @@ export function ProjectDetails({
         paymentMode,
         proof: proof.trim(),
       });
-      toast.success("Project marked as paid!");
+      toast.success("Payment recorded. Project moved to claim.");
       setPaymentDialogOpen(false);
       setReceiptNumber("");
       setProof("");
       setPaymentMode("cash");
     } catch {
-      toast.error("Failed to mark project as paid.");
+      toast.error("Failed to record payment.");
     } finally {
       setIsPaying(false);
     }
@@ -174,22 +174,22 @@ export function ProjectDetails({
   const timelineSteps = project
     ? [
         {
-          title: "Request submitted",
+          title: "Submission",
           statusLabel: "Completed",
           byLabel: project.client?.name ?? "Client",
           completed: true,
         },
         {
-          title: "Admin review",
+          title: "Review",
           statusLabel:
             project.status === "rejected"
               ? "Rejected"
               : project.status === "cancelled"
                 ? "Cancelled"
                 : project.status === "pending"
-                  ? "Pending"
+                  ? "In progress"
                   : "Completed",
-          byLabel: project.status === "pending" ? "Waiting" : "Admin",
+          byLabel: project.status === "pending" ? "FabLab Staff" : "FabLab Staff",
           active: project.status === "pending",
           completed:
             project.status === "approved" ||
@@ -203,7 +203,9 @@ export function ProjectDetails({
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
-              : project.status === "completed" || project.status === "paid"
+              : project.status === "approved"
+                ? "In progress"
+                : project.status === "completed" || project.status === "paid"
                 ? "Completed"
                 : "Pending",
           byLabel: project.assignedMaker
@@ -220,16 +222,31 @@ export function ProjectDetails({
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
-              : project.status === "paid"
-                ? "Paid"
-                : "Awaiting payment",
+              : project.status === "completed"
+                ? "In progress"
+                : project.status === "paid"
+                  ? "Completed"
+                  : "Pending",
           byLabel:
             project.status === "paid"
-              ? "Admin"
+              ? "FabLab Staff"
               : project.status === "completed"
                 ? "Waiting"
                 : "—",
           active: project.status === "completed",
+          completed: project.status === "paid",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
+        },
+        {
+          title: "Claim",
+          statusLabel:
+            project.status === "rejected" || project.status === "cancelled"
+              ? "Cancelled"
+              : project.status === "paid"
+                ? "Completed"
+                : "Pending",
+          byLabel: project.status === "paid" ? "Client" : "—",
           completed: project.status === "paid",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
@@ -292,7 +309,7 @@ export function ProjectDetails({
         status: "approved",
         makerId: selectedMaker as Id<"userProfile">,
       });
-      toast.success("Project approved and maker assigned!");
+      toast.success("Project moved to fabrication and maker assigned.");
       setDialogView("details");
     } catch {
       toast.error("Failed to assign maker.");
@@ -349,7 +366,7 @@ export function ProjectDetails({
                   <DialogTitle>
                     {project?.receipt
                       ? "Update Payment Details"
-                      : "Mark Project as Paid"}
+                      : "Record Payment and Move to Claim"}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
@@ -415,7 +432,7 @@ export function ProjectDetails({
                       ? "Saving…"
                       : project?.receipt
                         ? "Update Payment"
-                        : "Confirm Payment"}
+                        : "Record Payment"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

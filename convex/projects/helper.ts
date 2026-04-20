@@ -1,7 +1,12 @@
 import { ConvexError } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
-import { FILE_CATEGORIES } from "../constants";
+import {
+  FILE_CATEGORIES,
+  PROJECT_STATUS_LABELS,
+  PROJECT_STATUS_TRANSITIONS,
+  type ProjectStatusType,
+} from "../constants";
 
 /**
  * Builds the denormalized search text for a project.
@@ -18,13 +23,7 @@ export function buildSearchText(fields: {
     .toLowerCase();
 }
 
-export type ProjectStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "completed"
-  | "cancelled"
-  | "paid";
+export type ProjectStatus = ProjectStatusType;
 
 // ============================================================================
 // Types
@@ -659,9 +658,17 @@ export async function applyStatusChange(
 ): Promise<string[]> {
   if (project.status === status) return [];
 
+  if (!PROJECT_STATUS_TRANSITIONS[project.status].includes(status)) {
+    throw new ConvexError(
+      `Cannot change project status from ${project.status} to ${status}.`,
+    );
+  }
+
   await ctx.db.patch(project._id, { status });
 
-  const lines: string[] = [`Status updated to: **${status}**`];
+  const lines: string[] = [
+    `Status updated to: **${PROJECT_STATUS_LABELS[status]}**`,
+  ];
 
   // Release workshop slot on cancellation / rejection
   if (

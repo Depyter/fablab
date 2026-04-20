@@ -392,7 +392,7 @@ export const markProjectPaid = authMutation({
     });
 
     const lines: string[] = [
-      `Project marked as **paid**.`,
+      `Payment recorded. Project moved to **claim**.`,
       `- Receipt #: ${args.receiptNumber.toString()}`,
       `- Payment mode: ${args.paymentMode}`,
       ...(args.proof ? [`- Proof: ${args.proof}`] : []),
@@ -422,7 +422,7 @@ export const cancelOwnProject = authMutation({
       throw new ConvexError("You do not own this project.");
     }
 
-    if (["completed", "rejected", "cancelled"].includes(project.status)) {
+    if (["completed", "paid", "rejected", "cancelled"].includes(project.status)) {
       throw new ConvexError("Cannot cancel a project in its current status.");
     }
 
@@ -487,7 +487,7 @@ export const completeProject = authMutation({
     // ── 5. System message ────────────────────────────────────────────────────
     const durationHours = (args.actualDurationMs / (1000 * 60 * 60)).toFixed(2);
     const lines: string[] = [
-      `Project marked as **completed**.`,
+      `Fabrication complete. Project moved to **payment**.`,
       `- Actual duration: ${durationHours} hours`,
       `- Setup fee: ₱${setupFee.toFixed(2)}`,
       `- Time cost: ₱${timeCost.toFixed(2)}`,
@@ -542,7 +542,7 @@ export const updateOwnProjectDetails = authMutation({
 
     if (project.status !== "pending") {
       throw new ConvexError(
-        "Project details can only be updated while pending review.",
+        "Project details can only be updated while still in review.",
       );
     }
 

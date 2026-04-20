@@ -240,3 +240,24 @@ export type ProjectStatusType =
   (typeof ProjectStatus)[keyof typeof ProjectStatus];
 export type PaymentModeType = (typeof PaymentMode)[keyof typeof PaymentMode];
 export type UserRoleType = (typeof UserRole)[keyof typeof UserRole];
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatusType, string> = {
+  pending: "Review",
+  approved: "Fabrication",
+  completed: "Payment",
+  paid: "Claim",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+};
+
+export const PROJECT_STATUS_TRANSITIONS: Record<
+  ProjectStatusType,
+  readonly ProjectStatusType[]
+> = {
+  pending: [ProjectStatus.APPROVED, ProjectStatus.REJECTED, ProjectStatus.CANCELLED],
+  approved: [ProjectStatus.COMPLETED, ProjectStatus.CANCELLED],
+  completed: [ProjectStatus.PAID],
+  paid: [],
+  rejected: [],
+  cancelled: [],
+};

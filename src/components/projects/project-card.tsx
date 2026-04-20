@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Id } from "@convex/_generated/dataModel";
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import { ProjectDetails } from "./project-details";
 import { ManageCard } from "@/components/manage/manage-card";
 
@@ -12,10 +13,6 @@ export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
     badge: "bg-blue-100 text-blue-700 border-blue-200",
     cover: "from-blue-500/20 to-blue-500/5",
   },
-  rejected: {
-    badge: "bg-red-100 text-red-700 border-red-200",
-    cover: "from-red-500/20 to-red-500/5",
-  },
   completed: {
     badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
     cover: "from-emerald-500/20 to-emerald-500/5",
@@ -23,6 +20,14 @@ export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
   paid: {
     badge: "bg-teal-100 text-teal-700 border-teal-200",
     cover: "from-teal-500/20 to-teal-500/5",
+  },
+  rejected: {
+    badge: "bg-red-100 text-red-700 border-red-200",
+    cover: "from-red-500/20 to-red-500/5",
+  },
+  cancelled: {
+    badge: "bg-red-100 text-red-700 border-red-200",
+    cover: "from-red-500/20 to-red-500/5",
   },
 };
 
@@ -85,7 +90,7 @@ export function ProjectCard({
       coverFallback={
         <div className={cn("h-full w-full bg-linear-to-br", styles.cover)} />
       }
-      badgeText={status}
+      badgeText={PROJECT_STATUS_LABELS[status as keyof typeof PROJECT_STATUS_LABELS] ?? status}
       badgeClassName={styles.badge}
       footer={
         <>

@@ -127,11 +127,11 @@ describe("Project and Chat functionality", () => {
       return maker!._id;
     });
 
-    await tAera.mutation(api.projects.mutate.updateProject, {
-      projectId,
-      status: "approved",
-      makerId,
-    });
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "approved",
+        makerId,
+      });
 
     await t.run(async (ctx) => {
       const project = await ctx.db.get(projectId);

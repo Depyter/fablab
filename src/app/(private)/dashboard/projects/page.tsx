@@ -25,12 +25,20 @@ import { ProjectDetails } from "@/components/projects/project-details";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type StatusFilter = "all" | "pending" | "approved" | "rejected" | "completed";
+type StatusFilter =
+  | "all"
+  | "pending"
+  | "approved"
+  | "completed"
+  | "paid"
+  | "rejected"
+  | "cancelled";
 type DateFilter = "all" | "today" | "week" | "month";
 type SortOption = "newest" | "oldest" | "price-high" | "price-low" | "name-az";
 
@@ -55,15 +63,19 @@ type EnrichedProject = {
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
   approved: "bg-blue-100 text-blue-700",
-  rejected: "bg-red-100 text-red-700",
   completed: "bg-emerald-100 text-emerald-700",
+  paid: "bg-teal-100 text-teal-700",
+  rejected: "bg-red-100 text-red-700",
+  cancelled: "bg-red-100 text-red-700",
 };
 
 const STATUS_DOT: Record<string, string> = {
   pending: "bg-amber-400",
   approved: "bg-blue-400",
-  rejected: "bg-red-400",
   completed: "bg-emerald-400",
+  paid: "bg-teal-400",
+  rejected: "bg-red-400",
+  cancelled: "bg-red-400",
 };
 
 // ---------------------------------------------------------------------------
@@ -91,8 +103,10 @@ function ProjectListRow({ project }: { project: EnrichedProject }) {
                   "h-full w-full",
                   project.status === "pending" && "bg-amber-500/20",
                   project.status === "approved" && "bg-blue-500/20",
-                  project.status === "rejected" && "bg-red-500/20",
                   project.status === "completed" && "bg-emerald-500/20",
+                  project.status === "paid" && "bg-teal-500/20",
+                  project.status === "rejected" && "bg-red-500/20",
+                  project.status === "cancelled" && "bg-red-500/20",
                 )}
               />
             )}
@@ -137,7 +151,9 @@ function ProjectListRow({ project }: { project: EnrichedProject }) {
                     STATUS_DOT[project.status] ?? "bg-muted-foreground",
                   )}
                 />
-                {project.status}
+                {PROJECT_STATUS_LABELS[
+                  project.status as keyof typeof PROJECT_STATUS_LABELS
+                ] ?? project.status}
               </span>
             </div>
           </div>
@@ -238,13 +254,25 @@ export default function ProjectsList() {
             <SelectItem value="pending" className="text-xs">
               <span className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400 inline-block" />
-                Pending
+                Review
               </span>
             </SelectItem>
             <SelectItem value="approved" className="text-xs">
               <span className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-400 inline-block" />
-                Approved
+                Fabrication
+              </span>
+            </SelectItem>
+            <SelectItem value="completed" className="text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+                Payment
+              </span>
+            </SelectItem>
+            <SelectItem value="paid" className="text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-400 inline-block" />
+                Claim
               </span>
             </SelectItem>
             <SelectItem value="rejected" className="text-xs">
@@ -253,10 +281,10 @@ export default function ProjectsList() {
                 Rejected
               </span>
             </SelectItem>
-            <SelectItem value="completed" className="text-xs">
+            <SelectItem value="cancelled" className="text-xs">
               <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
-                Completed
+                <span className="h-1.5 w-1.5 rounded-full bg-red-400 inline-block" />
+                Cancelled
               </span>
             </SelectItem>
           </SelectContent>

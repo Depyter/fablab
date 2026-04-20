@@ -15,8 +15,7 @@ interface ReceiptCardProps {
 }
 
 export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
-  const visible =
-    receipt || status === "paid" || status === "completed";
+  const visible = receipt || status === "completed" || status === "paid";
 
   if (!visible) return null;
 
@@ -27,8 +26,8 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
       headerBg="color-mix(in srgb, var(--fab-teal) 7%, var(--fab-bg-sidebar))"
       headerRight={
         receipt ? (
-          <DetailChip
-            label="Paid"
+            <DetailChip
+              label="Recorded"
             bg="color-mix(in srgb, var(--fab-teal) 14%, white)"
             color="var(--fab-teal)"
           />

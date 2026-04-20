@@ -24,7 +24,8 @@ export const getProjects = authQuery({
       | "approved"
       | "rejected"
       | "completed"
-      | "cancelled";
+      | "cancelled"
+      | "paid";
 
     // ── Search path: uses the search index, applies status as a filter field ─
     if (args.searchText && args.searchText.trim() !== "") {
