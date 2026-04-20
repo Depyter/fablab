@@ -1,6 +1,7 @@
 import { ConvexError } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
+import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
   FILE_CATEGORIES,
   PROJECT_STATUS_LABELS,
@@ -184,64 +185,19 @@ export function computeProvisionalCostBreakdown(
   serviceType: string,
   bookingDurationMs: number,
 ): { setupFee: number; materialCost: number; timeCost: number; total: number } {
-  const durationMinutes = bookingDurationMs / (1000 * 60);
+  const breakdown = derivePricingFromSchema({
+    servicePricing: service.pricing,
+    pricingVariant,
+    serviceType: serviceType as "self-service" | "full-service" | "workshop",
+    bookingDurationMinutes: bookingDurationMs / (1000 * 60),
+  });
 
-  const unitToMinutes = (unit: string): number => {
-    if (unit === "hour") return 60;
-    if (unit === "day") return 60 * 24;
-    return 1;
+  return {
+    setupFee: breakdown.setupFee,
+    materialCost: 0,
+    timeCost: breakdown.timeCost,
+    total: breakdown.total,
   };
-
-  const isSelfService = serviceType === "self-service";
-
-  let setupFee = 0;
-  let timeCost = 0;
-
-  if (service.pricing.type === "FIXED") {
-    let amount = service.pricing.amount;
-    if (service.pricing.variants) {
-      const variant = service.pricing.variants.find(
-        (v) => v.name === pricingVariant,
-      );
-      if (variant) amount = variant.amount;
-    }
-    setupFee = isSelfService ? 0 : amount;
-  } else if (service.pricing.type === "PER_UNIT") {
-    setupFee = service.pricing.setupFee;
-    let ratePerUnit = service.pricing.ratePerUnit;
-    if (service.pricing.variants) {
-      const variant = service.pricing.variants.find(
-        (v) => v.name === pricingVariant,
-      );
-      if (variant) {
-        setupFee = variant.setupFee;
-        ratePerUnit = variant.ratePerUnit;
-      }
-    }
-    if (isSelfService) setupFee = 0;
-    const durationInUnit =
-      durationMinutes / unitToMinutes(service.pricing.unitName);
-    timeCost = durationInUnit * ratePerUnit;
-  } else if (service.pricing.type === "COMPOSITE") {
-    setupFee = service.pricing.setupFee;
-    let timeRate = service.pricing.timeRate;
-    if (service.pricing.variants) {
-      const variant = service.pricing.variants.find(
-        (v) => v.name === pricingVariant,
-      );
-      if (variant) {
-        setupFee = variant.setupFee;
-        timeRate = variant.timeRate;
-      }
-    }
-    if (isSelfService) setupFee = 0;
-    const durationInUnit =
-      durationMinutes / unitToMinutes(service.pricing.unitName);
-    timeCost = durationInUnit * timeRate;
-  }
-
-  const total = setupFee + timeCost;
-  return { setupFee, materialCost: 0, timeCost, total };
 }
 
 // ============================================================================

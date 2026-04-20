@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -9,10 +8,15 @@ import {
 import { useState } from "react";
 
 import { Card } from "@/components/ui/card";
-
 import { FieldSeparator } from "@/components/ui/field";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { UploadedFile } from "../file-upload/types";
+import {
+  derivePricingFromSchema,
+  getDurationMinutesFromTimeRange,
+  getPricingVariantKey,
+  type ServicePricing,
+} from "@/lib/project-pricing";
 
 export type BookingFormValues = {
   serviceType: "self-service" | "full-service";
@@ -36,33 +40,11 @@ export type BookingFormValues = {
 interface EstimateProjectDetailsProps {
   serviceName: string;
   data: BookingFormValues;
-  servicePricing?:
-    | {
-        type: "FIXED";
-        amount: number;
-        variants?: Array<{ name: string; amount: number }>;
-      }
-    | {
-        type: "PER_UNIT";
-        setupFee: number;
-        unitName: string;
-        ratePerUnit: number;
-        variants?: Array<{
-          name: string;
-          setupFee: number;
-          ratePerUnit: number;
-        }>;
-      }
-    | {
-        type: "COMPOSITE";
-        setupFee: number;
-        unitName: string;
-        timeRate: number;
-        variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
-      };
+  servicePricing?: ServicePricing;
   serviceMaterials?: Array<{
     _id: string;
     name: string;
+    unit?: string;
     pricePerUnit?: number;
     costPerUnit?: number;
   }>;
@@ -80,59 +62,18 @@ export function EstimateProjectDetails({
   canSubmit,
   onBack,
 }: EstimateProjectDetailsProps) {
-  let durationMins = 0;
-  if (data.dateTime.startTime && data.dateTime.endTime) {
-    const [startH, startM] = data.dateTime.startTime.split(":").map(Number);
-    const [endH, endM] = data.dateTime.endTime.split(":").map(Number);
-    durationMins = endH * 60 + endM - (startH * 60 + startM);
-  }
-
-  const unitToMinutes = (unit: string) => {
-    if (unit === "hour") return 60;
-    if (unit === "day") return 60 * 24;
-    return 1; // "minute"
-  };
-
   const [isChecked, setIsChecked] = useState(false);
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsChecked(e.target.checked);
   };
 
-  let basePrice = 0;
-  let durationCost = 0;
-  let materialCost = 0;
-  let unitName = "hour";
+  const durationMins = getDurationMinutesFromTimeRange(
+    data.dateTime.startTime,
+    data.dateTime.endTime,
+  );
 
-  // "Default" / empty string means no variant (use base rates)
-  const selectedVariant =
-    data.pricing && data.pricing !== "Default" ? data.pricing : null;
-
-  if (servicePricing) {
-    if (servicePricing.type === "FIXED") {
-      const variant = selectedVariant
-        ? servicePricing.variants?.find((v) => v.name === selectedVariant)
-        : undefined;
-      basePrice = variant ? variant.amount : servicePricing.amount;
-    } else if (servicePricing.type === "PER_UNIT") {
-      const variant = selectedVariant
-        ? servicePricing.variants?.find((v) => v.name === selectedVariant)
-        : undefined;
-      basePrice = variant ? variant.setupFee : servicePricing.setupFee;
-      const rate = variant ? variant.ratePerUnit : servicePricing.ratePerUnit;
-      unitName = servicePricing.unitName;
-      durationCost = (durationMins / unitToMinutes(unitName)) * rate;
-    } else if (servicePricing.type === "COMPOSITE") {
-      const variant = selectedVariant
-        ? servicePricing.variants?.find((v) => v.name === selectedVariant)
-        : undefined;
-      basePrice = variant ? variant.setupFee : servicePricing.setupFee;
-      const timeRate = variant ? variant.timeRate : servicePricing.timeRate;
-      unitName = servicePricing.unitName;
-      durationCost = (durationMins / unitToMinutes(unitName)) * timeRate;
-    }
-  }
-
+  let materialName = "";
   if (
     data.material === "buy-from-lab" &&
     data.requestedMaterialId &&
@@ -142,11 +83,21 @@ export function EstimateProjectDetails({
       (m) => m._id === data.requestedMaterialId,
     );
     if (mat) {
-      materialCost = mat.pricePerUnit || mat.costPerUnit || 0;
+      materialName = mat.name;
     }
   }
 
-  const estimatedTotal = basePrice + durationCost + materialCost;
+  const pricing = derivePricingFromSchema({
+    servicePricing,
+    pricingVariant: data.pricing,
+    serviceType: data.serviceType,
+    bookingDurationMinutes: durationMins,
+    materialCost: 0,
+  });
+  const selectedVariant = getPricingVariantKey(data.pricing);
+  const pricingType = servicePricing?.type ?? "FIXED";
+  const isTimeBased = pricingType === "PER_UNIT" || pricingType === "COMPOSITE";
+  const isBuyFromLab = data.material === "buy-from-lab";
 
   const formatTime12Hour = (time24: string) => {
     const [hour, minute] = time24.split(":").map(Number);
@@ -254,60 +205,107 @@ export function EstimateProjectDetails({
 
             {/* Pricing */}
             <div className="p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold text-gray-900 text-lg">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-lg font-semibold text-gray-900">
                   Pricing Estimate
                 </h3>
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-chart-6/10 text-chart-6 uppercase tracking-wider">
-                  {selectedVariant ? `${selectedVariant} Rate` : "Default Rate"}
-                </span>
-              </div>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Base Price</span>
-                  <span className="font-medium">₱{basePrice.toFixed(2)}</span>
-                </div>
-                {durationCost > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">
-                      Duration (
-                      {unitName === "day"
-                        ? (durationMins / (60 * 24)).toFixed(2)
-                        : unitName === "hour"
-                          ? (durationMins / 60).toFixed(2)
-                          : durationMins.toFixed(0)}{" "}
-                      {unitName}
-                      {(unitName === "day"
-                        ? durationMins / (60 * 24)
-                        : unitName === "hour"
-                          ? durationMins / 60
-                          : durationMins) !== 1
-                        ? "s"
-                        : ""}
-                      )
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedVariant && (
+                    <span className="rounded-full bg-chart-4/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-chart-4">
+                      {selectedVariant}
                     </span>
-                    <span className="font-medium">
-                      ₱{durationCost.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                {materialCost > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">
-                      Lab Material (Est. 1 unit)
-                    </span>
-                    <span className="font-medium">
-                      ₱{materialCost.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between pt-2 border-t border-gray-300">
-                  <span className="font-semibold">Estimated Total</span>
-                  <span className="font-semibold text-xl text-chart-6">
-                    ₱{estimatedTotal.toFixed(2)}
+                  )}
+                  <span className="rounded-full bg-chart-6/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-chart-6">
+                    {pricingType.replace("_", " ")}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+              </div>
+              <div className="space-y-3 text-sm">
+                {pricingType === "FIXED" && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Amount
+                    </span>
+                    <span className="text-[13px] font-medium text-gray-900">
+                      ₱{pricing.setupFee.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                {isTimeBased && (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                        Setup Fee
+                      </span>
+                      <span className="text-[13px] font-medium text-gray-900">
+                        ₱{pricing.setupFee.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                        Duration ({pricing.unitName}s)
+                      </span>
+                      <span className="text-[13px] font-medium text-gray-900">
+                        {pricing.duration.toFixed(2)} {pricing.unitName}s
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                        Rate / {pricing.unitName}
+                      </span>
+                      <span className="text-[13px] font-medium text-gray-900">
+                        ₱{pricing.rate.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                        Time Cost
+                      </span>
+                      <span className="text-[13px] font-medium text-gray-900">
+                        ₱{pricing.timeCost.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {isBuyFromLab && (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                        Material Used
+                        {materialName && (
+                          <span className="ml-1 normal-case text-[9px] font-normal tracking-normal text-gray-500">
+                            ({materialName})
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[13px] font-medium text-gray-900">
+                        N/A
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                        Material Cost
+                      </span>
+                      <span className="text-[13px] font-medium text-gray-900">
+                        N/A
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                <FieldSeparator className="my-1" />
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                    Estimated Total
+                  </span>
+                  <span className="text-xl font-extrabold text-chart-6">
+                    ₱{pricing.total.toFixed(2)}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-gray-500">
                   Final price may vary based on actual production time and
                   materials used.
                 </p>

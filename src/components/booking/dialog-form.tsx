@@ -287,7 +287,7 @@ export function BookingDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="flex flex-col h-auto w-full min-w-[min(22rem,calc(100%-2rem))] md:max-w-[80%] lg:max-w-[60vw] sm:max-w-[min(80vw,80rem)] rounded-xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none p-4 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl md:max-w-[80%] lg:max-w-[60vw]">
         {step === 1 && serviceCategory !== "WORKSHOP" && (
           <Step1ServiceType
             form={form}

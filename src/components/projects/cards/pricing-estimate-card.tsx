@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,12 +11,16 @@ import {
 } from "@/components/ui/select";
 import { FieldSeparator } from "@/components/ui/field";
 import { DetailCard, DetailChip } from "@/components/projects/cards/detail-card";
-import { ActionDialog } from "../../action-dialog";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
-import { ProjectMaterial, ResourceUnit } from "@convex/constants";
+import { ProjectMaterial } from "@convex/constants";
+import {
+  derivePricingFromSchema,
+  type PricingServiceType,
+  type ServicePricing,
+} from "@/lib/project-pricing";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,27 +32,6 @@ interface CostBreakdown {
   timeCost: number;
   total: number;
 }
-
-type ServicePricing =
-  | {
-      type: "FIXED";
-      amount: number;
-      variants?: Array<{ name: string; amount: number }>;
-    }
-  | {
-      type: "PER_UNIT";
-      setupFee: number;
-      unitName: string;
-      ratePerUnit: number;
-      variants?: Array<{ name: string; setupFee: number; ratePerUnit: number }>;
-    }
-  | {
-      type: "COMPOSITE";
-      setupFee: number;
-      unitName: string;
-      timeRate: number;
-      variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
-    };
 
 interface RequestedMaterial {
   _id: string;
@@ -94,6 +76,7 @@ interface PricingEstimateCardProps {
     pricing: ServicePricing;
     name?: string;
   };
+  serviceType?: PricingServiceType;
   projectPricing?: string;
   resourceUsages?: ResourceUsage[];
   requestedMaterial?: RequestedMaterial | null;
@@ -102,25 +85,12 @@ interface PricingEstimateCardProps {
   readOnly?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
-
-const unitToMinutes = (unit: string): number => {
-  if (unit === ResourceUnit.HOUR) return 60;
-  if (unit === ResourceUnit.DAY) return 60 * 24;
-  return 1; // minute
-};
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function PricingEstimateCard({
   projectId,
   material,
   costBreakdown,
   service,
+  serviceType,
   projectPricing = "Default",
   resourceUsages,
   requestedMaterial,
@@ -149,66 +119,16 @@ export function PricingEstimateCard({
     resourceUsages?.reduce((acc, u) => acc + (u.endTime - u.startTime), 0) ?? 0;
   const totalDurationMinutes = totalDurationMs / (1000 * 60);
 
-  const selectedVariantKey =
-    projectPricing && projectPricing !== "Default" ? projectPricing : null;
-
   const primaryUsage = resourceUsages?.[0];
 
   const derived = useMemo(() => {
-    if (!service?.pricing) {
-      return { setupFee: 0, rate: 0, duration: 0, unitName: "unit" };
-    }
-
-    const p = service.pricing;
-
-    if (p.type === "FIXED") {
-      const variant = selectedVariantKey
-        ? p.variants?.find((v) => v.name === selectedVariantKey)
-        : undefined;
-      return {
-        setupFee: variant ? variant.amount : p.amount,
-        rate: 0,
-        duration: 0,
-        unitName: "unit",
-      };
-    }
-
-    if (p.type === "PER_UNIT") {
-      const variant = selectedVariantKey
-        ? p.variants?.find((v) => v.name === selectedVariantKey)
-        : undefined;
-      const unitName = p.unitName;
-      const durationInUnit =
-        totalDurationMinutes > 0
-          ? totalDurationMinutes / unitToMinutes(unitName)
-          : 1;
-      return {
-        setupFee: variant ? variant.setupFee : p.setupFee,
-        rate: variant ? variant.ratePerUnit : p.ratePerUnit,
-        duration: durationInUnit,
-        unitName,
-      };
-    }
-
-    if (p.type === "COMPOSITE") {
-      const variant = selectedVariantKey
-        ? p.variants?.find((v) => v.name === selectedVariantKey)
-        : undefined;
-      const unitName = p.unitName;
-      const durationInUnit =
-        totalDurationMinutes > 0
-          ? totalDurationMinutes / unitToMinutes(unitName)
-          : 1;
-      return {
-        setupFee: variant ? variant.setupFee : p.setupFee,
-        rate: variant ? variant.timeRate : p.timeRate,
-        duration: durationInUnit,
-        unitName,
-      };
-    }
-
-    return { setupFee: 0, rate: 0, duration: 0, unitName: "unit" };
-  }, [service, selectedVariantKey, totalDurationMinutes]);
+    return derivePricingFromSchema({
+      servicePricing: service?.pricing,
+      pricingVariant: projectPricing,
+      serviceType,
+      bookingDurationMinutes: totalDurationMinutes,
+    });
+  }, [projectPricing, service?.pricing, serviceType, totalDurationMinutes]);
 
   // ── Editable cost state ──────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
@@ -219,9 +139,9 @@ export function PricingEstimateCard({
 
   const initialEditState = () => ({
     setupFee: costBreakdown?.setupFee ?? derived.setupFee,
-    rate: derived.rate,
-    duration: derived.duration,
-    amountUsed: initialAmountUsed,
+        rate: derived.rate,
+        duration: derived.duration,
+        amountUsed: initialAmountUsed,
   });
 
   const [editValues, setEditValues] = useState(initialEditState);
