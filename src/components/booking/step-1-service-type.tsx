@@ -25,7 +25,7 @@ export function Step1ServiceType({
       </DialogHeader>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-8">
         <Card
-          className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted hover:border border-primary cursor-pointer"
+          className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted/10 hover:border border-primary cursor-pointer"
           onClick={() => {
             form.setFieldValue("serviceType", "self-service");
             onNext();
@@ -37,7 +37,7 @@ export function Step1ServiceType({
           </p>
         </Card>
         <Card
-          className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted hover:border border-primary cursor-pointer"
+          className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted/10 hover:border border-primary cursor-pointer"
           onClick={() => {
             form.setFieldValue("serviceType", "full-service");
             onNext();

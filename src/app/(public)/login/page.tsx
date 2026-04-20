@@ -1,11 +1,11 @@
 import { LoginForm } from "@/components/login-form";
 import Image from "next/image";
-import { getToken } from "@/lib/auth-server";
+import { hasValidSession } from "@/lib/auth-queries";
 import { redirect } from "next/navigation";
 
 export default async function LoginPage() {
-  const token = await getToken();
-  if (token) {
+  const isAuthenticated = await hasValidSession();
+  if (isAuthenticated) {
     redirect("/dashboard");
   }
   return (

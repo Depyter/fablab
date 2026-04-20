@@ -3,12 +3,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { ReactNode } from "react";
 import { PublicMobileNav } from "@/components/sidebar/public-mobile-nav";
+import { hasValidSession } from "@/lib/auth-queries";
+
 
 export default async function PublicLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const isAuthenticated = await hasValidSession();
+
   return (
     <ConvexClientProvider>
       <div className="min-h-full flex flex-col">
@@ -40,9 +44,15 @@ export default async function PublicLayout({
                 Services
               </Link>
 
-              <Link href="/login" className="text-sm font-medium">
-                Login
-              </Link>
+              {isAuthenticated ? (
+                <Link href="/dashboard" className="text-sm font-medium">
+                  My Projects
+                </Link>
+              ) : (
+                <Link href="/login" className="text-sm font-medium">
+                  Login
+                </Link>
+              )}
             </nav>
           </div>
         </header>

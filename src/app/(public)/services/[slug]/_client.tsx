@@ -50,7 +50,7 @@ export function ServiceDetailClient({
   }
 
   return (
-    <main className="font-sans bg-background min-h-screen">
+    <main className="font-sans bg-background min-h-screen" >
       {/*
           Section 1: Hero Header & Main Info
           White background, minimal focus
@@ -88,7 +88,7 @@ export function ServiceDetailClient({
         </div>
       </header>
 
-      <div className="bg-primary-muted">
+      <div className="bg-primary-muted/10 ">
         <div className="container mx-auto max-w-7xl px-6 py-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-20 items-start">
             {/* Left: Media Gallery */}
@@ -147,6 +147,16 @@ export function ServiceDetailClient({
                         <p className="text-xl font-black tracking-tight">
                           ₱{service.pricing.setupFee.toLocaleString()}
                         </p>
+
+                        {service.pricing.variants?.map((variant) => (
+                          <p
+                            key={variant.name}
+                            className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1 bg-sidebar-accent/50 px-2 py-0.5 rounded-full w-fit"
+                          >
+                            {variant.name} Base Fee: ₱
+                            {variant.setupFee.toLocaleString()}
+                          </p>
+                        ))}
                       </div>
                       <div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
@@ -173,15 +183,7 @@ export function ServiceDetailClient({
                             </p>
                           ))}
                         </div>
-                        {service.pricing.variants?.map((variant) => (
-                          <p
-                            key={variant.name}
-                            className="text-xs font-bold text-muted-foreground mt-2 flex items-center gap-1"
-                          >
-                            {variant.name} Base Fee: ₱
-                            {variant.setupFee.toLocaleString()}
-                          </p>
-                        ))}
+                        
                       </div>
                     </>
                   )}

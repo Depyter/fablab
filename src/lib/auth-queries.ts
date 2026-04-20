@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { preloadAuthQuery } from "@/lib/auth-server";
+import { fetchAuthQuery, getToken, preloadAuthQuery } from "@/lib/auth-server";
 import { api } from "@/../convex/_generated/api";
 
 /**
@@ -17,3 +17,38 @@ import { api } from "@/../convex/_generated/api";
 export const getPreloadedUserProfile = cache(() =>
   preloadAuthQuery(api.users.getUserProfile, {}),
 );
+
+/**
+ * Checks whether the current request has a valid authenticated session.
+ * A token alone is not enough; we also verify it resolves to a user identity.
+ */
+export const hasValidSession = cache(async () => {
+  const token = await getToken();
+  if (!token) {
+    return false;
+  }
+
+  try {
+    const user = await fetchAuthQuery(api.auth.getCurrentUser, {});
+    return Boolean(user);
+  } catch {
+    return false;
+  }
+});
+
+/**
+ * Returns a token only when the session is fully valid.
+ */
+export const getVerifiedSessionToken = cache(async () => {
+  const token = await getToken();
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const user = await fetchAuthQuery(api.auth.getCurrentUser, {});
+    return user ? token : null;
+  } catch {
+    return null;
+  }
+});

@@ -1,5 +1,5 @@
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
-import { getToken } from "@/lib/auth-server";
+import { getVerifiedSessionToken } from "@/lib/auth-queries";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
 
@@ -8,7 +8,7 @@ export default async function AuthenticatedLayout({
 }: {
   children: ReactNode;
 }) {
-  const token = await getToken();
+  const token = await getVerifiedSessionToken();
   if (!token) {
     redirect("/login");
   }
