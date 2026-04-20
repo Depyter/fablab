@@ -540,7 +540,7 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                 <div className="divide-y">
                   {machineUsages.map((usage) => (
                     <ProjectDetails
-                      key={usage.id}
+                      key={usage.id || `${usage.machineId}-${usage.startTime}`}
                       projectId={usage.projectId as Id<"projects">}
                       trigger={
                         <button

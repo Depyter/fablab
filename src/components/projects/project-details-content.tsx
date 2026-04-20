@@ -23,6 +23,11 @@ import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActionDialog } from "../action-dialog";
 import { api } from "@/../convex/_generated/api";
+import {
+  ProjectStatusType,
+  ProjectMaterialType,
+  ProjectServiceTypeType,
+} from "@convex/constants";
 
 export type ProjectData = NonNullable<
   (typeof api.projects.query.getProject)["_returnType"]
@@ -33,30 +38,21 @@ interface ProjectDetailsContentProps {
   styles?: { badge?: string; cover?: string };
   timelineSteps: ProjectTimelineStep[];
   onOpenAssignView: () => void;
-  onUpdateStatus: (
-    newStatus:
-      | "pending"
-      | "approved"
-      | "rejected"
-      | "completed"
-      | "cancellation_requested"
-      | "cancelled"
-      | string,
-  ) => void;
+  onUpdateStatus: (newStatus: ProjectStatusType) => void;
   onMarkPaid: () => void;
   isClient: boolean;
   onCancelProject: () => void;
   onUpdateDetails?: (args: {
     description?: string;
     notes?: string;
-    material?: "provide-own" | "buy-from-lab";
-    serviceType?: "self-service" | "full-service" | "workshop";
+    material?: ProjectMaterialType;
+    serviceType?: ProjectServiceTypeType;
     files?: string[];
   }) => Promise<void>;
 }
 
 const STATUS_PILL: Record<
-  string,
+  ProjectStatusType,
   { bg: string; color: string; border: string; label: string }
 > = {
   pending: {
@@ -113,12 +109,12 @@ export function ProjectDetailsContent({
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [editMaterial, setEditMaterial] = useState<
-    "provide-own" | "buy-from-lab"
-  >("provide-own");
-  const [editServiceType, setEditServiceType] = useState<
-    "self-service" | "full-service" | "workshop"
-  >("self-service");
+  const [editMaterial, setEditMaterial] = useState<ProjectMaterialType>(
+    "provide-own",
+  );
+  const [editServiceType, setEditServiceType] = useState<ProjectServiceTypeType>(
+    "self-service",
+  );
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -127,10 +123,8 @@ export function ProjectDetailsContent({
   function openEdit() {
     setEditDescription(project.description ?? "");
     setEditNotes(project.notes ?? "");
-    setEditMaterial(project.material as "provide-own" | "buy-from-lab");
-    setEditServiceType(
-      project.serviceType as "self-service" | "full-service" | "workshop",
-    );
+    setEditMaterial(project.material as ProjectMaterialType);
+    setEditServiceType(project.serviceType as ProjectServiceTypeType);
     setEditFiles(
       (project.resolvedFiles ?? [])
         .filter((f) => !!f.url)
@@ -264,7 +258,7 @@ export function ProjectDetailsContent({
                   onValueChange={(val) => {
                     if (val === "approved") onOpenAssignView();
                     else if (val === "paid") onMarkPaid();
-                    else onUpdateStatus(val);
+                    else onUpdateStatus(val as ProjectStatusType);
                   }}
                 >
                   <SelectTrigger
