@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import {
@@ -82,12 +83,14 @@ export default function AddServicePage() {
       toast.success("Service added successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Failed to add service. Please try again.",
-      );
-      toast.error("Failed to add service. Please try again.");
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to add service. Please try again.";
+      setSubmitError(message);
+      toast.error(message);
       throw error;
     }
   };

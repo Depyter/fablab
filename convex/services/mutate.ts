@@ -123,6 +123,17 @@ export const addService = authMutation({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
+    const slug = slugify(args.name);
+    const existing = await ctx.db
+      .query("services")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (existing) {
+      throw new ConvexError(
+        `A service with the slug "${slug}" already exists. Choose a different name.`,
+      );
+    }
+
     const finalServiceCategory = args.serviceCategory;
     if (finalServiceCategory.type === "WORKSHOP") {
       finalServiceCategory.schedules.forEach((schedule) => {
@@ -255,8 +266,18 @@ export const updateService = authMutation({
     const updates: Record<string, any> = {};
 
     if (args.name !== undefined) {
+      const slug = slugify(args.name);
+      const conflict = await ctx.db
+        .query("services")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first();
+      if (conflict && conflict._id !== args.service) {
+        throw new ConvexError(
+          `A service with the slug "${slug}" already exists. Choose a different name.`,
+        );
+      }
       updates.name = args.name;
-      updates.slug = slugify(args.name);
+      updates.slug = slug;
     }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
