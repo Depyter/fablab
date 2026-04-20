@@ -5,13 +5,21 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Html, useProgress } from "@react-three/drei";
 import { Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { X, Info, Focus } from "lucide-react";
+import { Focus } from "lucide-react";
 import * as THREE from "three";
 import type { ModelData } from "./utils";
 import { Button } from "@/components/ui/button";
 import { getModelFormat } from "./modelViewer";
 
 const ModelScene = dynamic(() => import("./modelScene"), { ssr: false });
+
+const COMPLEXITY_LEVELS = {
+  1: { label: "Calm", color: "var(--fab-teal)" },
+  2: { label: "Steady", color: "var(--fab-teal-light)" },
+  3: { label: "Tuned", color: "var(--fab-amber)" },
+  4: { label: "Detailed", color: "var(--fab-magenta-light)" },
+  5: { label: "Wild", color: "var(--fab-magenta)" },
+} as const;
 
 function CameraAnimator({
   action,
@@ -76,7 +84,6 @@ export default function ModelViewerClient({
   className?: string;
 }) {
   const [modelData, setModelData] = useState<ModelData | null>(null);
-  const [isInfoVisible, setIsInfoVisible] = useState(false);
   const [cameraAction, setCameraAction] = useState<{
     type: "recenter";
     id: number;
@@ -91,6 +98,18 @@ export default function ModelViewerClient({
 
   // Convert mm to cm and format
   const toCm = (mm: number) => (mm / 10).toFixed(1);
+  const dimensions = modelData
+    ? {
+        x: modelData.boundingBox.max.x - modelData.boundingBox.min.x,
+        y: modelData.boundingBox.max.y - modelData.boundingBox.min.y,
+        z: modelData.boundingBox.max.z - modelData.boundingBox.min.z,
+      }
+    : null;
+  const complexity = modelData
+    ? (COMPLEXITY_LEVELS[
+        modelData.complexityTier as keyof typeof COMPLEXITY_LEVELS
+      ] ?? COMPLEXITY_LEVELS[3])
+    : null;
 
   return (
     <div
@@ -106,107 +125,75 @@ export default function ModelViewerClient({
         </Suspense>
       </Canvas>
 
-      {modelData && isInfoVisible && (
-        <div className="absolute top-3 right-3 bg-sidebar/95 backdrop-blur-md p-4 rounded-xl shadow-2xl text-sidebar-foreground w-56 z-10 border border-sidebar-border font-sans text-sm">
-          <div className="flex justify-between items-center mb-3 border-b border-sidebar-border pb-2">
-            <span className="font-bold text-xs uppercase tracking-wider text-sidebar-foreground/70">
-              Model Analysis
+      {modelData && dimensions && complexity && (
+        <div className="absolute top-3 left-3 right-3 z-10 flex gap-2">
+          {/* Pill 1: Vol + Size */}
+          <div className="flex flex-1 sm:flex-none items-center h-8 rounded-full border border-[var(--fab-border-md)] bg-white/90 px-3 shadow-sm backdrop-blur-md gap-2 text-[11px] font-semibold text-[var(--fab-text-primary)] whitespace-nowrap">
+            <span className="text-[var(--fab-text-dim)] font-bold uppercase tracking-[0.10em] text-[9px]">
+              Vol
             </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsInfoVisible(false);
-              }}
-              className="text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <span className="tabular-nums">
+              {(modelData.volume / 1000).toFixed(1)} cm³
+            </span>
+            <div className="w-px h-3.5 bg-[var(--fab-border-md)]" />
+            <span className="text-[var(--fab-text-dim)] font-bold uppercase tracking-[0.10em] text-[9px]">
+              Size
+            </span>
+            <span className="tabular-nums">
+              {toCm(dimensions.x)}×{toCm(dimensions.y)}×{toCm(dimensions.z)} cm
+            </span>
           </div>
 
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-sidebar-foreground/70">
-                <span>Volume</span>
-                <span className="font-semibold text-sidebar-foreground">
-                  {(modelData.volume / 1000).toFixed(2)} cm³
-                </span>
-              </div>
-              <div className="flex justify-between text-sidebar-foreground/70">
-                <span>Size (XYZ)</span>
-                <span className="font-semibold text-sidebar-foreground tabular-nums">
-                  {toCm(
-                    modelData.boundingBox.max.x - modelData.boundingBox.min.x,
-                  )}
-                  ×
-                  {toCm(
-                    modelData.boundingBox.max.y - modelData.boundingBox.min.y,
-                  )}
-                  ×
-                  {toCm(
-                    modelData.boundingBox.max.z - modelData.boundingBox.min.z,
-                  )}{" "}
-                  cm
-                </span>
-              </div>
+          {/* Pill 2: Complexity */}
+          <div className="flex flex-1 sm:flex-none items-center justify-center h-8 rounded-full border border-[var(--fab-border-md)] bg-white/90 px-3 shadow-sm backdrop-blur-md gap-2 whitespace-nowrap">
+            <div className="flex items-end gap-px">
+              {Array.from({ length: 5 }, (_, index) => {
+                const tier = index + 1;
+                const active = index < modelData.complexityTier;
+                const tierColor =
+                  COMPLEXITY_LEVELS[tier as keyof typeof COMPLEXITY_LEVELS]
+                    .color;
+                return (
+                  <span
+                    key={index}
+                    className="w-[10px] rounded-full transition-opacity border"
+                    style={{
+                      height: `${5 + index * 2}px`,
+                      background: active
+                        ? tierColor
+                        : "color-mix(in srgb, var(--fab-border-md) 60%, white)",
+                      opacity: active ? 1 : 0.5,
+                    }}
+                  />
+                );
+              })}
             </div>
-
-            <div className="space-y-1.5 border-t border-sidebar-border/50 pt-3">
-              <div className="flex justify-between text-sidebar-foreground/70">
-                <span>Weight</span>
-                <span className="font-semibold text-sidebar-foreground">
-                  {modelData.weight.toFixed(1)}g
-                </span>
-              </div>
-              <div className="flex justify-between text-sidebar-foreground/70">
-                <span>Est. Time</span>
-                <span className="font-semibold text-sidebar-foreground">
-                  {modelData.printTime.toFixed(1)}h
-                </span>
-              </div>
-            </div>
-
-            <div className="pt-3 mt-1 border-t border-sidebar-border flex items-center justify-between">
-              <span className="font-bold text-xs text-sidebar-foreground/70 uppercase tracking-wider">
-                Total
-              </span>
-              <span className="font-black text-chart-6 text-lg">
-                ₱{modelData.price.toFixed(2)}
-              </span>
-            </div>
+            <span
+              className="rounded-[4px] px-[5px] py-[1px] text-[9px] font-bold uppercase tracking-[0.06em]"
+              style={{
+                background: `color-mix(in srgb, ${complexity.color} 20%, white)`,
+                color: complexity.color,
+              }}
+            >
+              {complexity.label}
+            </span>
           </div>
         </div>
       )}
 
-      {modelData && !isInfoVisible && (
-        <Button
-          variant="default"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsInfoVisible(true);
-          }}
-          className="bg-secondary hover:bg-primary absolute top-3 right-3 backdrop-blur-md rounded-lg shadow-lg border border-sidebar-border/50 gap-1.5 font-bold uppercase tracking-widest text-sm h-7 px-2.5 z-10"
-        >
-          <Info className="h-5 w-5" />
-          Analysis
-        </Button>
-      )}
-
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-1 bg-background/80 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-sidebar-border/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            triggerCameraAction("recenter");
-          }}
-          className="h-8 px-3 rounded-full text-xs font-semibold gap-1.5"
-          title="Recenter"
-        >
-          <Focus className="h-4 w-4" />
-          Recenter
-        </Button>
-      </div>
+      <Button
+        variant="default"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          triggerCameraAction("recenter");
+        }}
+        className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 h-8 rounded-full px-4 text-xs font-semibold gap-1.5 bg-[var(--fab-teal)] text-white hover:bg-[var(--fab-teal)]/90 shadow-md"
+        title="Recenter"
+      >
+        <Focus className="h-3.5 w-3.5" />
+        Recenter
+      </Button>
     </div>
   );
 }

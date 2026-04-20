@@ -124,12 +124,12 @@ function MediaLightbox({
 
           {/* Media area */}
           <div
-            className="relative flex-1 flex items-center justify-center min-h-0 px-16 cursor-default"
+            className="relative flex-1 flex items-center justify-center min-h-0 px-2 sm:px-16 cursor-default"
             onClick={() => onOpenChange(false)}
           >
             {is3D ? (
               <div
-                className="h-full w-4/5"
+                className="h-full w-full sm:w-4/5"
                 onClick={(e) => e.stopPropagation()}
               >
                 <ModelViewer
@@ -206,7 +206,7 @@ function MediaLightbox({
                   prev();
                 }}
                 aria-label="Previous"
-                className="absolute left-4 rounded-xl p-2.5 bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                className="hidden sm:flex absolute left-4 rounded-xl p-2.5 bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
@@ -220,7 +220,7 @@ function MediaLightbox({
                   next();
                 }}
                 aria-label="Next"
-                className="absolute right-4 rounded-xl p-2.5 bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                className="hidden sm:flex absolute right-4 rounded-xl p-2.5 bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -229,24 +229,49 @@ function MediaLightbox({
 
           {/* Bottom bar */}
           <div className="flex flex-col items-center gap-3 py-5 shrink-0">
-            <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/8">
+            <div className="flex items-center gap-2">
+              {/* Mobile-only prev/next pill */}
               {count > 1 && (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/35 tabular-nums select-none">
-                  {current + 1} / {count}
-                </span>
+                <div className="flex sm:hidden items-center rounded-full bg-white/5 border border-white/8">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); prev(); }}
+                    aria-label="Previous"
+                    className="px-3 py-1.5 text-white/35 hover:text-white/70 transition-colors"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="w-px h-3 bg-white/10" />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); next(); }}
+                    aria-label="Next"
+                    className="px-3 py-1.5 text-white/35 hover:text-white/70 transition-colors"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               )}
-              {count > 1 && <div className="w-px h-3 bg-white/10" />}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  downloadCurrent();
-                }}
-                aria-label="Download"
-                className="text-white/35 hover:text-white/70 transition-colors"
-              >
-                <Download className="h-3.5 w-3.5" />
-              </button>
+
+              <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/8">
+                {count > 1 && (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/35 tabular-nums select-none">
+                    {current + 1} / {count}
+                  </span>
+                )}
+                {count > 1 && <div className="w-px h-3 bg-white/10" />}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadCurrent();
+                  }}
+                  aria-label="Download"
+                  className="text-white/35 hover:text-white/70 transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
             {count > 1 && (
