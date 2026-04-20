@@ -9,6 +9,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { AddServiceFormValues } from "@/types/add-service";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 
 export function EditServiceClient({
@@ -176,12 +177,14 @@ export function EditServiceClient({
       toast.success("Service updated successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Failed to update service. Please try again.",
-      );
-      toast.error("Failed to update service. Please try again.");
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update service. Please try again.";
+      setSubmitError(message);
+      toast.error(message);
       throw error;
     }
   };

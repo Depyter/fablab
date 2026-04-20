@@ -9,6 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DetailCard } from "./detail-card";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
+import { FileUpload } from "@/components/file-upload/file-upload";
+import { UploadedFile } from "@/components/file-upload/types";
+
+interface ResolvedFile {
+  url?: string | null;
+  type: string | null;
+  originalName?: string | null;
+}
 
 interface ProjectInfoCardProps {
   description?: string | null;
@@ -17,6 +26,7 @@ interface ProjectInfoCardProps {
   notes?: string | null;
   bookingDateStr: string;
   bookingTimeRange: string;
+  resolvedFiles?: ResolvedFile[] | null;
 
   // Edit controls
   canEdit: boolean;
@@ -31,6 +41,8 @@ interface ProjectInfoCardProps {
   setEditDescription: (v: string) => void;
   editNotes: string;
   setEditNotes: (v: string) => void;
+  editFiles: UploadedFile[];
+  setEditFiles: (files: UploadedFile[]) => void;
   editMaterial: "provide-own" | "buy-from-lab";
   setEditMaterial: (v: "provide-own" | "buy-from-lab") => void;
   editServiceType: "self-service" | "full-service" | "workshop";
@@ -44,6 +56,7 @@ export function ProjectInfoCard({
   notes,
   bookingDateStr,
   bookingTimeRange,
+  resolvedFiles,
   canEdit,
   isEditing,
   isSaving,
@@ -54,6 +67,8 @@ export function ProjectInfoCard({
   setEditDescription,
   editNotes,
   setEditNotes,
+  editFiles,
+  setEditFiles,
   editMaterial,
   setEditMaterial,
   editServiceType,
@@ -165,6 +180,39 @@ export function ProjectInfoCard({
           )}
         </div>
       </div>
+
+      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
+
+      {/* Attachments */}
+      <div className="space-y-1">
+        <p
+          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+          style={{ color: "var(--fab-text-dim)" }}
+        >
+          Attachments
+        </p>
+        {isEditing ? (
+          <FileUpload
+            value={editFiles}
+            onFilesChange={setEditFiles}
+            variant="minimal"
+            title="Add files"
+            multiple
+          />
+        ) : (
+          <ProjectAttachments
+            files={(resolvedFiles ?? [])
+              .filter((f) => !!f.url)
+              .map((f) => ({
+                url: f.url!,
+                type: f.type,
+                originalName: f.originalName,
+              }))}
+          />
+        )}
+      </div>
+
+      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
 
       {/* Booking date + time */}
       <div className="grid min-w-0 grid-cols-2 gap-4">

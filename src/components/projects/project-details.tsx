@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,8 +29,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import {
+  ProjectStatusType,
+  PaymentModeType,
+  UserRoleType,
+  ProjectMaterialType,
+  ProjectServiceTypeType,
+} from "@convex/constants";
+
 interface ProjectDetailsProps {
-  projectId: Id<"projects">;
+  projectId?: Id<"projects"> | null;
   serviceName?: string;
   trigger?: ReactNode;
   triggerClassName?: string;
@@ -52,15 +60,14 @@ export function ProjectDetails({
   // Payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState("");
-  const [paymentMode, setPaymentMode] = useState<
-    "cash" | "gcash" | "bank transfer" | "others"
-  >("cash");
+  const [paymentMode, setPaymentMode] = useState<PaymentModeType>("cash");
   const [proof, setProof] = useState("");
   const [isPaying, setIsPaying] = useState(false);
 
-  const project = useQuery(api.projects.query.getProject, {
-    projectId,
-  });
+  const project = useQuery(
+    api.projects.query.getProject,
+    projectId ? { projectId } : "skip",
+  );
 
   const updateProject = useMutation(api.projects.mutate.updateProject);
   const cancelOwnProject = useMutation(api.projects.mutate.cancelOwnProject);
@@ -68,27 +75,25 @@ export function ProjectDetails({
   const updateOwnProjectDetails = useMutation(
     api.projects.mutate.updateOwnProjectDetails,
   );
-  const role = useQuery(api.users.getRole, {});
+  const role = useQuery(api.users.getRole, {}) as UserRoleType | undefined;
   const isClient = role === "client";
+  const isAdminOrMaker = role === "admin" || role === "maker";
+  const makers = useQuery(api.users.getMakers, isAdminOrMaker ? {} : "skip");
 
-  const handleUpdateStatus = async (
-    newStatus:
-      | "pending"
-      | "approved"
-      | "rejected"
-      | "completed"
-      | "cancelled"
-      | string,
-  ) => {
+  if (!projectId) {
+    if (React.isValidElement<{ className?: string }>(trigger)) {
+      return React.cloneElement(trigger, {
+        className: cn(trigger.props.className, "cursor-default hover:ring-0"),
+      });
+    }
+    return <>{trigger}</>;
+  }
+
+  const handleUpdateStatus = async (newStatus: ProjectStatusType) => {
     try {
       await updateProject({
         projectId,
-        status: newStatus as
-          | "pending"
-          | "approved"
-          | "rejected"
-          | "completed"
-          | "cancelled",
+        status: newStatus,
       });
       toast.success(`Project status updated to ${newStatus}!`);
     } catch {
@@ -108,17 +113,15 @@ export function ProjectDetails({
   const handleUpdateDetails = async (args: {
     description?: string;
     notes?: string;
-    material?: "provide-own" | "buy-from-lab";
-    serviceType?: "self-service" | "full-service" | "workshop";
+    material?: ProjectMaterialType;
+    serviceType?: ProjectServiceTypeType;
     files?: string[];
   }) => {
     try {
       await updateOwnProjectDetails({
         projectId,
         ...args,
-        files: args.files as Parameters<
-          typeof updateOwnProjectDetails
-        >[0]["files"],
+        files: args.files as Id<"_storage">[],
       });
       toast.success("Project details updated.");
     } catch {
@@ -167,8 +170,6 @@ export function ProjectDetails({
       cover: "from-red-500/20 to-red-500/5",
     };
   }
-
-  const makers = useQuery(api.users.getMakers);
 
   const timelineSteps = project
     ? [
@@ -311,7 +312,7 @@ export function ProjectDetails({
       )}
 
       <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
-        {!project ? (
+        {!project || role === undefined ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             Loading project details...
           </div>

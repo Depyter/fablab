@@ -307,12 +307,9 @@ export function ChatInterface({
                         style={{ marginTop: isFirstInGroup ? 2 : 0 }}
                       >
                         {isFirstInGroup ? (
-                          <div
-                            className="flex size-8.5 items-center justify-center overflow-hidden rounded-xl"
-                            style={{ background: "var(--fab-magenta)" }}
-                          >
+                          <div className="flex size-8.5 items-center justify-center overflow-hidden rounded-xl">
                             <Image
-                              src="/fablab.svg"
+                              src="/fablab.jpg"
                               alt="System"
                               className="h-7.5 w-7.5"
                               width="30"
