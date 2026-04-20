@@ -95,32 +95,6 @@ export function DetailCard({
             />
           </Button>
         )}
-        {isEditing && (
-          <div className="flex items-center gap-1 shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={onCancel}
-              disabled={isSaving}
-              aria-label="Cancel edit"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              className="h-6 w-6"
-              onClick={onSave}
-              disabled={isSaving}
-              aria-label="Save changes"
-              style={{ background: "var(--fab-teal)", color: "#fff" }}
-            >
-              <Save className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Body */}
@@ -129,6 +103,37 @@ export function DetailCard({
         style={{ background: "var(--fab-bg-card)", ...bodyStyle }}
       >
         {children}
+
+        {isEditing && (
+          <div className="mt-4 flex flex-col gap-2">
+            <div
+              className="h-px w-full"
+              style={{ background: "var(--fab-border-soft)" }}
+            />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-semibold"
+                onClick={onCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 text-xs font-semibold text-white"
+                onClick={onSave}
+                disabled={isSaving}
+                style={{ background: "var(--fab-teal)", border: "none" }}
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

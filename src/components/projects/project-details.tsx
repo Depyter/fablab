@@ -70,6 +70,7 @@ export function ProjectDetails({
   );
   const role = useQuery(api.users.getRole, {});
   const isClient = role === "client";
+  const isAdminOrMaker = role === "admin" || role === "maker";
 
   const handleUpdateStatus = async (
     newStatus:
@@ -168,7 +169,7 @@ export function ProjectDetails({
     };
   }
 
-  const makers = useQuery(api.users.getMakers);
+  const makers = useQuery(api.users.getMakers, isAdminOrMaker ? {} : "skip");
 
   const timelineSteps = project
     ? [
@@ -311,7 +312,7 @@ export function ProjectDetails({
       )}
 
       <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
-        {!project ? (
+        {!project || role === undefined ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             Loading project details...
           </div>

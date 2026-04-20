@@ -16,7 +16,6 @@ import {
 } from "@/components/projects/project-timeline";
 import { UploadedFile } from "@/components/file-upload/types";
 import { ProjectInfoCard } from "./cards/project-info-card";
-import { AttachmentsCard } from "./cards/attachments-card";
 import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
 import { MessageSquare } from "lucide-react";
@@ -299,7 +298,7 @@ export function ProjectDetailsContent({
                     href={`/dashboard/chat/${project.roomId}?thread=${project.threadId}`}
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
-                    Message Client
+                    {isClient ? "Message Staff" : "Message Client"}
                   </Link>
                 </Button>
               ) : (
@@ -310,7 +309,7 @@ export function ProjectDetailsContent({
                   disabled
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
-                  Message Client
+                  {isClient ? "Message Staff" : "Message Client"}
                 </Button>
               )}
             </div>
@@ -331,6 +330,7 @@ export function ProjectDetailsContent({
               notes={project.notes}
               bookingDateStr={bookingDateStr}
               bookingTimeRange={bookingTimeRange}
+              resolvedFiles={project.resolvedFiles}
               canEdit={canEdit}
               isEditing={isEditing}
               isSaving={isSaving}
@@ -341,22 +341,12 @@ export function ProjectDetailsContent({
               setEditDescription={setEditDescription}
               editNotes={editNotes}
               setEditNotes={setEditNotes}
+              editFiles={editFiles}
+              setEditFiles={setEditFiles}
               editMaterial={editMaterial}
               setEditMaterial={setEditMaterial}
               editServiceType={editServiceType}
               setEditServiceType={setEditServiceType}
-            />
-
-            <AttachmentsCard
-              resolvedFiles={project.resolvedFiles}
-              canEdit={canEdit}
-              isEditing={isEditing}
-              isSaving={isSaving}
-              onEdit={openEdit}
-              onSave={saveEdit}
-              onCancel={cancelEdit}
-              editFiles={editFiles}
-              setEditFiles={setEditFiles}
             />
 
             {!isClient && (

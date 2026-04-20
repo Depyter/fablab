@@ -376,6 +376,9 @@ export function PricingEstimateCard({
       titleColor="var(--fab-text-primary)"
       headerRight={headerChips}
       onEdit={!readOnly && !isEditing ? handleEdit : undefined}
+      isEditing={isEditing}
+      onSave={handleSave}
+      onCancel={handleDiscard}
       bodyClassName="space-y-3 py-3"
     >
         {/* ── Assignment section (non-clients only) ── */}
@@ -851,30 +854,6 @@ export function PricingEstimateCard({
             ₱{displayTotal.toFixed(2)}
           </span>
         </div>
-
-        {/* ── Footer actions (inside body when editing) ────────────────────── */}
-        {!readOnly && isEditing && (
-          <>
-            <FieldSeparator className="my-1" />
-            <ActionDialog
-              title="Discard Changes"
-              description="Are you sure you want to discard your edits?"
-              onConfirm={handleDiscard}
-              cancelButtonText="Back"
-              confirmButtonText="Discard"
-              className="w-full"
-              baseActionText="Cancel"
-            />
-            <Button
-              size="sm"
-              onClick={handleSave}
-              className="w-full rounded-[6px] text-white font-semibold"
-              style={{ background: "var(--fab-teal)", border: "none" }}
-            >
-              Save Changes
-            </Button>
-          </>
-        )}
     </DetailCard>
   );
 }
