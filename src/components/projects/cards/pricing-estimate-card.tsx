@@ -10,7 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldSeparator } from "@/components/ui/field";
-import { DetailCard, DetailChip } from "@/components/projects/cards/detail-card";
+import {
+  DetailCard,
+  DetailChip,
+} from "@/components/projects/cards/detail-card";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
@@ -139,9 +142,9 @@ export function PricingEstimateCard({
 
   const initialEditState = () => ({
     setupFee: costBreakdown?.setupFee ?? derived.setupFee,
-        rate: derived.rate,
-        duration: derived.duration,
-        amountUsed: initialAmountUsed,
+    rate: derived.rate,
+    duration: derived.duration,
+    amountUsed: initialAmountUsed,
   });
 
   const [editValues, setEditValues] = useState(initialEditState);
@@ -278,14 +281,6 @@ export function PricingEstimateCard({
         color="var(--fab-text-muted)"
         border="var(--fab-border-md)"
       />
-      {hasFinalBreakdown && !isEditing && (
-        <DetailChip
-          label="Final"
-          bg="color-mix(in srgb, var(--fab-teal) 10%, var(--fab-bg-sidebar))"
-          color="var(--fab-teal)"
-          border="color-mix(in srgb, var(--fab-teal) 25%, transparent)"
-        />
-      )}
     </>
   );
 
@@ -301,142 +296,217 @@ export function PricingEstimateCard({
       onCancel={handleDiscard}
       bodyClassName="space-y-3 py-3"
     >
-        {/* ── Assignment section (non-clients only) ── */}
-        {!readOnly && (
-          <>
-            {/* Maker */}
-            <div className="space-y-1">
-              <p
-                className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
+      {/* ── Assignment section (non-clients only) ── */}
+      {!readOnly && (
+        <>
+          {/* Maker */}
+          <div className="space-y-1">
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Assigned Maker
+            </p>
+            {isEditing ? (
+              <Select
+                value={selectedMakerId}
+                onValueChange={setSelectedMakerId}
               >
-                Assigned Maker
-              </p>
-              {isEditing ? (
-                <Select
-                  value={selectedMakerId}
-                  onValueChange={setSelectedMakerId}
-                >
-                  <SelectTrigger className="text-sm h-8">
-                    <SelectValue placeholder="Select a maker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {makers?.map((maker) => (
-                      <SelectItem key={maker._id} value={maker._id}>
-                        {maker.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : assignedMaker ? (
-                <div className="flex items-center gap-2.5">
-                  {assignedMaker.pfpUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={assignedMaker.pfpUrl}
-                      alt={assignedMaker.name}
-                      className="h-7 w-7 rounded-[6px] object-cover shrink-0"
-                    />
-                  ) : (
-                    <div
-                      className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
-                      style={{
-                        background:
-                          "color-mix(in srgb, var(--fab-teal) 15%, var(--fab-bg-sidebar))",
-                        color: "var(--fab-teal)",
-                      }}
-                    >
-                      {assignedMaker.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p
-                      className="text-[9px] font-bold uppercase tracking-[0.1em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Maker
-                    </p>
-                    <p
-                      className="text-[12px] font-medium truncate"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {assignedMaker.name}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p
-                  className="text-[12px]"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  No maker assigned yet.
-                </p>
-              )}
-            </div>
-
-            {/* Resource */}
-            <div className="space-y-1">
-              <p
-                className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Resource
-              </p>
-              {isEditing ? (
-                <Select
-                  value={selectedResourceId}
-                  onValueChange={setSelectedResourceId}
-                >
-                  <SelectTrigger className="text-sm h-8">
-                    <SelectValue placeholder="Select a resource" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {resources?.map((resource) => (
-                      <SelectItem key={resource._id} value={resource._id}>
-                        {resource.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : primaryUsage?.resourceDetails ? (
-                <div className="flex items-start gap-2.5">
+                <SelectTrigger className="text-sm h-8">
+                  <SelectValue placeholder="Select a maker" />
+                </SelectTrigger>
+                <SelectContent>
+                  {makers?.map((maker) => (
+                    <SelectItem key={maker._id} value={maker._id}>
+                      {maker.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : assignedMaker ? (
+              <div className="flex items-center gap-2.5">
+                {assignedMaker.pfpUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={assignedMaker.pfpUrl}
+                    alt={assignedMaker.name}
+                    className="h-7 w-7 rounded-[6px] object-cover shrink-0"
+                  />
+                ) : (
                   <div
-                    className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold mt-0.5"
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
                     style={{
-                      background: "rgba(83,74,183,0.12)",
-                      color: "#534AB7",
+                      background:
+                        "color-mix(in srgb, var(--fab-teal) 15%, var(--fab-bg-sidebar))",
+                      color: "var(--fab-teal)",
                     }}
                   >
-                    {primaryUsage.resourceDetails.name.charAt(0).toUpperCase()}
+                    {assignedMaker.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="min-w-0">
+                )}
+                <div className="min-w-0">
+                  <p
+                    className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                    style={{ color: "var(--fab-text-dim)" }}
+                  >
+                    Maker
+                  </p>
+                  <p
+                    className="text-[12px] font-medium truncate"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {assignedMaker.name}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p
+                className="text-[12px]"
+                style={{ color: "var(--fab-text-muted)" }}
+              >
+                No maker assigned yet.
+              </p>
+            )}
+          </div>
+
+          {/* Resource */}
+          <div className="space-y-1">
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Resource
+            </p>
+            {isEditing ? (
+              <Select
+                value={selectedResourceId}
+                onValueChange={setSelectedResourceId}
+              >
+                <SelectTrigger className="text-sm h-8">
+                  <SelectValue placeholder="Select a resource" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resources?.map((resource) => (
+                    <SelectItem key={resource._id} value={resource._id}>
+                      {resource.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : primaryUsage?.resourceDetails ? (
+              <div className="flex items-start gap-2.5">
+                <div
+                  className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold mt-0.5"
+                  style={{
+                    background: "rgba(83,74,183,0.12)",
+                    color: "#534AB7",
+                  }}
+                >
+                  {primaryUsage.resourceDetails.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p
+                    className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                    style={{ color: "var(--fab-text-dim)" }}
+                  >
+                    Resource
+                  </p>
+                  <p
+                    className="text-[12px] font-medium truncate"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {primaryUsage.resourceDetails.name}
+                  </p>
+                  {(primaryUsage.resourceDetails.category ||
+                    primaryUsage.resourceDetails.type) && (
+                    <p
+                      className="text-[10px] mt-0.5"
+                      style={{ color: "var(--fab-text-muted)" }}
+                    >
+                      {[
+                        primaryUsage.resourceDetails.category,
+                        primaryUsage.resourceDetails.type,
+                        primaryUsage.resourceDetails.status,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p
+                className="text-[12px]"
+                style={{ color: "var(--fab-text-muted)" }}
+              >
+                No resource assigned.
+              </p>
+            )}
+          </div>
+
+          {/* Material (only relevant for buy-from-lab) */}
+          {isBuyFromLab && (
+            <div className="space-y-1">
+              <p
+                className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Material
+              </p>
+              {isEditing ? (
+                <Select
+                  value={selectedMaterialId}
+                  onValueChange={setSelectedMaterialId}
+                >
+                  <SelectTrigger className="text-sm h-8">
+                    <SelectValue placeholder="Select a material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materials?.map((m) => (
+                      <SelectItem key={m._id} value={m._id}>
+                        {m.name}{" "}
+                        <span className="text-muted-foreground">
+                          ({m.unit})
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : requestedMaterial ? (
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
+                    style={{
+                      background: "var(--fab-amber-light)",
+                      color: "var(--fab-amber)",
+                    }}
+                  >
+                    {requestedMaterial.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
                     <p
                       className="text-[9px] font-bold uppercase tracking-[0.1em]"
                       style={{ color: "var(--fab-text-dim)" }}
                     >
-                      Resource
+                      Material
                     </p>
-                    <p
-                      className="text-[12px] font-medium truncate"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {primaryUsage.resourceDetails.name}
-                    </p>
-                    {(primaryUsage.resourceDetails.category ||
-                      primaryUsage.resourceDetails.type) && (
+                    <div className="flex items-baseline gap-2">
                       <p
-                        className="text-[10px] mt-0.5"
-                        style={{ color: "var(--fab-text-muted)" }}
+                        className="text-[12px] font-medium truncate"
+                        style={{ color: "var(--fab-text-primary)" }}
                       >
-                        {[
-                          primaryUsage.resourceDetails.category,
-                          primaryUsage.resourceDetails.type,
-                          primaryUsage.resourceDetails.status,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {requestedMaterial.name}
                       </p>
-                    )}
+                      {requestedMaterial.pricePerUnit != null && (
+                        <p
+                          className="text-[10px] shrink-0"
+                          style={{ color: "var(--fab-text-muted)" }}
+                        >
+                          ₱{requestedMaterial.pricePerUnit.toFixed(2)} /{" "}
+                          {requestedMaterial.unit}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -444,101 +514,61 @@ export function PricingEstimateCard({
                   className="text-[12px]"
                   style={{ color: "var(--fab-text-muted)" }}
                 >
-                  No resource assigned.
+                  No material selected.
                 </p>
               )}
             </div>
+          )}
 
-            {/* Material (only relevant for buy-from-lab) */}
-            {isBuyFromLab && (
-              <div className="space-y-1">
-                <p
-                  className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                  style={{ color: "var(--fab-text-dim)" }}
-                >
-                  Material
-                </p>
-                {isEditing ? (
-                  <Select
-                    value={selectedMaterialId}
-                    onValueChange={setSelectedMaterialId}
-                  >
-                    <SelectTrigger className="text-sm h-8">
-                      <SelectValue placeholder="Select a material" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {materials?.map((m) => (
-                        <SelectItem key={m._id} value={m._id}>
-                          {m.name}{" "}
-                          <span className="text-muted-foreground">
-                            ({m.unit})
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : requestedMaterial ? (
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
-                      style={{
-                        background: "var(--fab-amber-light)",
-                        color: "var(--fab-amber)",
-                      }}
-                    >
-                      {requestedMaterial.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="text-[9px] font-bold uppercase tracking-[0.1em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Material
-                      </p>
-                      <div className="flex items-baseline gap-2">
-                        <p
-                          className="text-[12px] font-medium truncate"
-                          style={{ color: "var(--fab-text-primary)" }}
-                        >
-                          {requestedMaterial.name}
-                        </p>
-                        {requestedMaterial.pricePerUnit != null && (
-                          <p
-                            className="text-[10px] shrink-0"
-                            style={{ color: "var(--fab-text-muted)" }}
-                          >
-                            ₱{requestedMaterial.pricePerUnit.toFixed(2)} /{" "}
-                            {requestedMaterial.unit}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p
-                    className="text-[12px]"
-                    style={{ color: "var(--fab-text-muted)" }}
-                  >
-                    No material selected.
-                  </p>
-                )}
-              </div>
-            )}
+          <FieldSeparator className="my-1" />
+        </>
+      )}
 
-            <FieldSeparator className="my-1" />
-          </>
-        )}
+      {/* ── Cost rows ────────────────────────────────────────────────────── */}
 
-        {/* ── Cost rows ────────────────────────────────────────────────────── */}
+      {/* FIXED */}
+      {pricingType === "FIXED" && (
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: "var(--fab-text-dim)" }}
+          >
+            Amount
+          </span>
+          {isEditing ? (
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={editValues.setupFee}
+              onChange={(e) =>
+                setEditValues((prev) => ({
+                  ...prev,
+                  setupFee: Number(e.target.value || 0),
+                }))
+              }
+              className="h-7 w-32 text-right text-sm"
+            />
+          ) : (
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: "var(--fab-text-primary)" }}
+            >
+              ₱{displaySetupFee.toFixed(2)}
+            </span>
+          )}
+        </div>
+      )}
 
-        {/* FIXED */}
-        {pricingType === "FIXED" && (
+      {/* PER_UNIT / COMPOSITE */}
+      {isTimeBased && (
+        <>
           <div className="flex items-center justify-between gap-2">
             <span
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Amount
+              Setup Fee
             </span>
             {isEditing ? (
               <Input
@@ -563,217 +593,182 @@ export function PricingEstimateCard({
               </span>
             )}
           </div>
-        )}
 
-        {/* PER_UNIT / COMPOSITE */}
-        {isTimeBased && (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Setup Fee
-              </span>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={editValues.setupFee}
-                  onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      setupFee: Number(e.target.value || 0),
-                    }))
-                  }
-                  className="h-7 w-32 text-right text-sm"
-                />
-              ) : (
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  ₱{displaySetupFee.toFixed(2)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Duration ({derived.unitName}s)
-              </span>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={editValues.duration}
-                  onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      duration: Number(e.target.value || 0),
-                    }))
-                  }
-                  className="h-7 w-32 text-right text-sm"
-                />
-              ) : (
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  {derived.duration.toFixed(2)} {derived.unitName}s
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Rate / {derived.unitName}
-              </span>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={editValues.rate}
-                  onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      rate: Number(e.target.value || 0),
-                    }))
-                  }
-                  className="h-7 w-32 text-right text-sm"
-                />
-              ) : (
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  ₱{derived.rate.toFixed(2)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Time Cost
-              </span>
-              <span
-                className="text-[13px] font-medium"
-                style={{
-                  color: isEditing
-                    ? "var(--fab-text-muted)"
-                    : "var(--fab-text-primary)",
-                }}
-              >
-                ₱{displayTimeCost.toFixed(2)}
-              </span>
-            </div>
-          </>
-        )}
-
-        {/* Material Usage (buy-from-lab only) */}
-        {isBuyFromLab && (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Material Used
-                {materialName && (
-                  <span
-                    className="ml-1 normal-case text-[9px] tracking-normal font-normal"
-                    style={{ color: "var(--fab-text-muted)" }}
-                  >
-                    ({materialName})
-                  </span>
-                )}
-              </span>
-              {isEditing ? (
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={editValues.amountUsed}
-                    onChange={(e) =>
-                      setEditValues((prev) => ({
-                        ...prev,
-                        amountUsed: Number(e.target.value || 0),
-                      }))
-                    }
-                    className="h-7 w-24 text-right text-sm"
-                  />
-                  <span
-                    className="text-[11px] shrink-0"
-                    style={{ color: "var(--fab-text-muted)" }}
-                  >
-                    {materialUnit}
-                  </span>
-                </div>
-              ) : (
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  {displayAmountUsed} {materialUnit}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Material Cost
-                {pricePerUnit > 0 && (
-                  <span
-                    className="ml-1 normal-case text-[9px] tracking-normal font-normal"
-                    style={{ color: "var(--fab-text-muted)" }}
-                  >
-                    (₱{pricePerUnit.toFixed(2)} / {materialUnit})
-                  </span>
-                )}
-              </span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Duration ({derived.unitName}s)
+            </span>
+            {isEditing ? (
+              <Input
+                type="number"
+                min={0}
+                step="0.1"
+                value={editValues.duration}
+                onChange={(e) =>
+                  setEditValues((prev) => ({
+                    ...prev,
+                    duration: Number(e.target.value || 0),
+                  }))
+                }
+                className="h-7 w-32 text-right text-sm"
+              />
+            ) : (
               <span
                 className="text-[13px] font-medium"
                 style={{ color: "var(--fab-text-primary)" }}
               >
-                ₱{displayMaterialCost.toFixed(2)}
+                {derived.duration.toFixed(2)} {derived.unitName}s
               </span>
-            </div>
-          </>
-        )}
+            )}
+          </div>
 
-        <FieldSeparator className="my-1" />
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Rate / {derived.unitName}
+            </span>
+            {isEditing ? (
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={editValues.rate}
+                onChange={(e) =>
+                  setEditValues((prev) => ({
+                    ...prev,
+                    rate: Number(e.target.value || 0),
+                  }))
+                }
+                className="h-7 w-32 text-right text-sm"
+              />
+            ) : (
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                ₱{derived.rate.toFixed(2)}
+              </span>
+            )}
+          </div>
 
-        {/* Total */}
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            {hasFinalBreakdown && !isEditing ? "Total" : "Estimated Total"}
-          </span>
-          <span
-            className="text-[21px] font-extrabold leading-none"
-            style={{ fontFamily: "Syne, sans-serif", color: "var(--fab-teal)" }}
-          >
-            ₱{displayTotal.toFixed(2)}
-          </span>
-        </div>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Time Cost
+            </span>
+            <span
+              className="text-[13px] font-medium"
+              style={{
+                color: isEditing
+                  ? "var(--fab-text-muted)"
+                  : "var(--fab-text-primary)",
+              }}
+            >
+              ₱{displayTimeCost.toFixed(2)}
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* Material Usage (buy-from-lab only) */}
+      {isBuyFromLab && (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Material Used
+              {materialName && (
+                <span
+                  className="ml-1 normal-case text-[9px] tracking-normal font-normal"
+                  style={{ color: "var(--fab-text-muted)" }}
+                >
+                  ({materialName})
+                </span>
+              )}
+            </span>
+            {isEditing ? (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editValues.amountUsed}
+                  onChange={(e) =>
+                    setEditValues((prev) => ({
+                      ...prev,
+                      amountUsed: Number(e.target.value || 0),
+                    }))
+                  }
+                  className="h-7 w-24 text-right text-sm"
+                />
+                <span
+                  className="text-[11px] shrink-0"
+                  style={{ color: "var(--fab-text-muted)" }}
+                >
+                  {materialUnit}
+                </span>
+              </div>
+            ) : (
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                {displayAmountUsed} {materialUnit}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Material Cost
+              {pricePerUnit > 0 && (
+                <span
+                  className="ml-1 normal-case text-[9px] tracking-normal font-normal"
+                  style={{ color: "var(--fab-text-muted)" }}
+                >
+                  (₱{pricePerUnit.toFixed(2)} / {materialUnit})
+                </span>
+              )}
+            </span>
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: "var(--fab-text-primary)" }}
+            >
+              ₱{displayMaterialCost.toFixed(2)}
+            </span>
+          </div>
+        </>
+      )}
+
+      <FieldSeparator className="my-1" />
+
+      {/* Total */}
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+          style={{ color: "var(--fab-text-dim)" }}
+        >
+          {hasFinalBreakdown && !isEditing ? "Total" : "Estimated Total"}
+        </span>
+        <span
+          className="text-[21px] font-extrabold leading-none"
+          style={{ fontFamily: "Syne, sans-serif", color: "var(--fab-teal)" }}
+        >
+          ₱{displayTotal.toFixed(2)}
+        </span>
+      </div>
     </DetailCard>
   );
 }

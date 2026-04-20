@@ -107,35 +107,55 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
 
       {/* ── Desktop: horizontal ──────────────────────────────────── */}
       <div className="hidden md:block overflow-x-auto">
-        <div className="flex min-w-180 items-start pb-2 lg:min-w-0">
+        <div className="flex min-w-180 pb-2 lg:min-w-0">
           {steps.map((step, index) => {
+            const isFirst = index === 0;
             const isLast = index === steps.length - 1;
+            const next = steps[index + 1];
+
             return (
-              <div key={step.title} className="flex min-w-0 flex-1 items-start">
-                <div className="flex w-full shrink-0 flex-col items-center text-center">
+              <div
+                key={step.title}
+                className="flex min-w-0 flex-1 flex-col items-center"
+              >
+                {/* Connector halves flanking the dot */}
+                <div className="flex w-full items-center">
+                  <div
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full",
+                      isFirst
+                        ? "invisible"
+                        : connectorCn(
+                            step.completed,
+                            step.rejected,
+                            step.active,
+                          ),
+                    )}
+                  />
                   <StepDot
                     active={step.active}
                     completed={step.completed}
                     rejected={step.rejected}
                   />
-                  <div className="mt-3">
-                    <h4 className="text-[11px] font-semibold leading-tight text-[var(--fab-text-primary)] sm:text-sm wrap-break-word">
-                      {step.title}
-                    </h4>
-                  </div>
-                </div>
-                {!isLast && (
                   <div
                     className={cn(
-                      "mt-4 h-0.5 min-w-12 flex-1 rounded-full sm:mt-5 sm:min-w-20",
-                      connectorCn(
-                        steps[index + 1].completed,
-                        steps[index + 1].rejected,
-                        steps[index + 1].active,
-                      ),
+                      "h-0.5 flex-1 rounded-full",
+                      isLast
+                        ? "invisible"
+                        : connectorCn(
+                            next.completed,
+                            next.rejected,
+                            next.active,
+                          ),
                     )}
                   />
-                )}
+                </div>
+
+                <div className="mt-3 px-1 text-center">
+                  <h4 className="text-[11px] font-semibold leading-tight text-[var(--fab-text-primary)] sm:text-sm break-words">
+                    {step.title}
+                  </h4>
+                </div>
               </div>
             );
           })}
