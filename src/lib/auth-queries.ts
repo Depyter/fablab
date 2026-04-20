@@ -1,19 +1,19 @@
 import { cache } from "react";
-import { preloadAuthQuery } from "@/lib/auth-server";
-import { api } from "@/../convex/_generated/api";
+import { preloadedQueryResult } from "convex/nextjs";
+import { api } from "@convex/_generated/api";
+import { preloadAuthQuery } from "./auth-server";
 
 /**
- * Cached preload for the current user's profile.
- *
- * React's `cache()` deduplicates calls within the same request lifecycle, so
- * multiple Server Components / layouts that call this function will all share
- * the same `Preloaded` object without triggering additional network requests.
- *
- * Usage:
- *   const preloaded = await getPreloadedUserProfile();
- *   // Pass to a client component:  <Foo preloadedProfile={preloaded} />
- *   // Or read the value directly:  preloadedQueryResult(preloaded)
+ * Preload the current user's profile once per request.
+ * React cache() deduplicates calls across the layout tree so
+ * dashboard/layout.tsx and dashboard/(manage)/layout.tsx share
+ * the same fetch result without a second network round-trip.
  */
 export const getPreloadedUserProfile = cache(() =>
-  preloadAuthQuery(api.users.getUserProfile, {}),
+  preloadAuthQuery(api.users.getUserProfile),
 );
+
+export const getUserProfile = cache(async () => {
+  const preloaded = await getPreloadedUserProfile();
+  return preloadedQueryResult(preloaded);
+});
