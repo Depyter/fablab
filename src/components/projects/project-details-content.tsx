@@ -190,6 +190,9 @@ export function ProjectDetailsContent({
   const previousStepLabel =
     previousStep ? PROJECT_STATUS_LABELS[previousStep] : "";
   const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
+  const isClaimedProject =
+    project.status === "paid" || (project.status as string) === "claimed";
+  const canRebook = isClient && project.status === "cancelled";
 
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
@@ -264,15 +267,32 @@ export function ProjectDetailsContent({
             {/* Action buttons */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               {isClient ? (
-                <ActionDialog
-                  title="Cancel Project Request"
-                  description="Do you want to cancel this project request? This cannot be undone."
-                  onConfirm={onCancelProject}
-                  baseActionText="Cancel Request"
-                  cancelButtonText="Back"
-                  confirmButtonText="Yes, cancel"
-                  className="w-full sm:w-auto"
-                />
+                <>
+                  {canRebook ? (
+                    <ActionDialog
+                    title="Rebook Project Request"
+                    description="Do you want to rebook this project request?"
+                    onConfirm={() => {}}
+                    baseActionText="Rebook Request"
+                    cancelButtonText="Back"
+                    confirmButtonText="Yes, rebook"
+                    className="w-full sm:w-auto"
+                    disabled={isClaimedProject}
+                  />
+                  ): (
+                    <ActionDialog
+                    title="Cancel Project Request"
+                    description="Do you want to cancel this project request? This cannot be undone."
+                    onConfirm={onCancelProject}
+                    baseActionText="Cancel Request"
+                    cancelButtonText="Back"
+                    confirmButtonText="Yes, cancel"
+                    className="w-full sm:w-auto"
+                    disabled={isClaimedProject}
+                    />
+                  )}
+                  
+                </>
               ) : (
                 <>
                  
