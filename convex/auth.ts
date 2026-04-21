@@ -50,6 +50,8 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   });
 };
 
+export const { getAuthUser } = authComponent.clientApi();
+
 export const getCurrentUser = authQuery({
   args: {},
   handler: async (ctx) => {
