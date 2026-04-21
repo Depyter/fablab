@@ -95,8 +95,8 @@ export function ChatInterface({
     fileUploadKey,
     fileUploadInitialFiles,
     scrollContainerRef,
+    topSentinelRef,
     bottomRef,
-    handleScroll,
     handleSendMessage,
     handleKeyPress,
     handleFilesChange,
@@ -164,7 +164,6 @@ export function ChatInterface({
       {/* ------------------------------------------------------------------ */}
       <div
         ref={scrollContainerRef}
-        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4 py-4 relative z-2"
       >
         {isLoading ? (
@@ -193,6 +192,8 @@ export function ChatInterface({
           </div>
         ) : (
           <>
+            <div ref={topSentinelRef} aria-hidden="true" className="h-px" />
+
             {status === "LoadingMore" && (
               <div
                 className="sticky top-0 z-10 flex items-center justify-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest shadow backdrop-blur-sm mx-auto w-fit"
@@ -577,7 +578,7 @@ export function ChatInterface({
               );
             })}
 
-            <div ref={bottomRef} className="h-2" />
+            <div ref={bottomRef} aria-hidden="true" className="h-2" />
           </>
         )}
       </div>
