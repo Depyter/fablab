@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { InventoryTab } from "@/components/inventory/tabs";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,8 @@ export function InventoryClient({
   preloadedResources,
   preloadedMaterials,
 }: InventoryClientProps) {
-  const resources = usePreloadedQuery(preloadedResources);
-  const materials = usePreloadedQuery(preloadedMaterials);
+  const resources = usePreloadedAuthQuery(preloadedResources) ?? [];
+  const materials = usePreloadedAuthQuery(preloadedMaterials) ?? [];
 
   const [machineOpen, setMachineOpen] = useState(false);
   const [toolOpen, setToolOpen] = useState(false);

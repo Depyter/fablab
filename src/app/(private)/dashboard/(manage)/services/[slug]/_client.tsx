@@ -1,6 +1,6 @@
 "use client";
 
-import { usePreloadedQuery } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { api } from "@convex/_generated/api";
 import { Preloaded } from "convex/react";
 import { useState, useEffect } from "react";
@@ -21,7 +21,7 @@ export function ServiceDetailClient({
 }: {
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
-  const service = usePreloadedQuery(preloadedService);
+  const service = usePreloadedAuthQuery(preloadedService);
   const router = useRouter();
   const deleteService = useMutation(api.services.mutate.deleteService);
   const [isScrolled, setIsScrolled] = useState(false);

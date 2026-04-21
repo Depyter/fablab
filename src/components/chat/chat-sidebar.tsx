@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -39,7 +40,7 @@ export function ChatSidebar({
   preloadedRooms: Preloaded<typeof api.chat.query.getRooms>;
   className?: string;
 }) {
-  const rooms = usePreloadedQuery(preloadedRooms) as
+  const rooms = usePreloadedAuthQuery(preloadedRooms) as
     | (RoomWithLastMessage | null)[]
     | undefined;
   const [searchTerm, setSearchTerm] = React.useState("");

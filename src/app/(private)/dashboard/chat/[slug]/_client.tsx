@@ -1,6 +1,7 @@
 "use client";
 
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat/chat-interface";
@@ -14,7 +15,7 @@ export function ChatRoomClient({
   roomId: Id<"rooms">;
   preloadedCurrentUser: Preloaded<typeof api.auth.getCurrentUser>;
 }) {
-  const currentUser = usePreloadedQuery(preloadedCurrentUser);
+  const currentUser = usePreloadedAuthQuery(preloadedCurrentUser);
   const searchParams = useSearchParams();
   const activeThreadId = (searchParams.get("thread") ?? undefined) as
     | Id<"threads">

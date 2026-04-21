@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
 import { PackageOpen, Search, Plus } from "lucide-react";
@@ -26,7 +27,7 @@ export function ServicesListClient({
 }: {
   preloadedServices: Preloaded<typeof api.services.query.getServices>;
 }) {
-  const services = usePreloadedQuery(preloadedServices);
+  const services = usePreloadedAuthQuery(preloadedServices) ?? [];
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name-az" | "price-high" | "price-low">(
     "name-az",

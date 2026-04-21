@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   MessageSquareIcon,
@@ -112,7 +113,7 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   preloadedProfile: Preloaded<typeof api.users.getUserProfile>;
 }) {
-  const profile = usePreloadedQuery(preloadedProfile);
+  const profile = usePreloadedAuthQuery(preloadedProfile);
   const pathname = usePathname();
 
   const role: Role = profile?.role ?? "client";

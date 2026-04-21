@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { ServiceForm } from "@/components/services/forms/service-form";
 import { useRouter } from "next/navigation";
-import { useMutation, usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { useMutation, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { AddServiceFormValues } from "@/types/add-service";
@@ -17,7 +18,7 @@ export function EditServiceClient({
 }: {
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
-  const service = usePreloadedQuery(preloadedService);
+  const service = usePreloadedAuthQuery(preloadedService);
   const router = useRouter();
   const updateService = useMutation(api.services.mutate.updateService);
   const deleteService = useMutation(api.services.mutate.deleteService);
