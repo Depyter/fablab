@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import {
   DataViewRoot,
   DataViewToolbar,
@@ -226,7 +227,7 @@ export default function ProjectsList() {
         actions={
           <Button size="sm" className="h-8 gap-1 shrink-0">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Project</span>
+            <Link href="/services" className="hidden sm:inline">Add Project</Link>
           </Button>
         }
       />

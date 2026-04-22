@@ -2,13 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { FieldSeparator } from "@/components/ui/field";
 import {
   ProjectTimeline,
@@ -18,7 +11,7 @@ import { UploadedFile } from "@/components/file-upload/types";
 import { ProjectInfoCard } from "./cards/project-info-card";
 import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActionDialog } from "../action-dialog";
@@ -55,43 +48,37 @@ interface ProjectDetailsContentProps {
 
 const STATUS_PILL: Record<
   ProjectStatusType,
-  { bg: string; color: string; border: string; label: string }
+  { bg: string; color: string; border: string }
 > = {
   pending: {
     bg: "var(--fab-amber-light)",
     color: "var(--fab-amber)",
     border: "rgba(235,170,87,0.35)",
-    label: "Review",
   },
   approved: {
     bg: "rgba(59,130,246,0.1)",
     color: "#1d4ed8",
     border: "rgba(59,130,246,0.25)",
-    label: "Fabrication",
   },
   completed: {
     bg: "rgba(16,185,129,0.1)",
     color: "#059669",
     border: "rgba(16,185,129,0.25)",
-    label: "Payment",
   },
   paid: {
     bg: "color-mix(in srgb, var(--fab-teal) 12%, white)",
     color: "var(--fab-teal)",
     border: "color-mix(in srgb, var(--fab-teal) 30%, transparent)",
-    label: "Claim",
   },
   rejected: {
     bg: "var(--fab-magenta-light)",
     color: "var(--fab-magenta)",
     border: "rgba(157,26,88,0.25)",
-    label: "Rejected",
   },
   cancelled: {
     bg: "rgba(239,68,68,0.08)",
     color: "#dc2626",
     border: "rgba(239,68,68,0.2)",
-    label: "Cancelled",
   },
 };
 
@@ -186,12 +173,41 @@ export function ProjectDetailsContent({
     : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
-  const statusOptions = [
-    project.status,
-    ...PROJECT_STATUS_TRANSITIONS[project.status].filter(
-      (status) => status !== "cancelled",
-    ),
-  ];
+  const statusOrder = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatusType[];
+  const currentIndex = statusOrder.indexOf(project.status);
+  const allowedTransitions = PROJECT_STATUS_TRANSITIONS[project.status].filter(
+    (status) => status !== "cancelled",
+  );
+
+  const previousStep = allowedTransitions
+    .filter((status) => statusOrder.indexOf(status) < currentIndex)
+    .sort((a, b) => statusOrder.indexOf(b) - statusOrder.indexOf(a))[0];
+
+  const nextStep = allowedTransitions
+    .filter((status) => statusOrder.indexOf(status) > currentIndex)
+    .sort((a, b) => statusOrder.indexOf(a) - statusOrder.indexOf(b))[0];
+
+  const previousStepLabel =
+    previousStep ? PROJECT_STATUS_LABELS[previousStep] : "";
+  const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
+  const isClaimedProject =
+    project.status === "paid" || (project.status as string) === "claimed";
+  const canRebook = isClient && project.status === "cancelled";
+  const canSubmitReview = isClient && isClaimedProject;
+
+  function handleStatusChange(status: ProjectStatusType) {
+    if (status === "approved" && project.status === "pending") {
+      onOpenAssignView();
+      return;
+    }
+
+    if (status === "paid") {
+      onMarkPaid();
+      return;
+    }
+
+    onUpdateStatus(status);
+  }
 
   return (
     <div className="min-w-0 space-y-0">
@@ -220,7 +236,7 @@ export function ProjectDetailsContent({
                     border: `1px solid ${pill.border}`,
                   }}
                 >
-                  {pill.label}
+                  {PROJECT_STATUS_LABELS[project.status]}
                 </span>
                 {/* Service type chip */}
                 <span
@@ -252,42 +268,66 @@ export function ProjectDetailsContent({
             {/* Action buttons */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               {isClient ? (
-                <ActionDialog
-                  title="Cancel Project Request"
-                  description="Do you want to cancel this project request? This cannot be undone."
-                  onConfirm={onCancelProject}
-                  baseActionText="Cancel Request"
-                  cancelButtonText="Back"
-                  confirmButtonText="Yes, cancel"
-                  className="w-full sm:w-auto"
-                />
+                <>
+                  
+                  {canRebook ? (
+                    <ActionDialog
+                    title="Rebook Project Request"
+                    description="Do you want to rebook this project request?"
+                    onConfirm={() => {}}
+                    baseActionText="Rebook Request"
+                    cancelButtonText="Back"
+                    confirmButtonText="Yes, rebook"
+                    className="w-full sm:w-auto"
+                    disabled={isClaimedProject}
+                  />
+                  ): (
+                    <ActionDialog
+                    title="Cancel Project Request"
+                    description="Do you want to cancel this project request?"
+                    onConfirm={() => {}}
+                    baseActionText="Cancel   Request"
+                    cancelButtonText="Back"
+                    confirmButtonText="Yes, cancel"
+                    className="w-full sm:w-auto"
+                    disabled={isClaimedProject}
+                  />
+                  
+                  )}
+                  
+                </>
               ) : (
-                <Select
-                  value={project.status}
-                  onValueChange={(val) => {
-                    if (val === "approved") onOpenAssignView();
-                    else if (val === "paid") onMarkPaid();
-                    else onUpdateStatus(val as ProjectStatusType);
-                  }}
-                >
-                  <SelectTrigger
-                    className="h-8 w-auto gap-2 px-3 text-xs font-semibold"
-                    style={{
-                      background: pill.bg,
-                      color: pill.color,
-                      border: `1px solid ${pill.border}`,
-                    }}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {PROJECT_STATUS_LABELS[status]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <>
+                 
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 text-xs font-semibold"
+                      onClick={() =>
+                        previousStep && handleStatusChange(previousStep)
+                      }
+                      disabled={!previousStep}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      {previousStep ? `Back: ${previousStepLabel}` : "Back"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 px-3 text-xs font-semibold"
+                      style={{
+                        background: pill.bg,
+                        color: pill.color,
+                        border: `1px solid ${pill.border}`,
+                      }}
+                      onClick={() => nextStep && handleStatusChange(nextStep)}
+                      disabled={!nextStep}
+                    >
+                      {nextStep ? `Next: ${nextStepLabel}` : "Completed"}
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </>
               )}
 
               {project.roomId && project.threadId ? (

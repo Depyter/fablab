@@ -20,6 +20,7 @@ interface ActionDialogProps {
   confirmButtonText?: string;
   cancelButtonText?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function ActionDialog({
@@ -30,12 +31,17 @@ export function ActionDialog({
   confirmButtonText,
   cancelButtonText,
   className,
+  disabled,
 }: ActionDialogProps) {
   return (
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline" className={cn("rounded-lg", className)}>
+          <Button
+            variant="outline"
+            className={cn("rounded-lg", className)}
+            disabled={disabled}
+          >
             {baseActionText || "Back"}
           </Button>
         </DialogTrigger>

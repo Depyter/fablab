@@ -24,7 +24,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
   if (!images || images.length === 0) return null;
 
   return (
-    <div className="group/carousel relative flex flex-col items-center justify-center w-full aspect-square bg-sidebar-accent/5 overflow-hidden">
+    <div className="group/carousel relative flex h-full min-h-105 w-full flex-col items-center justify-center overflow-hidden bg-background">
       <div className="absolute inset-0 w-full h-full">
         {images.map((src, index) => (
           <div
@@ -34,7 +34,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
               current === index ? "opacity-100 z-10" : "opacity-0 z-0",
             )}
           >
-            <div className="relative w-full h-full p-8 lg:p-12">
+            <div className="relative h-full w-full p-4 lg:p-8">
               <Image
                 src={src}
                 alt={`Product Image ${index + 1}`}
@@ -52,21 +52,33 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
         <>
           <button
             onClick={prev}
-            className="absolute -left-8 group-hover/carousel:-left-0.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-6 lg:w-12 lg:h-8 bg-background border border-border text-foreground transition-all duration-500 hover:bg-sidebar-accent opacity-0 group-hover/carousel:opacity-100"
+            className="absolute bottom-3 left-[44%] z-20 flex h-7 w-7 items-center justify-center border border-black bg-background text-foreground transition-colors hover:bg-sidebar-accent"
             aria-label="Previous image"
           >
-            <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
           <button
             onClick={next}
-            className="absolute -right-8 group-hover/carousel:-right-0.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-6 lg:w-12 lg:h-8 bg-background border border-border text-foreground transition-all duration-500 hover:bg-sidebar-accent opacity-0 group-hover/carousel:opacity-100"
+            className="absolute bottom-3 left-[56%] z-20 flex h-7 w-7 items-center justify-center border border-black bg-background text-foreground transition-colors hover:bg-sidebar-accent"
             aria-label="Next image"
           >
-            <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
+            <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
-          <div className="absolute bottom-[5%] left-1/2 -translate-x-1/2 z-20 flex items-center gap-4">
+          <div className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 text-[10px] font-semibold tracking-[0.2em] text-foreground/60">
+            {String(current + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
+          </div>
+
+          <div className="sr-only" aria-live="polite">
+            Image {current + 1} of {images.length}
+          </div>
+
+          <div className="absolute bottom-0 left-0 z-10 h-12 w-full border-t border-black" />
+
+          <div className="absolute bottom-0 left-0 z-0 h-12 w-full bg-background" />
+
+          <div className="hidden">
             {images.map((_, idx) => (
               <button
                 key={idx}

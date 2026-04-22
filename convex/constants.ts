@@ -255,9 +255,9 @@ export const PROJECT_STATUS_TRANSITIONS: Record<
   readonly ProjectStatusType[]
 > = {
   pending: [ProjectStatus.APPROVED, ProjectStatus.REJECTED, ProjectStatus.CANCELLED],
-  approved: [ProjectStatus.COMPLETED, ProjectStatus.CANCELLED],
-  completed: [ProjectStatus.PAID],
-  paid: [],
-  rejected: [],
-  cancelled: [],
+  approved: [ProjectStatus.PENDING, ProjectStatus.COMPLETED, ProjectStatus.CANCELLED],
+  completed: [ProjectStatus.APPROVED, ProjectStatus.PAID],
+  paid: [ProjectStatus.COMPLETED],
+  rejected: [ProjectStatus.PENDING],
+  cancelled: [ProjectStatus.PENDING],
 };
