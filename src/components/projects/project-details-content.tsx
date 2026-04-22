@@ -11,9 +11,22 @@ import { UploadedFile } from "@/components/file-upload/types";
 import { ProjectInfoCard } from "./cards/project-info-card";
 import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
-import { MessageSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import Link from "next/link";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ActionDialog } from "../action-dialog";
 import { api } from "@/../convex/_generated/api";
 import {
@@ -215,15 +228,54 @@ export function ProjectDetailsContent({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             {/* Title + meta chips */}
             <div className="min-w-0 space-y-2">
-              <DialogTitle
-                className="text-xl font-bold leading-tight tracking-tight"
-                style={{
-                  fontFamily: "Syne, sans-serif",
-                  color: "var(--fab-text-primary)",
-                }}
-              >
-                {project.name}
-              </DialogTitle>
+              <div className="flex items-center gap-2 flex-wrap">
+                <DialogTitle
+                  className="text-xl font-bold leading-tight tracking-tight"
+                  style={{
+                    fontFamily: "Syne, sans-serif",
+                    color: "var(--fab-text-primary)",
+                  }}
+                >
+                  {project.name}
+                </DialogTitle>
+                {/* Override status — next to project name, admin/maker only */}
+                {!isClient && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] font-bold uppercase tracking-[0.08em] gap-1 rounded-[5px]"
+                        style={{
+                          background: "var(--fab-magenta-light)",
+                          color: "var(--fab-magenta)",
+                          border: "1px solid rgba(157,26,88,0.25)",
+                        }}
+                      >
+                        Override
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuLabel className="text-xs font-semibold">
+                        Override Status
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {PROJECT_STATUS_TRANSITIONS[project.status].map(
+                        (status) => (
+                          <DropdownMenuItem
+                            key={status}
+                            className="text-xs"
+                            onClick={() => handleStatusChange(status)}
+                          >
+                            {PROJECT_STATUS_LABELS[status]}
+                          </DropdownMenuItem>
+                        ),
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {/* Status pill */}
                 <span
@@ -293,7 +345,8 @@ export function ProjectDetailsContent({
                 </>
               ) : (
                 <>
-                  <div className="flex items-center gap-2">
+                  {/* Back · Current state · Next */}
+                  <div className="flex items-center gap-1.5">
                     <Button
                       variant="outline"
                       size="sm"
@@ -305,6 +358,19 @@ export function ProjectDetailsContent({
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                       {previousStep ? `Back: ${previousStepLabel}` : "Back"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 text-xs font-semibold"
+                      style={{
+                        background: "var(--fab-teal)",
+                        color: "white",
+                        border: `1px solid ${pill.border}`,
+                      }}
+                      onClick={() => {}}
+                    >
+                      {PROJECT_STATUS_LABELS[project.status]}
                     </Button>
                     <Button
                       size="sm"
