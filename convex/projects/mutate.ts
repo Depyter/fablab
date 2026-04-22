@@ -27,6 +27,7 @@ import {
   applyMaterialAssignment,
   syncMaterialUsageStock,
   buildMaterialSnapshot,
+  buildPricingSnapshot,
 } from "./helper";
 
 // ============================================================================
@@ -101,6 +102,9 @@ export const createProject = authMutation({
       bookingDurationMs,
     );
 
+    // Snapshot the resolved pricing at booking time for historical accuracy
+    const pricingSnapshot = buildPricingSnapshot(service, args.pricing);
+
     // ── 5. Insert the project record ─────────────────────────────────────────
     const now = Date.now();
     const projectId = await ctx.db.insert("projects", {
@@ -113,6 +117,7 @@ export const createProject = authMutation({
       assignedMaker: args.assignedMaker,
       service: args.service,
       pricing: args.pricing,
+      pricingSnapshot,
       status: "pending",
       files: args.files,
       notes: args.notes,

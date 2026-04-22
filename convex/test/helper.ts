@@ -35,9 +35,9 @@ export async function setupProject() {
     name: "3d printing",
     images: [],
     samples: [],
-    serviceCategory: { type: "FABRICATION", materials: [] },
-    pricing: {
-      type: "COMPOSITE",
+    serviceCategory: {
+      type: "FABRICATION",
+      materials: [],
       setupFee: 1,
       unitName: "hour",
       timeRate: 2,

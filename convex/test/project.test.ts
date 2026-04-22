@@ -162,9 +162,9 @@ describe("Project and Chat functionality", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      serviceCategory: { type: "FABRICATION", materials: [materialId] },
-      pricing: {
-        type: "COMPOSITE",
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [materialId],
         setupFee: 1,
         unitName: "hour",
         timeRate: 2,

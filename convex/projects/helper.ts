@@ -175,27 +175,6 @@ export async function validateFabricationAvailability(
 // Helpers — Cost
 // ============================================================================
 
-export function computeSharedFixedCostBreakdown(
-  service: ServiceDoc,
-  pricingVariant: string,
-  serviceType: string,
-):
-  | { setupFee: number; materialCost: number; timeCost: number; total: number }
-  | undefined {
-  if (service.pricing.type !== "FIXED") return undefined;
-
-  let amount = service.pricing.amount;
-  if (service.pricing.variants) {
-    const variant = service.pricing.variants.find(
-      (v) => v.name === pricingVariant,
-    );
-    if (variant) amount = variant.amount;
-  }
-
-  const setupFee = serviceType === "self-service" ? 0 : amount;
-  return { setupFee, materialCost: 0, timeCost: 0, total: setupFee };
-}
-
 export function computeProvisionalCostBreakdown(
   service: ServiceDoc,
   pricingVariant: string,
@@ -203,7 +182,7 @@ export function computeProvisionalCostBreakdown(
   bookingDurationMs: number,
 ): { setupFee: number; materialCost: number; timeCost: number; total: number } {
   const breakdown = derivePricingFromSchema({
-    servicePricing: service.pricing,
+    servicePricing: service.serviceCategory,
     pricingVariant,
     serviceType: serviceType as "self-service" | "full-service" | "workshop",
     bookingDurationMinutes: bookingDurationMs / (1000 * 60),
@@ -238,6 +217,39 @@ export function buildMaterialSnapshot(material: Doc<"materials">) {
     unit: material.unit,
     pricePerUnit: material.pricePerUnit,
     costPerUnit: material.costPerUnit,
+  };
+}
+
+/**
+ * Resolves the chosen pricing variant and returns a flat snapshot
+ * suitable for storing on a project at booking time.
+ * Maps WORKSHOP → "FIXED" and FABRICATION → "FABRICATION" in the snapshot.
+ */
+export function buildPricingSnapshot(
+  service: ServiceDoc,
+  pricingVariant: string,
+):
+  | { type: "FIXED"; amount: number }
+  | {
+      type: "FABRICATION";
+      setupFee: number;
+      unitName: "minute" | "hour" | "day";
+      timeRate: number;
+    } {
+  const sc = service.serviceCategory;
+
+  if (sc.type === "WORKSHOP") {
+    const variant = sc.variants?.find((v) => v.name === pricingVariant);
+    return { type: "FIXED", amount: variant ? variant.amount : sc.amount };
+  }
+
+  // FABRICATION
+  const variant = sc.variants?.find((v) => v.name === pricingVariant);
+  return {
+    type: "FABRICATION",
+    setupFee: variant ? variant.setupFee : sc.setupFee,
+    unitName: sc.unitName,
+    timeRate: variant ? variant.timeRate : sc.timeRate,
   };
 }
 
@@ -540,68 +552,63 @@ export function computeCompletionCost(
   project: Doc<"projects">,
   actualDurationMs: number,
 ): { setupFee: number; timeCost: number } {
-  // All rates are stored per their unit; convert duration to that unit for cost.
   const durationMinutes = actualDurationMs / (1000 * 60);
+  const isSelfService = project.serviceType === "self-service";
 
   const unitToMinutes = (unit: string): number => {
     if (unit === "hour") return 60;
     if (unit === "day") return 60 * 24;
-    return 1; // "minute" — rate is already per minute
+    return 1;
   };
 
-  let setupFee = 0;
-  let timeCost = 0;
-
-  if (service.pricing.type === "COMPOSITE") {
-    setupFee = service.pricing.setupFee;
-    let timeRate = service.pricing.timeRate;
-
-    if (service.pricing.variants) {
-      const variant = service.pricing.variants.find(
-        (v) => v.name === project.pricing,
-      );
-      if (variant) {
-        setupFee = variant.setupFee;
-        timeRate = variant.timeRate;
-      }
+  // Prefer the pricing snapshot captured at booking time (historical accuracy)
+  const snapshot = project.pricingSnapshot;
+  if (snapshot) {
+    if (snapshot.type === "FIXED") {
+      return { setupFee: isSelfService ? 0 : snapshot.amount, timeCost: 0 };
     }
-
-    if (project.serviceType === "self-service") setupFee = 0;
-
-    const durationInUnit =
-      durationMinutes / unitToMinutes(service.pricing.unitName);
-    timeCost = durationInUnit * timeRate;
-  } else if (service.pricing.type === "PER_UNIT") {
-    setupFee = service.pricing.setupFee;
-    let ratePerUnit = service.pricing.ratePerUnit;
-
-    if (service.pricing.variants) {
-      const variant = service.pricing.variants.find(
-        (v) => v.name === project.pricing,
-      );
-      if (variant) {
-        setupFee = variant.setupFee;
-        ratePerUnit = variant.ratePerUnit;
-      }
-    }
-
-    if (project.serviceType === "self-service") setupFee = 0;
-
-    const durationInUnit =
-      durationMinutes / unitToMinutes(service.pricing.unitName);
-    timeCost = durationInUnit * ratePerUnit;
-  } else if (service.pricing.type === "FIXED") {
-    setupFee = service.pricing.amount;
-
-    if (service.pricing.variants) {
-      const variant = service.pricing.variants.find(
-        (v) => v.name === project.pricing,
-      );
-      if (variant) setupFee = variant.amount;
-    }
-
-    if (project.serviceType === "self-service") setupFee = 0;
+    // FABRICATION
+    const durationInUnit = durationMinutes / unitToMinutes(snapshot.unitName);
+    return {
+      setupFee: isSelfService ? 0 : snapshot.setupFee,
+      timeCost: durationInUnit * snapshot.timeRate,
+    };
   }
+
+  // Fallback: derive from live service doc (handles legacy projects without a snapshot).
+  // Cast to a loose shape so legacy records with separate pricing or old type names are handled.
+  const sc = service.serviceCategory as {
+    type: string;
+    amount?: number;
+    setupFee?: number;
+    unitName?: string;
+    timeRate?: number;
+    ratePerUnit?: number;
+    variants?: Array<{
+      name: string;
+      setupFee?: number;
+      timeRate?: number;
+      ratePerUnit?: number;
+      amount?: number;
+    }>;
+  };
+
+  if (sc.type === "WORKSHOP") {
+    const variant = sc.variants?.find((v) => v.name === project.pricing);
+    const amount = variant?.amount ?? sc.amount ?? 0;
+    return { setupFee: isSelfService ? 0 : amount, timeCost: 0 };
+  }
+
+  // FABRICATION / legacy COMPOSITE / legacy PER_UNIT
+  let setupFee = sc.setupFee ?? 0;
+  const variant = sc.variants?.find((v) => v.name === project.pricing);
+  if (variant?.setupFee !== undefined) setupFee = variant.setupFee;
+  if (isSelfService) setupFee = 0;
+
+  const timeRate =
+    variant?.timeRate ?? variant?.ratePerUnit ?? sc.timeRate ?? sc.ratePerUnit ?? 0;
+  const unitName = sc.unitName ?? "minute";
+  const timeCost = (durationMinutes / unitToMinutes(unitName)) * timeRate;
 
   return { setupFee, timeCost };
 }

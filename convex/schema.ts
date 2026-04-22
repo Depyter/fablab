@@ -64,48 +64,17 @@ export default defineSchema({
             ),
           }),
         ),
+        // Pricing: one-time flat payment
+        amount: v.number(),
+        variants: v.optional(
+          v.array(v.object({ name: v.string(), amount: v.number() })),
+        ),
       }),
       v.object({
         type: v.literal("FABRICATION"),
         availableDays: v.optional(v.array(v.number())),
         materials: v.optional(v.array(v.id("materials"))),
-      }),
-    ),
-    // Polymorphic pricing structure
-    pricing: v.union(
-      v.object({
-        type: v.literal("FIXED"),
-        amount: v.number(),
-        variants: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              amount: v.number(),
-            }),
-          ),
-        ),
-      }),
-      v.object({
-        type: v.literal("PER_UNIT"),
-        setupFee: v.number(),
-        unitName: v.union(
-          v.literal(ResourceUnit.MINUTE),
-          v.literal(ResourceUnit.HOUR),
-          v.literal(ResourceUnit.DAY),
-        ),
-        ratePerUnit: v.number(),
-        variants: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              setupFee: v.number(),
-              ratePerUnit: v.number(),
-            }),
-          ),
-        ),
-      }),
-      v.object({
-        type: v.literal("COMPOSITE"), // e.g., 3D Printing
+        // Pricing: variable time-based cost
         setupFee: v.number(),
         unitName: v.union(
           v.literal(ResourceUnit.MINUTE),
@@ -251,6 +220,23 @@ export default defineSchema({
     ),
 
     pricing: v.string(), // Chosen variant name (e.g., "Default", "UP", "KID")
+
+    // Snapshot of resolved pricing at booking time — drives historical cost calculations
+    pricingSnapshot: v.optional(
+      v.union(
+        v.object({ type: v.literal("FIXED"), amount: v.number() }),
+        v.object({
+          type: v.literal("FABRICATION"),
+          setupFee: v.number(),
+          unitName: v.union(
+            v.literal(ResourceUnit.MINUTE),
+            v.literal(ResourceUnit.HOUR),
+            v.literal(ResourceUnit.DAY),
+          ),
+          timeRate: v.number(),
+        }),
+      ),
+    ),
     status: v.union(
       v.literal(ProjectStatus.PENDING),
       v.literal(ProjectStatus.APPROVED),

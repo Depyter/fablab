@@ -1,18 +1,11 @@
 export type ServicePricing =
   | {
-      type: "FIXED";
+      type: "WORKSHOP";
       amount: number;
       variants?: Array<{ name: string; amount: number }>;
     }
   | {
-      type: "PER_UNIT";
-      setupFee: number;
-      unitName: string;
-      ratePerUnit: number;
-      variants?: Array<{ name: string; setupFee: number; ratePerUnit: number }>;
-    }
-  | {
-      type: "COMPOSITE";
+      type: "FABRICATION";
       setupFee: number;
       unitName: string;
       timeRate: number;
@@ -87,7 +80,7 @@ export function derivePricingFromSchema(args: {
   const selectedVariant = getPricingVariantKey(pricingVariant);
   const isSelfService = serviceType === "self-service";
 
-  if (servicePricing.type === "FIXED") {
+  if (servicePricing.type === "WORKSHOP") {
     const variant = selectedVariant
       ? servicePricing.variants?.find((v) => v.name === selectedVariant)
       : undefined;
@@ -105,31 +98,7 @@ export function derivePricingFromSchema(args: {
     };
   }
 
-  if (servicePricing.type === "PER_UNIT") {
-    const variant = selectedVariant
-      ? servicePricing.variants?.find((v) => v.name === selectedVariant)
-      : undefined;
-    const unitName = servicePricing.unitName;
-    const duration = bookingDurationMinutes / unitToMinutes(unitName);
-    const rate = variant ? variant.ratePerUnit : servicePricing.ratePerUnit;
-    const setupFee = isSelfService
-      ? 0
-      : variant
-        ? variant.setupFee
-        : servicePricing.setupFee;
-    const timeCost = duration * rate;
-
-    return {
-      setupFee,
-      materialCost,
-      timeCost,
-      total: setupFee + timeCost + materialCost,
-      duration,
-      rate,
-      unitName,
-    };
-  }
-
+  // FABRICATION: variable time-based cost
   const variant = selectedVariant
     ? servicePricing.variants?.find((v) => v.name === selectedVariant)
     : undefined;

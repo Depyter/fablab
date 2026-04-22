@@ -59,47 +59,15 @@ export const addService = authMutation({
             ),
           }),
         ),
+        amount: v.number(),
+        variants: v.optional(
+          v.array(v.object({ name: v.string(), amount: v.number() })),
+        ),
       }),
       v.object({
         type: v.literal("FABRICATION"),
         availableDays: v.optional(v.array(v.number())),
         materials: v.optional(v.array(v.id("materials"))),
-      }),
-    ),
-    pricing: v.union(
-      v.object({
-        type: v.literal("FIXED"),
-        amount: v.number(),
-        variants: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              amount: v.number(),
-            }),
-          ),
-        ),
-      }),
-      v.object({
-        type: v.literal("PER_UNIT"),
-        setupFee: v.number(),
-        unitName: v.union(
-          v.literal("minute"),
-          v.literal("hour"),
-          v.literal("day"),
-        ),
-        ratePerUnit: v.number(),
-        variants: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              setupFee: v.number(),
-              ratePerUnit: v.number(),
-            }),
-          ),
-        ),
-      }),
-      v.object({
-        type: v.literal("COMPOSITE"),
         setupFee: v.number(),
         unitName: v.union(
           v.literal("minute"),
@@ -149,7 +117,6 @@ export const addService = authMutation({
       images: args.images,
       description: args.description,
       serviceCategory: finalServiceCategory,
-      pricing: args.pricing,
       fileTypes: args.fileTypes,
       resources: args.resources,
       status: args.status,
@@ -184,49 +151,15 @@ export const updateService = authMutation({
               ),
             }),
           ),
+          amount: v.number(),
+          variants: v.optional(
+            v.array(v.object({ name: v.string(), amount: v.number() })),
+          ),
         }),
         v.object({
           type: v.literal("FABRICATION"),
           availableDays: v.optional(v.array(v.number())),
           materials: v.optional(v.array(v.id("materials"))),
-        }),
-      ),
-    ),
-    pricing: v.optional(
-      v.union(
-        v.object({
-          type: v.literal("FIXED"),
-          amount: v.number(),
-          variants: v.optional(
-            v.array(
-              v.object({
-                name: v.string(),
-                amount: v.number(),
-              }),
-            ),
-          ),
-        }),
-        v.object({
-          type: v.literal("PER_UNIT"),
-          setupFee: v.number(),
-          unitName: v.union(
-            v.literal("minute"),
-            v.literal("hour"),
-            v.literal("day"),
-          ),
-          ratePerUnit: v.number(),
-          variants: v.optional(
-            v.array(
-              v.object({
-                name: v.string(),
-                setupFee: v.number(),
-                ratePerUnit: v.number(),
-              }),
-            ),
-          ),
-        }),
-        v.object({
-          type: v.literal("COMPOSITE"),
           setupFee: v.number(),
           unitName: v.union(
             v.literal("minute"),
@@ -330,7 +263,6 @@ export const updateService = authMutation({
       }
       updates.serviceCategory = args.serviceCategory;
     }
-    if (args.pricing !== undefined) updates.pricing = args.pricing;
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;
     if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;
