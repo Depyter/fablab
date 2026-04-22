@@ -189,7 +189,7 @@ export async function createWorkshopUsage(
   booking: BookingWindow,
   projectId: Id<"projects">,
   snapshot: { name: string; costAtTime: number; unit: string },
-  requestedMaterialId?: Id<"materials">,
+  requestedMaterials?: Id<"materials">[],
 ): Promise<void> {
   // Capacity check against the schedule time slot
   if (service.serviceCategory.type === "WORKSHOP") {
@@ -208,9 +208,10 @@ export async function createWorkshopUsage(
     }
   }
 
-  const materialEntry = requestedMaterialId
-    ? await buildMaterialEntry(ctx, requestedMaterialId)
-    : undefined;
+  const materialsUsed =
+    requestedMaterials && requestedMaterials.length > 0
+      ? await buildMaterialEntries(ctx, requestedMaterials)
+      : undefined;
 
   await ctx.db.insert("resourceUsage", {
     projectId,
@@ -218,7 +219,7 @@ export async function createWorkshopUsage(
     startTime: booking.startTime,
     endTime: booking.endTime,
     snapshot,
-    materialsUsed: materialEntry,
+    materialsUsed,
   });
 }
 
@@ -228,11 +229,12 @@ export async function createFabricationUsage(
   booking: BookingWindow,
   projectId: Id<"projects">,
   snapshot: { name: string; costAtTime: number; unit: string },
-  requestedMaterialId?: Id<"materials">,
+  requestedMaterials?: Id<"materials">[],
 ): Promise<void> {
-  const materialEntry = requestedMaterialId
-    ? await buildMaterialEntry(ctx, requestedMaterialId)
-    : undefined;
+  const materialsUsed =
+    requestedMaterials && requestedMaterials.length > 0
+      ? await buildMaterialEntries(ctx, requestedMaterials)
+      : undefined;
 
   await ctx.db.insert("resourceUsage", {
     projectId,
@@ -240,22 +242,24 @@ export async function createFabricationUsage(
     startTime: booking.startTime,
     endTime: booking.endTime,
     snapshot,
-    materialsUsed: materialEntry,
+    materialsUsed,
   });
 }
 
-async function buildMaterialEntry(
+async function buildMaterialEntries(
   ctx: MutationCtx,
-  materialId: Id<"materials">,
+  materialIds: Id<"materials">[],
 ) {
-  const mat = await ctx.db.get(materialId);
-  return [
-    {
-      materialId,
-      amountUsed: 0,
-      snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
-    },
-  ];
+  return Promise.all(
+    materialIds.map(async (materialId) => {
+      const mat = await ctx.db.get(materialId);
+      return {
+        materialId,
+        amountUsed: 0,
+        snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
+      };
+    }),
+  );
 }
 
 export async function incrementWorkshopSlot(
@@ -641,59 +645,54 @@ export async function applyResourceAssignment(
 }
 
 /**
- * Updates the requested material on the project record.
+ * Replaces the requested materials list on a project.
+ * Restores stock for removed materials; seeds new materials at amount 0.
  * Returns change-log lines for the system message.
  */
 export async function applyMaterialAssignment(
   ctx: MutationCtx,
   project: Doc<"projects">,
-  materialId: Id<"materials">,
+  materialIds: Id<"materials">[],
 ): Promise<string[]> {
-  const materialDoc = await ctx.db.get(materialId);
-  if (!materialDoc) throw new ConvexError("Material not found.");
+  const oldIds = project.requestedMaterials ?? [];
+  const removedIds = oldIds.filter((id) => !materialIds.includes(id));
+  const addedIds = materialIds.filter((id) => !oldIds.includes(id));
 
-  if (project.requestedMaterialId === materialId) return [];
+  if (removedIds.length === 0 && addedIds.length === 0) return [];
 
   const usage = await findProjectUsage(ctx, project);
-  const previousAmountUsed =
-    project.requestedMaterialId === undefined
-      ? 0
-      : (usage?.materialsUsed?.find(
-          (materialUsage) => materialUsage.materialId === project.requestedMaterialId,
-        )?.amountUsed ?? 0);
+  let nextMaterials = [...(usage?.materialsUsed ?? [])];
+  const lines: string[] = [];
+
+  // Restore stock for removed materials that had amounts recorded
+  for (const id of removedIds) {
+    const entry = nextMaterials.find((m) => m.materialId === id);
+    if (entry && entry.amountUsed > 0) {
+      await syncMaterialUsageStock(ctx, id, entry.amountUsed, 0);
+    }
+    nextMaterials = nextMaterials.filter((m) => m.materialId !== id);
+    const doc = await ctx.db.get(id);
+    if (doc) lines.push(`- Material removed: **${doc.name}**`);
+  }
+
+  // Seed new materials at amount 0
+  for (const id of addedIds) {
+    const doc = await ctx.db.get(id);
+    if (!doc) throw new ConvexError("Material not found.");
+    nextMaterials = [
+      ...nextMaterials.filter((m) => m.materialId !== id),
+      { materialId: id, amountUsed: 0, snapshot: buildMaterialSnapshot(doc) },
+    ];
+    lines.push(`- Material added: **${doc.name}**`);
+  }
 
   if (usage) {
-    const nextMaterialsUsed = (usage.materialsUsed ?? []).filter(
-      (materialUsage) =>
-        materialUsage.materialId !== project.requestedMaterialId &&
-        materialUsage.materialId !== materialId,
-    );
-
-    await ctx.db.patch(usage._id, {
-      materialsUsed: [
-        ...nextMaterialsUsed,
-        {
-          materialId,
-          amountUsed: previousAmountUsed,
-          snapshot: buildMaterialSnapshot(materialDoc),
-        },
-      ],
-    });
+    await ctx.db.patch(usage._id, { materialsUsed: nextMaterials });
   }
 
-  await ctx.db.patch(project._id, { requestedMaterialId: materialId });
+  await ctx.db.patch(project._id, { requestedMaterials: materialIds });
 
-  if (project.requestedMaterialId && previousAmountUsed > 0) {
-    await syncMaterialUsageStock(
-      ctx,
-      project.requestedMaterialId,
-      previousAmountUsed,
-      0,
-    );
-    await syncMaterialUsageStock(ctx, materialId, 0, previousAmountUsed);
-  }
-
-  return [`- Material updated to: **${materialDoc.name}**`];
+  return lines;
 }
 
 // ============================================================================

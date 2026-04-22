@@ -186,7 +186,7 @@ describe("Project and Chat functionality", () => {
       description: "hello",
       fulfillmentMode: "self-service",
       material: "buy-from-lab",
-      requestedMaterialId: materialId,
+      requestedMaterials: [materialId],
       files: [],
       service: serviceId,
       notes: "pls na",
@@ -207,7 +207,7 @@ describe("Project and Chat functionality", () => {
       setupFee: 1,
       timeCost: 2,
       materialCost: 20,
-      amountUsed: 10,
+      materialsUsed: [{ materialId, amountUsed: 10 }],
     });
 
     await t.run(async (ctx) => {
@@ -229,7 +229,7 @@ describe("Project and Chat functionality", () => {
       setupFee: 1,
       timeCost: 2,
       materialCost: 6,
-      amountUsed: 3,
+      materialsUsed: [{ materialId, amountUsed: 3 }],
     });
 
     await t.run(async (ctx) => {

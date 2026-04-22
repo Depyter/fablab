@@ -41,7 +41,7 @@ export const createProject = authMutation({
       v.literal("staff-led"),
     ),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
-    requestedMaterialId: v.optional(v.id("materials")),
+    requestedMaterials: v.optional(v.array(v.id("materials"))),
     service: v.id("services"),
     pricing: v.string(),
     files: v.optional(v.array(v.id("_storage"))),
@@ -96,7 +96,7 @@ export const createProject = authMutation({
       type: projectType,
       fulfillmentMode: args.fulfillmentMode,
       material: args.material,
-      requestedMaterialId: args.requestedMaterialId,
+      requestedMaterials: args.requestedMaterials,
       userId: userProfile._id,
       assignedMaker: args.assignedMaker,
       service: args.service,
@@ -120,7 +120,7 @@ export const createProject = authMutation({
         booking,
         projectId,
         usageSnapshot,
-        args.requestedMaterialId,
+        args.requestedMaterials,
       );
       await incrementWorkshopSlot(ctx, service, booking);
     } else {
@@ -130,7 +130,7 @@ export const createProject = authMutation({
         booking,
         projectId,
         usageSnapshot,
-        args.requestedMaterialId,
+        args.requestedMaterials,
       );
     }
 
@@ -187,7 +187,7 @@ export const updateProject = authMutation({
     // Assignments
     makerId: v.optional(v.id("userProfile")),
     resourceId: v.optional(v.id("resources")),
-    materialId: v.optional(v.id("materials")),
+    materialIds: v.optional(v.array(v.id("materials"))),
   },
   handler: async (ctx, args) => {
     const existingProject = await ctx.db.get(args.projectId);
@@ -226,11 +226,11 @@ export const updateProject = authMutation({
     }
 
     // ── Material assignment ──────────────────────────────────────────────────
-    if (args.materialId !== undefined) {
+    if (args.materialIds !== undefined) {
       const lines = await applyMaterialAssignment(
         ctx,
         project,
-        args.materialId,
+        args.materialIds,
       );
       messagelines.push(...lines);
     }
@@ -247,7 +247,14 @@ export const updateCostBreakdown = authMutation({
     setupFee: v.number(),
     timeCost: v.number(),
     materialCost: v.number(),
-    amountUsed: v.optional(v.number()),
+    materialsUsed: v.optional(
+      v.array(
+        v.object({
+          materialId: v.id("materials"),
+          amountUsed: v.number(),
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
@@ -257,100 +264,98 @@ export const updateCostBreakdown = authMutation({
     const total = subtotal;
 
     // ── Detect what actually changed ─────────────────────────────────────────
-    const existing = project.totalInvoice;
+    const breakdownChanged = project.totalInvoice?.subtotal !== subtotal;
 
-    const feeChanged = existing?.subtotal !== subtotal;
-    const breakdownChanged = feeChanged;
-
-    // Resolve existing amountUsed from the usage record
-    let existingAmountUsed = 0;
     let usage = null;
-    if (args.amountUsed !== undefined && project.requestedMaterialId) {
+    let materialsChanged = false;
+
+    if (args.materialsUsed && args.materialsUsed.length > 0) {
       usage = await findProjectUsage(ctx, project);
-      existingAmountUsed =
-        usage?.materialsUsed?.find(
-          (materialUsage) => materialUsage.materialId === project.requestedMaterialId,
-        )?.amountUsed ?? 0;
+      for (const { materialId, amountUsed } of args.materialsUsed) {
+        const existing =
+          usage?.materialsUsed?.find((m) => m.materialId === materialId)
+            ?.amountUsed ?? 0;
+        if (amountUsed !== existing) {
+          materialsChanged = true;
+          break;
+        }
+      }
     }
-    const amountChanged =
-      args.amountUsed !== undefined && args.amountUsed !== existingAmountUsed;
 
-    if (!breakdownChanged && !amountChanged) return;
+    if (!breakdownChanged && !materialsChanged) return;
 
-    // ── Persist changes ──────────────────────────────────────────────────────
+    const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
+
+    // ── Persist invoice ───────────────────────────────────────────────────────
     if (breakdownChanged) {
       await ctx.db.patch(args.projectId, {
-        totalInvoice: {
-          subtotal,
-          tax: 0,
-          total,
-        },
+        totalInvoice: { subtotal, tax: 0, total },
       });
 
-      // Also update the usage snapshot to reflect the latest cost
-      const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
       if (resolvedUsage) {
         await ctx.db.patch(resolvedUsage._id, {
-          snapshot: {
-            ...resolvedUsage.snapshot,
-            costAtTime: total,
+          snapshot: { ...resolvedUsage.snapshot, costAtTime: total },
+        });
+      }
+    }
+
+    // ── Sync per-material amounts + stock ─────────────────────────────────────
+    if (materialsChanged && resolvedUsage && args.materialsUsed) {
+      let nextMaterials = [...(resolvedUsage.materialsUsed ?? [])];
+      const systemLines: string[] = [];
+
+      for (const { materialId, amountUsed } of args.materialsUsed) {
+        const existing = nextMaterials.find((m) => m.materialId === materialId);
+        const previousAmount = existing?.amountUsed ?? 0;
+        if (amountUsed === previousAmount) continue;
+
+        await syncMaterialUsageStock(ctx, materialId, previousAmount, amountUsed);
+
+        const materialDoc = await ctx.db.get(materialId);
+        nextMaterials = [
+          ...nextMaterials.filter((m) => m.materialId !== materialId),
+          {
+            materialId,
+            amountUsed,
+            snapshot: materialDoc ? buildMaterialSnapshot(materialDoc) : undefined,
           },
-        });
+        ];
+
+        if (materialDoc) {
+          systemLines.push(
+            `- Material used: ${amountUsed} ${materialDoc.unit} of ${materialDoc.name}`,
+          );
+        }
       }
+
+      await ctx.db.patch(resolvedUsage._id, { materialsUsed: nextMaterials });
+
+      // ── System message ──────────────────────────────────────────────────────
+      const lines: string[] = [];
+      if (breakdownChanged) {
+        lines.push(
+          `Invoice updated:`,
+          `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
+          `- Time cost: ₱${args.timeCost.toFixed(2)}`,
+          `- Material cost: ₱${args.materialCost.toFixed(2)}`,
+          `- **Total: ₱${total.toFixed(2)}**`,
+        );
+      }
+      lines.push(...systemLines);
+      await sendProjectSystemMessage(ctx, args.projectId, lines);
+      return;
     }
 
-    // ── Update amountUsed on the resource usage record ───────────────────────
-    if (amountChanged && project.requestedMaterialId) {
-      const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
-      if (resolvedUsage) {
-        await syncMaterialUsageStock(
-          ctx,
-          project.requestedMaterialId,
-          existingAmountUsed,
-          args.amountUsed!,
-        );
-
-        const nextMaterialsUsed = (resolvedUsage.materialsUsed ?? []).filter(
-          (materialUsage) => materialUsage.materialId !== project.requestedMaterialId,
-        );
-
-        const materialDoc = await ctx.db.get(
-          project.requestedMaterialId as Id<"materials">,
-        );
-
-        await ctx.db.patch(resolvedUsage._id, {
-          materialsUsed: [
-            ...nextMaterialsUsed,
-            {
-              materialId: project.requestedMaterialId as Id<"materials">,
-              amountUsed: args.amountUsed!,
-              snapshot: materialDoc
-                ? buildMaterialSnapshot(materialDoc)
-                : undefined,
-            },
-          ],
-        });
-      }
-    }
-
-    // ── System message ───────────────────────────────────────────────────────
-    const lines: string[] = [];
+    // ── System message (breakdown only) ──────────────────────────────────────
     if (breakdownChanged) {
-      lines.push(
+      await sendProjectSystemMessage(ctx, args.projectId, [
         `Invoice updated:`,
         `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
         `- Time cost: ₱${args.timeCost.toFixed(2)}`,
         `- Material cost: ₱${args.materialCost.toFixed(2)}`,
         `- **Total: ₱${total.toFixed(2)}**`,
-      );
+      ]);
     }
-    if (amountChanged && project.requestedMaterialId) {
-      const materialDoc = await ctx.db.get(project.requestedMaterialId);
-      lines.push(
-        `- Material used: ${args.amountUsed} ${materialDoc?.unit ?? "units"} of ${materialDoc?.name ?? "material"}`,
-      );
-    }
-    await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });
 

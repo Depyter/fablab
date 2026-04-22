@@ -198,7 +198,7 @@ export default defineSchema({
       v.literal(ProjectMaterial.PROVIDE_OWN),
       v.literal(ProjectMaterial.BUY_FROM_LAB),
     ),
-    requestedMaterialId: v.optional(v.id("materials")),
+    requestedMaterials: v.optional(v.array(v.id("materials"))),
 
     userId: v.id("userProfile"),
     assignedMaker: v.optional(v.id("userProfile")),

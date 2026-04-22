@@ -292,19 +292,25 @@ export const getProject = authQuery({
     const primaryUsage = usageDocs[0] ?? null;
 
     // -------------------------------------------------------------------------
-    // Requested material
+    // Requested materials
     // -------------------------------------------------------------------------
-    const requestedMaterialDoc = project.requestedMaterialId
-      ? await ctx.db.get(project.requestedMaterialId as Id<"materials">)
-      : null;
-    const requestedMaterial = requestedMaterialDoc
-      ? {
-          _id: requestedMaterialDoc._id,
-          name: requestedMaterialDoc.name,
-          unit: requestedMaterialDoc.unit,
-          pricePerUnit: requestedMaterialDoc.pricePerUnit ?? 0,
-        }
-      : null;
+    const requestedMaterials = project.requestedMaterials
+      ? (
+          await Promise.all(
+            project.requestedMaterials.map(async (id) => {
+              const doc = await ctx.db.get(id as Id<"materials">);
+              return doc
+                ? {
+                    _id: doc._id,
+                    name: doc.name,
+                    unit: doc.unit,
+                    pricePerUnit: doc.pricePerUnit ?? 0,
+                  }
+                : null;
+            }),
+          )
+        ).filter((m): m is NonNullable<typeof m> => m !== null)
+      : [];
 
     // -------------------------------------------------------------------------
     // Thread
@@ -351,7 +357,7 @@ export const getProject = authQuery({
       resolvedFiles,
       receipt,
       resourceUsages,
-      requestedMaterial,
+      requestedMaterials,
       threadId: thread?._id ?? null,
       roomId: thread?.roomId ?? null,
     };
