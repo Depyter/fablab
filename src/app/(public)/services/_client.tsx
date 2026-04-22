@@ -18,12 +18,20 @@ export function ServicesListClient({
   preloadedServices: Preloaded<typeof api.services.query.getServices>;
 }) {
   const services = usePreloadedQuery(preloadedServices);
+  type ServiceItem = (typeof services)[number];
+
   const fabricationServices = services.filter(
     (service) => service.serviceCategory?.type === "FABRICATION",
   );
   const workshopServices = services.filter(
     (service) => service.serviceCategory?.type === "WORKSHOP",
   );
+
+  const getGridColsClass = (count: number) => {
+    if (count <= 1) return "grid-cols-1 sm:grid-cols-1 lg:grid-cols-1";
+    if (count === 2) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2";
+    return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  };
 
   if (services.length === 0) {
     return (
@@ -98,30 +106,23 @@ export function ServicesListClient({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20">
-                    {fabricationServices.map((service, index) => {
-                      const cardBgClass =
-                        index % 2 === 0
-                          ? "bg-primary-muted/20"
-                          : "bg-secondary/10";
-
-                      return (
-                        <div
-                          key={service._id}
-                          className={cn(
-                            "group rounded-sm transition-all duration-500",
-                            cardBgClass,
-                          )}
-                        >
-                          <ServiceCardClient
-                            slug={service.slug}
-                            imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-                            hoverImageSrc={service.imageUrls[1] ?? service.imageUrls[0]}
-                            title={service.name}
-                          />
-                        </div>
-                      );
-                    })}
+                  <div
+                    className={cn(
+                      "inline-grid gap-0 border border-black",
+                      getGridColsClass(fabricationServices.length),
+                    )}
+                  >
+                    {fabricationServices.map((service) => (
+                      <ServiceCardClient
+                        key={service._id}
+                        slug={service.slug}
+                        imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
+                        hoverImageSrc={service.imageUrls[1] ?? service.imageUrls[0]}
+                        title={service.name}
+                        
+                        badgeLabel="Featured"
+                      />
+                    ))}
                   </div>
                 </div>
               )}
@@ -137,30 +138,23 @@ export function ServicesListClient({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20">
-                    {workshopServices.map((service, index) => {
-                      const cardBgClass =
-                        index % 2 === 0
-                          ? "bg-primary-muted/20"
-                          : "bg-secondary/10";
-
-                      return (
-                        <div
-                          key={service._id}
-                          className={cn(
-                            "group rounded-sm transition-all duration-500",
-                            cardBgClass,
-                          )}
-                        >
-                          <ServiceCardClient
-                            slug={service.slug}
-                            imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-                            hoverImageSrc={service.imageUrls[1] ?? service.imageUrls[0]}
-                            title={service.name}
-                          />
-                        </div>
-                      );
-                    })}
+                  <div
+                    className={cn(
+                      "inline-grid gap-0 border border-black",
+                      getGridColsClass(workshopServices.length),
+                    )}
+                  >
+                    {workshopServices.map((service) => (
+                      <ServiceCardClient
+                        key={service._id}
+                        slug={service.slug}
+                        imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
+                        hoverImageSrc={service.imageUrls[1] ?? service.imageUrls[0]}
+                        title={service.name}
+                       
+                        badgeLabel="Featured"
+                      />
+                    ))}
                   </div>
                 </div>
               )}

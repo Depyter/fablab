@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
 import { Step2ProjectDetails } from "./step-2-project-details";
@@ -79,6 +80,17 @@ export function BookingDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
+
+  const isUnauthenticatedBookingError = (error: unknown) => {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "";
+
+    return /unauthenticated|not\s+authenticated/i.test(message);
+  };
 
   const handleUploadingChange = useCallback((uploading: boolean) => {
     setIsUploading(uploading);
@@ -202,6 +214,12 @@ export function BookingDialog({
         router.push(`/dashboard/chat/${roomId}?thread=${threadId}`);
       } catch (error) {
         setIsSubmitting(false);
+        if (isUnauthenticatedBookingError(error)) {
+          toast.error("You must be logged in to create a booking.");
+          handleOpenChange(false);
+          router.push("/login");
+          return;
+        }
         toast.error(
           error instanceof Error ? error.message : "Failed to create booking.",
         );
@@ -276,16 +294,27 @@ export function BookingDialog({
     handleOpenChange(false);
   };
 
+  const handleCreateBookingClick = async () => {
+    const session = await authClient.getSession();
+    if (!session?.data) {
+      toast.error("You must be logged in to create a booking.");
+      router.push("/login");
+      return;
+    }
+
+    handleOpenChange(true);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="bg-primary hover:bg-primary/80 px-10 font-medium rounded-md text-white hover:text-white w-full"
-        >
-          Create Booking
-        </Button>
-      </DialogTrigger>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleCreateBookingClick}
+        className="bg-primary hover:bg-primary/80 px-10 font-medium rounded-md text-white hover:text-white w-full"
+      >
+        Create Booking
+      </Button>
 
       <DialogContent className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none p-4 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl md:max-w-[80%] lg:max-w-[60vw]">
         {step === 1 && serviceCategory !== "WORKSHOP" && (

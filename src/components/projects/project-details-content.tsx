@@ -193,6 +193,7 @@ export function ProjectDetailsContent({
   const isClaimedProject =
     project.status === "paid" || (project.status as string) === "claimed";
   const canRebook = isClient && project.status === "cancelled";
+  const canSubmitReview = isClient && isClaimedProject;
 
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
@@ -268,6 +269,7 @@ export function ProjectDetailsContent({
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               {isClient ? (
                 <>
+                  
                   {canRebook ? (
                     <ActionDialog
                     title="Rebook Project Request"
@@ -282,14 +284,15 @@ export function ProjectDetailsContent({
                   ): (
                     <ActionDialog
                     title="Cancel Project Request"
-                    description="Do you want to cancel this project request? This cannot be undone."
-                    onConfirm={onCancelProject}
-                    baseActionText="Cancel Request"
+                    description="Do you want to cancel this project request?"
+                    onConfirm={() => {}}
+                    baseActionText="Cancel   Request"
                     cancelButtonText="Back"
                     confirmButtonText="Yes, cancel"
                     className="w-full sm:w-auto"
                     disabled={isClaimedProject}
-                    />
+                  />
+                  
                   )}
                   
                 </>
