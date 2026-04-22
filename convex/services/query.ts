@@ -85,7 +85,12 @@ export const getBookedTimeSlots = publicQuery({
     const usages = await ctx.db
       .query("resourceUsage")
       .withIndex("by_service", (q) => q.eq("service", args.serviceId))
-      .filter((q) => q.eq(q.field("date"), args.date))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("startTime"), args.date),
+          q.lt(q.field("startTime"), args.date + 24 * 60 * 60 * 1000),
+        ),
+      )
       .collect();
 
     return usages.map((u) => ({

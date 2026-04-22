@@ -184,7 +184,7 @@ describe("Project and Chat functionality", () => {
       name: "stock sync",
       pricing: "Default",
       description: "hello",
-      serviceType: "self-service",
+      fulfillmentMode: "self-service",
       material: "buy-from-lab",
       requestedMaterialId: materialId,
       files: [],

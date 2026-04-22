@@ -74,6 +74,17 @@ export const ProjectServiceType = {
   WORKSHOP: "workshop",
 } as const;
 
+export const FulfillmentMode = {
+  SELF_SERVICE: "self-service",
+  FULL_SERVICE: "full-service",
+  STAFF_LED: "staff-led",
+} as const;
+
+export const ProjectType = {
+  WORKSHOP: "WORKSHOP",
+  FABRICATION: "FABRICATION",
+} as const;
+
 export const ProjectMaterial = {
   PROVIDE_OWN: "provide-own",
   BUY_FROM_LAB: "buy-from-lab",
@@ -234,6 +245,10 @@ export type ResourceStatusType =
   (typeof ResourceStatus)[keyof typeof ResourceStatus];
 export type ProjectServiceTypeType =
   (typeof ProjectServiceType)[keyof typeof ProjectServiceType];
+export type FulfillmentModeType =
+  (typeof FulfillmentMode)[keyof typeof FulfillmentMode];
+export type ProjectTypeType =
+  (typeof ProjectType)[keyof typeof ProjectType];
 export type ProjectMaterialType =
   (typeof ProjectMaterial)[keyof typeof ProjectMaterial];
 export type ProjectStatusType =

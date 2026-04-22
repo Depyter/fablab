@@ -58,7 +58,7 @@ export async function setupProject() {
     name: "test",
     pricing: "UP",
     description: "hello",
-    serviceType: "self-service",
+    fulfillmentMode: "self-service",
     material: "provide-own",
     files: [],
     service: serviceId,

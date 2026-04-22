@@ -55,39 +55,34 @@ export const getProjects = authQuery({
     let orderedQuery;
     switch (args.sortBy) {
       case "price-high":
-        orderedQuery = baseQuery
-          .withIndex("by_totalCost_startTime")
-          .order("desc");
-        break;
       case "price-low":
-        orderedQuery = baseQuery
-          .withIndex("by_totalCost_startTime")
-          .order("asc");
+        // No price index; fall through to default creation-time order
+        orderedQuery = baseQuery.order(args.sortBy === "price-high" ? "desc" : "asc");
         break;
       case "name-az":
-        orderedQuery = baseQuery.withIndex("by_name_startTime").order("asc");
+        orderedQuery = baseQuery.order("asc");
         break;
       case "oldest":
         if (hasStatusFilter) {
           orderedQuery = baseQuery
-            .withIndex("by_status_startTime", (q) =>
+            .withIndex("by_status", (q) =>
               q.eq("status", args.statusFilter as StatusUnion),
             )
             .order("asc");
         } else {
-          orderedQuery = baseQuery.withIndex("by_startTime").order("asc");
+          orderedQuery = baseQuery.order("asc");
         }
         break;
       case "newest":
       default:
         if (hasStatusFilter) {
           orderedQuery = baseQuery
-            .withIndex("by_status_startTime", (q) =>
+            .withIndex("by_status", (q) =>
               q.eq("status", args.statusFilter as StatusUnion),
             )
             .order("desc");
         } else {
-          orderedQuery = baseQuery.withIndex("by_startTime").order("desc");
+          orderedQuery = baseQuery.order("desc");
         }
         break;
     }
@@ -108,43 +103,8 @@ export const getProjects = authQuery({
       );
     }
 
-    if (args.dateFilter && args.dateFilter !== "all") {
-      const now = new Date();
-      let start = 0;
-      let end = Number.MAX_SAFE_INTEGER;
-
-      if (args.dateFilter === "today") {
-        start = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-        ).getTime();
-        end = start + 24 * 60 * 60 * 1000 - 1;
-      } else if (args.dateFilter === "week") {
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(now.getFullYear(), now.getMonth(), diff).getTime();
-        end = start + 7 * 24 * 60 * 60 * 1000 - 1;
-      } else if (args.dateFilter === "month") {
-        start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-        end = new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999,
-        ).getTime();
-      }
-
-      query = query.filter((q) =>
-        q.and(
-          q.gte(q.field("selectedTimeSlot.startTime"), start),
-          q.lte(q.field("selectedTimeSlot.startTime"), end),
-        ),
-      );
-    }
+    // dateFilter is not supported after the scheduling refactor
+    // (startTime now lives on resourceUsage, not projects)
 
     const result = await query.paginate(args.paginationOpts);
     const enrichedPage = await enrichProjects(ctx, result.page);
@@ -162,12 +122,11 @@ async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
         ctx.db.get(project.service as Id<"services">),
       ]);
 
-      // Resource usage is the source of truth for booking window
-      const usages = await ctx.db
+      // Fetch usage directly by project
+      const usage = await ctx.db
         .query("resourceUsage")
-        .withIndex("by_service", (q) => q.eq("service", project.service))
-        .collect();
-      const usage = usages.find((u) => u.projects.includes(project._id));
+        .withIndex("by_project", (q) => q.eq("projectId", project._id))
+        .first();
 
       const coverUrl =
         service?.images && service.images.length > 0
@@ -193,12 +152,11 @@ async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
             }
           : null,
         // Booking window from resourceUsage
-        bookingDate: usage?.date ?? null,
         bookingStartTime: usage?.startTime ?? null,
         bookingEndTime: usage?.endTime ?? null,
         // Audit dates
         requestedDate: project._creationTime,
-        estimatedPrice: project.costBreakdown?.total ?? 0,
+        estimatedPrice: project.totalInvoice?.total ?? 0,
         coverUrl,
       };
     }),
@@ -282,45 +240,17 @@ export const getProject = authQuery({
       : null;
 
     // -------------------------------------------------------------------------
-    // Resource usages — source of truth for booking window, maker, resource
+    // Resource usages — source of truth for booking window and resource
     // -------------------------------------------------------------------------
-    const allUsagesForService = await ctx.db
+    const usageDocs = await ctx.db
       .query("resourceUsage")
-      .withIndex("by_service", (q) => q.eq("service", project.service))
+      .withIndex("by_project", (q) => q.eq("projectId", project._id))
       .collect();
-
-    const usageDocs = allUsagesForService.filter((u) =>
-      u.projects.includes(project._id),
-    );
-
-    // Resolve service-level resources as a fallback
-    const serviceResources =
-      serviceDoc?.resources && serviceDoc.resources.length > 0
-        ? await Promise.all(
-            serviceDoc.resources.map((rId) =>
-              ctx.db.get(rId as Id<"resources">),
-            ),
-          )
-        : [];
 
     const resourceUsages = await Promise.all(
       usageDocs.map(async (usage) => {
-        // Prefer snapshot for historical accuracy; fall back to live resource doc
-        let resourceDoc =
-          !usage.resourceSnapshot && usage.resource
-            ? await ctx.db.get(usage.resource as Id<"resources">)
-            : null;
-
-        if (!resourceDoc && !usage.resourceSnapshot && serviceResources.length > 0) {
-          resourceDoc = serviceResources[0] ?? null;
-        }
-
-        const [makerProfile] = await Promise.all([
-          usage.maker ? ctx.db.get(usage.maker as Id<"userProfile">) : null,
-        ]);
-
-        const makerPfpUrl = makerProfile?.profilePic
-          ? await ctx.storage.getUrl(makerProfile.profilePic)
+        const resourceDoc = usage.resource
+          ? await ctx.db.get(usage.resource as Id<"resources">)
           : null;
 
         const enrichedMaterialsUsed = usage.materialsUsed
@@ -341,30 +271,17 @@ export const getProject = authQuery({
             )
           : [];
 
-        const resourceDetails = usage.resourceSnapshot
-          ? {
-              _id: usage.resource ?? null,
-              name: usage.resourceSnapshot.name,
-              category: usage.resourceSnapshot.category,
-              type: usage.resourceSnapshot.type,
-              status: null,
-              description: usage.resourceSnapshot.description,
-            }
-          : resourceDoc
-            ? {
-                _id: resourceDoc._id,
-                name: resourceDoc.name,
-                category: resourceDoc.category,
-                type: resourceDoc.type,
-                status: resourceDoc.status,
-                description: resourceDoc.description,
-              }
-            : null;
+        const resourceDetails = {
+          _id: usage.resource ?? null,
+          name: usage.snapshot.name,
+          category: resourceDoc?.category ?? null,
+          type: resourceDoc?.type ?? null,
+          status: resourceDoc?.status ?? null,
+          description: resourceDoc?.description ?? null,
+        };
 
         return {
           ...usage,
-          makerName: makerProfile?.name ?? null,
-          makerPfpUrl,
           resourceDetails,
           materialsUsed: enrichedMaterialsUsed,
         };
@@ -415,7 +332,6 @@ export const getProject = authQuery({
       // Audit / tracking dates
       requestedDate: project._creationTime,
       // Booking window derived from resourceUsage
-      bookingDate: primaryUsage?.date ?? null,
       bookingStartTime: primaryUsage?.startTime ?? null,
       bookingEndTime: primaryUsage?.endTime ?? null,
       // Relations

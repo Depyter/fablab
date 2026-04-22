@@ -6,7 +6,6 @@ import {
   ResourceUnit,
   PaymentMode,
   ProjectMaterial,
-  ProjectServiceType,
   ProjectStatus,
   ResourceCategory,
   ResourceStatus,
@@ -139,18 +138,22 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   // --------------------------------------------------------
-  // 4. RESOURCE USAGE: The scheduling & consumption engine
+  // 4. RESOURCE USAGE: Atomic session records
   // --------------------------------------------------------
   resourceUsage: defineTable({
+    projectId: v.id("projects"),
     resource: v.optional(v.id("resources")),
     service: v.id("services"),
-    usageMode: v.union(
-      v.literal("EXCLUSIVE"), // One project locks the resource
-      v.literal("SHARED"), // Multiple projects/users can join
-    ),
-    projects: v.array(v.id("projects")),
-    maxCapacity: v.optional(v.number()),
-    maker: v.optional(v.id("userProfile")),
+
+    startTime: v.number(),
+    endTime: v.number(),
+
+    // Snapshot of cost and naming at time of session — drives historical records
+    snapshot: v.object({
+      name: v.string(),
+      costAtTime: v.number(),
+      unit: v.string(),
+    }),
 
     // Inventory deductions mapped to this specific session
     materialsUsed: v.optional(
@@ -158,7 +161,6 @@ export default defineSchema({
         v.object({
           materialId: v.id("materials"),
           amountUsed: v.number(),
-          // Snapshot of material values at time of usage for historical accuracy
           snapshot: v.optional(
             v.object({
               name: v.string(),
@@ -170,73 +172,49 @@ export default defineSchema({
         }),
       ),
     ),
-
-    // Snapshot of resource details at time of booking for historical accuracy
-    resourceSnapshot: v.optional(
-      v.object({
-        name: v.string(),
-        category: v.string(),
-        type: v.string(),
-        description: v.string(),
-      }),
-    ),
-
-    startTime: v.number(),
-    endTime: v.number(),
-    date: v.number(),
   })
-    .index("by_date_resource_startTime", ["date", "resource", "startTime"])
-    .index("by_service", ["service"]),
+    .index("by_project", ["projectId"])
+    .index("by_service", ["service"])
+    .index("by_resource_startTime", ["resource", "startTime"]),
 
   // --------------------------------------------------------
-  // 5. PROJECTS: User submissions & financial line items
+  // 5. PROJECTS: Parent container — ledger of sessions
   // --------------------------------------------------------
   projects: defineTable({
     name: v.string(),
     description: v.string(),
-    serviceType: v.union(
-      v.literal(ProjectServiceType.SELF_SERVICE),
-      v.literal(ProjectServiceType.FULL_SERVICE),
-      v.literal(ProjectServiceType.WORKSHOP),
+
+    // Structural type: determines session logic
+    type: v.union(v.literal("WORKSHOP"), v.literal("FABRICATION")),
+
+    // How the session is fulfilled
+    fulfillmentMode: v.union(
+      v.literal("self-service"),
+      v.literal("full-service"),
+      v.literal("staff-led"),
     ),
+
     material: v.union(
       v.literal(ProjectMaterial.PROVIDE_OWN),
       v.literal(ProjectMaterial.BUY_FROM_LAB),
     ),
-    requestedMaterialId: v.optional(v.id("materials")), // What the client selected
+    requestedMaterialId: v.optional(v.id("materials")),
 
     userId: v.id("userProfile"),
     assignedMaker: v.optional(v.id("userProfile")),
     service: v.id("services"),
 
-    // Frozen calculated cost breakdown for history/receipts
-    costBreakdown: v.optional(
+    // Aggregate invoice derived from resourceUsage sessions
+    totalInvoice: v.optional(
       v.object({
-        setupFee: v.number(),
-        materialCost: v.number(),
-        timeCost: v.number(),
+        subtotal: v.number(),
+        tax: v.number(),
         total: v.number(),
       }),
     ),
 
     pricing: v.string(), // Chosen variant name (e.g., "Default", "UP", "KID")
 
-    // Snapshot of resolved pricing at booking time — drives historical cost calculations
-    pricingSnapshot: v.optional(
-      v.union(
-        v.object({ type: v.literal("FIXED"), amount: v.number() }),
-        v.object({
-          type: v.literal("FABRICATION"),
-          setupFee: v.number(),
-          unitName: v.union(
-            v.literal(ResourceUnit.MINUTE),
-            v.literal(ResourceUnit.HOUR),
-            v.literal(ResourceUnit.DAY),
-          ),
-          timeRate: v.number(),
-        }),
-      ),
-    ),
     status: v.union(
       v.literal(ProjectStatus.PENDING),
       v.literal(ProjectStatus.APPROVED),
@@ -248,22 +226,10 @@ export default defineSchema({
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())),
     notes: v.string(),
-    selectedTimeSlot: v.optional(
-      v.object({
-        startTime: v.number(),
-        endTime: v.number(),
-      }),
-    ),
-    searchText: v.string(), // name,
+    searchText: v.string(),
   })
     .index("by_userProfile", ["userId"])
-    .index("by_startTime", ["selectedTimeSlot.startTime"])
-    .index("by_status_startTime", ["status", "selectedTimeSlot.startTime"])
-    .index("by_totalCost_startTime", [
-      "costBreakdown.total",
-      "selectedTimeSlot.startTime",
-    ])
-    .index("by_name_startTime", ["name", "selectedTimeSlot.startTime"])
+    .index("by_status", ["status"])
     .searchIndex("search_body", {
       searchField: "searchText",
       filterFields: ["status"],

@@ -7,13 +7,11 @@ import {
   buildSearchText,
   resolveService,
   validateFileTypes,
-  resolveBookingFromSharedUsage,
   validateBookingTiming,
   validateFabricationAvailability,
   computeProvisionalCostBreakdown,
-  handleSharedResourceUsage,
-  handleWorkshopResourceUsage,
-  handleExclusiveResourceUsage,
+  createWorkshopUsage,
+  createFabricationUsage,
   incrementWorkshopSlot,
   ensureProjectRoom,
   createProjectThread,
@@ -27,7 +25,6 @@ import {
   applyMaterialAssignment,
   syncMaterialUsageStock,
   buildMaterialSnapshot,
-  buildPricingSnapshot,
 } from "./helper";
 
 // ============================================================================
@@ -38,10 +35,10 @@ export const createProject = authMutation({
   args: {
     name: v.string(),
     description: v.string(),
-    serviceType: v.union(
+    fulfillmentMode: v.union(
       v.literal("self-service"),
       v.literal("full-service"),
-      v.literal("workshop"),
+      v.literal("staff-led"),
     ),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     requestedMaterialId: v.optional(v.id("materials")),
@@ -50,79 +47,63 @@ export const createProject = authMutation({
     files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
     assignedMaker: v.optional(v.id("userProfile")),
-    selectedTimeSlot: v.optional(
-      v.object({
-        startTime: v.number(),
-        endTime: v.number(),
-      }),
-    ),
-    booking: v.optional(
-      v.object({
-        startTime: v.number(),
-        endTime: v.number(),
-        date: v.number(),
-      }),
-    ),
-    sharedUsageId: v.optional(v.id("resourceUsage")),
+    booking: v.object({
+      startTime: v.number(),
+      endTime: v.number(),
+      date: v.number(),
+    }),
   },
   handler: async (ctx, args) => {
-    // ── 1. Resolve service (user profile is guaranteed via authMutation) ─────
+    // ── 1. Resolve service ────────────────────────────────────────────────────
     const service = await resolveService(ctx, args.service);
     const userProfile = ctx.profile;
 
-    // ── 2. Validate uploaded file types ─────────────────────────────────────
+    // ── 2. Validate uploaded file types ──────────────────────────────────────
     await validateFileTypes(ctx, args.files ?? [], service);
 
-    // ── 3. Resolve & validate booking window ────────────────────────────────
-    let booking: BookingWindow;
-    let sharedUsage: Doc<"resourceUsage"> | null = null;
-
-    if (args.sharedUsageId) {
-      const resolved = await resolveBookingFromSharedUsage(
-        ctx,
-        args.sharedUsageId,
-      );
-      booking = resolved.booking;
-      sharedUsage = resolved.sharedUsage;
-    } else if (args.booking) {
-      booking = args.booking;
-    } else {
-      throw new ConvexError("Booking details are required.");
-    }
-
+    // ── 3. Validate booking window ────────────────────────────────────────────
+    const booking: BookingWindow = args.booking;
     validateBookingTiming(booking);
     await validateFabricationAvailability(ctx, args.service, service, booking);
 
-    // ── 4. Compute provisional cost for all pricing types ───────────────────
+    // ── 4. Determine project type from service ────────────────────────────────
+    const projectType =
+      service.serviceCategory.type === "WORKSHOP" ? "WORKSHOP" : "FABRICATION";
+
+    // ── 5. Compute provisional cost for snapshot ──────────────────────────────
     const bookingDurationMs = booking.endTime - booking.startTime;
-    const costBreakdown = computeProvisionalCostBreakdown(
+    const provisional = computeProvisionalCostBreakdown(
       service,
       args.pricing,
-      args.serviceType,
+      args.fulfillmentMode,
       bookingDurationMs,
     );
 
-    // Snapshot the resolved pricing at booking time for historical accuracy
-    const pricingSnapshot = buildPricingSnapshot(service, args.pricing);
+    const usageSnapshot = {
+      name: service.name,
+      costAtTime: provisional.total,
+      unit:
+        service.serviceCategory.type === "FABRICATION"
+          ? service.serviceCategory.unitName
+          : "session",
+    };
 
-    // ── 5. Insert the project record ─────────────────────────────────────────
+    // ── 6. Insert the project record ──────────────────────────────────────────
     const now = Date.now();
     const projectId = await ctx.db.insert("projects", {
       name: args.name,
       description: args.description,
-      serviceType: args.serviceType,
+      type: projectType,
+      fulfillmentMode: args.fulfillmentMode,
       material: args.material,
       requestedMaterialId: args.requestedMaterialId,
       userId: userProfile._id,
       assignedMaker: args.assignedMaker,
       service: args.service,
       pricing: args.pricing,
-      pricingSnapshot,
       status: "pending",
       files: args.files,
       notes: args.notes,
-      selectedTimeSlot: args.selectedTimeSlot,
-      costBreakdown,
       searchText: buildSearchText({
         name: args.name,
         description: args.description,
@@ -130,41 +111,33 @@ export const createProject = authMutation({
       }),
     });
 
-    // ── 6. Update resource usage records ────────────────────────────────────
-    if (args.sharedUsageId && sharedUsage) {
-      await handleSharedResourceUsage(
-        ctx,
-        args.sharedUsageId,
-        sharedUsage,
-        projectId,
-      );
-    } else if (service.serviceCategory.type === "WORKSHOP") {
-      await handleWorkshopResourceUsage(
+    // ── 7. Create resource usage record ───────────────────────────────────────
+    if (projectType === "WORKSHOP") {
+      await createWorkshopUsage(
         ctx,
         args.service,
         service,
         booking,
-        args.selectedTimeSlot,
         projectId,
+        usageSnapshot,
         args.requestedMaterialId,
       );
+      await incrementWorkshopSlot(ctx, service, booking);
     } else {
-      await handleExclusiveResourceUsage(
+      await createFabricationUsage(
         ctx,
         args.service,
         booking,
         projectId,
+        usageSnapshot,
         args.requestedMaterialId,
       );
     }
 
-    // ── 7. Increment workshop slot counter ───────────────────────────────────
-    await incrementWorkshopSlot(ctx, service, booking, args.selectedTimeSlot);
-
-    // ── 8. Ensure client messaging room exists ───────────────────────────────
+    // ── 8. Ensure client messaging room exists ────────────────────────────────
     const roomId = await ensureProjectRoom(ctx, userProfile);
 
-    // ── 9. Create project thread + initial message ───────────────────────────
+    // ── 9. Create project thread + initial message ────────────────────────────
     const threadId = await createProjectThread(
       ctx,
       roomId,
@@ -174,7 +147,8 @@ export const createProject = authMutation({
       {
         name: args.name,
         description: args.description,
-        serviceType: args.serviceType,
+        type: projectType,
+        fulfillmentMode: args.fulfillmentMode,
         material: args.material,
         pricing: args.pricing,
         notes: args.notes,
@@ -184,7 +158,7 @@ export const createProject = authMutation({
       now,
     );
 
-    // ── 10. Claim uploaded files ─────────────────────────────────────────────
+    // ── 10. Claim uploaded files ──────────────────────────────────────────────
     if (args.files && args.files.length > 0) {
       claimFiles(ctx, args.files);
     }
@@ -279,15 +253,14 @@ export const updateCostBreakdown = authMutation({
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
 
-    const total = args.setupFee + args.timeCost + args.materialCost;
+    const subtotal = args.setupFee + args.timeCost + args.materialCost;
+    const total = subtotal;
 
     // ── Detect what actually changed ─────────────────────────────────────────
-    const existing = project.costBreakdown;
+    const existing = project.totalInvoice;
 
-    const feeChanged = existing?.setupFee !== args.setupFee;
-    const timeChanged = existing?.timeCost !== args.timeCost;
-    const materialCostChanged = existing?.materialCost !== args.materialCost;
-    const breakdownChanged = feeChanged || timeChanged || materialCostChanged;
+    const feeChanged = existing?.subtotal !== subtotal;
+    const breakdownChanged = feeChanged;
 
     // Resolve existing amountUsed from the usage record
     let existingAmountUsed = 0;
@@ -307,13 +280,23 @@ export const updateCostBreakdown = authMutation({
     // ── Persist changes ──────────────────────────────────────────────────────
     if (breakdownChanged) {
       await ctx.db.patch(args.projectId, {
-        costBreakdown: {
-          setupFee: args.setupFee,
-          timeCost: args.timeCost,
-          materialCost: args.materialCost,
+        totalInvoice: {
+          subtotal,
+          tax: 0,
           total,
         },
       });
+
+      // Also update the usage snapshot to reflect the latest cost
+      const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
+      if (resolvedUsage) {
+        await ctx.db.patch(resolvedUsage._id, {
+          snapshot: {
+            ...resolvedUsage.snapshot,
+            costAtTime: total,
+          },
+        });
+      }
     }
 
     // ── Update amountUsed on the resource usage record ───────────────────────
@@ -354,7 +337,7 @@ export const updateCostBreakdown = authMutation({
     const lines: string[] = [];
     if (breakdownChanged) {
       lines.push(
-        `Cost breakdown updated:`,
+        `Invoice updated:`,
         `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
         `- Time cost: ₱${args.timeCost.toFixed(2)}`,
         `- Material cost: ₱${args.materialCost.toFixed(2)}`,
@@ -495,18 +478,22 @@ export const completeProject = authMutation({
         ? await consumeMaterials(ctx, args.materialsUsed)
         : 0;
 
-    // ── 3. Persist final cost breakdown ─────────────────────────────────────
+    // ── 3. Persist final invoice ─────────────────────────────────────────────
     const total = setupFee + timeCost + materialCost;
 
     await ctx.db.patch(args.projectId, {
       status: "completed",
-      costBreakdown: { setupFee, timeCost, materialCost, total },
+      totalInvoice: { subtotal: total, tax: 0, total },
     });
 
-    // ── 4. Record materials on the usage log ─────────────────────────────────
-    if (args.materialsUsed) {
-      const usage = await findProjectUsage(ctx, project);
-      if (usage) {
+    // ── 4. Update usage snapshot and record materials ─────────────────────────
+    const usage = await findProjectUsage(ctx, project);
+    if (usage) {
+      await ctx.db.patch(usage._id, {
+        snapshot: { ...usage.snapshot, costAtTime: total },
+      });
+
+      if (args.materialsUsed) {
         const materialsWithSnapshots = await Promise.all(
           args.materialsUsed.map(async (m) => {
             const materialDoc = await ctx.db.get(m.materialId);
@@ -552,11 +539,11 @@ export const updateOwnProjectDetails = authMutation({
     material: v.optional(
       v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     ),
-    serviceType: v.optional(
+    fulfillmentMode: v.optional(
       v.union(
         v.literal("self-service"),
         v.literal("full-service"),
-        v.literal("workshop"),
+        v.literal("staff-led"),
       ),
     ),
     files: v.optional(v.array(v.id("_storage"))),
@@ -601,11 +588,11 @@ export const updateOwnProjectDetails = authMutation({
       changed.push("material");
     }
     if (
-      args.serviceType !== undefined &&
-      args.serviceType !== project.serviceType
+      args.fulfillmentMode !== undefined &&
+      args.fulfillmentMode !== project.fulfillmentMode
     ) {
-      patch.serviceType = args.serviceType;
-      changed.push("service type");
+      patch.fulfillmentMode = args.fulfillmentMode;
+      changed.push("fulfillment mode");
     }
     if (args.files !== undefined) {
       patch.files = args.files;

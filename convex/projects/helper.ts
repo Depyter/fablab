@@ -35,7 +35,7 @@ export type ProjectStatus = ProjectStatusType;
 export type BookingWindow = {
   startTime: number;
   endTime: number;
-  date: number;
+  date: number; // Local day-start timestamp — used for workshop schedule matching
 };
 
 export type ServiceDoc = Doc<"services">;
@@ -97,32 +97,6 @@ export async function validateFileTypes(
 // Helpers — Booking Resolution
 // ============================================================================
 
-export async function resolveBookingFromSharedUsage(
-  ctx: MutationCtx,
-  sharedUsageId: Id<"resourceUsage">,
-): Promise<{ booking: BookingWindow; sharedUsage: Doc<"resourceUsage"> }> {
-  const sharedUsage = await ctx.db.get(sharedUsageId);
-  if (!sharedUsage) throw new ConvexError("Shared event not found.");
-  if (sharedUsage.usageMode !== "SHARED") {
-    throw new ConvexError("This resource is not a shared event.");
-  }
-  if (
-    sharedUsage.maxCapacity &&
-    sharedUsage.projects.length >= sharedUsage.maxCapacity
-  ) {
-    throw new ConvexError("Shared event is at maximum capacity.");
-  }
-
-  return {
-    booking: {
-      startTime: sharedUsage.startTime,
-      endTime: sharedUsage.endTime,
-      date: sharedUsage.date,
-    },
-    sharedUsage,
-  };
-}
-
 export function validateBookingTiming(booking: BookingWindow): void {
   const now = Date.now();
   if (booking.startTime < now) {
@@ -154,11 +128,10 @@ export async function validateFabricationAvailability(
     }
   }
 
-  // Conflict check
+  // Conflict check — query all usages for this service and check time overlap
   const existingUsages = await ctx.db
     .query("resourceUsage")
     .withIndex("by_service", (q) => q.eq("service", serviceId))
-    .filter((q) => q.eq(q.field("date"), booking.date))
     .collect();
 
   for (const usage of existingUsages) {
@@ -178,13 +151,13 @@ export async function validateFabricationAvailability(
 export function computeProvisionalCostBreakdown(
   service: ServiceDoc,
   pricingVariant: string,
-  serviceType: string,
+  fulfillmentMode: string,
   bookingDurationMs: number,
 ): { setupFee: number; materialCost: number; timeCost: number; total: number } {
   const breakdown = derivePricingFromSchema({
     servicePricing: service.serviceCategory,
     pricingVariant,
-    serviceType: serviceType as "self-service" | "full-service" | "workshop",
+    serviceType: fulfillmentMode as "self-service" | "full-service" | "staff-led",
     bookingDurationMinutes: bookingDurationMs / (1000 * 60),
   });
 
@@ -200,17 +173,6 @@ export function computeProvisionalCostBreakdown(
 // Helpers — Resource Usage
 // ============================================================================
 
-export async function handleSharedResourceUsage(
-  ctx: MutationCtx,
-  sharedUsageId: Id<"resourceUsage">,
-  sharedUsage: Doc<"resourceUsage">,
-  projectId: Id<"projects">,
-): Promise<void> {
-  await ctx.db.patch(sharedUsageId, {
-    projects: [...sharedUsage.projects, projectId],
-  });
-}
-
 export function buildMaterialSnapshot(material: Doc<"materials">) {
   return {
     name: material.name,
@@ -220,148 +182,95 @@ export function buildMaterialSnapshot(material: Doc<"materials">) {
   };
 }
 
-/**
- * Resolves the chosen pricing variant and returns a flat snapshot
- * suitable for storing on a project at booking time.
- * Maps WORKSHOP → "FIXED" and FABRICATION → "FABRICATION" in the snapshot.
- */
-export function buildPricingSnapshot(
-  service: ServiceDoc,
-  pricingVariant: string,
-):
-  | { type: "FIXED"; amount: number }
-  | {
-      type: "FABRICATION";
-      setupFee: number;
-      unitName: "minute" | "hour" | "day";
-      timeRate: number;
-    } {
-  const sc = service.serviceCategory;
-
-  if (sc.type === "WORKSHOP") {
-    const variant = sc.variants?.find((v) => v.name === pricingVariant);
-    return { type: "FIXED", amount: variant ? variant.amount : sc.amount };
-  }
-
-  // FABRICATION
-  const variant = sc.variants?.find((v) => v.name === pricingVariant);
-  return {
-    type: "FABRICATION",
-    setupFee: variant ? variant.setupFee : sc.setupFee,
-    unitName: sc.unitName,
-    timeRate: variant ? variant.timeRate : sc.timeRate,
-  };
-}
-
-export async function handleWorkshopResourceUsage(
+export async function createWorkshopUsage(
   ctx: MutationCtx,
   serviceId: Id<"services">,
   service: ServiceDoc,
   booking: BookingWindow,
-  selectedTimeSlot: { startTime: number; endTime: number } | undefined,
   projectId: Id<"projects">,
+  snapshot: { name: string; costAtTime: number; unit: string },
   requestedMaterialId?: Id<"materials">,
 ): Promise<void> {
-  const existingUsages = await ctx.db
-    .query("resourceUsage")
-    .withIndex("by_service", (q) => q.eq("service", serviceId))
-    .collect();
-
-  const existingUsage = existingUsages.find(
-    (u) => u.date === booking.date && u.startTime === booking.startTime,
-  );
-
-  if (existingUsage) {
+  // Capacity check against the schedule time slot
+  if (service.serviceCategory.type === "WORKSHOP") {
+    const schedule = service.serviceCategory.schedules.find(
+      (s) => s.date === booking.date,
+    );
+    const timeSlot = schedule?.timeSlots.find(
+      (t) => t.startTime === booking.startTime,
+    );
     if (
-      existingUsage.maxCapacity &&
-      existingUsage.projects.length >= existingUsage.maxCapacity
+      timeSlot &&
+      timeSlot.maxSlots > 0 &&
+      (timeSlot.usedUpSlots ?? 0) >= timeSlot.maxSlots
     ) {
       throw new ConvexError("This workshop timeslot is fully booked.");
     }
-    await ctx.db.patch(existingUsage._id, {
-      projects: [...existingUsage.projects, projectId],
-    });
-  } else {
-    const slotStartTime = selectedTimeSlot?.startTime ?? booking.startTime;
-    const schedule =
-      service.serviceCategory.type === "WORKSHOP"
-        ? service.serviceCategory.schedules.find((s) => s.date === booking.date)
-        : undefined;
-    const timeSlot = schedule?.timeSlots.find(
-      (t) => t.startTime === slotStartTime,
-    );
-
-    await ctx.db.insert("resourceUsage", {
-      service: serviceId,
-      usageMode: "SHARED",
-      projects: [projectId],
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      date: booking.date,
-      maxCapacity: timeSlot?.maxSlots,
-      materialsUsed: requestedMaterialId
-        ? await (async () => {
-            const mat = await ctx.db.get(requestedMaterialId);
-            return [
-              {
-                materialId: requestedMaterialId,
-                amountUsed: 0,
-                snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
-              },
-            ];
-          })()
-        : undefined,
-    });
   }
+
+  const materialEntry = requestedMaterialId
+    ? await buildMaterialEntry(ctx, requestedMaterialId)
+    : undefined;
+
+  await ctx.db.insert("resourceUsage", {
+    projectId,
+    service: serviceId,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    snapshot,
+    materialsUsed: materialEntry,
+  });
 }
 
-export async function handleExclusiveResourceUsage(
+export async function createFabricationUsage(
   ctx: MutationCtx,
   serviceId: Id<"services">,
   booking: BookingWindow,
   projectId: Id<"projects">,
+  snapshot: { name: string; costAtTime: number; unit: string },
   requestedMaterialId?: Id<"materials">,
 ): Promise<void> {
   const materialEntry = requestedMaterialId
-    ? await (async () => {
-        const mat = await ctx.db.get(requestedMaterialId);
-        return [
-          {
-            materialId: requestedMaterialId,
-            amountUsed: 0,
-            snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
-          },
-        ];
-      })()
+    ? await buildMaterialEntry(ctx, requestedMaterialId)
     : undefined;
 
   await ctx.db.insert("resourceUsage", {
+    projectId,
     service: serviceId,
-    usageMode: "EXCLUSIVE",
-    projects: [projectId],
     startTime: booking.startTime,
     endTime: booking.endTime,
-    date: booking.date,
+    snapshot,
     materialsUsed: materialEntry,
   });
+}
+
+async function buildMaterialEntry(
+  ctx: MutationCtx,
+  materialId: Id<"materials">,
+) {
+  const mat = await ctx.db.get(materialId);
+  return [
+    {
+      materialId,
+      amountUsed: 0,
+      snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
+    },
+  ];
 }
 
 export async function incrementWorkshopSlot(
   ctx: MutationCtx,
   service: ServiceDoc,
   booking: BookingWindow,
-  selectedTimeSlot: { startTime: number; endTime: number } | undefined,
 ): Promise<void> {
   if (service.serviceCategory.type !== "WORKSHOP") return;
-
-  const slotStartTime = selectedTimeSlot?.startTime ?? booking.startTime;
 
   const updatedSchedules = service.serviceCategory.schedules.map((s) => {
     if (s.date !== booking.date) return s;
     return {
       ...s,
       timeSlots: s.timeSlots.map((t) => {
-        if (t.startTime !== slotStartTime) return t;
+        if (t.startTime !== booking.startTime) return t;
         return { ...t, usedUpSlots: (t.usedUpSlots || 0) + 1 };
       }),
     };
@@ -379,14 +288,15 @@ export async function decrementWorkshopSlot(
   ctx: MutationCtx,
   service: ServiceDoc,
   usage: Doc<"resourceUsage">,
-  selectedTimeSlot: { startTime: number; endTime: number } | undefined,
 ): Promise<void> {
   if (service.serviceCategory.type !== "WORKSHOP") return;
 
-  const slotStartTime = selectedTimeSlot?.startTime ?? usage.startTime;
+  const slotStartTime = usage.startTime;
 
+  // Match schedule by finding the one that owns this time slot
   const updatedSchedules = service.serviceCategory.schedules.map((s) => {
-    if (s.date !== usage.date) return s;
+    const hasSlot = s.timeSlots.some((t) => t.startTime === slotStartTime);
+    if (!hasSlot) return s;
     return {
       ...s,
       timeSlots: s.timeSlots.map((t) => {
@@ -477,7 +387,8 @@ export async function createProjectThread(
   args: {
     name: string;
     description: string;
-    serviceType: string;
+    type: string;
+    fulfillmentMode: string;
     material: string;
     pricing: string;
     notes: string;
@@ -509,7 +420,8 @@ export async function createProjectThread(
     ``,
     `Service: ${service.name}`,
     `Description: ${args.description}`,
-    `Service Type: ${args.serviceType}`,
+    `Type: ${args.type}`,
+    `Fulfillment: ${args.fulfillmentMode}`,
     `Material: ${args.material}`,
     `Pricing: ${args.pricing}`,
     `Notes: ${args.notes}`,
@@ -553,7 +465,7 @@ export function computeCompletionCost(
   actualDurationMs: number,
 ): { setupFee: number; timeCost: number } {
   const durationMinutes = actualDurationMs / (1000 * 60);
-  const isSelfService = project.serviceType === "self-service";
+  const isSelfService = project.fulfillmentMode === "self-service";
 
   const unitToMinutes = (unit: string): number => {
     if (unit === "hour") return 60;
@@ -561,22 +473,9 @@ export function computeCompletionCost(
     return 1;
   };
 
-  // Prefer the pricing snapshot captured at booking time (historical accuracy)
-  const snapshot = project.pricingSnapshot;
-  if (snapshot) {
-    if (snapshot.type === "FIXED") {
-      return { setupFee: isSelfService ? 0 : snapshot.amount, timeCost: 0 };
-    }
-    // FABRICATION
-    const durationInUnit = durationMinutes / unitToMinutes(snapshot.unitName);
-    return {
-      setupFee: isSelfService ? 0 : snapshot.setupFee,
-      timeCost: durationInUnit * snapshot.timeRate,
-    };
-  }
-
-  // Fallback: derive from live service doc (handles legacy projects without a snapshot).
-  // Cast to a loose shape so legacy records with separate pricing or old type names are handled.
+  // Derive from live service doc using the variant chosen at booking time.
+  // The computed cost is persisted in resourceUsage.snapshot.costAtTime, so
+  // historical accuracy is preserved at the output level, not the rate level.
   const sc = service.serviceCategory as {
     type: string;
     amount?: number;
@@ -599,7 +498,7 @@ export function computeCompletionCost(
     return { setupFee: isSelfService ? 0 : amount, timeCost: 0 };
   }
 
-  // FABRICATION / legacy COMPOSITE / legacy PER_UNIT
+  // FABRICATION
   let setupFee = sc.setupFee ?? 0;
   const variant = sc.variants?.find((v) => v.name === project.pricing);
   if (variant?.setupFee !== undefined) setupFee = variant.setupFee;
@@ -618,17 +517,16 @@ export function computeCompletionCost(
 // ============================================================================
 
 /**
- * Finds the resourceUsage record that contains the given project.
+ * Finds the resourceUsage record for the given project.
  */
 export async function findProjectUsage(
   ctx: MutationCtx,
   project: Doc<"projects">,
 ): Promise<Doc<"resourceUsage"> | null> {
-  const usages = await ctx.db
+  return ctx.db
     .query("resourceUsage")
-    .withIndex("by_service", (q) => q.eq("service", project.service))
-    .collect();
-  return usages.find((u) => u.projects.includes(project._id)) ?? null;
+    .withIndex("by_project", (q) => q.eq("projectId", project._id))
+    .first();
 }
 
 /**
@@ -681,7 +579,7 @@ export async function applyStatusChange(
 
   // Release workshop slot on cancellation / rejection
   if (
-    project.serviceType === "workshop" &&
+    project.type === "WORKSHOP" &&
     (status === "cancelled" || status === "rejected") &&
     existingProject.status !== "cancelled" &&
     existingProject.status !== "rejected"
@@ -690,15 +588,8 @@ export async function applyStatusChange(
     if (service && service.serviceCategory.type === "WORKSHOP") {
       const usage = await findProjectUsage(ctx, project);
       if (usage) {
-        await decrementWorkshopSlot(
-          ctx,
-          service,
-          usage,
-          project.selectedTimeSlot,
-        );
-        await ctx.db.patch(usage._id, {
-          projects: usage.projects.filter((p) => p !== project._id),
-        });
+        await decrementWorkshopSlot(ctx, service, usage);
+        await ctx.db.delete(usage._id);
       }
     }
   }
@@ -723,11 +614,6 @@ export async function applyMakerAssignment(
   if (project.assignedMaker === makerId) return [];
 
   await ctx.db.patch(project._id, { assignedMaker: makerId });
-
-  const usage = await findProjectUsage(ctx, project);
-  if (usage) {
-    await ctx.db.patch(usage._id, { maker: makerId });
-  }
 
   return [`- Assigned maker updated to: **${makerProfile.name}**`];
 }
