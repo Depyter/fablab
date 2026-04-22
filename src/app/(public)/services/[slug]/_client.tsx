@@ -25,21 +25,19 @@ export function ServiceDetailClient({
 
   const getBasePrice = () => {
     if (service === null) return 0;
-    if (service.pricing.type === "FIXED") return service.pricing.amount;
-    return service.pricing.setupFee;
+    if (service.serviceCategory.type === "WORKSHOP")
+      return service.serviceCategory.amount;
+    return service.serviceCategory.setupFee;
   };
 
   const getRatePerHour = () => {
     if (service === null) return 0;
-    if (service.pricing.type === "FIXED") return service.pricing.amount;
-
-    const rawRate =
-      service.pricing.type === "PER_UNIT"
-        ? service.pricing.ratePerUnit
-        : service.pricing.timeRate;
-
-    if (service.pricing.unitName === "minute") return rawRate * 60;
-    if (service.pricing.unitName === "day") return rawRate / 24;
+    if (service.serviceCategory.type === "WORKSHOP")
+      return service.serviceCategory.amount;
+    const rawRate = service.serviceCategory.timeRate;
+    const unitName = service.serviceCategory.unitName;
+    if (unitName === "minute") return rawRate * 60;
+    if (unitName === "day") return rawRate / 24;
     return rawRate;
   };
 
@@ -52,6 +50,11 @@ export function ServiceDetailClient({
       </main>
     );
   }
+
+  const fabricationUnitName =
+    service.serviceCategory.type === "FABRICATION"
+      ? service.serviceCategory.unitName
+      : null;
 
   return (
     <main className="min-h-screen bg-background font-sans">
@@ -106,9 +109,10 @@ export function ServiceDetailClient({
                     ₱{getBasePrice().toLocaleString()}
                   </p>
 
-                  {service.pricing.type === "FIXED" && service.pricing.variants?.length ? (
+                  {service.serviceCategory.type === "WORKSHOP" &&
+                  service.serviceCategory.variants?.length ? (
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {service.pricing.variants.map((variant) => (
+                      {service.serviceCategory.variants.map((variant) => (
                         <span
                           key={variant.name}
                           className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
@@ -119,17 +123,17 @@ export function ServiceDetailClient({
                       ))}
                     </div>
                   ) : null}
-                  {(service.pricing.type === "PER_UNIT" ||
-                    service.pricing.type === "COMPOSITE") &&
-                  service.pricing.variants?.length ? (
+                  {service.serviceCategory.type === "FABRICATION" &&
+                  service.serviceCategory.variants?.length ? (
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {service.pricing.variants.map((variant) => (
+                      {service.serviceCategory.variants.map((variant) => (
                         <span
                           key={variant.name}
                           className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
                         >
                           <CirclePercent className="h-3 w-3" />
-                          {variant.name}: ₱{variant.setupFee.toLocaleString()}
+                          {variant.name}: ₱{variant.setupFee.toLocaleString()}{" "}
+                          base
                         </span>
                       ))}
                     </div>
@@ -144,9 +148,10 @@ export function ServiceDetailClient({
                     ₱{getRatePerHour().toLocaleString()}
                   </p>
 
-                  {service.pricing.type === "FIXED" && service.pricing.variants?.length ? (
+                  {service.serviceCategory.type === "WORKSHOP" &&
+                  service.serviceCategory.variants?.length ? (
                     <div className="mt-3 flex flex-wrap justify-end gap-1.5">
-                      {service.pricing.variants.map((variant) => (
+                      {service.serviceCategory.variants.map((variant) => (
                         <span
                           key={variant.name}
                           className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
@@ -157,28 +162,17 @@ export function ServiceDetailClient({
                       ))}
                     </div>
                   ) : null}
-                  {service.pricing.type === "PER_UNIT" && service.pricing.variants?.length ? (
+                  {service.serviceCategory.type === "FABRICATION" &&
+                  service.serviceCategory.variants?.length ? (
                     <div className="mt-3 flex flex-wrap justify-end gap-1.5">
-                      {service.pricing.variants.map((variant) => (
+                      {service.serviceCategory.variants.map((variant) => (
                         <span
                           key={variant.name}
                           className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
                         >
                           <CirclePercent className="h-3 w-3" />
-                          {variant.name}: ₱{variant.ratePerUnit.toLocaleString()}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  {service.pricing.type === "COMPOSITE" && service.pricing.variants?.length ? (
-                    <div className="mt-3 flex flex-wrap justify-end gap-1.5">
-                      {service.pricing.variants.map((variant) => (
-                        <span
-                          key={variant.name}
-                          className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
-                        >
-                          <CirclePercent className="h-3 w-3" />
-                          {variant.name}: ₱{variant.timeRate.toLocaleString()}
+                          {variant.name}: ₱{variant.timeRate.toLocaleString()}/
+                          {fabricationUnitName}
                         </span>
                       ))}
                     </div>
@@ -199,11 +193,28 @@ export function ServiceDetailClient({
                   }
                   serviceMaterials={service.materialDetails ?? []}
                   hasUpPricing={
-                    service.pricing.variants !== undefined &&
-                    service.pricing.variants.length > 0
+                    (service.serviceCategory.variants?.length ?? 0) > 0
                   }
-                  pricingVariants={service.pricing.variants ?? []}
-                  servicePricing={service.pricing}
+                  pricingVariants={
+                    (service.serviceCategory.variants ?? []) as Array<{
+                      name: string;
+                    }>
+                  }
+                  servicePricing={
+                    service.serviceCategory.type === "WORKSHOP"
+                      ? {
+                          type: "WORKSHOP",
+                          amount: service.serviceCategory.amount,
+                          variants: service.serviceCategory.variants,
+                        }
+                      : {
+                          type: "FABRICATION",
+                          setupFee: service.serviceCategory.setupFee,
+                          unitName: service.serviceCategory.unitName,
+                          timeRate: service.serviceCategory.timeRate,
+                          variants: service.serviceCategory.variants,
+                        }
+                  }
                   serviceCategory={service.serviceCategory.type}
                   schedules={
                     service.serviceCategory.type === "WORKSHOP"

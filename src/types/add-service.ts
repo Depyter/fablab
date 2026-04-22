@@ -3,8 +3,7 @@ import { ServiceStatus, type ServiceStatusType } from "@convex/constants";
 
 export type PricingVariant =
   | { name: string; amount: number } // FIXED variant
-  | { name: string; setupFee: number; ratePerUnit: number } // PER_UNIT variant
-  | { name: string; setupFee: number; timeRate: number }; // COMPOSITE variant
+  | { name: string; setupFee: number; timeRate: number }; // FABRICATION variant
 
 export interface AddServiceFormValues {
   name: string;
@@ -17,18 +16,7 @@ export interface AddServiceFormValues {
         variants: Array<{ name: string; amount: number }>;
       }
     | {
-        type: "PER_UNIT";
-        setupFee: number;
-        unitName: "minute" | "hour" | "day";
-        ratePerUnit: number;
-        variants: Array<{
-          name: string;
-          setupFee: number;
-          ratePerUnit: number;
-        }>;
-      }
-    | {
-        type: "COMPOSITE";
+        type: "FABRICATION";
         setupFee: number;
         unitName: "minute" | "hour" | "day";
         timeRate: number;

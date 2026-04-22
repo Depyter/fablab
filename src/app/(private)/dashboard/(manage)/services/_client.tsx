@@ -45,18 +45,17 @@ export function ServicesListClient({
       );
     }
 
-    const getSortPrice = (pricing: (typeof services)[number]["pricing"]) => {
-      if (pricing.type === "FIXED") return pricing.amount;
-      if (pricing.type === "PER_UNIT")
-        return pricing.setupFee + pricing.ratePerUnit;
-      if (pricing.type === "COMPOSITE")
-        return pricing.setupFee + pricing.timeRate;
+    const getSortPrice = (
+      cat: (typeof services)[number]["serviceCategory"],
+    ) => {
+      if (cat.type === "WORKSHOP") return cat.amount;
+      if (cat.type === "FABRICATION") return cat.setupFee + cat.timeRate;
       return 0;
     };
 
     result.sort((a, b) => {
-      const priceA = getSortPrice(a.pricing);
-      const priceB = getSortPrice(b.pricing);
+      const priceA = getSortPrice(a.serviceCategory);
+      const priceB = getSortPrice(b.serviceCategory);
       if (sortBy === "price-high") return priceB - priceA;
       if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "name-az") return a.name.localeCompare(b.name);
@@ -134,7 +133,21 @@ export function ServicesListClient({
             imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
             title={service.name}
             description={service.description}
-            pricing={service.pricing}
+            pricing={
+            service.serviceCategory.type === "WORKSHOP"
+              ? {
+                  type: "FIXED" as const,
+                  amount: service.serviceCategory.amount,
+                  variants: service.serviceCategory.variants,
+                }
+              : {
+                  type: "FABRICATION" as const,
+                  setupFee: service.serviceCategory.setupFee,
+                  unitName: service.serviceCategory.unitName,
+                  timeRate: service.serviceCategory.timeRate,
+                  variants: service.serviceCategory.variants,
+                }
+          }
           />
         )}
         emptyState={{

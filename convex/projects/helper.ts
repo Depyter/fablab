@@ -486,12 +486,10 @@ export function computeCompletionCost(
     setupFee?: number;
     unitName?: string;
     timeRate?: number;
-    ratePerUnit?: number;
     variants?: Array<{
       name: string;
       setupFee?: number;
       timeRate?: number;
-      ratePerUnit?: number;
       amount?: number;
     }>;
   };
@@ -508,8 +506,7 @@ export function computeCompletionCost(
   if (variant?.setupFee !== undefined) setupFee = variant.setupFee;
   if (isSelfService) setupFee = 0;
 
-  const timeRate =
-    variant?.timeRate ?? variant?.ratePerUnit ?? sc.timeRate ?? sc.ratePerUnit ?? 0;
+  const timeRate = variant?.timeRate ?? sc.timeRate ?? 0;
   const unitName = sc.unitName ?? "minute";
   const timeCost = (durationMinutes / unitToMinutes(unitName)) * timeRate;
 

@@ -51,8 +51,8 @@ interface AssignedMaker {
 interface ResourceDetails {
   _id: string | null;
   name: string;
-  category?: string;
-  type?: string;
+  category?: string | null;
+  type?: string | null;
   status?: string | null;
 }
 
@@ -75,7 +75,19 @@ interface PricingEstimateCardProps {
   material: string;
   totalInvoice?: TotalInvoice;
   service?: {
-    pricing: ServicePricing;
+    serviceCategory:
+      | {
+          type: "WORKSHOP";
+          amount: number;
+          variants?: Array<{ name: string; amount: number }>;
+        }
+      | {
+          type: "FABRICATION";
+          setupFee: number;
+          unitName: string;
+          timeRate: number;
+          variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
+        };
     name?: string;
   };
   serviceType?: PricingServiceType;
@@ -121,14 +133,30 @@ export function PricingEstimateCard({
 
   const primaryUsage = resourceUsages?.[0];
 
+  const servicePricing: ServicePricing | undefined = service
+    ? service.serviceCategory.type === "WORKSHOP"
+      ? {
+          type: "WORKSHOP",
+          amount: service.serviceCategory.amount,
+          variants: service.serviceCategory.variants,
+        }
+      : {
+          type: "FABRICATION",
+          setupFee: service.serviceCategory.setupFee,
+          unitName: service.serviceCategory.unitName,
+          timeRate: service.serviceCategory.timeRate,
+          variants: service.serviceCategory.variants,
+        }
+    : undefined;
+
   const derived = useMemo(() => {
     return derivePricingFromSchema({
-      servicePricing: service?.pricing,
+      servicePricing,
       pricingVariant: projectPricing,
       serviceType,
       bookingDurationMinutes: totalDurationMinutes,
     });
-  }, [projectPricing, service?.pricing, serviceType, totalDurationMinutes]);
+  }, [projectPricing, servicePricing, serviceType, totalDurationMinutes]);
 
   // ── Editable cost state ──────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
@@ -175,8 +203,8 @@ export function PricingEstimateCard({
     [isEditing, materials, requestedMaterials, selectedMaterialIds],
   );
 
-  const pricingType = service?.pricing?.type ?? "FIXED";
-  const isTimeBased = pricingType === "PER_UNIT" || pricingType === "COMPOSITE";
+  const pricingType = servicePricing?.type ?? "WORKSHOP";
+  const isTimeBased = pricingType === "FABRICATION";
   const isBuyFromLab = material === ProjectMaterial.BUY_FROM_LAB;
 
   const computedTimeCost = isTimeBased
@@ -549,8 +577,8 @@ export function PricingEstimateCard({
 
       {/* ── Cost rows ────────────────────────────────────────────────────── */}
 
-      {/* FIXED */}
-      {pricingType === "FIXED" && (
+      {/* WORKSHOP */}
+      {pricingType === "WORKSHOP" && (
         <div className="flex items-center justify-between gap-2">
           <span
             className="text-[10px] font-bold uppercase tracking-[0.12em]"
@@ -583,7 +611,7 @@ export function PricingEstimateCard({
         </div>
       )}
 
-      {/* PER_UNIT / COMPOSITE */}
+      {/* FABRICATION */}
       {isTimeBased && (
         <>
           <div className="flex items-center justify-between gap-2">

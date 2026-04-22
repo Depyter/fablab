@@ -1,12 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
 import { Step2ProjectDetails } from "./step-2-project-details";
-import { ActionDialog } from "../action-dialog";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { useStore } from "@tanstack/react-form";
@@ -16,10 +15,11 @@ import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import {
   FILE_CATEGORIES,
-  ProjectServiceType,
+  FulfillmentMode,
   ProjectMaterial,
 } from "@convex/constants";
 import { WorkshopSchedule } from "./workshop-time-slot-picker";
+import { type ServicePricing } from "@/lib/project-pricing";
 
 interface BookingDialog {
   serviceId: Id<"services">;
@@ -36,8 +36,7 @@ interface BookingDialog {
   }>;
   hasUpPricing?: boolean;
   pricingVariants?: Array<{ name: string }>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  servicePricing?: any;
+  servicePricing?: ServicePricing;
   serviceCategory?: string;
   schedules?: WorkshopSchedule[];
 }
@@ -96,32 +95,9 @@ export function BookingDialog({
     setIsUploading(uploading);
   }, []);
 
-  const form = useAppForm({
-    defaultValues: {
-      serviceType:
-        serviceCategory === "WORKSHOP"
-          ? ProjectServiceType.WORKSHOP
-          : ProjectServiceType.SELF_SERVICE,
-      name: "",
-      description: "",
-      notes: "",
-      material: ProjectMaterial.PROVIDE_OWN,
-      pricing: "Default",
-      requestedMaterialIds: [],
-      dateTime: {
-        date: undefined,
-        startTime: "",
-        endTime: "",
-        originalDate: undefined,
-        originalStartTime: undefined,
-        originalEndTime: undefined,
-      },
-      files: [],
-    } as LocalBookingFormValues,
-    onSubmit: async ({ value: rawValue }) => {
+  const handleFormSubmit = useCallback(
+    async ({ value: rawValue }: { value: LocalBookingFormValues }) => {
       const value = rawValue as LocalBookingFormValues;
-      if (isSubmitting || isSuccess) return;
-
       if (!value.dateTime.date) {
         toast.error("Please select a date.");
         return;
@@ -146,30 +122,6 @@ export function BookingDialog({
         const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
         const endTimeTs = endDate.getTime();
 
-        console.log("=== DEBUG: dialog-form.tsx onSubmit ===");
-        console.log("Raw form value.dateTime:", value.dateTime);
-        console.log(
-          "Computed bookingDateTs:",
-          bookingDateTs,
-          new Date(bookingDateTs).toString(),
-        );
-        console.log(
-          "Computed startTimeTs:",
-          startTimeTs,
-          new Date(startTimeTs).toString(),
-        );
-        console.log(
-          "Computed endTimeTs:",
-          endTimeTs,
-          new Date(endTimeTs).toString(),
-        );
-        console.log("Date.now() reference:", Date.now(), new Date().toString());
-        console.log(
-          "Comparison (startTimeTs < Date.now()):",
-          startTimeTs < Date.now(),
-        );
-        console.log("=====================================");
-
         if (startTimeTs < Date.now()) {
           toast.error("Cannot book a date or time in the past.");
           setIsSubmitting(false);
@@ -185,7 +137,7 @@ export function BookingDialog({
         const { roomId, threadId } = await createProject({
           name: value.name || `${serviceName} Booking`,
           description: value.description || `Booking for ${serviceName}`,
-          serviceType: value.serviceType,
+          fulfillmentMode: value.serviceType,
           material: value.material,
           requestedMaterials: value.requestedMaterialIds as Id<"materials">[],
           service: serviceId,
@@ -194,17 +146,15 @@ export function BookingDialog({
           files: value.files.map((f) => f.storageId as Id<"_storage">),
           booking: {
             date: bookingDateTs,
-            startTime: startTimeTs,
-            endTime: endTimeTs,
+            startTime:
+              serviceCategory === "WORKSHOP"
+                ? (value.dateTime.originalStartTime ?? startTimeTs)
+                : startTimeTs,
+            endTime:
+              serviceCategory === "WORKSHOP"
+                ? (value.dateTime.originalEndTime ?? endTimeTs)
+                : endTimeTs,
           },
-          ...(serviceCategory === "WORKSHOP"
-            ? {
-                selectedTimeSlot: {
-                  startTime: value.dateTime.originalStartTime ?? startTimeTs,
-                  endTime: value.dateTime.originalEndTime ?? endTimeTs,
-                },
-              }
-            : {}),
         });
 
         setIsSuccess(true);
@@ -214,7 +164,7 @@ export function BookingDialog({
         setIsSubmitting(false);
         if (isUnauthenticatedBookingError(error)) {
           toast.error("You must be logged in to create a booking.");
-          handleOpenChange(false);
+          setIsOpen(false);
           router.push("/login");
           return;
         }
@@ -223,6 +173,32 @@ export function BookingDialog({
         );
       }
     },
+    [serviceCategory, serviceId, serviceName, createProject, router],
+  );
+
+  const form = useAppForm({
+    defaultValues: {
+      serviceType:
+        serviceCategory === "WORKSHOP"
+          ? FulfillmentMode.STAFF_LED
+          : FulfillmentMode.SELF_SERVICE,
+      name: "",
+      description: "",
+      notes: "",
+      material: ProjectMaterial.PROVIDE_OWN,
+      pricing: "Default",
+      requestedMaterialIds: [],
+      dateTime: {
+        date: undefined,
+        startTime: "",
+        endTime: "",
+        originalDate: undefined,
+        originalStartTime: undefined,
+        originalEndTime: undefined,
+      },
+      files: [],
+    } as LocalBookingFormValues,
+    onSubmit: handleFormSubmit,
   });
 
   const selectedDateRaw = useStore(
@@ -286,10 +262,6 @@ export function BookingDialog({
         form.reset();
       }, 300);
     }
-  };
-
-  const handleConfirmCancel = () => {
-    handleOpenChange(false);
   };
 
   const handleCreateBookingClick = async () => {

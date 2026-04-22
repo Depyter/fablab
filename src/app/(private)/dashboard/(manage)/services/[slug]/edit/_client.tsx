@@ -59,38 +59,26 @@ export function EditServiceClient({
     description: service.description,
     serviceCategory: service.serviceCategory.type as "WORKSHOP" | "FABRICATION",
     pricing:
-      service.pricing.type === "FIXED"
+      service.serviceCategory.type === "WORKSHOP"
         ? {
             type: "FIXED" as const,
-            amount: service.pricing.amount,
-            variants: (service.pricing.variants ?? []) as Array<{
+            amount: service.serviceCategory.amount,
+            variants: (service.serviceCategory.variants ?? []) as Array<{
               name: string;
               amount: number;
             }>,
           }
-        : service.pricing.type === "PER_UNIT"
-          ? {
-              type: "PER_UNIT" as const,
-              setupFee: service.pricing.setupFee,
-              unitName: service.pricing.unitName,
-              ratePerUnit: service.pricing.ratePerUnit,
-              variants: (service.pricing.variants ?? []) as Array<{
-                name: string;
-                setupFee: number;
-                ratePerUnit: number;
-              }>,
-            }
-          : {
-              type: "COMPOSITE" as const,
-              setupFee: service.pricing.setupFee,
-              unitName: service.pricing.unitName,
-              timeRate: service.pricing.timeRate,
-              variants: (service.pricing.variants ?? []) as Array<{
-                name: string;
-                setupFee: number;
-                timeRate: number;
-              }>,
-            },
+        : {
+            type: "FABRICATION" as const,
+            setupFee: service.serviceCategory.setupFee,
+            unitName: service.serviceCategory.unitName,
+            timeRate: service.serviceCategory.timeRate,
+            variants: (service.serviceCategory.variants ?? []) as Array<{
+              name: string;
+              setupFee: number;
+              timeRate: number;
+            }>,
+          },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: service.status as any,
     images: service.images as string[],
@@ -118,38 +106,6 @@ export function EditServiceClient({
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
-      const pricing =
-        value.pricing.type === "FIXED"
-          ? {
-              type: "FIXED" as const,
-              amount: value.pricing.amount,
-              variants:
-                value.pricing.variants.length > 0
-                  ? value.pricing.variants
-                  : undefined,
-            }
-          : value.pricing.type === "PER_UNIT"
-            ? {
-                type: "PER_UNIT" as const,
-                setupFee: value.pricing.setupFee,
-                unitName: value.pricing.unitName,
-                ratePerUnit: value.pricing.ratePerUnit,
-                variants:
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              }
-            : {
-                type: "COMPOSITE" as const,
-                setupFee: value.pricing.setupFee,
-                unitName: value.pricing.unitName,
-                timeRate: value.pricing.timeRate,
-                variants:
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              };
-
       await updateService({
         service: service._id as Id<"services">,
         name: value.name,
@@ -159,15 +115,35 @@ export function EditServiceClient({
             ? {
                 type: "WORKSHOP",
                 schedules: value.schedules ?? [],
+                amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
+                variants:
+                  value.pricing.type === "FIXED" &&
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
+                    : undefined,
               }
             : {
                 type: "FABRICATION",
                 availableDays: value.availableDays,
                 materials: value.materials as Id<"materials">[],
+                setupFee:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.setupFee
+                    : 0,
+                unitName:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.unitName
+                    : ("hour" as const),
+                timeRate:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.timeRate
+                    : 0,
+                variants:
+                  value.pricing.type === "FABRICATION" &&
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
+                    : undefined,
               },
-        //TODO FIX AS ANY
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pricing: pricing as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         status: value.status as any,
         requirements: value.requirements.filter((r) => r.trim() !== ""),

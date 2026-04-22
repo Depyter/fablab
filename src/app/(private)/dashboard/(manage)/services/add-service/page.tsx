@@ -30,6 +30,7 @@ export default function AddServicePage() {
         schedules,
         serviceCategory,
         materials,
+        pricing,
         ...restValue
       } = value;
 
@@ -37,47 +38,37 @@ export default function AddServicePage() {
         ...restValue,
         serviceCategory:
           serviceCategory === "WORKSHOP"
-            ? { type: "WORKSHOP", schedules: schedules ?? [] }
+            ? {
+                type: "WORKSHOP",
+                schedules: schedules ?? [],
+                amount: pricing.type === "FIXED" ? pricing.amount : 0,
+                variants:
+                  pricing.type === "FIXED" && pricing.variants.length > 0
+                    ? pricing.variants
+                    : undefined,
+              }
             : {
                 type: "FABRICATION",
                 availableDays,
                 materials: materials as Id<"materials">[],
+                setupFee:
+                  pricing.type === "FABRICATION" ? pricing.setupFee : 0,
+                unitName:
+                  pricing.type === "FABRICATION"
+                    ? pricing.unitName
+                    : ("hour" as const),
+                timeRate:
+                  pricing.type === "FABRICATION" ? pricing.timeRate : 0,
+                variants:
+                  pricing.type === "FABRICATION" &&
+                  pricing.variants.length > 0
+                    ? pricing.variants
+                    : undefined,
               },
         images: value.images as Id<"_storage">[],
         samples: value.samples as Id<"_storage">[],
         resources: value.resources as Id<"resources">[],
         requirements: value.requirements.filter((r) => r.trim() !== ""),
-        pricing:
-          value.pricing.type === "FIXED"
-            ? {
-                type: "FIXED",
-                amount: value.pricing.amount,
-                variants:
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              }
-            : value.pricing.type === "PER_UNIT"
-              ? {
-                  type: "PER_UNIT",
-                  setupFee: value.pricing.setupFee,
-                  unitName: value.pricing.unitName,
-                  ratePerUnit: value.pricing.ratePerUnit,
-                  variants:
-                    value.pricing.variants.length > 0
-                      ? value.pricing.variants
-                      : undefined,
-                }
-              : {
-                  type: "COMPOSITE",
-                  setupFee: value.pricing.setupFee,
-                  unitName: value.pricing.unitName,
-                  timeRate: value.pricing.timeRate,
-                  variants:
-                    value.pricing.variants.length > 0
-                      ? value.pricing.variants
-                      : undefined,
-                },
       });
 
       toast.success("Service added successfully!");

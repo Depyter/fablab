@@ -41,7 +41,7 @@ interface ProjectDetailsContentProps {
     description?: string;
     notes?: string;
     material?: ProjectMaterialType;
-    serviceType?: ProjectServiceTypeType;
+    fulfillmentMode?: string;
     files?: string[];
   }) => Promise<void>;
 }
@@ -114,7 +114,7 @@ export function ProjectDetailsContent({
     setEditDescription(project.description ?? "");
     setEditNotes(project.notes ?? "");
     setEditMaterial(project.material as ProjectMaterialType);
-    setEditServiceType(project.serviceType as ProjectServiceTypeType);
+    setEditServiceType(project.fulfillmentMode as ProjectServiceTypeType);
     setEditFiles(
       (project.resolvedFiles ?? [])
         .filter((f) => !!f.url)
@@ -142,7 +142,7 @@ export function ProjectDetailsContent({
         description: editDescription,
         notes: editNotes,
         material: editMaterial,
-        serviceType: editServiceType,
+        fulfillmentMode: editServiceType,
         files: editFiles.map((f) => f.storageId),
       });
       setIsEditing(false);
@@ -247,7 +247,7 @@ export function ProjectDetailsContent({
                     border: "1px solid var(--fab-border-md)",
                   }}
                 >
-                  {project.serviceType}
+                  {project.fulfillmentMode}
                 </span>
                 {/* Material chip */}
                 <span
@@ -368,9 +368,8 @@ export function ProjectDetailsContent({
           <div className="min-w-0 space-y-4 lg:col-span-7">
             <ProjectInfoCard
               description={project.description}
-              serviceType={project.serviceType}
+              serviceType={project.fulfillmentMode}
               material={project.material}
-              notes={project.notes}
               bookingDateStr={bookingDateStr}
               bookingTimeRange={bookingTimeRange}
               resolvedFiles={project.resolvedFiles}
@@ -408,7 +407,7 @@ export function ProjectDetailsContent({
               material={project.material}
               totalInvoice={project.totalInvoice ?? undefined}
               service={project.service ?? undefined}
-              serviceType={project.serviceType}
+              serviceType={project.fulfillmentMode}
               resourceUsages={project.resourceUsages}
               projectPricing={project.pricing}
               requestedMaterials={project.requestedMaterials ?? []}

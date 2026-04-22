@@ -85,7 +85,7 @@ export function ProjectCalendarView() {
         projectAlias: p?.name || "Unknown Project",
         projectStatus: (p?.status || "pending") as ProjectStatusType,
         makerName: b.maker?.name || "Unassigned",
-        date: b.date,
+        date: b.startTime,
         startTime: getSnappedDecimalHours(b.startTime, false),
         endTime: getSnappedDecimalHours(b.endTime, true),
         color:
@@ -115,7 +115,7 @@ export function ProjectCalendarView() {
         projectAlias: p?.name || "Unknown Project",
         projectStatus: (p?.status || "pending") as ProjectStatusType,
         makerName: b.maker?.name || "Unknown Maker",
-        date: b.date,
+        date: b.startTime,
         startTime: getSnappedDecimalHours(b.startTime, false),
         endTime: getSnappedDecimalHours(b.endTime, true),
         color:

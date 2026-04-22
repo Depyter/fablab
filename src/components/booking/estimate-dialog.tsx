@@ -93,8 +93,8 @@ export function EstimateProjectDetails({
     materialCost: 0,
   });
   const selectedVariant = getPricingVariantKey(data.pricing);
-  const pricingType = servicePricing?.type ?? "FIXED";
-  const isTimeBased = pricingType === "PER_UNIT" || pricingType === "COMPOSITE";
+  const pricingType = servicePricing?.type ?? "WORKSHOP";
+  const isTimeBased = pricingType === "FABRICATION";
   const isBuyFromLab = data.material === "buy-from-lab";
 
   const formatTime12Hour = (time24: string) => {
@@ -219,7 +219,7 @@ export function EstimateProjectDetails({
                 </div>
               </div>
               <div className="space-y-3 text-sm">
-                {pricingType === "FIXED" && (
+                {pricingType === "WORKSHOP" && (
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
                       Amount

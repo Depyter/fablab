@@ -17,18 +17,7 @@ interface ServiceCardProps {
         variants?: Array<{ name: string; amount: number }>;
       }
     | {
-        type: "PER_UNIT";
-        setupFee: number;
-        unitName: string;
-        ratePerUnit: number;
-        variants?: Array<{
-          name: string;
-          setupFee: number;
-          ratePerUnit: number;
-        }>;
-      }
-    | {
-        type: "COMPOSITE";
+        type: "FABRICATION";
         setupFee: number;
         unitName: string;
         timeRate: number;
@@ -75,14 +64,8 @@ export function ServiceCard({
                 ? ` (+${pricing.variants.length} variant${pricing.variants.length > 1 ? "s" : ""})`
                 : ""
             }`}
-          {pricing.type === "PER_UNIT" &&
-            `₱${(pricing.setupFee ?? (pricing as unknown as { baseFee: number }).baseFee ?? 0).toFixed(2)} Setup + ₱${pricing.ratePerUnit.toFixed(2)}/${pricing.unitName}${
-              pricing.variants && pricing.variants.length > 0
-                ? ` (+${pricing.variants.length} variant${pricing.variants.length > 1 ? "s" : ""})`
-                : ""
-            }`}
-          {pricing.type === "COMPOSITE" &&
-            `₱${(pricing.setupFee ?? (pricing as unknown as { baseFee: number }).baseFee ?? 0).toFixed(2)} Setup + ₱${pricing.timeRate.toFixed(2)}/${pricing.unitName}${
+          {pricing.type === "FABRICATION" &&
+            `₱${(pricing.setupFee ?? 0).toFixed(2)} Setup + ₱${pricing.timeRate.toFixed(2)}/${pricing.unitName}${
               pricing.variants && pricing.variants.length > 0
                 ? ` (+${pricing.variants.length} variant${pricing.variants.length > 1 ? "s" : ""})`
                 : ""

@@ -49,7 +49,6 @@ type EnrichedProject = {
   description: string;
   clientName: string;
   serviceName: string;
-  bookingDate: number | null;
   bookingStartTime: number | null;
   bookingEndTime: number | null;
   estimatedPrice: number;
@@ -127,8 +126,8 @@ function ProjectListRow({ project }: { project: EnrichedProject }) {
             {/* Right-side meta */}
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-xs text-muted-foreground hidden md:block whitespace-nowrap">
-                {project.bookingDate
-                  ? new Date(project.bookingDate).toLocaleDateString([], {
+                {project.bookingStartTime
+                  ? new Date(project.bookingStartTime).toLocaleDateString([], {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
@@ -356,7 +355,7 @@ export default function ProjectsList() {
             description={project.description}
             clientName={project.clientName}
             serviceName={project.serviceName}
-            bookingDate={project.bookingDate}
+            bookingDate={project.bookingStartTime}
             bookingStartTime={project.bookingStartTime}
             bookingEndTime={project.bookingEndTime}
             estimatedPrice={project.estimatedPrice}
