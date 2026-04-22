@@ -153,8 +153,8 @@ export function ProjectDetailsContent({
 
   const primaryUsage = project.resourceUsages?.[0];
 
-  const bookingDateStr = primaryUsage?.date
-    ? new Date(primaryUsage.date).toLocaleDateString("en-US", {
+  const bookingDateStr = primaryUsage?.startTime
+    ? new Date(primaryUsage.startTime).toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -406,13 +406,12 @@ export function ProjectDetailsContent({
             <PricingEstimateCard
               projectId={project._id}
               material={project.material}
-              costBreakdown={project.costBreakdown ?? undefined}
+              totalInvoice={project.totalInvoice ?? undefined}
               service={project.service ?? undefined}
               serviceType={project.serviceType}
               resourceUsages={project.resourceUsages}
               projectPricing={project.pricing}
-              requestedMaterial={project.requestedMaterial ?? undefined}
-              requestedMaterialId={project.requestedMaterialId ?? undefined}
+              requestedMaterials={project.requestedMaterials ?? []}
               assignedMaker={project.assignedMaker ?? undefined}
               readOnly={isClient}
             />

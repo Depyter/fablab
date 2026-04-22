@@ -299,44 +299,58 @@ export function Step2ProjectDetails({
                   material === "buy-from-lab" &&
                   serviceMaterials.length > 0 && (
                     <form.Field
-                      name="requestedMaterialId"
-                      children={(field: any) => (
-                        <Field>
-                          <Label htmlFor="requestedMaterialId">
-                            Select Lab Material
-                          </Label>
-                          <div className="relative">
-                            <Select
-                              value={field.state.value || ""}
-                              onValueChange={field.handleChange}
-                            >
-                              <SelectTrigger
-                                id="requestedMaterialId"
-                                className="w-full bg-background border-input"
-                              >
-                                <SelectValue placeholder="Select a material..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {serviceMaterials.map((m) => (
-                                  <SelectItem key={m._id} value={m._id}>
-                                    {m.name} - ₱
-                                    {m.pricePerUnit || m.costPerUnit || 0}/
-                                    {m.unit}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                      name="requestedMaterialIds"
+                      children={(field: any) => {
+                        const selected: string[] = field.state.value ?? [];
+                        return (
+                          <Field>
+                            <Label htmlFor="requestedMaterialIds">
+                              Select Lab Materials
+                            </Label>
+                            <div className="flex flex-col gap-2 rounded-lg border border-input bg-background p-3">
+                              {serviceMaterials.map((m) => {
+                                const isChecked = selected.includes(m._id);
+                                return (
+                                  <label
+                                    key={m._id}
+                                    className="flex items-center gap-2.5 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          field.handleChange([...selected, m._id]);
+                                        } else {
+                                          field.handleChange(
+                                            selected.filter((id) => id !== m._id),
+                                          );
+                                        }
+                                      }}
+                                      className="h-4 w-4 rounded border-input accent-primary"
+                                    />
+                                    <span className="text-sm flex-1">
+                                      {m.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground shrink-0">
+                                      ₱{m.pricePerUnit ?? m.costPerUnit ?? 0}/
+                                      {m.unit}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
                             <input
                               type="text"
                               required
-                              value={field.state.value || ""}
-                              className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+                              value={selected.join(",")}
+                              className="absolute opacity-0 pointer-events-none"
                               tabIndex={-1}
                               onChange={() => {}}
                             />
-                          </div>
-                        </Field>
-                      )}
+                          </Field>
+                        );
+                      }}
                     />
                   )
                 }

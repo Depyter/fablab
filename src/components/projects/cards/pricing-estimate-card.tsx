@@ -29,10 +29,9 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-interface CostBreakdown {
-  setupFee: number;
-  materialCost: number;
-  timeCost: number;
+interface TotalInvoice {
+  subtotal: number;
+  tax: number;
   total: number;
 }
 
@@ -74,7 +73,7 @@ interface ResourceUsage {
 interface PricingEstimateCardProps {
   projectId: Id<"projects">;
   material: string;
-  costBreakdown?: CostBreakdown;
+  totalInvoice?: TotalInvoice;
   service?: {
     pricing: ServicePricing;
     name?: string;
@@ -82,8 +81,7 @@ interface PricingEstimateCardProps {
   serviceType?: PricingServiceType;
   projectPricing?: string;
   resourceUsages?: ResourceUsage[];
-  requestedMaterial?: RequestedMaterial | null;
-  requestedMaterialId?: string;
+  requestedMaterials?: RequestedMaterial[];
   assignedMaker?: AssignedMaker | null;
   readOnly?: boolean;
 }
@@ -91,13 +89,12 @@ interface PricingEstimateCardProps {
 export function PricingEstimateCard({
   projectId,
   material,
-  costBreakdown,
+  totalInvoice,
   service,
   serviceType,
   projectPricing = "Default",
   resourceUsages,
-  requestedMaterial,
-  requestedMaterialId,
+  requestedMaterials = [],
   assignedMaker,
   readOnly = false,
 }: PricingEstimateCardProps) {
@@ -136,18 +133,27 @@ export function PricingEstimateCard({
   // ── Editable cost state ──────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
 
-  const initialAmountUsed =
-    resourceUsages?.find((u) => u.materialsUsed && u.materialsUsed.length > 0)
-      ?.materialsUsed?.[0]?.amountUsed ?? 0;
+  // Per-material amounts: materialId → amountUsed
+  const initialMaterialAmounts = (): Record<string, number> => {
+    const amounts: Record<string, number> = {};
+    for (const usage of resourceUsages ?? []) {
+      for (const m of usage.materialsUsed ?? []) {
+        amounts[m.materialId] = (amounts[m.materialId] ?? 0) + m.amountUsed;
+      }
+    }
+    return amounts;
+  };
 
   const initialEditState = () => ({
-    setupFee: costBreakdown?.setupFee ?? derived.setupFee,
+    setupFee: derived.setupFee,
     rate: derived.rate,
     duration: derived.duration,
-    amountUsed: initialAmountUsed,
   });
 
   const [editValues, setEditValues] = useState(initialEditState);
+  const [materialAmounts, setMaterialAmounts] = useState<Record<string, number>>(
+    initialMaterialAmounts,
+  );
 
   // ── Assignment edit state ────────────────────────────────────────────────
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
@@ -156,25 +162,18 @@ export function PricingEstimateCard({
   const [selectedResourceId, setSelectedResourceId] = useState<string>(
     primaryUsage?.resourceDetails?._id ?? "",
   );
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string>(
-    requestedMaterialId ?? "",
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>(
+    requestedMaterials.map((m) => m._id),
   );
 
-  // Resolve the material currently selected in the dropdown for live price preview
-  const selectedMaterialDoc = useMemo(
-    () => materials?.find((m) => m._id === selectedMaterialId) ?? null,
-    [materials, selectedMaterialId],
+  // Resolve selected material docs for live price preview while editing
+  const selectedMaterialDocs = useMemo(
+    () =>
+      (isEditing ? selectedMaterialIds : requestedMaterials.map((m) => m._id))
+        .map((id) => materials?.find((m) => m._id === id) ?? requestedMaterials.find((m) => m._id === id))
+        .filter((m): m is NonNullable<typeof m> => !!m),
+    [isEditing, materials, requestedMaterials, selectedMaterialIds],
   );
-
-  const pricePerUnit =
-    (isEditing
-      ? selectedMaterialDoc?.pricePerUnit
-      : requestedMaterial?.pricePerUnit) ?? 0;
-  const materialUnit =
-    (isEditing ? selectedMaterialDoc?.unit : requestedMaterial?.unit) ??
-    "units";
-  const materialName =
-    (isEditing ? selectedMaterialDoc?.name : requestedMaterial?.name) ?? "";
 
   const pricingType = service?.pricing?.type ?? "FIXED";
   const isTimeBased = pricingType === "PER_UNIT" || pricingType === "COMPOSITE";
@@ -184,63 +183,72 @@ export function PricingEstimateCard({
     ? editValues.duration * editValues.rate
     : 0;
   const computedMaterialCost = isBuyFromLab
-    ? editValues.amountUsed * pricePerUnit
+    ? selectedMaterialDocs.reduce((acc, m) => {
+        const price = (m as RequestedMaterial).pricePerUnit ?? 0;
+        const amount = materialAmounts[m._id] ?? 0;
+        return acc + price * amount;
+      }, 0)
     : 0;
   const computedTotal =
     editValues.setupFee + computedTimeCost + computedMaterialCost;
 
-  // ── Displayed values (frozen breakdown takes priority when not editing) ──
-  const displaySetupFee = isEditing
-    ? editValues.setupFee
-    : (costBreakdown?.setupFee ?? derived.setupFee);
-
+  // ── Displayed values ─────────────────────────────────────────────────────
+  const displaySetupFee = isEditing ? editValues.setupFee : derived.setupFee;
   const displayTimeCost = isEditing
     ? computedTimeCost
-    : (costBreakdown?.timeCost ?? derived.rate * derived.duration);
+    : derived.rate * derived.duration;
 
-  const displayAmountUsed = isEditing
-    ? editValues.amountUsed
-    : initialAmountUsed;
-  const displayMaterialCost = isEditing
-    ? computedMaterialCost
-    : (costBreakdown?.materialCost ?? initialAmountUsed * pricePerUnit);
+  // Material cost when not editing: sum from stored amounts × pricePerUnit
+  const storedMaterialCost = requestedMaterials.reduce((acc, mat) => {
+    const stored = initialMaterialAmounts();
+    return acc + (stored[mat._id] ?? 0) * mat.pricePerUnit;
+  }, 0);
+
+  const displayMaterialCost = isEditing ? computedMaterialCost : storedMaterialCost;
 
   const displayTotal = isEditing
     ? computedTotal
-    : costBreakdown
-      ? costBreakdown.setupFee +
-        costBreakdown.timeCost +
-        costBreakdown.materialCost
-      : displaySetupFee +
-        displayTimeCost +
-        (isBuyFromLab ? displayMaterialCost : 0);
+    : totalInvoice
+      ? totalInvoice.total
+      : displaySetupFee + displayTimeCost + (isBuyFromLab ? displayMaterialCost : 0);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleEdit = () => {
     setEditValues(initialEditState());
+    setMaterialAmounts(initialMaterialAmounts());
     setSelectedMakerId(assignedMaker?._id ?? "");
     setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
-    setSelectedMaterialId(requestedMaterialId ?? "");
+    setSelectedMaterialIds(requestedMaterials.map((m) => m._id));
     setIsEditing(true);
   };
 
   const handleDiscard = () => {
     setIsEditing(false);
     setEditValues(initialEditState());
+    setMaterialAmounts(initialMaterialAmounts());
     setSelectedMakerId(assignedMaker?._id ?? "");
     setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
-    setSelectedMaterialId(requestedMaterialId ?? "");
+    setSelectedMaterialIds(requestedMaterials.map((m) => m._id));
   };
 
   const handleSave = async () => {
     try {
+      const materialsUsedPayload = isBuyFromLab
+        ? Object.entries(materialAmounts)
+            .filter(([, amt]) => amt > 0)
+            .map(([materialId, amountUsed]) => ({
+              materialId: materialId as Id<"materials">,
+              amountUsed,
+            }))
+        : undefined;
+
       await Promise.all([
         updateCostBreakdown({
           projectId,
           setupFee: editValues.setupFee,
           timeCost: computedTimeCost,
           materialCost: computedMaterialCost,
-          amountUsed: isBuyFromLab ? editValues.amountUsed : undefined,
+          materialsUsed: materialsUsedPayload,
         }),
         updateAssignments({
           projectId,
@@ -250,9 +258,9 @@ export function PricingEstimateCard({
           resourceId: selectedResourceId
             ? (selectedResourceId as Id<"resources">)
             : undefined,
-          materialId: selectedMaterialId
-            ? (selectedMaterialId as Id<"materials">)
-            : undefined,
+          materialIds: selectedMaterialIds.length
+            ? (selectedMaterialIds as Id<"materials">[])
+            : [],
         }),
       ]);
       toast.success("Project updated.");
@@ -262,7 +270,7 @@ export function PricingEstimateCard({
     }
   };
 
-  const hasFinalBreakdown = !!costBreakdown;
+  const hasFinalBreakdown = !!totalInvoice;
 
   // ── Render ───────────────────────────────────────────────────────────────
   const headerChips = (
@@ -444,77 +452,92 @@ export function PricingEstimateCard({
             )}
           </div>
 
-          {/* Material (only relevant for buy-from-lab) */}
+          {/* Materials (only relevant for buy-from-lab) */}
           {isBuyFromLab && (
             <div className="space-y-1">
               <p
                 className="text-[9px] font-bold uppercase tracking-[0.12em]"
                 style={{ color: "var(--fab-text-dim)" }}
               >
-                Material
+                Materials
               </p>
               {isEditing ? (
-                <Select
-                  value={selectedMaterialId}
-                  onValueChange={setSelectedMaterialId}
-                >
-                  <SelectTrigger className="text-sm h-8">
-                    <SelectValue placeholder="Select a material" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materials?.map((m) => (
-                      <SelectItem key={m._id} value={m._id}>
-                        {m.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({m.unit})
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : requestedMaterial ? (
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
-                    style={{
-                      background: "var(--fab-amber-light)",
-                      color: "var(--fab-amber)",
-                    }}
-                  >
-                    {requestedMaterial.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="text-[9px] font-bold uppercase tracking-[0.1em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Material
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <p
-                        className="text-[12px] font-medium truncate"
-                        style={{ color: "var(--fab-text-primary)" }}
+                <div className="flex flex-col gap-1.5 rounded-md border border-input p-2">
+                  {materials?.map((m) => {
+                    const isChecked = selectedMaterialIds.includes(m._id);
+                    return (
+                      <label
+                        key={m._id}
+                        className="flex items-center gap-2 cursor-pointer"
                       >
-                        {requestedMaterial.name}
-                      </p>
-                      {requestedMaterial.pricePerUnit != null && (
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedMaterialIds((prev) => [...prev, m._id]);
+                            } else {
+                              setSelectedMaterialIds((prev) =>
+                                prev.filter((id) => id !== m._id),
+                              );
+                              setMaterialAmounts((prev) => {
+                                const next = { ...prev };
+                                delete next[m._id];
+                                return next;
+                              });
+                            }
+                          }}
+                          className="h-3.5 w-3.5 accent-primary"
+                        />
+                        <span className="text-[12px] flex-1">{m.name}</span>
+                        <span
+                          className="text-[10px] shrink-0"
+                          style={{ color: "var(--fab-text-muted)" }}
+                        >
+                          ₱{(m.pricePerUnit ?? 0).toFixed(2)}/{m.unit}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : requestedMaterials.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {requestedMaterials.map((mat) => (
+                    <div key={mat._id} className="flex items-center gap-2.5">
+                      <div
+                        className="flex h-6 w-6 items-center justify-center rounded-[5px] shrink-0 text-[10px] font-bold"
+                        style={{
+                          background: "var(--fab-amber-light)",
+                          color: "var(--fab-amber)",
+                        }}
+                      >
+                        {mat.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-[12px] font-medium truncate"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {mat.name}
+                        </p>
+                      </div>
+                      {mat.pricePerUnit != null && (
                         <p
                           className="text-[10px] shrink-0"
                           style={{ color: "var(--fab-text-muted)" }}
                         >
-                          ₱{requestedMaterial.pricePerUnit.toFixed(2)} /{" "}
-                          {requestedMaterial.unit}
+                          ₱{mat.pricePerUnit.toFixed(2)}/{mat.unit}
                         </p>
                       )}
                     </div>
-                  </div>
+                  ))}
                 </div>
               ) : (
                 <p
                   className="text-[12px]"
                   style={{ color: "var(--fab-text-muted)" }}
                 >
-                  No material selected.
+                  No materials selected.
                 </p>
               )}
             </div>
@@ -677,70 +700,84 @@ export function PricingEstimateCard({
         </>
       )}
 
-      {/* Material Usage (buy-from-lab only) */}
+      {/* Material usage rows (buy-from-lab only) */}
       {isBuyFromLab && (
         <>
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Material Used
-              {materialName && (
-                <span
-                  className="ml-1 normal-case text-[9px] tracking-normal font-normal"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  ({materialName})
-                </span>
-              )}
-            </span>
-            {isEditing ? (
-              <div className="flex items-center gap-1.5">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={editValues.amountUsed}
-                  onChange={(e) =>
-                    setEditValues((prev) => ({
-                      ...prev,
-                      amountUsed: Number(e.target.value || 0),
-                    }))
-                  }
-                  className="h-7 w-24 text-right text-sm"
-                />
-                <span
-                  className="text-[11px] shrink-0"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  {materialUnit}
-                </span>
+          {(isEditing ? selectedMaterialDocs : requestedMaterials).map((mat) => {
+            const matId = mat._id as string;
+            const matUnit = (mat as RequestedMaterial).unit ?? "units";
+            const matPrice = (mat as RequestedMaterial).pricePerUnit ?? 0;
+            const storedAmounts = initialMaterialAmounts();
+            const storedAmt = storedAmounts[matId] ?? 0;
+            const displayAmt = isEditing
+              ? (materialAmounts[matId] ?? 0)
+              : storedAmt;
+            return (
+              <div key={matId} className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: "var(--fab-text-dim)" }}
+                  >
+                    {mat.name}
+                  </span>
+                  {isEditing ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={materialAmounts[matId] ?? 0}
+                        onChange={(e) =>
+                          setMaterialAmounts((prev) => ({
+                            ...prev,
+                            [matId]: Number(e.target.value || 0),
+                          }))
+                        }
+                        className="h-7 w-24 text-right text-sm"
+                      />
+                      <span
+                        className="text-[11px] shrink-0"
+                        style={{ color: "var(--fab-text-muted)" }}
+                      >
+                        {matUnit}
+                      </span>
+                    </div>
+                  ) : (
+                    <span
+                      className="text-[13px] font-medium"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {displayAmt} {matUnit}
+                    </span>
+                  )}
+                </div>
+                {matPrice > 0 && (
+                  <div className="flex items-center justify-between gap-2 pl-2">
+                    <span
+                      className="text-[9px] tracking-normal font-normal"
+                      style={{ color: "var(--fab-text-muted)" }}
+                    >
+                      ₱{matPrice.toFixed(2)} / {matUnit}
+                    </span>
+                    <span
+                      className="text-[12px]"
+                      style={{ color: "var(--fab-text-muted)" }}
+                    >
+                      ₱{(displayAmt * matPrice).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
-            ) : (
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {displayAmountUsed} {materialUnit}
-              </span>
-            )}
-          </div>
+            );
+          })}
 
           <div className="flex items-center justify-between gap-2">
             <span
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Material Cost
-              {pricePerUnit > 0 && (
-                <span
-                  className="ml-1 normal-case text-[9px] tracking-normal font-normal"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  (₱{pricePerUnit.toFixed(2)} / {materialUnit})
-                </span>
-              )}
+              Total Material Cost
             </span>
             <span
               className="text-[13px] font-medium"

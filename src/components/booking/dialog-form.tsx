@@ -52,7 +52,7 @@ interface LocalBookingFormValues extends Omit<
   material:
     | typeof ProjectMaterial.PROVIDE_OWN
     | typeof ProjectMaterial.BUY_FROM_LAB;
-  requestedMaterialId?: string;
+  requestedMaterialIds: string[];
 }
 
 export function BookingDialog({
@@ -107,7 +107,7 @@ export function BookingDialog({
       notes: "",
       material: ProjectMaterial.PROVIDE_OWN,
       pricing: "Default",
-      requestedMaterialId: undefined,
+      requestedMaterialIds: [],
       dateTime: {
         date: undefined,
         startTime: "",
@@ -187,9 +187,7 @@ export function BookingDialog({
           description: value.description || `Booking for ${serviceName}`,
           serviceType: value.serviceType,
           material: value.material,
-          requestedMaterialId: value.requestedMaterialId as
-            | Id<"materials">
-            | undefined,
+          requestedMaterials: value.requestedMaterialIds as Id<"materials">[],
           service: serviceId,
           pricing: value.pricing,
           notes: value.notes,

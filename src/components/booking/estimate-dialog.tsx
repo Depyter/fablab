@@ -24,7 +24,7 @@ export type BookingFormValues = {
   description: string;
   notes: string;
   material: string;
-  requestedMaterialId?: string;
+  requestedMaterialIds?: string[];
   pricing: string; // variant name, e.g. "Default", "UP", "Senior"
   dateTime: {
     date: Date | undefined;
@@ -73,18 +73,16 @@ export function EstimateProjectDetails({
     data.dateTime.endTime,
   );
 
-  let materialName = "";
+  let materialNames: string[] = [];
   if (
     data.material === "buy-from-lab" &&
-    data.requestedMaterialId &&
+    data.requestedMaterialIds &&
+    data.requestedMaterialIds.length > 0 &&
     serviceMaterials
   ) {
-    const mat = serviceMaterials.find(
-      (m) => m._id === data.requestedMaterialId,
-    );
-    if (mat) {
-      materialName = mat.name;
-    }
+    materialNames = data.requestedMaterialIds
+      .map((id) => serviceMaterials.find((m) => m._id === id)?.name)
+      .filter((n): n is string => !!n);
   }
 
   const pricing = derivePricingFromSchema({
@@ -271,17 +269,14 @@ export function EstimateProjectDetails({
 
                 {isBuyFromLab && (
                   <>
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Material Used
-                        {materialName && (
-                          <span className="ml-1 normal-case text-[9px] font-normal tracking-normal text-gray-500">
-                            ({materialName})
-                          </span>
-                        )}
+                        Materials
                       </span>
-                      <span className="text-[13px] font-medium text-gray-900">
-                        N/A
+                      <span className="text-[13px] font-medium text-gray-900 text-right">
+                        {materialNames.length > 0
+                          ? materialNames.join(", ")
+                          : "N/A"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
