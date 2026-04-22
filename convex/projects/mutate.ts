@@ -25,6 +25,7 @@ import {
   applyMakerAssignment,
   applyResourceAssignment,
   applyMaterialAssignment,
+  syncMaterialUsageStock,
 } from "./helper";
 
 // ============================================================================
@@ -283,16 +284,17 @@ export const updateCostBreakdown = authMutation({
     const breakdownChanged = feeChanged || timeChanged || materialCostChanged;
 
     // Resolve existing amountUsed from the usage record
-    let existingAmountUsed2: number | undefined;
+    let existingAmountUsed = 0;
     let usage = null;
     if (args.amountUsed !== undefined && project.requestedMaterialId) {
       usage = await findProjectUsage(ctx, project);
-      existingAmountUsed2 = usage?.materialsUsed?.find(
-        (m) => m.materialId === project.requestedMaterialId,
-      )?.amountUsed;
+      existingAmountUsed =
+        usage?.materialsUsed?.find(
+          (materialUsage) => materialUsage.materialId === project.requestedMaterialId,
+        )?.amountUsed ?? 0;
     }
     const amountChanged =
-      args.amountUsed !== undefined && args.amountUsed !== existingAmountUsed2;
+      args.amountUsed !== undefined && args.amountUsed !== existingAmountUsed;
 
     if (!breakdownChanged && !amountChanged) return;
 
@@ -312,8 +314,20 @@ export const updateCostBreakdown = authMutation({
     if (amountChanged && project.requestedMaterialId) {
       const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
       if (resolvedUsage) {
+        await syncMaterialUsageStock(
+          ctx,
+          project.requestedMaterialId,
+          existingAmountUsed,
+          args.amountUsed!,
+        );
+
+        const nextMaterialsUsed = (resolvedUsage.materialsUsed ?? []).filter(
+          (materialUsage) => materialUsage.materialId !== project.requestedMaterialId,
+        );
+
         await ctx.db.patch(resolvedUsage._id, {
           materialsUsed: [
+            ...nextMaterialsUsed,
             {
               materialId: project.requestedMaterialId as Id<"materials">,
               amountUsed: args.amountUsed!,

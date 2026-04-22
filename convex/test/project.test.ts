@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { setupProject } from "./helper";
+import { setupProject, setupUsers } from "./helper";
 import { api, internal } from "../_generated/api";
 
 describe("Project and Chat functionality", () => {
@@ -137,6 +137,101 @@ describe("Project and Chat functionality", () => {
       const project = await ctx.db.get(projectId);
       expect(project!.status).toBe("approved");
       expect(project!.assignedMaker).toBe(makerId);
+    });
+  });
+
+  test("Update cost breakdown syncs material stock", async () => {
+    const { t, tAera, tHarley } = await setupUsers();
+
+    await tAera.mutation(api.materials.mutate.addMaterial, {
+      name: "PLA",
+      category: "Filament",
+      unit: "g",
+      currentStock: 100,
+      pricePerUnit: 2,
+      reorderThreshold: 10,
+      status: "IN_STOCK",
+    });
+
+    const materialId = await t.run(async (ctx) => {
+      const material = await ctx.db.query("materials").first();
+      return material!._id;
+    });
+
+    await tAera.mutation(api.services.mutate.addService, {
+      name: "3d printing",
+      images: [],
+      samples: [],
+      serviceCategory: { type: "FABRICATION", materials: [materialId] },
+      pricing: {
+        type: "COMPOSITE",
+        setupFee: 1,
+        unitName: "hour",
+        timeRate: 2,
+      },
+      requirements: ["design", "model"],
+      fileTypes: [],
+      description: "std to 3d printed model",
+      status: "Available",
+    });
+
+    const serviceId = await t.run(async (ctx) => {
+      const service = await ctx.db.query("services").first();
+      return service!._id;
+    });
+
+    await tHarley.mutation(api.projects.mutate.createProject, {
+      name: "stock sync",
+      pricing: "Default",
+      description: "hello",
+      serviceType: "self-service",
+      material: "buy-from-lab",
+      requestedMaterialId: materialId,
+      files: [],
+      service: serviceId,
+      notes: "pls na",
+      booking: {
+        startTime: Date.now() + 1000 * 60 * 60,
+        endTime: Date.now() + 1000 * 60 * 60 * 2,
+        date: Date.now() + 1000 * 60 * 60 * 24,
+      },
+    });
+
+    const projectId = await t.run(async (ctx) => {
+      const project = await ctx.db.query("projects").first();
+      return project!._id;
+    });
+
+    await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
+      projectId,
+      setupFee: 1,
+      timeCost: 2,
+      materialCost: 20,
+      amountUsed: 10,
+    });
+
+    await t.run(async (ctx) => {
+      const material = await ctx.db.get(materialId);
+      const usage = await ctx.db.query("resourceUsage").first();
+
+      expect(material!.currentStock).toBe(90);
+      expect(usage!.materialsUsed).toEqual([{ materialId, amountUsed: 10 }]);
+    });
+
+    await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
+      projectId,
+      setupFee: 1,
+      timeCost: 2,
+      materialCost: 6,
+      amountUsed: 3,
+    });
+
+    await t.run(async (ctx) => {
+      const material = await ctx.db.get(materialId);
+      const usage = await ctx.db.query("resourceUsage").first();
+
+      expect(material!.currentStock).toBe(97);
+      expect(usage!.materialsUsed).toEqual([{ materialId, amountUsed: 3 }]);
     });
   });
   test("Update Project (Non-privileged)", async () => {});

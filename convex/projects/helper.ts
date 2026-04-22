@@ -4,8 +4,10 @@ import { MutationCtx } from "../_generated/server";
 import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
   FILE_CATEGORIES,
+  MaterialStatus,
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_TRANSITIONS,
+  type MaterialStatusType,
   type ProjectStatusType,
 } from "../constants";
 
@@ -37,6 +39,21 @@ export type BookingWindow = {
 };
 
 export type ServiceDoc = Doc<"services">;
+
+export function resolveMaterialStatus(
+  stock: number,
+  reorderThreshold?: number,
+): MaterialStatusType {
+  if (stock === 0) {
+    return MaterialStatus.OUT_OF_STOCK;
+  }
+
+  if (reorderThreshold !== undefined && stock <= reorderThreshold) {
+    return MaterialStatus.LOW_STOCK;
+  }
+
+  return MaterialStatus.IN_STOCK;
+}
 
 // ============================================================================
 // Helpers — Validation
@@ -715,12 +732,65 @@ export async function applyMaterialAssignment(
 
   if (project.requestedMaterialId === materialId) return [];
 
+  const usage = await findProjectUsage(ctx, project);
+  const previousAmountUsed =
+    project.requestedMaterialId === undefined
+      ? 0
+      : (usage?.materialsUsed?.find(
+          (materialUsage) => materialUsage.materialId === project.requestedMaterialId,
+        )?.amountUsed ?? 0);
+
+  if (usage) {
+    const nextMaterialsUsed = (usage.materialsUsed ?? []).filter(
+      (materialUsage) =>
+        materialUsage.materialId !== project.requestedMaterialId &&
+        materialUsage.materialId !== materialId,
+    );
+
+    await ctx.db.patch(usage._id, {
+      materialsUsed: [
+        ...nextMaterialsUsed,
+        { materialId, amountUsed: previousAmountUsed },
+      ],
+    });
+  }
+
   await ctx.db.patch(project._id, { requestedMaterialId: materialId });
+
+  if (project.requestedMaterialId && previousAmountUsed > 0) {
+    await syncMaterialUsageStock(
+      ctx,
+      project.requestedMaterialId,
+      previousAmountUsed,
+      0,
+    );
+    await syncMaterialUsageStock(ctx, materialId, 0, previousAmountUsed);
+  }
 
   return [`- Material updated to: **${materialDoc.name}**`];
 }
 
 // ============================================================================
+
+export async function syncMaterialUsageStock(
+  ctx: MutationCtx,
+  materialId: Id<"materials">,
+  previousAmountUsed: number,
+  nextAmountUsed: number,
+): Promise<void> {
+  const material = await ctx.db.get(materialId);
+  if (!material) throw new ConvexError("Material not found.");
+
+  const newStock = Math.max(
+    0,
+    material.currentStock + previousAmountUsed - nextAmountUsed,
+  );
+
+  await ctx.db.patch(material._id, {
+    currentStock: newStock,
+    status: resolveMaterialStatus(newStock, material.reorderThreshold),
+  });
+}
 
 export async function consumeMaterials(
   ctx: MutationCtx,
@@ -736,20 +806,10 @@ export async function consumeMaterials(
     materialCost += usage.amountUsed * rate;
 
     const newStock = Math.max(0, material.currentStock - usage.amountUsed);
-    let newStatus = material.status;
-
-    if (newStock === 0) {
-      newStatus = "OUT_OF_STOCK";
-    } else if (
-      material.reorderThreshold &&
-      newStock <= material.reorderThreshold
-    ) {
-      newStatus = "LOW_STOCK";
-    }
 
     await ctx.db.patch(material._id, {
       currentStock: newStock,
-      status: newStatus,
+      status: resolveMaterialStatus(newStock, material.reorderThreshold),
     });
   }
 
