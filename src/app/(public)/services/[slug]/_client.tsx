@@ -23,6 +23,24 @@ export function ServiceDetailClient({
 }) {
   const service = usePreloadedQuery(preloadedService);
 
+  const sortedFabricationDays =
+    service?.serviceCategory.type === "FABRICATION"
+      ? [...(service.serviceCategory.availableDays ?? [])].sort((a, b) => a - b)
+      : [];
+
+  const getFabricationDays = () => {
+    return sortedFabricationDays.map((day) => {
+      if (day === 1) return "Monday";
+      if (day === 2) return "Tuesday";
+      if (day === 3) return "Wednesday";
+      if (day === 4) return "Thursday";
+      if (day === 5) return "Friday";
+      if (day === 6) return "Saturday";
+      if (day === 0) return "Sunday";
+      return "Unknown";
+    });
+  };
+
   const getBasePrice = () => {
     if (service === null) return 0;
     if (service.pricing.type === "FIXED") return service.pricing.amount;
@@ -86,9 +104,21 @@ export function ServiceDetailClient({
                 <span className="mb-3 block text-[10px] font-black uppercase tracking-[0.35em] text-foreground/60">
                   {service.status}
                 </span>
-                <h1 className="mb-6 text-3xl font-black uppercase tracking-tight text-foreground lg:text-4xl">
+                
+                <h1 className="mb-2 text-3xl font-black uppercase tracking-tight text-foreground lg:text-4xl">
                   {service.name}
                 </h1>
+
+                <span className="mb-3 block text-[10px] font-black uppercase tracking-[0.35em] text-foreground/60">
+                  {getFabricationDays().length > 0
+                    ? getFabricationDays().map((day) => 
+                      <div key={day} className="inline-flex items-center gap-1 border bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground mr-2">
+                        {day.slice(0, 3).toUpperCase()}
+                      </div>
+                        
+                    )
+                    : ""}
+                </span>
               </div>
 
               
@@ -194,7 +224,7 @@ export function ServiceDetailClient({
                   fileTypes={service.fileTypes ?? []}
                   availableDays={
                     service.serviceCategory.type === "FABRICATION"
-                      ? (service.serviceCategory.availableDays ?? [])
+                      ? sortedFabricationDays
                       : []
                   }
                   serviceMaterials={service.materialDetails ?? []}
