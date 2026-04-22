@@ -86,7 +86,11 @@ interface PricingEstimateCardProps {
           setupFee: number;
           unitName: string;
           timeRate: number;
-          variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
+          variants?: Array<{
+            name: string;
+            setupFee: number;
+            timeRate: number;
+          }>;
         };
     name?: string;
   };
@@ -179,9 +183,9 @@ export function PricingEstimateCard({
   });
 
   const [editValues, setEditValues] = useState(initialEditState);
-  const [materialAmounts, setMaterialAmounts] = useState<Record<string, number>>(
-    initialMaterialAmounts,
-  );
+  const [materialAmounts, setMaterialAmounts] = useState<
+    Record<string, number>
+  >(initialMaterialAmounts);
 
   // ── Assignment edit state ────────────────────────────────────────────────
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
@@ -198,7 +202,11 @@ export function PricingEstimateCard({
   const selectedMaterialDocs = useMemo(
     () =>
       (isEditing ? selectedMaterialIds : requestedMaterials.map((m) => m._id))
-        .map((id) => materials?.find((m) => m._id === id) ?? requestedMaterials.find((m) => m._id === id))
+        .map(
+          (id) =>
+            materials?.find((m) => m._id === id) ??
+            requestedMaterials.find((m) => m._id === id),
+        )
         .filter((m): m is NonNullable<typeof m> => !!m),
     [isEditing, materials, requestedMaterials, selectedMaterialIds],
   );
@@ -232,13 +240,17 @@ export function PricingEstimateCard({
     return acc + (stored[mat._id] ?? 0) * mat.pricePerUnit;
   }, 0);
 
-  const displayMaterialCost = isEditing ? computedMaterialCost : storedMaterialCost;
+  const displayMaterialCost = isEditing
+    ? computedMaterialCost
+    : storedMaterialCost;
 
   const displayTotal = isEditing
     ? computedTotal
     : totalInvoice
       ? totalInvoice.total
-      : displaySetupFee + displayTimeCost + (isBuyFromLab ? displayMaterialCost : 0);
+      : displaySetupFee +
+        displayTimeCost +
+        (isBuyFromLab ? displayMaterialCost : 0);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleEdit = () => {
@@ -503,7 +515,10 @@ export function PricingEstimateCard({
                           checked={isChecked}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedMaterialIds((prev) => [...prev, m._id]);
+                              setSelectedMaterialIds((prev) => [
+                                ...prev,
+                                m._id,
+                              ]);
                             } else {
                               setSelectedMaterialIds((prev) =>
                                 prev.filter((id) => id !== m._id),
@@ -731,74 +746,76 @@ export function PricingEstimateCard({
       {/* Material usage rows (buy-from-lab only) */}
       {isBuyFromLab && (
         <>
-          {(isEditing ? selectedMaterialDocs : requestedMaterials).map((mat) => {
-            const matId = mat._id as string;
-            const matUnit = (mat as RequestedMaterial).unit ?? "units";
-            const matPrice = (mat as RequestedMaterial).pricePerUnit ?? 0;
-            const storedAmounts = initialMaterialAmounts();
-            const storedAmt = storedAmounts[matId] ?? 0;
-            const displayAmt = isEditing
-              ? (materialAmounts[matId] ?? 0)
-              : storedAmt;
-            return (
-              <div key={matId} className="space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    {mat.name}
-                  </span>
-                  {isEditing ? (
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={materialAmounts[matId] ?? 0}
-                        onChange={(e) =>
-                          setMaterialAmounts((prev) => ({
-                            ...prev,
-                            [matId]: Number(e.target.value || 0),
-                          }))
-                        }
-                        className="h-7 w-24 text-right text-sm"
-                      />
+          {(isEditing ? selectedMaterialDocs : requestedMaterials).map(
+            (mat) => {
+              const matId = mat._id as string;
+              const matUnit = (mat as RequestedMaterial).unit ?? "units";
+              const matPrice = (mat as RequestedMaterial).pricePerUnit ?? 0;
+              const storedAmounts = initialMaterialAmounts();
+              const storedAmt = storedAmounts[matId] ?? 0;
+              const displayAmt = isEditing
+                ? (materialAmounts[matId] ?? 0)
+                : storedAmt;
+              return (
+                <div key={matId} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      {mat.name}
+                    </span>
+                    {isEditing ? (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={materialAmounts[matId] ?? 0}
+                          onChange={(e) =>
+                            setMaterialAmounts((prev) => ({
+                              ...prev,
+                              [matId]: Number(e.target.value || 0),
+                            }))
+                          }
+                          className="h-7 w-24 text-right text-sm"
+                        />
+                        <span
+                          className="text-[11px] shrink-0"
+                          style={{ color: "var(--fab-text-muted)" }}
+                        >
+                          {matUnit}
+                        </span>
+                      </div>
+                    ) : (
                       <span
-                        className="text-[11px] shrink-0"
+                        className="text-[13px] font-medium"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {displayAmt} {matUnit}
+                      </span>
+                    )}
+                  </div>
+                  {matPrice > 0 && (
+                    <div className="flex items-center justify-between gap-2 pl-2">
+                      <span
+                        className="text-[9px] tracking-normal font-normal"
                         style={{ color: "var(--fab-text-muted)" }}
                       >
-                        {matUnit}
+                        ₱{matPrice.toFixed(2)} / {matUnit}
+                      </span>
+                      <span
+                        className="text-[12px]"
+                        style={{ color: "var(--fab-text-muted)" }}
+                      >
+                        ₱{(displayAmt * matPrice).toFixed(2)}
                       </span>
                     </div>
-                  ) : (
-                    <span
-                      className="text-[13px] font-medium"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {displayAmt} {matUnit}
-                    </span>
                   )}
                 </div>
-                {matPrice > 0 && (
-                  <div className="flex items-center justify-between gap-2 pl-2">
-                    <span
-                      className="text-[9px] tracking-normal font-normal"
-                      style={{ color: "var(--fab-text-muted)" }}
-                    >
-                      ₱{matPrice.toFixed(2)} / {matUnit}
-                    </span>
-                    <span
-                      className="text-[12px]"
-                      style={{ color: "var(--fab-text-muted)" }}
-                    >
-                      ₱{(displayAmt * matPrice).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            },
+          )}
 
           <div className="flex items-center justify-between gap-2">
             <span

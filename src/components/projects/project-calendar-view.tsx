@@ -27,7 +27,11 @@ import {
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
-import { ResourceStatus, ServiceStatus, ProjectStatusType } from "@convex/constants";
+import {
+  ResourceStatus,
+  ServiceStatus,
+  ProjectStatusType,
+} from "@convex/constants";
 import { STATUS_STYLES } from "@/components/projects/project-card";
 
 function getSnappedDecimalHours(ms: number, ceil = false) {
@@ -224,7 +228,9 @@ export function ProjectCalendarView() {
               {
                 new Set(
                   [
-                    ...(isAdminOrMaker ? filteredResourceUsages.map((u) => u.projectId) : []),
+                    ...(isAdminOrMaker
+                      ? filteredResourceUsages.map((u) => u.projectId)
+                      : []),
                     ...filteredServiceUsages.map((u) => u.projectId),
                   ].filter(Boolean),
                 ).size
@@ -233,7 +239,9 @@ export function ProjectCalendarView() {
             <span className="text-muted-foreground">
               {new Set(
                 [
-                  ...(isAdminOrMaker ? filteredResourceUsages.map((u) => u.projectId) : []),
+                  ...(isAdminOrMaker
+                    ? filteredResourceUsages.map((u) => u.projectId)
+                    : []),
                   ...filteredServiceUsages.map((u) => u.projectId),
                 ].filter(Boolean),
               ).size === 1

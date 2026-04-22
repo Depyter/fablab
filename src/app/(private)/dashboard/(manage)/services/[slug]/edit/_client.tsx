@@ -115,7 +115,8 @@ export function EditServiceClient({
             ? {
                 type: "WORKSHOP",
                 schedules: value.schedules ?? [],
-                amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
+                amount:
+                  value.pricing.type === "FIXED" ? value.pricing.amount : 0,
                 variants:
                   value.pricing.type === "FIXED" &&
                   value.pricing.variants.length > 0

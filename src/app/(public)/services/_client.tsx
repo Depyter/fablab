@@ -18,7 +18,7 @@ export function ServicesListClient({
   preloadedServices: Preloaded<typeof api.services.query.getServices>;
 }) {
   const services = usePreloadedQuery(preloadedServices);
-  type ServiceItem = (typeof services)[number];
+  // type ServiceItem = (typeof services)[number];
 
   const fabricationServices = services.filter(
     (service) => service.serviceCategory?.type === "FABRICATION",
@@ -117,9 +117,10 @@ export function ServicesListClient({
                         key={service._id}
                         slug={service.slug}
                         imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-                        hoverImageSrc={service.imageUrls[1] ?? service.imageUrls[0]}
+                        hoverImageSrc={
+                          service.imageUrls[1] ?? service.imageUrls[0]
+                        }
                         title={service.name}
-                        
                         badgeLabel="Featured"
                       />
                     ))}
@@ -149,9 +150,10 @@ export function ServicesListClient({
                         key={service._id}
                         slug={service.slug}
                         imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-                        hoverImageSrc={service.imageUrls[1] ?? service.imageUrls[0]}
+                        hoverImageSrc={
+                          service.imageUrls[1] ?? service.imageUrls[0]
+                        }
                         title={service.name}
-                       
                         badgeLabel="Featured"
                       />
                     ))}
@@ -172,8 +174,8 @@ export function ServicesListClient({
               Custom Projects?
             </h3>
             <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed mb-10">
-              If you have a specialized fabrication requirement not listed above,
-              our technicians are ready to assist with custom workflows.
+              If you have a specialized fabrication requirement not listed
+              above, our technicians are ready to assist with custom workflows.
             </p>
             <div className="h-px w-8 bg-primary/30 mx-auto" />
           </div>

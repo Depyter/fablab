@@ -235,7 +235,10 @@ function MediaLightbox({
                 <div className="flex sm:hidden items-center rounded-full bg-white/5 border border-white/8">
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); prev(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      prev();
+                    }}
                     aria-label="Previous"
                     className="px-3 py-1.5 text-white/35 hover:text-white/70 transition-colors"
                   >
@@ -244,7 +247,10 @@ function MediaLightbox({
                   <div className="w-px h-3 bg-white/10" />
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); next(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      next();
+                    }}
                     aria-label="Next"
                     className="px-3 py-1.5 text-white/35 hover:text-white/70 transition-colors"
                   >

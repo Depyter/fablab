@@ -98,17 +98,14 @@ export function ProjectDetailsContent({
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [editMaterial, setEditMaterial] = useState<ProjectMaterialType>(
-    "provide-own",
-  );
-  const [editServiceType, setEditServiceType] = useState<ProjectServiceTypeType>(
-    "self-service",
-  );
+  const [editMaterial, setEditMaterial] =
+    useState<ProjectMaterialType>("provide-own");
+  const [editServiceType, setEditServiceType] =
+    useState<ProjectServiceTypeType>("self-service");
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const canEdit =
-    isClient && project.status === "pending" && !!onUpdateDetails;
+  const canEdit = isClient && project.status === "pending" && !!onUpdateDetails;
 
   function openEdit() {
     setEditDescription(project.description ?? "");
@@ -187,8 +184,9 @@ export function ProjectDetailsContent({
     .filter((status) => statusOrder.indexOf(status) > currentIndex)
     .sort((a, b) => statusOrder.indexOf(a) - statusOrder.indexOf(b))[0];
 
-  const previousStepLabel =
-    previousStep ? PROJECT_STATUS_LABELS[previousStep] : "";
+  const previousStepLabel = previousStep
+    ? PROJECT_STATUS_LABELS[previousStep]
+    : "";
   const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
   const isClaimedProject =
     project.status === "paid" || (project.status as string) === "claimed";
@@ -269,36 +267,32 @@ export function ProjectDetailsContent({
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               {isClient ? (
                 <>
-                  
                   {canRebook ? (
                     <ActionDialog
-                    title="Rebook Project Request"
-                    description="Do you want to rebook this project request?"
-                    onConfirm={() => {}}
-                    baseActionText="Rebook Request"
-                    cancelButtonText="Back"
-                    confirmButtonText="Yes, rebook"
-                    className="w-full sm:w-auto"
-                    disabled={isClaimedProject}
-                  />
-                  ): (
+                      title="Rebook Project Request"
+                      description="Do you want to rebook this project request?"
+                      onConfirm={() => {}}
+                      baseActionText="Rebook Request"
+                      cancelButtonText="Back"
+                      confirmButtonText="Yes, rebook"
+                      className="w-full sm:w-auto"
+                      disabled={isClaimedProject}
+                    />
+                  ) : (
                     <ActionDialog
-                    title="Cancel Project Request"
-                    description="Do you want to cancel this project request?"
-                    onConfirm={() => {}}
-                    baseActionText="Cancel   Request"
-                    cancelButtonText="Back"
-                    confirmButtonText="Yes, cancel"
-                    className="w-full sm:w-auto"
-                    disabled={isClaimedProject}
-                  />
-                  
+                      title="Cancel Project Request"
+                      description="Do you want to cancel this project request?"
+                      onConfirm={() => {}}
+                      baseActionText="Cancel   Request"
+                      cancelButtonText="Back"
+                      confirmButtonText="Yes, cancel"
+                      className="w-full sm:w-auto"
+                      disabled={isClaimedProject}
+                    />
                   )}
-                  
                 </>
               ) : (
                 <>
-                 
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"

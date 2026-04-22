@@ -16,15 +16,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  ChevronsUpDownIcon,
-  BadgeCheckIcon,
-  BellIcon,
-  LogOutIcon,
-} from "lucide-react";
+import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react";
 import { UserProfileDialog } from "@/components/profile/profile-card";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 
 function getInitials(name: string): string {
   return name
@@ -46,7 +40,6 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const initials = getInitials(user.name);
-  const router = useRouter();
 
   const handleSignOut = async () => {
     await authClient.signOut();

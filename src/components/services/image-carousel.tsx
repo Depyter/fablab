@@ -67,7 +67,8 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
           </button>
 
           <div className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 text-[10px] font-semibold tracking-[0.2em] text-foreground/60">
-            {String(current + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
+            {String(current + 1).padStart(2, "0")} /{" "}
+            {String(images.length).padStart(2, "0")}
           </div>
 
           <div className="sr-only" aria-live="polite">

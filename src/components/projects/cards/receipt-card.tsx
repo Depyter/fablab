@@ -26,8 +26,8 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
       headerBg="color-mix(in srgb, var(--fab-teal) 7%, var(--fab-bg-sidebar))"
       headerRight={
         receipt ? (
-            <DetailChip
-              label="Recorded"
+          <DetailChip
+            label="Recorded"
             bg="color-mix(in srgb, var(--fab-teal) 14%, white)"
             color="var(--fab-teal)"
           />

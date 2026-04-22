@@ -1,6 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
-import { Id, Doc } from "../_generated/dataModel";
+import { Id } from "../_generated/dataModel";
 import {
   BookingWindow,
   ProjectStatus,
@@ -309,7 +309,12 @@ export const updateCostBreakdown = authMutation({
         const previousAmount = existing?.amountUsed ?? 0;
         if (amountUsed === previousAmount) continue;
 
-        await syncMaterialUsageStock(ctx, materialId, previousAmount, amountUsed);
+        await syncMaterialUsageStock(
+          ctx,
+          materialId,
+          previousAmount,
+          amountUsed,
+        );
 
         const materialDoc = await ctx.db.get(materialId);
         nextMaterials = [
@@ -317,7 +322,9 @@ export const updateCostBreakdown = authMutation({
           {
             materialId,
             amountUsed,
-            snapshot: materialDoc ? buildMaterialSnapshot(materialDoc) : undefined,
+            snapshot: materialDoc
+              ? buildMaterialSnapshot(materialDoc)
+              : undefined,
           },
         ];
 
@@ -437,7 +444,9 @@ export const cancelOwnProject = authMutation({
       throw new ConvexError("You do not own this project.");
     }
 
-    if (["completed", "paid", "rejected", "cancelled"].includes(project.status)) {
+    if (
+      ["completed", "paid", "rejected", "cancelled"].includes(project.status)
+    ) {
       throw new ConvexError("Cannot cancel a project in its current status.");
     }
 
@@ -504,11 +513,15 @@ export const completeProject = authMutation({
             const materialDoc = await ctx.db.get(m.materialId);
             return {
               ...m,
-              snapshot: materialDoc ? buildMaterialSnapshot(materialDoc) : undefined,
+              snapshot: materialDoc
+                ? buildMaterialSnapshot(materialDoc)
+                : undefined,
             };
           }),
         );
-        await ctx.db.patch(usage._id, { materialsUsed: materialsWithSnapshots });
+        await ctx.db.patch(usage._id, {
+          materialsUsed: materialsWithSnapshots,
+        });
       }
     }
 

@@ -1,12 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import {
-  authQuery,
-  authMutation,
-  claimFiles,
-  ensureAuthentication,
-  publicMutation,
-} from "./helper";
+import { authQuery, authMutation, claimFiles } from "./helper";
 import { Id } from "./_generated/dataModel";
 
 export const getUserProfile = authQuery({

@@ -90,7 +90,10 @@ export function ProjectCard({
       coverFallback={
         <div className={cn("h-full w-full bg-linear-to-br", styles.cover)} />
       }
-      badgeText={PROJECT_STATUS_LABELS[status as keyof typeof PROJECT_STATUS_LABELS] ?? status}
+      badgeText={
+        PROJECT_STATUS_LABELS[status as keyof typeof PROJECT_STATUS_LABELS] ??
+        status
+      }
       badgeClassName={styles.badge}
       footer={
         <>

@@ -18,7 +18,9 @@ export function ClientAuthBoundary({ children }: PropsWithChildren) {
   return (
     <AuthBoundary
       authClient={authClient}
-      onUnauth={() => { window.location.replace("/login"); }}
+      onUnauth={() => {
+        window.location.replace("/login");
+      }}
       getAuthUserFn={api.auth.getAuthUser}
       isAuthError={isAuthError}
     >

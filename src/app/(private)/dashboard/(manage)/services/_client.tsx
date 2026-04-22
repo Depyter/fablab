@@ -134,20 +134,20 @@ export function ServicesListClient({
             title={service.name}
             description={service.description}
             pricing={
-            service.serviceCategory.type === "WORKSHOP"
-              ? {
-                  type: "FIXED" as const,
-                  amount: service.serviceCategory.amount,
-                  variants: service.serviceCategory.variants,
-                }
-              : {
-                  type: "FABRICATION" as const,
-                  setupFee: service.serviceCategory.setupFee,
-                  unitName: service.serviceCategory.unitName,
-                  timeRate: service.serviceCategory.timeRate,
-                  variants: service.serviceCategory.variants,
-                }
-          }
+              service.serviceCategory.type === "WORKSHOP"
+                ? {
+                    type: "FIXED" as const,
+                    amount: service.serviceCategory.amount,
+                    variants: service.serviceCategory.variants,
+                  }
+                : {
+                    type: "FABRICATION" as const,
+                    setupFee: service.serviceCategory.setupFee,
+                    unitName: service.serviceCategory.unitName,
+                    timeRate: service.serviceCategory.timeRate,
+                    variants: service.serviceCategory.variants,
+                  }
+            }
           />
         )}
         emptyState={{

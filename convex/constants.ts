@@ -247,8 +247,7 @@ export type ProjectServiceTypeType =
   (typeof ProjectServiceType)[keyof typeof ProjectServiceType];
 export type FulfillmentModeType =
   (typeof FulfillmentMode)[keyof typeof FulfillmentMode];
-export type ProjectTypeType =
-  (typeof ProjectType)[keyof typeof ProjectType];
+export type ProjectTypeType = (typeof ProjectType)[keyof typeof ProjectType];
 export type ProjectMaterialType =
   (typeof ProjectMaterial)[keyof typeof ProjectMaterial];
 export type ProjectStatusType =
@@ -269,8 +268,16 @@ export const PROJECT_STATUS_TRANSITIONS: Record<
   ProjectStatusType,
   readonly ProjectStatusType[]
 > = {
-  pending: [ProjectStatus.APPROVED, ProjectStatus.REJECTED, ProjectStatus.CANCELLED],
-  approved: [ProjectStatus.PENDING, ProjectStatus.COMPLETED, ProjectStatus.CANCELLED],
+  pending: [
+    ProjectStatus.APPROVED,
+    ProjectStatus.REJECTED,
+    ProjectStatus.CANCELLED,
+  ],
+  approved: [
+    ProjectStatus.PENDING,
+    ProjectStatus.COMPLETED,
+    ProjectStatus.CANCELLED,
+  ],
   completed: [ProjectStatus.APPROVED, ProjectStatus.PAID],
   paid: [ProjectStatus.COMPLETED],
   rejected: [ProjectStatus.PENDING],

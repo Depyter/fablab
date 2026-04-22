@@ -189,7 +189,8 @@ export function ProjectDetails({
                 : project.status === "pending"
                   ? "In progress"
                   : "Completed",
-          byLabel: project.status === "pending" ? "FabLab Staff" : "FabLab Staff",
+          byLabel:
+            project.status === "pending" ? "FabLab Staff" : "FabLab Staff",
           active: project.status === "pending",
           completed:
             project.status === "approved" ||
@@ -206,8 +207,8 @@ export function ProjectDetails({
               : project.status === "approved"
                 ? "In progress"
                 : project.status === "completed" || project.status === "paid"
-                ? "Completed"
-                : "Pending",
+                  ? "Completed"
+                  : "Pending",
           byLabel: project.assignedMaker
             ? project.assignedMaker.name
             : "Waiting",

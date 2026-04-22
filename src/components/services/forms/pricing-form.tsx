@@ -241,7 +241,6 @@ export const PricingForm = withForm({
                     </div>
                   )}
 
-
                   {/* ── FABRICATION ─────────────────────────────────────── */}
                   {pricingType === "FABRICATION" && (
                     <div className="space-y-4">

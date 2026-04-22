@@ -127,11 +127,11 @@ describe("Project and Chat functionality", () => {
       return maker!._id;
     });
 
-      await tAera.mutation(api.projects.mutate.updateProject, {
-        projectId,
-        status: "approved",
-        makerId,
-      });
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId,
+      status: "approved",
+      makerId,
+    });
 
     await t.run(async (ctx) => {
       const project = await ctx.db.get(projectId);
@@ -219,7 +219,12 @@ describe("Project and Chat functionality", () => {
         {
           materialId,
           amountUsed: 10,
-          snapshot: { name: "PLA", unit: "g", pricePerUnit: 2, costPerUnit: undefined },
+          snapshot: {
+            name: "PLA",
+            unit: "g",
+            pricePerUnit: 2,
+            costPerUnit: undefined,
+          },
         },
       ]);
     });
@@ -241,7 +246,12 @@ describe("Project and Chat functionality", () => {
         {
           materialId,
           amountUsed: 3,
-          snapshot: { name: "PLA", unit: "g", pricePerUnit: 2, costPerUnit: undefined },
+          snapshot: {
+            name: "PLA",
+            unit: "g",
+            pricePerUnit: 2,
+            costPerUnit: undefined,
+          },
         },
       ]);
     });

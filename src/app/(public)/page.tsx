@@ -5,8 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { useEffect } from "react";
-import { getToken } from "@/lib/auth-server";
-import { redirect } from "next/navigation";
 
 const fablabGoals = [
   {
@@ -102,7 +100,6 @@ const fablabGoals = [
 ];
 
 export default function HomePage() {
-    
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {

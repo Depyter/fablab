@@ -157,7 +157,10 @@ export function computeProvisionalCostBreakdown(
   const breakdown = derivePricingFromSchema({
     servicePricing: service.serviceCategory,
     pricingVariant,
-    serviceType: fulfillmentMode as "self-service" | "full-service" | "staff-led",
+    serviceType: fulfillmentMode as
+      | "self-service"
+      | "full-service"
+      | "staff-led",
     bookingDurationMinutes: bookingDurationMs / (1000 * 60),
   });
 

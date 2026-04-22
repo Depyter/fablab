@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ManageCard } from "@/components/manage/manage-card";
-import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -47,7 +46,7 @@ export function ServiceCard({
   pricing,
   imageAlt = "Service image",
   badgeText = "Featured",
-  badgeVariant = "secondary",
+  // badgeVariant = "secondary",
   buttonText = "Edit Service",
   showBadge = true,
   className = "",

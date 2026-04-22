@@ -226,7 +226,9 @@ export default function ProjectsList() {
         actions={
           <Button size="sm" className="h-8 gap-1 shrink-0">
             <Plus className="h-4 w-4" />
-            <Link href="/services" className="hidden sm:inline">Add Project</Link>
+            <Link href="/services" className="hidden sm:inline">
+              Add Project
+            </Link>
           </Button>
         }
       />

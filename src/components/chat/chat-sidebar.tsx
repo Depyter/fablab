@@ -11,8 +11,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { Id } from "@convex/_generated/dataModel";
 
 import { RoomSettingsDialog } from "./room-settings-dialog";
-import { Input } from "@/components/ui/input";
-import { MessageCircle, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RoomWithLastMessage {
@@ -87,7 +85,7 @@ export function ChatSidebar({
         className="flex items-center gap-2 px-3 h-14 shrink-0"
         style={{ borderBottom: "1px solid var(--fab-border-md)" }}
       >
-        <SidebarTrigger className="text-[var(--fab-text-dim)] hover:text-[var(--fab-text-primary)] transition-colors" />
+        <SidebarTrigger className="text-(--fab-text-dim) hover:text-(--fab-text-primary) transition-colors" />
         <div className="flex-1 flex items-center gap-2">
           <span
             className="text-[12px] font-black uppercase tracking-[0.15em]"

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
 import { FormSection } from "@/components/ui/form-section";
@@ -16,13 +15,6 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, X } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const formatTimeForInput = (val: number | undefined) => {
   if (!val) return "";

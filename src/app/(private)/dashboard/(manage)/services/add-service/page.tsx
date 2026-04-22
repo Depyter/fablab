@@ -51,17 +51,14 @@ export default function AddServicePage() {
                 type: "FABRICATION",
                 availableDays,
                 materials: materials as Id<"materials">[],
-                setupFee:
-                  pricing.type === "FABRICATION" ? pricing.setupFee : 0,
+                setupFee: pricing.type === "FABRICATION" ? pricing.setupFee : 0,
                 unitName:
                   pricing.type === "FABRICATION"
                     ? pricing.unitName
                     : ("hour" as const),
-                timeRate:
-                  pricing.type === "FABRICATION" ? pricing.timeRate : 0,
+                timeRate: pricing.type === "FABRICATION" ? pricing.timeRate : 0,
                 variants:
-                  pricing.type === "FABRICATION" &&
-                  pricing.variants.length > 0
+                  pricing.type === "FABRICATION" && pricing.variants.length > 0
                     ? pricing.variants
                     : undefined,
               },

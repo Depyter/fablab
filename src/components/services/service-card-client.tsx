@@ -60,21 +60,17 @@ export function ServiceCardClient({
             className="object-contain p-10 opacity-0 transition-all duration-500 ease-in-out group-hover:opacity-100 group-hover:scale-105"
           />
         )}
-
       </div>
 
       <div className="relative px-4 pb-4 pt-6">
         <span className="absolute left-1/2 top-0 z-50 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black bg-black px-4 py-0.75 text-[8px] font-bold uppercase tracking-[0.18em] text-white">
           {badgeLabel}
         </span>
-       
 
         <div className="flex items-end justify-between gap-2">
           <h3 className="font-serif text-[31px] leading-[1.02] font-semibold text-foreground transition-colors group-hover:text-primary">
             {title}
           </h3>
-
-          
         </div>
       </div>
     </Link>

@@ -5,7 +5,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft } from "lucide-react";
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -320,10 +319,15 @@ export function Step2ProjectDetails({
                                       checked={isChecked}
                                       onChange={(e) => {
                                         if (e.target.checked) {
-                                          field.handleChange([...selected, m._id]);
+                                          field.handleChange([
+                                            ...selected,
+                                            m._id,
+                                          ]);
                                         } else {
                                           field.handleChange(
-                                            selected.filter((id) => id !== m._id),
+                                            selected.filter(
+                                              (id) => id !== m._id,
+                                            ),
                                           );
                                         }
                                       }}

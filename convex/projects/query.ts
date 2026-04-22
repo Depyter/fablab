@@ -57,7 +57,9 @@ export const getProjects = authQuery({
       case "price-high":
       case "price-low":
         // No price index; fall through to default creation-time order
-        orderedQuery = baseQuery.order(args.sortBy === "price-high" ? "desc" : "asc");
+        orderedQuery = baseQuery.order(
+          args.sortBy === "price-high" ? "desc" : "asc",
+        );
         break;
       case "name-az":
         orderedQuery = baseQuery.order("asc");

@@ -94,8 +94,6 @@ export function ServiceDetailClient({
                 </h1>
               </div>
 
-              
-
               <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
                 {service.description}
               </p>
