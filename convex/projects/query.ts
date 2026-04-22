@@ -305,12 +305,13 @@ export const getProject = authQuery({
 
     const resourceUsages = await Promise.all(
       usageDocs.map(async (usage) => {
-        // Prefer the usage's own resource; fall back to service-level resources
-        let resourceDoc = usage.resource
-          ? await ctx.db.get(usage.resource as Id<"resources">)
-          : null;
+        // Prefer snapshot for historical accuracy; fall back to live resource doc
+        let resourceDoc =
+          !usage.resourceSnapshot && usage.resource
+            ? await ctx.db.get(usage.resource as Id<"resources">)
+            : null;
 
-        if (!resourceDoc && serviceResources.length > 0) {
+        if (!resourceDoc && !usage.resourceSnapshot && serviceResources.length > 0) {
           resourceDoc = serviceResources[0] ?? null;
         }
 
@@ -325,6 +326,9 @@ export const getProject = authQuery({
         const enrichedMaterialsUsed = usage.materialsUsed
           ? await Promise.all(
               usage.materialsUsed.map(async (m) => {
+                if (m.snapshot) {
+                  return { ...m, name: m.snapshot.name, unit: m.snapshot.unit };
+                }
                 const materialDoc = await ctx.db.get(
                   m.materialId as Id<"materials">,
                 );
@@ -337,11 +341,16 @@ export const getProject = authQuery({
             )
           : [];
 
-        return {
-          ...usage,
-          makerName: makerProfile?.name ?? null,
-          makerPfpUrl,
-          resourceDetails: resourceDoc
+        const resourceDetails = usage.resourceSnapshot
+          ? {
+              _id: usage.resource ?? null,
+              name: usage.resourceSnapshot.name,
+              category: usage.resourceSnapshot.category,
+              type: usage.resourceSnapshot.type,
+              status: null,
+              description: usage.resourceSnapshot.description,
+            }
+          : resourceDoc
             ? {
                 _id: resourceDoc._id,
                 name: resourceDoc.name,
@@ -350,7 +359,13 @@ export const getProject = authQuery({
                 status: resourceDoc.status,
                 description: resourceDoc.description,
               }
-            : null,
+            : null;
+
+        return {
+          ...usage,
+          makerName: makerProfile?.name ?? null,
+          makerPfpUrl,
+          resourceDetails,
           materialsUsed: enrichedMaterialsUsed,
         };
       }),

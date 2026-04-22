@@ -178,7 +178,20 @@ export const updateUsage = authMutation({
     const updates: Record<string, any> = {};
 
     if (args.projects !== undefined) updates.projects = args.projects;
-    if (args.resource !== undefined) updates.resource = args.resource;
+    if (args.resource !== undefined) {
+      updates.resource = args.resource;
+      if (args.resource) {
+        const resourceDoc = await ctx.db.get(args.resource);
+        if (resourceDoc) {
+          updates.resourceSnapshot = {
+            name: resourceDoc.name,
+            category: resourceDoc.category,
+            type: resourceDoc.type,
+            description: resourceDoc.description,
+          };
+        }
+      }
+    }
     if (args.service !== undefined) updates.service = args.service;
     if (args.maker !== undefined) updates.maker = args.maker;
     if (args.startTime !== undefined) updates.startTime = args.startTime;
@@ -228,6 +241,12 @@ export const createSharedUsage = authMutation({
       startTime: args.startTime,
       endTime: args.endTime,
       date: args.date,
+      resourceSnapshot: {
+        name: resource.name,
+        category: resource.category,
+        type: resource.type,
+        description: resource.description,
+      },
     });
   },
 });

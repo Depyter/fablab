@@ -50,11 +50,11 @@ interface AssignedMaker {
 }
 
 interface ResourceDetails {
-  _id: string;
+  _id: string | null;
   name: string;
   category?: string;
   type?: string;
-  status?: string;
+  status?: string | null;
 }
 
 interface ResourceUsage {

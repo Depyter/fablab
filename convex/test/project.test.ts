@@ -215,7 +215,13 @@ describe("Project and Chat functionality", () => {
       const usage = await ctx.db.query("resourceUsage").first();
 
       expect(material!.currentStock).toBe(90);
-      expect(usage!.materialsUsed).toEqual([{ materialId, amountUsed: 10 }]);
+      expect(usage!.materialsUsed).toEqual([
+        {
+          materialId,
+          amountUsed: 10,
+          snapshot: { name: "PLA", unit: "g", pricePerUnit: 2, costPerUnit: undefined },
+        },
+      ]);
     });
 
     await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
@@ -231,7 +237,13 @@ describe("Project and Chat functionality", () => {
       const usage = await ctx.db.query("resourceUsage").first();
 
       expect(material!.currentStock).toBe(97);
-      expect(usage!.materialsUsed).toEqual([{ materialId, amountUsed: 3 }]);
+      expect(usage!.materialsUsed).toEqual([
+        {
+          materialId,
+          amountUsed: 3,
+          snapshot: { name: "PLA", unit: "g", pricePerUnit: 2, costPerUnit: undefined },
+        },
+      ]);
     });
   });
   test("Update Project (Non-privileged)", async () => {});

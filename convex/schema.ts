@@ -189,8 +189,27 @@ export default defineSchema({
         v.object({
           materialId: v.id("materials"),
           amountUsed: v.number(),
+          // Snapshot of material values at time of usage for historical accuracy
+          snapshot: v.optional(
+            v.object({
+              name: v.string(),
+              unit: v.string(),
+              pricePerUnit: v.optional(v.number()),
+              costPerUnit: v.optional(v.number()),
+            }),
+          ),
         }),
       ),
+    ),
+
+    // Snapshot of resource details at time of booking for historical accuracy
+    resourceSnapshot: v.optional(
+      v.object({
+        name: v.string(),
+        category: v.string(),
+        type: v.string(),
+        description: v.string(),
+      }),
     ),
 
     startTime: v.number(),

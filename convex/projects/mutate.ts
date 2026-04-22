@@ -26,6 +26,7 @@ import {
   applyResourceAssignment,
   applyMaterialAssignment,
   syncMaterialUsageStock,
+  buildMaterialSnapshot,
 } from "./helper";
 
 // ============================================================================
@@ -325,12 +326,19 @@ export const updateCostBreakdown = authMutation({
           (materialUsage) => materialUsage.materialId !== project.requestedMaterialId,
         );
 
+        const materialDoc = await ctx.db.get(
+          project.requestedMaterialId as Id<"materials">,
+        );
+
         await ctx.db.patch(resolvedUsage._id, {
           materialsUsed: [
             ...nextMaterialsUsed,
             {
               materialId: project.requestedMaterialId as Id<"materials">,
               amountUsed: args.amountUsed!,
+              snapshot: materialDoc
+                ? buildMaterialSnapshot(materialDoc)
+                : undefined,
             },
           ],
         });
@@ -494,7 +502,16 @@ export const completeProject = authMutation({
     if (args.materialsUsed) {
       const usage = await findProjectUsage(ctx, project);
       if (usage) {
-        await ctx.db.patch(usage._id, { materialsUsed: args.materialsUsed });
+        const materialsWithSnapshots = await Promise.all(
+          args.materialsUsed.map(async (m) => {
+            const materialDoc = await ctx.db.get(m.materialId);
+            return {
+              ...m,
+              snapshot: materialDoc ? buildMaterialSnapshot(materialDoc) : undefined,
+            };
+          }),
+        );
+        await ctx.db.patch(usage._id, { materialsUsed: materialsWithSnapshots });
       }
     }
 

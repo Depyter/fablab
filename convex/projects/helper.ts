@@ -232,6 +232,15 @@ export async function handleSharedResourceUsage(
   });
 }
 
+export function buildMaterialSnapshot(material: Doc<"materials">) {
+  return {
+    name: material.name,
+    unit: material.unit,
+    pricePerUnit: material.pricePerUnit,
+    costPerUnit: material.costPerUnit,
+  };
+}
+
 export async function handleWorkshopResourceUsage(
   ctx: MutationCtx,
   serviceId: Id<"services">,
@@ -279,7 +288,16 @@ export async function handleWorkshopResourceUsage(
       date: booking.date,
       maxCapacity: timeSlot?.maxSlots,
       materialsUsed: requestedMaterialId
-        ? [{ materialId: requestedMaterialId, amountUsed: 0 }]
+        ? await (async () => {
+            const mat = await ctx.db.get(requestedMaterialId);
+            return [
+              {
+                materialId: requestedMaterialId,
+                amountUsed: 0,
+                snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
+              },
+            ];
+          })()
         : undefined,
     });
   }
@@ -292,6 +310,19 @@ export async function handleExclusiveResourceUsage(
   projectId: Id<"projects">,
   requestedMaterialId?: Id<"materials">,
 ): Promise<void> {
+  const materialEntry = requestedMaterialId
+    ? await (async () => {
+        const mat = await ctx.db.get(requestedMaterialId);
+        return [
+          {
+            materialId: requestedMaterialId,
+            amountUsed: 0,
+            snapshot: mat ? buildMaterialSnapshot(mat) : undefined,
+          },
+        ];
+      })()
+    : undefined;
+
   await ctx.db.insert("resourceUsage", {
     service: serviceId,
     usageMode: "EXCLUSIVE",
@@ -299,9 +330,7 @@ export async function handleExclusiveResourceUsage(
     startTime: booking.startTime,
     endTime: booking.endTime,
     date: booking.date,
-    materialsUsed: requestedMaterialId
-      ? [{ materialId: requestedMaterialId, amountUsed: 0 }]
-      : undefined,
+    materialsUsed: materialEntry,
   });
 }
 
@@ -750,7 +779,11 @@ export async function applyMaterialAssignment(
     await ctx.db.patch(usage._id, {
       materialsUsed: [
         ...nextMaterialsUsed,
-        { materialId, amountUsed: previousAmountUsed },
+        {
+          materialId,
+          amountUsed: previousAmountUsed,
+          snapshot: buildMaterialSnapshot(materialDoc),
+        },
       ],
     });
   }
