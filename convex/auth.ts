@@ -31,6 +31,19 @@ export const { onCreate } = authComponent.triggersApi();
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
+    rateLimit: {
+      enabled: true,
+      customRules: {
+        "/sign-in/social": {
+          window: 60,
+          max: 10,
+        },
+        "/callback/*": {
+          window: 60,
+          max: 10,
+        },
+      },
+    },
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
     socialProviders: {

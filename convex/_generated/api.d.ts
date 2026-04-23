@@ -23,6 +23,7 @@ import type * as presence from "../presence.js";
 import type * as projects_helper from "../projects/helper.js";
 import type * as projects_mutate from "../projects/mutate.js";
 import type * as projects_query from "../projects/query.js";
+import type * as ratelimit from "../ratelimit.js";
 import type * as resource_helper from "../resource/helper.js";
 import type * as resource_mutate from "../resource/mutate.js";
 import type * as resource_query from "../resource/query.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "projects/helper": typeof projects_helper;
   "projects/mutate": typeof projects_mutate;
   "projects/query": typeof projects_query;
+  ratelimit: typeof ratelimit;
   "resource/helper": typeof resource_helper;
   "resource/mutate": typeof resource_mutate;
   "resource/query": typeof resource_query;
@@ -91,4 +93,5 @@ export declare const internal: FilterApi<
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
   presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
 };

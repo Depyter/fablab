@@ -1,6 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
 import { Id } from "../_generated/dataModel";
+
 import {
   BookingWindow,
   ProjectStatus,
@@ -53,6 +54,7 @@ export const createProject = authMutation({
       date: v.number(),
     }),
   },
+  rateLimit: "createProject",
   handler: async (ctx, args) => {
     // ── 1. Resolve service ────────────────────────────────────────────────────
     const service = await resolveService(ctx, args.service);

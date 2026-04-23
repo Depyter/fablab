@@ -6,6 +6,7 @@ import {
   customMutation,
 } from "convex-helpers/server/customFunctions";
 import { ConvexError } from "convex/values";
+import { rateLimiter, type RateLimitName } from "./ratelimit";
 
 type Role = "admin" | "maker" | "client";
 type RoleCombo = Role | Role[];
@@ -116,7 +117,11 @@ export const authQuery = customQuery(query, {
 
 export const authMutation = customMutation(mutation, {
   args: {},
-  input: async (ctx, args, opts: { role?: RoleCombo } = {}) => {
+  input: async (
+    ctx,
+    args,
+    opts: { role?: RoleCombo; rateLimit?: RateLimitName } = {},
+  ) => {
     const user = await ensureAuthentication(ctx);
 
     const profile = await ctx.db
@@ -125,6 +130,13 @@ export const authMutation = customMutation(mutation, {
       .first();
 
     if (!profile) throw new ConvexError("User profile not found");
+
+    if (opts.rateLimit) {
+      await rateLimiter.limit(ctx, opts.rateLimit, {
+        key: profile._id,
+        throws: true,
+      });
+    }
 
     if (opts.role) {
       const roles = Array.isArray(opts.role) ? opts.role : [opts.role];

@@ -25,6 +25,7 @@
     "@base-ui/react": "^1.4.1",
     "@convex-dev/better-auth": "^0.10.13",
     "@convex-dev/presence": "^0.3.0",
+    "@convex-dev/rate-limiter": "^0.3.2",
     "@edge-runtime/vm": "^5.0.0",
     "@opennextjs/cloudflare": "^1.19.3",
     "@react-three/drei": "^10.7.7",

@@ -337,7 +337,7 @@ export async function ensureProjectRoom(
 
   if (existingRoom) return existingRoom._id;
 
-  const workspaceName = `${userProfile.name}'s Channel`;
+  const workspaceName = `${userProfile.name}`;
   const roomId = await ctx.db.insert("rooms", {
     name: workspaceName,
     color: "yellow",

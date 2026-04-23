@@ -1,6 +1,7 @@
 import schema from "../schema";
 import { convexTest } from "convex-test";
 import { internal, api } from "../_generated/api";
+import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 
 /**
  *
@@ -8,6 +9,7 @@ import { internal, api } from "../_generated/api";
  */
 export async function setupUsers() {
   const t = convexTest(schema);
+  rateLimiterComponent.register(t);
 
   // Create Initial Users for mock
   await t.mutation(internal.users.createUserProfile, {

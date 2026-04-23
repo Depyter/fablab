@@ -33,7 +33,7 @@ describe("Project and Chat functionality", () => {
       const room = await ctx.db.query("rooms").collect();
       expect(room.length).toBe(1);
       expect(room[0].color).toBe("yellow");
-      expect(room[0].name).toBe("Harley's Channel");
+      expect(room[0].name).toBe("Harley");
 
       // check room members
       const members = await ctx.db.query("roomMembers").collect();
@@ -58,7 +58,7 @@ describe("Project and Chat functionality", () => {
       expect(message[0].threadId).toBe(thread[0]._id);
       expect(message[0].sender).toBe("System");
       expect(message[0].content).toBe(
-        "Welcome to Harley's Channel! This is your main room for general inquiries.",
+        "Welcome to Harley! This is your main room for general inquiries.",
       );
 
       expect(message[1].room).toBe(room[0]._id);
