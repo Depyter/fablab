@@ -19,6 +19,7 @@ import {
 import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react";
 import { UserProfileDialog } from "@/components/profile/profile-card";
 import { authClient } from "@/lib/auth-client";
+import posthog from "posthog-js";
 
 function getInitials(name: string): string {
   return name
@@ -42,6 +43,7 @@ export function NavUser({
   const initials = getInitials(user.name);
 
   const handleSignOut = async () => {
+    posthog.reset();
     await authClient.signOut();
     window.location.replace("/login");
   };

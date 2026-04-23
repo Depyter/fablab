@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { usePostHogIdentify } from "@/hooks/use-posthog-identify";
 import {
   MessageSquareIcon,
   FolderIcon,
@@ -115,6 +116,7 @@ export function AppSidebar({
 }) {
   const profile = usePreloadedAuthQuery(preloadedProfile);
   const pathname = usePathname();
+  usePostHogIdentify(profile ?? null);
 
   const role: Role = profile?.role ?? "client";
   const navItems = filterNavItems(allNavItems, role);

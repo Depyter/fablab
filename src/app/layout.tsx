@@ -12,7 +12,7 @@ const robotoMono = Roboto_Mono({
 
 export const metadata: Metadata = {
   title: "IskoLab | Fablab UP Cebu",
-  description: "Build something great!",
+  description: "Make almost Everying!",
   icons: {
     icon: "/fablab.svg",
   },
