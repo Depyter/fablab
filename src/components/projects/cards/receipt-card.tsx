@@ -1,11 +1,20 @@
 "use client";
 
 import { DetailCard, DetailChip } from "./detail-card";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
+
+interface ReceiptFile {
+  storageId: string;
+  url: string | null;
+  type?: string | null;
+  originalName?: string | null;
+}
 
 interface Receipt {
-  receiptNumber: number | string | bigint;
+  receiptString: string;
   paymentMode: string;
   proof?: string | null;
+  resolvedFiles?: ReceiptFile[] | null;
 }
 
 interface ReceiptCardProps {
@@ -18,6 +27,10 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
   const visible = receipt || status === "completed" || status === "paid";
 
   if (!visible) return null;
+
+  const attachments = (receipt?.resolvedFiles ?? []).filter(
+    (f): f is ReceiptFile & { url: string } => !!f.url,
+  );
 
   return (
     <DetailCard
@@ -50,7 +63,7 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
               className="wrap-break-word text-sm font-medium"
               style={{ color: "var(--fab-text-primary)" }}
             >
-              {receipt.receiptNumber.toString()}
+              {receipt.receiptString}
             </p>
           </div>
           <div className="space-y-0.5">
@@ -81,6 +94,17 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
               {receipt.proof || "No proof details"}
             </p>
           </div>
+          {attachments.length > 0 && (
+            <div className="col-span-2 space-y-1.5">
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Attachments
+              </p>
+              <ProjectAttachments files={attachments} />
+            </div>
+          )}
         </>
       ) : (
         <p className="text-sm" style={{ color: "var(--fab-text-dim)" }}>
@@ -90,3 +114,5 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
     </DetailCard>
   );
 }
+
+

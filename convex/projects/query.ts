@@ -237,9 +237,33 @@ export const getProject = authQuery({
     // -------------------------------------------------------------------------
     // Receipt
     // -------------------------------------------------------------------------
-    const receipt = project.receipt
-      ? await ctx.db.get(project.receipt as Id<"receipts">)
-      : null;
+    const receipt = await (async () => {
+      if (!project.receipt) return null;
+      const doc = await ctx.db.get(project.receipt as Id<"receipts">);
+      if (!doc) return null;
+      const resolvedFiles = doc.files
+        ? await Promise.all(
+            doc.files.map(async (storageId) => {
+              const [fileDoc, url] = await Promise.all([
+                ctx.db
+                  .query("files")
+                  .withIndex("by_storageId", (q) =>
+                    q.eq("storageId", storageId),
+                  )
+                  .first(),
+                ctx.storage.getUrl(storageId),
+              ]);
+              return {
+                storageId,
+                url,
+                type: fileDoc?.type ?? null,
+                originalName: fileDoc?.originalName ?? null,
+              };
+            }),
+          )
+        : [];
+      return { ...doc, resolvedFiles };
+    })();
 
     // -------------------------------------------------------------------------
     // Resource usages — source of truth for booking window and resource

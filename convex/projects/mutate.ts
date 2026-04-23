@@ -372,7 +372,7 @@ export const markProjectPaid = authMutation({
   role: ["admin", "maker"],
   args: {
     projectId: v.id("projects"),
-    receiptNumber: v.int64(),
+    receiptString: v.string(),
     paymentMode: v.union(
       v.literal("cash"),
       v.literal("gcash"),
@@ -380,7 +380,7 @@ export const markProjectPaid = authMutation({
       v.literal("others"),
     ),
     proof: v.string(),
-    proofImage: v.optional(v.id("_storage")),
+    proofFiles: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
@@ -395,18 +395,18 @@ export const markProjectPaid = authMutation({
     if (project.receipt) {
       // Update existing receipt record
       await ctx.db.patch(project.receipt, {
-        receiptNumber: args.receiptNumber,
+        receiptString: args.receiptString,
         paymentMode: args.paymentMode,
         proof: args.proof,
-        ...(args.proofImage !== undefined ? { image: args.proofImage } : {}),
+        ...(args.proofFiles !== undefined ? { files: args.proofFiles } : {}),
       });
       receiptId = project.receipt as Id<"receipts">;
     } else {
       receiptId = await ctx.db.insert("receipts", {
-        receiptNumber: args.receiptNumber,
+        receiptString: args.receiptString,
         paymentMode: args.paymentMode,
         proof: args.proof,
-        image: args.proofImage,
+        files: args.proofFiles,
       });
     }
 
@@ -417,7 +417,7 @@ export const markProjectPaid = authMutation({
 
     const lines: string[] = [
       `Payment recorded. Project moved to **claim**.`,
-      `- Receipt #: ${args.receiptNumber.toString()}`,
+      `- Receipt #: ${args.receiptString}`,
       `- Payment mode: ${args.paymentMode}`,
       ...(args.proof ? [`- Proof: ${args.proof}`] : []),
     ];

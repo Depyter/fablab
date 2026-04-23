@@ -239,7 +239,7 @@ export default defineSchema({
   // EXISTING TABLES: Keep existing unmodified
   // --------------------------------------------------------
   receipts: defineTable({
-    receiptNumber: v.int64(),
+    receiptString: v.string(),
     paymentMode: v.union(
       v.literal(PaymentMode.CASH),
       v.literal(PaymentMode.GCASH),
@@ -247,7 +247,7 @@ export default defineSchema({
       v.literal(PaymentMode.OTHERS),
     ),
     proof: v.string(),
-    image: v.optional(v.id("_storage")),
+    files: v.optional(v.array(v.id("_storage"))),
   }),
 
   rooms: defineTable({

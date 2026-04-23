@@ -28,6 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileUpload } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/file-upload";
 
 import {
   ProjectStatusType,
@@ -62,6 +64,8 @@ export function ProjectDetails({
   const [receiptNumber, setReceiptNumber] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentModeType>("cash");
   const [proof, setProof] = useState("");
+  const [proofFiles, setProofFiles] = useState<UploadedFile[]>([]);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
 
   const project = useQuery(
@@ -131,9 +135,8 @@ export function ProjectDetails({
   };
 
   const handleMarkPaid = async () => {
-    const num = parseInt(receiptNumber, 10);
-    if (!receiptNumber || isNaN(num) || num <= 0) {
-      toast.error("Please enter a valid receipt number.");
+    if (!receiptNumber.trim()) {
+      toast.error("Please enter a receipt number.");
       return;
     }
     if (!proof.trim()) {
@@ -144,15 +147,17 @@ export function ProjectDetails({
     try {
       await markProjectPaid({
         projectId,
-        receiptNumber: BigInt(num),
+        receiptString: receiptNumber.trim(),
         paymentMode,
         proof: proof.trim(),
+        proofFiles: proofFiles.map((f) => f.storageId as Id<"_storage">),
       });
       toast.success("Payment recorded. Project moved to claim.");
       setPaymentDialogOpen(false);
       setReceiptNumber("");
       setProof("");
       setPaymentMode("cash");
+      setProofFiles([]);
     } catch {
       toast.error("Failed to record payment.");
     } finally {
@@ -277,15 +282,17 @@ export function ProjectDetails({
   const handleOpenPaymentDialog = () => {
     // Pre-populate from existing receipt when updating
     if (project?.receipt) {
-      setReceiptNumber(project.receipt.receiptNumber?.toString() ?? "");
+      setReceiptNumber(project.receipt.receiptString ?? "");
       setPaymentMode(
         (project.receipt.paymentMode as typeof paymentMode) ?? "cash",
       );
       setProof(project.receipt.proof ?? "");
+      setProofFiles([]);
     } else {
       setReceiptNumber("");
       setPaymentMode("cash");
       setProof("");
+      setProofFiles([]);
     }
     setPaymentDialogOpen(true);
   };
@@ -375,9 +382,8 @@ export function ProjectDetails({
                     <Label htmlFor="receipt-number">Receipt Number</Label>
                     <Input
                       id="receipt-number"
-                      type="number"
-                      min={1}
-                      placeholder="e.g. 10042"
+                      type="text"
+                      placeholder="e.g. OR-10042"
                       value={receiptNumber}
                       onChange={(e) => setReceiptNumber(e.target.value)}
                     />
@@ -415,6 +421,19 @@ export function ProjectDetails({
                       onChange={(e) => setProof(e.target.value)}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Attachments (optional)</Label>
+                    <FileUpload
+                      title="Upload proof images"
+                      variant="compact"
+                      multiple
+                      allowedTypes={["image/*"]}
+                      value={proofFiles}
+                      onFilesChange={setProofFiles}
+                      onUploadingChange={setIsUploadingProof}
+                      autoUpload
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
@@ -426,14 +445,16 @@ export function ProjectDetails({
                   </Button>
                   <Button
                     onClick={handleMarkPaid}
-                    disabled={isPaying}
+                    disabled={isPaying || isUploadingProof}
                     style={{ background: "var(--fab-teal)", color: "#fff" }}
                   >
-                    {isPaying
-                      ? "Saving…"
-                      : project?.receipt
-                        ? "Update Payment"
-                        : "Record Payment"}
+                    {isUploadingProof
+                      ? "Uploading…"
+                      : isPaying
+                        ? "Saving…"
+                        : project?.receipt
+                          ? "Update Payment"
+                          : "Record Payment"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
