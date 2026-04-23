@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload";
+import posthog from "posthog-js";
 
 import {
   ProjectStatusType,
@@ -99,6 +100,11 @@ export function ProjectDetails({
         projectId,
         status: newStatus,
       });
+      posthog.capture("project_status_updated", {
+        project_id: projectId,
+        project_name: project?.name,
+        new_status: newStatus,
+      });
       toast.success(`Project status updated to ${newStatus}!`);
     } catch {
       toast.error(`Failed to update project status`);
@@ -108,6 +114,10 @@ export function ProjectDetails({
   const handleCancelProject = async () => {
     try {
       await cancelOwnProject({ projectId });
+      posthog.capture("project_cancelled", {
+        project_id: projectId,
+        project_name: project?.name,
+      });
       toast.success("Project request cancelled.");
     } catch {
       toast.error("Failed to cancel project request.");
@@ -126,6 +136,10 @@ export function ProjectDetails({
         projectId,
         ...args,
         files: args.files as Id<"_storage">[],
+      });
+      posthog.capture("project_details_updated", {
+        project_id: projectId,
+        project_name: project?.name,
       });
       toast.success("Project details updated.");
     } catch {
@@ -151,6 +165,11 @@ export function ProjectDetails({
         paymentMode,
         proof: proof.trim(),
         proofFiles: proofFiles.map((f) => f.storageId as Id<"_storage">),
+      });
+      posthog.capture("project_payment_recorded", {
+        project_id: projectId,
+        project_name: project?.name,
+        payment_mode: paymentMode,
       });
       toast.success("Payment recorded. Project moved to claim.");
       setPaymentDialogOpen(false);
@@ -272,7 +291,13 @@ export function ProjectDetails({
 
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
-    if (!open) {
+    if (open) {
+      posthog.capture("project_details_opened", {
+        project_id: projectId,
+        project_name: project?.name,
+        project_status: project?.status,
+      });
+    } else {
       setDialogView("details");
       setSelectedMaker("");
       setPaymentDialogOpen(false);
@@ -316,6 +341,11 @@ export function ProjectDetails({
         projectId,
         status: "approved",
         makerId: selectedMaker as Id<"userProfile">,
+      });
+      posthog.capture("project_maker_assigned", {
+        project_id: projectId,
+        project_name: project?.name,
+        maker_id: selectedMaker,
       });
       toast.success("Project moved to fabrication and maker assigned.");
       setDialogView("details");

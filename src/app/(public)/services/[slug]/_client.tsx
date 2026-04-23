@@ -8,6 +8,8 @@ import Link from "next/link";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
 import { BookingDialog } from "@/components/booking/dialog-form";
+import { useEffect } from "react";
+import posthog from "posthog-js";
 
 /**
  * ServiceDetailClient
@@ -22,6 +24,16 @@ export function ServiceDetailClient({
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
   const service = usePreloadedQuery(preloadedService);
+
+  useEffect(() => {
+    if (!service) return;
+    posthog.capture("service_detail_viewed", {
+      service_id: service._id,
+      service_name: service.name,
+      service_type: service.serviceCategory.type,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service?._id]);
 
   const sortedFabricationDays =
     service?.serviceCategory.type === "FABRICATION"

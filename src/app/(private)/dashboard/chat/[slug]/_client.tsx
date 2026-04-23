@@ -7,6 +7,8 @@ import type { Id } from "@convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { ArrowLeftIcon, HashIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import posthog from "posthog-js";
 
 export function ChatRoomClient({
   roomId,
@@ -20,6 +22,14 @@ export function ChatRoomClient({
   const activeThreadId = (searchParams.get("thread") ?? undefined) as
     | Id<"threads">
     | undefined;
+
+  useEffect(() => {
+    posthog.capture("chat_room_viewed", {
+      room_id: roomId,
+      thread_id: activeThreadId,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
 
   return (
     <div className="flex h-full overflow-hidden min-h-0 relative">

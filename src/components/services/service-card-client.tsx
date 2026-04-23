@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
 
 interface ServiceCardProps {
   slug: string;
@@ -33,6 +36,12 @@ export function ServiceCardClient({
     <Link
       href={`/services/${slug}`}
       className="group flex h-full min-w-100 flex-col bg-background border-r border-b border-black"
+      onClick={() =>
+        posthog.capture("service_card_clicked", {
+          service_slug: slug,
+          service_name: title,
+        })
+      }
     >
       <div className="relative h-65 w-full overflow-hidden border-b border-black">
         <span className="absolute right-3 top-3 z-20 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-background text-[10px] leading-none">

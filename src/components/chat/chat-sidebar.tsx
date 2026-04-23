@@ -12,6 +12,7 @@ import type { Id } from "@convex/_generated/dataModel";
 
 import { RoomSettingsDialog } from "./room-settings-dialog";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
 
 interface RoomWithLastMessage {
   _id?: string;
@@ -175,6 +176,15 @@ export function ChatSidebar({
                               href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
                               key={thread._id}
                               className="relative flex items-center gap-2 pl-7 pr-3 py-2 transition-colors duration-150 group"
+                              onClick={() =>
+                                posthog.capture("chat_thread_opened", {
+                                  room_id: room._id,
+                                  room_name: room.name,
+                                  thread_id: thread._id,
+                                  thread_title: thread.title,
+                                  is_archived: false,
+                                })
+                              }
                               style={
                                 isThreadActive
                                   ? {
@@ -282,6 +292,15 @@ export function ChatSidebar({
                                       href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
                                       key={thread._id}
                                       className="relative flex items-center gap-2 pl-11 pr-3 py-2 transition-colors duration-150 group"
+                                      onClick={() =>
+                                        posthog.capture("chat_thread_opened", {
+                                          room_id: room._id,
+                                          room_name: room.name,
+                                          thread_id: thread._id,
+                                          thread_title: thread.title,
+                                          is_archived: true,
+                                        })
+                                      }
                                       style={
                                         isThreadActive
                                           ? {

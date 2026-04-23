@@ -13,6 +13,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { UploadedFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
@@ -184,7 +185,13 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         room: roomId,
         threadId,
       });
-      // toast.success("Message sent");
+      posthog.capture("chat_message_sent", {
+        room_id: roomId,
+        thread_id: threadId,
+        has_attachments: attachments.length > 0,
+        attachment_count: attachments.length,
+        message_length: content.trim().length,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error(

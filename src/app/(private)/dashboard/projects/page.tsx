@@ -27,6 +27,7 @@ import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import posthog from "posthog-js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -176,6 +177,10 @@ export default function ProjectsList() {
   const debouncedSearch = useDebounce(search, 300);
   const isSearching = debouncedSearch.trim() !== "";
 
+  React.useEffect(() => {
+    posthog.capture("project_list_viewed");
+  }, []);
+
   const {
     results: rawResults,
     status: queryStatus,
@@ -244,7 +249,10 @@ export default function ProjectsList() {
         {/* Status */}
         <Select
           value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+          onValueChange={(v) => {
+            setStatusFilter(v as StatusFilter);
+            posthog.capture("project_filter_changed", { filter: "status", value: v });
+          }}
         >
           <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
             <SelectValue placeholder="Status" />

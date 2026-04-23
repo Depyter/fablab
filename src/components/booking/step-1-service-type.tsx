@@ -4,15 +4,30 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
+import posthog from "posthog-js";
 
 export function Step1ServiceType({
   form,
+  serviceName,
+  serviceCategory,
   onNext,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: any;
+  serviceName?: string;
+  serviceCategory?: string;
   onNext: () => void;
 }) {
+  const trackAndNext = (serviceType: string) => {
+    form.setFieldValue("serviceType", serviceType);
+    posthog.capture("booking_service_type_selected", {
+      service_name: serviceName,
+      service_category: serviceCategory,
+      service_type_selected: serviceType,
+    });
+    onNext();
+  };
+
   return (
     <>
       <DialogHeader>
@@ -26,10 +41,7 @@ export function Step1ServiceType({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-8">
         <Card
           className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted/10 hover:border border-primary cursor-pointer"
-          onClick={() => {
-            form.setFieldValue("serviceType", "self-service");
-            onNext();
-          }}
+          onClick={() => trackAndNext("self-service")}
         >
           <h3 className="text-lg font-semibold mb-2">Self-Service</h3>
           <p className="text-sm text-gray-600">
@@ -38,10 +50,7 @@ export function Step1ServiceType({
         </Card>
         <Card
           className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted/10 hover:border border-primary cursor-pointer"
-          onClick={() => {
-            form.setFieldValue("serviceType", "full-service");
-            onNext();
-          }}
+          onClick={() => trackAndNext("full-service")}
         >
           <h3 className="text-lg font-semibold mb-2">Full-Service Request</h3>
           <p className="text-sm text-gray-600">

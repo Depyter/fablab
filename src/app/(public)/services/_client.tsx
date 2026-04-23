@@ -4,6 +4,8 @@ import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCardClient } from "@/components/services/service-card-client";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import posthog from "posthog-js";
 
 /**
  * ServicesListClient
@@ -26,6 +28,14 @@ export function ServicesListClient({
   const workshopServices = services.filter(
     (service) => service.serviceCategory?.type === "WORKSHOP",
   );
+
+  useEffect(() => {
+    posthog.capture("service_list_viewed", {
+      fabrication_count: fabricationServices.length,
+      workshop_count: workshopServices.length,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getGridColsClass = (count: number) => {
     if (count <= 1) return "grid-cols-1 sm:grid-cols-1 lg:grid-cols-1";

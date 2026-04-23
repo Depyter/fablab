@@ -20,6 +20,7 @@ import {
 } from "@convex/constants";
 import { WorkshopSchedule } from "./workshop-time-slot-picker";
 import { type ServicePricing } from "@/lib/project-pricing";
+import posthog from "posthog-js";
 
 interface BookingDialog {
   serviceId: Id<"services">;
@@ -157,6 +158,13 @@ export function BookingDialog({
           },
         });
 
+        posthog.capture("booking_submitted", {
+          service_id: serviceId,
+          service_name: serviceName,
+          service_category: serviceCategory,
+          file_count: value.files.length,
+        });
+
         setIsSuccess(true);
         toast.success("Booking request created successfully!");
         router.push(`/dashboard/chat/${roomId}?thread=${threadId}`);
@@ -272,6 +280,11 @@ export function BookingDialog({
       return;
     }
 
+    posthog.capture("booking_dialog_opened", {
+      service_id: serviceId,
+      service_name: serviceName,
+      service_category: serviceCategory,
+    });
     handleOpenChange(true);
   };
 
@@ -290,6 +303,8 @@ export function BookingDialog({
         {step === 1 && serviceCategory !== "WORKSHOP" && (
           <Step1ServiceType
             form={form}
+            serviceName={serviceName}
+            serviceCategory={serviceCategory}
             onNext={() => {
               if (
                 serviceCategory === "FABRICATION" &&

@@ -18,6 +18,7 @@ import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
 import { PresenceIndicator } from "./presence-indicator";
 import { ChatInterfaceProps, MessageFile } from "./types";
 import Image from "next/image";
+import posthog from "posthog-js";
 
 const AVATAR_COLORS = [
   "var(--fab-magenta)",
@@ -655,6 +656,14 @@ export function ChatInterface({
             onFilesChange={handleFilesChange}
             onUploadError={handleUploadError}
             onUploadingChange={setIsUploading}
+            onUploadComplete={(file) => {
+              posthog.capture("chat_file_attached", {
+                room_id: roomId,
+                thread_id: threadId,
+                file_type: file.fileType,
+                file_size_bytes: file.fileSize,
+              });
+            }}
           />
 
           <Input

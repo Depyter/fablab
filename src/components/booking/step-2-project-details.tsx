@@ -22,6 +22,8 @@ import { FileUpload } from "../file-upload";
 import { DateTimePicker } from "./date-time-picker";
 import { toast } from "sonner";
 import { WorkshopSchedule } from "./workshop-time-slot-picker";
+import posthog from "posthog-js";
+import { type UploadedFile } from "../file-upload/types";
 
 export function Step2ProjectDetails({
   form,
@@ -139,6 +141,12 @@ export function Step2ProjectDetails({
       startDateTs < Date.now(),
     );
     console.log("=====================================");
+
+    posthog.capture("booking_details_completed", {
+      service_name: serviceName,
+      service_category: serviceCategory,
+      file_count: (form.state.values.files as UploadedFile[]).length,
+    });
 
     onNext(e);
   };
@@ -421,6 +429,15 @@ export function Step2ProjectDetails({
                 value={field.state.value as any}
                 onFilesChange={field.handleChange as any}
                 onUploadingChange={onUploadingChange}
+                onUploadComplete={(file: UploadedFile) => {
+                  posthog.capture("booking_file_uploaded", {
+                    service_name: serviceName,
+                    service_category: serviceCategory,
+                    file_name: file.fileName,
+                    file_type: file.fileType,
+                    file_size_bytes: file.fileSize,
+                  });
+                }}
                 accept="*/*"
                 allowedTypes={expandedFileTypes as any}
               />
