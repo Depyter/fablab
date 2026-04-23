@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { setupProject, setupUsers } from "./helper";
-import { api, internal } from "../_generated/api";
+import { api, internal } from "@/convex/_generated/api";
 
 describe("Project and Chat functionality", () => {
   test("Initialization", async () => {

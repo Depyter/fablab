@@ -1,5 +1,5 @@
 import { describe, test } from "vitest";
-import { api } from "../_generated/api";
+import { api } from "@/convex/_generated/api";
 import { expect } from "vitest";
 import { setupUsers } from "./helper";
 

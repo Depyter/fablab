@@ -57,7 +57,7 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Receipt Number
+              Receipt
             </p>
             <p
               className="wrap-break-word text-sm font-medium"
@@ -114,5 +114,3 @@ export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
     </DetailCard>
   );
 }
-
-

@@ -38,6 +38,7 @@ import {
   UserRoleType,
   ProjectMaterialType,
   ProjectServiceTypeType,
+  FILE_CATEGORIES,
 } from "@convex/constants";
 
 interface ProjectDetailsProps {
@@ -454,10 +455,14 @@ export function ProjectDetails({
                   <div className="space-y-1.5">
                     <Label>Attachments (optional)</Label>
                     <FileUpload
-                      title="Upload proof images"
+                      title="Upload proof (images or PDF)"
                       variant="compact"
                       multiple
-                      allowedTypes={["image/*"]}
+                      accept="image/*,.pdf"
+                      allowedTypes={[
+                        ...FILE_CATEGORIES.Images,
+                        "application/pdf",
+                      ]}
                       value={proofFiles}
                       onFilesChange={setProofFiles}
                       onUploadingChange={setIsUploadingProof}

@@ -29,7 +29,7 @@ import type * as resource_mutate from "../resource/mutate.js";
 import type * as resource_query from "../resource/query.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
-import type * as test_helper from "../test/helper.js";
+import type * as test_helper from "../../test/helper.js";
 import type * as users from "../users.js";
 
 import type {
