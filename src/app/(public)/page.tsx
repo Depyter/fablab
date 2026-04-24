@@ -5,97 +5,32 @@ import Link from "next/link";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { useEffect } from "react";
+import { Leaf, Wrench, Boxes, DoorOpenIcon } from "lucide-react";
 
 const fablabGoals = [
   {
     title: "Open Access Making",
     description:
       "A practical space to explore fabrication tools with guidance.",
-    shape: (
-      <div className="relative h-28 w-28">
-        <div
-          className="absolute left-8 bottom h-10 w-10 rotate-45 rounded-sm"
-          style={{ backgroundColor: "var(--chart-6)" }}
-        />
-        <div
-          className="absolute left-8 top-16 h-10 w-10 rotate-45 rounded-sm"
-          style={{ backgroundColor: "var(--chart-6)" }}
-        />
-        <div
-          className="absolute  top-8 h-10 w-10 rotate-45 rounded-sm"
-          style={{ backgroundColor: "var(--chart-3)" }}
-        />
-        <div
-          className="absolute left-16 top-8 h-10 w-10 rotate-45 rounded-sm"
-          style={{ backgroundColor: "var(--primary)" }}
-        />
-      </div>
-    ),
+    icon: DoorOpenIcon,
   },
   {
     title: "Skill Building",
     description:
       "Encourage hands-on learning through workshops, peer mentoring, and shared experimentation.",
-    shape: (
-      <div className="relative h-28 w-28">
-        <div
-          className="absolute left-1 top-8 h-14 w-14 rounded-l-full rounded-r-none"
-          style={{ backgroundColor: "var(--primary)" }}
-        />
-        <div
-          className="absolute left-8 top-2 h-14 w-14 rounded-r-full rounded-l-none"
-          style={{ backgroundColor: "var(--chart-1)" }}
-        />
-      </div>
-    ),
+    icon: Wrench,
   },
   {
     title: "Prototype Support",
     description:
       "Help turn class ideas and research concepts into usable models, parts, and test pieces.",
-    shape: (
-      <div className="relative h-28 w-28">
-        <div className="absolute left-7 top-2 h-14 w-14 rotate-45 rounded-sm bg-chart-3" />
-        <div className="absolute left-7 top-10 h-14 w-14 rounded-full bg-chart-1" />
-        <div className="absolute left-9.5 top-6.5">
-          <svg viewBox="0 0 100 100" width={35} height={35} aria-hidden="true">
-            <path
-              d="M50 0
-                            C56 22 78 44 100 50
-                            C78 56 56 78 50 100
-                            C44 78 22 56 0 50
-                            C22 44 44 22 50 0Z"
-              fill="var(--chart-2)"
-            />
-          </svg>
-        </div>
-      </div>
-    ),
+    icon: Boxes,
   },
   {
     title: "Sustainable Innovation",
     description:
       "Promote responsible making, repair thinking, and solutions that serve the campus and community.",
-    shape: (
-      <div className="relative h-28 w-28">
-        <div
-          className="absolute left-6 top-0 h-14 w-14 rounded-tl-full rounded-tr-none rounded-br-none rounded-bl-none"
-          style={{ backgroundColor: "var(--chart-3)" }}
-        />
-        <div
-          className="absolute left-6 top-14 h-14 w-14 rounded-bl-full rounded-br-none rounded-tr-none rounded-tl-none"
-          style={{ backgroundColor: "var(--chart-3)" }}
-        />
-        <div
-          className="absolute left-0 top-6 h-14 w-14 rounded-sm"
-          style={{ backgroundColor: "var(--chart-1)" }}
-        />
-        <div
-          className="absolute left-14 top-6 h-14 w-14 rounded-sm"
-          style={{ backgroundColor: "var(--chart-5)" }}
-        />
-      </div>
-    ),
+    icon: Leaf,
   },
 ];
 
@@ -105,12 +40,13 @@ export default function HomePage() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add("animate-in");
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
           }
         });
       },
       {
-        threshold: 0.1,
+        threshold: 0.12,
         rootMargin: "50px",
       },
     );
@@ -124,93 +60,178 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="bg-background font-sans">
-      <section className="relative h-[calc(100svh-8vh)] shrink-2 overflow-hidden bg-primary-muted">
-        <Image
-          src="/fablab_mural.png"
-          alt="Hero Image"
-          fill
-          priority
-          className="object-cover object-center"
-        />
-        <div className="absolute inset-0 flex items-end bg-primary/50">
-          <div className="mx-auto w-full max-w-7xl px-4 pb-15 sm:px-6 lg:px-10">
-            <h1
-              className="text-3xl font-bold text-background sm:text-4xl md:text-5xl"
-              data-animate="fade-up"
+    <main className="relative overflow-hidden bg-background">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-size-[32px_32px] opacity-35" />
+
+      <section className="relative mx-auto w-full max-w-7xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 lg:px-10 lg:pt-14">
+
+        {/* <div className="grid items-stretch gap-6 lg:grid-cols-12"> */}
+          <div className="lg:col-span-7">
+            <Card
+              className="landing-reveal relative overflow-hidden rounded-none border-2 border-foreground bg-card p-6 shadow-[8px_8px_0_var(--foreground)] sm:p-8"
+              data-animate
             >
-              Make Almost Anything.
-            </h1>
-            <p
-              className="mt-2 max-w-2xl text-sm text-background/90 sm:text-base"
-              data-animate="fade-up"
+              
+            
+              <h1 className="max-w-2xl text-4xl leading-[0.95] font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+                Make
+                <br />
+                Almost
+                <br />
+                Anything.
+              </h1>
+
+              <p className="mt-5 max-w-xl text-sm leading-relaxed font-medium text-muted-foreground sm:text-base">
+                A one-stop fabrication lab for bold experiments, rapid
+                prototypes, and practical making with the UP Cebu community.
+              </p>
+
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href="/login">
+                  <Button
+                    size="lg"
+                    className="rounded-none border-2 border-foreground bg-primary px-6 font-black text-primary-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
+                  >
+                    Start A Project
+                  </Button>
+                </Link>
+                <Link href="/services">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-none border-2 border-foreground bg-secondary px-6 font-black text-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
+                  >
+                    Explore Services
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          </div>
+
+          {/* <div className="lg:col-span-5">
+            <Card
+              className="landing-reveal relative h-full overflow-hidden rounded-none border-2 border-foreground bg-secondary p-3 shadow-[8px_8px_0_var(--foreground)]"
+              data-animate
             >
-              Your One-Stop Fabrication Lab
-            </p>
+              <div className="relative h-80 overflow-hidden border-2 border-foreground bg-primary-muted sm:h-95 lg:h-full lg:min-h-115">
+                <Image
+                  src="/fablab_mural.png"
+                  alt="UP Cebu Fablab mural"
+                  fill
+                  priority
+                  className="object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-primary/25" />
+                <div className="absolute left-3 top-3 border-2 border-foreground bg-light-yellow px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-foreground sm:text-xs">
+                  Fabricate • Iterate • Share
+                </div>
+              </div>
+            </Card>
+          </div> */}
+        </div>
+      </section>
+
+      
+
+      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
+        <div
+          className="landing-reveal relative overflow-x-hidden bg-secondary/30"
+          data-animate
+        >
+          <div className="pointer-events-none absolute top-12 bottom-0 left-0 z-0 hidden w-0.5 bg-foreground xl:block" />
+          <div className="pointer-events-none absolute top-12 bottom-0 right-0 z-0 hidden w-0.5 bg-foreground xl:block" />
+          <div className="pointer-events-none absolute left-0 right-0 top-12 z-0 hidden h-0.5 bg-foreground xl:block" />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-0.5 bg-foreground" />
+          <div className="relative z-10 grid xl:grid-cols-4">
+            {fablabGoals.map((goal, index) => {
+              const Icon = goal.icon;
+
+              return (
+                <article
+                  key={goal.title}
+                  className="relative px-7 pt-22 pb-10"
+                >
+                  {index < fablabGoals.length - 1 ? (
+                    <div className="pointer-events-none absolute top-12 right-0 bottom-0 hidden w-0.5 bg-foreground xl:block" />
+                  ) : null}
+
+                  <div className="absolute left-7 top-12 z-20 flex h-18 w-18 -translate-y-1/2 items-center justify-center rounded-full border-2 border-foreground bg-background">
+                    <Icon className="h-8 w-8 text-foreground" strokeWidth={2.25} />
+                  </div>
+
+                  <h3 className="text-2xl leading-none font-black uppercase tracking-[0.04em] text-foreground md:text-3xl">
+                    {goal.title}
+                  </h3>
+                  <p className="mt-8 max-w-[32ch] text-base leading-[1.55] text-foreground/85 md:text-lg">
+                    {goal.description}
+                  </p>
+
+                  
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-10">
-        <div className="grid gap-12 sm:grid-cols-2 xl:grid-cols-4">
-          {fablabGoals.map((goal, index) => (
-            <div
-              key={goal.title}
-              className="flex flex-col items-center text-center"
-              data-animate="fade-up"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="mb-6 flex h-28 w-28 items-center justify-center">
-                {goal.shape}
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">
-                {goal.title}
-              </h3>
-              <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
-                {goal.description}
-              </p>
-            </div>
-          ))}
-        </div>
+    
 
-        <div className="mt-14 text-center" data-animate="fade-up">
-          <Link href="/services">
-            <Button size="lg" className="rounded-lg">
-              Explore Services
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      <section
-        className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-10"
-        data-animate="fade-up"
-      >
-        <Card className="rounded-lg bg-linear-to-r from-primary/10 to-accent/10 p-8 shadow">
-          <h3 className="mb-3 text-2xl font-bold">Ready to Create?</h3>
-          <p className="mb-6 max-w-2xl text-muted-foreground">
-            Join us at FabLab UP Cebu and bring your ideas to life. With our
-            state-of-the-art equipment and supportive community, there&apos;s
-            almost nothing you can&apos;t make.
+      <section className="mx-auto w-full max-w-7xl px-4 pt-8 pb-14 sm:px-6 lg:px-10">
+        <Card
+          className="landing-reveal rounded-none border-2 border-foreground bg-primary p-7 text-primary-foreground shadow-[10px_10px_0_var(--foreground)] sm:p-10"
+          data-animate
+        >
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-foreground/85">
+            Ready To Make?
           </p>
-          <div className="flex flex-wrap gap-3">
+          <h2 className="mt-3 max-w-3xl text-3xl leading-[1.05] font-black sm:text-4xl">
+            Join FabLab UP Cebu and turn your concept into a real prototype.
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm text-primary-foreground/90 sm:text-base">
+            Access practical equipment, mentorship, and a collaborative space
+            built for students, researchers, and curious builders.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/login">
-              <Button className="rounded-lg">Get Started</Button>
+              <Button
+                size="lg"
+                className="rounded-none border-2 border-foreground bg-light-yellow px-6 font-black text-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
+              >
+                Get Started
+              </Button>
             </Link>
             <Link href="/services">
-              <Button variant="outline" className="rounded-lg">
-                Learn More
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-none border-2 border-foreground bg-background px-6 font-black text-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
+              >
+                See Services
               </Button>
             </Link>
           </div>
         </Card>
       </section>
 
-      <footer className="border-t border-sidebar-border/10 bg-background py-16 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/30">
-          Built for Makers at Fablab
+      <footer className="border-t-2 border-foreground bg-secondary py-10 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+          Built For Makers At Fablab
         </p>
       </footer>
+
+      <style jsx>{`
+        .landing-reveal {
+          opacity: 0;
+          transform: translateY(18px);
+          transition: transform 0.5s cubic-bezier(0.2, 0.75, 0.2, 1),
+            opacity 0.5s ease;
+        }
+
+        .landing-reveal.is-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      `}</style>
     </main>
   );
 }
