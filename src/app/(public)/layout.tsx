@@ -44,14 +44,14 @@ export default async function PublicLayout({
             {isAuthenticated ? (
               <Link
                 href="/dashboard"
-                className="border-4 border-black bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
+                className=" bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
               >
                 Dashboard
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="border-4 border-black bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
+                className=" bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
               >
                 Login
               </Link>
