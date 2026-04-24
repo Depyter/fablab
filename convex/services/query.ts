@@ -75,3 +75,27 @@ export const getService = publicQuery({
     return { ...service, imageUrls, sampleUrls, materialDetails };
   },
 });
+
+export const getBookedTimeSlots = publicQuery({
+  args: {
+    serviceId: v.id("services"),
+    date: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const usages = await ctx.db
+      .query("resourceUsage")
+      .withIndex("by_service", (q) => q.eq("service", args.serviceId))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("startTime"), args.date),
+          q.lt(q.field("startTime"), args.date + 24 * 60 * 60 * 1000),
+        ),
+      )
+      .collect();
+
+    return usages.map((u) => ({
+      startTime: u.startTime,
+      endTime: u.endTime,
+    }));
+  },
+});

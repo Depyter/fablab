@@ -231,12 +231,12 @@ export function getOverhangRatio(
 
 /**
  * Computes the complexity tier based on surface area, volume, overhang ratio, and triangle count.
- * Tier 1: Simple, 2: Medium, 3: Complex.
+ * Tier 1: Simple, 2: Light, 3: Balanced, 4: Detailed, 5: Advanced.
  * @param surfaceAreaMm2 Surface area in mm².
  * @param volumeMm3 Volume in mm³.
  * @param overhangRatio Overhang ratio (0-1).
  * @param triangleCount Number of triangles.
- * @returns Complexity tier (1-3).
+ * @returns Complexity tier (1-5).
  */
 export function getComplexityTier(
   surfaceAreaMm2: number,
@@ -260,16 +260,18 @@ export function getComplexityTier(
   // Weighted combination — overhangs matter most for print cost
   const score = svScore * 0.3 + overhangScore * 0.5 + densityScore * 0.2;
 
-  if (score < 0.33) return 1; // Simple
-  if (score < 0.66) return 2; // Moderate
-  return 3; // Complex
+  if (score < 0.2) return 1;
+  if (score < 0.4) return 2;
+  if (score < 0.6) return 3;
+  if (score < 0.8) return 4;
+  return 5;
 }
 /**
  * Computes the price breakdown split into machine time and human labor.
  * Material costs are excluded — charge those separately at point of sale.
  * @param printTimeHr Print time in hours.
  * @param supportRequired Whether the model requires support structures.
- * @param complexityTier Complexity tier (1–3).
+ * @param complexityTier Complexity tier (1–5).
  * @param machineCostPerHr Cost per hour to run the machine (electricity/wear).
  * @param laborCostPerHr Cost per hour of human labor.
  * @returns Total price in ₱.
@@ -290,7 +292,7 @@ export function getPriceBreakdown(
 
   // Add post-processing time for support removal — complex prints take longer
   if (supportRequired) {
-    // Tier 1: +5 min, Tier 2: +10 min, Tier 3: +15 min
+    // Tier 1: +5 min ... Tier 5: +25 min
     laborTimeHr += (5 * complexityTier) / 60;
   }
 

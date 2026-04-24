@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown, CheckCircle2, Circle, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, XCircle } from "lucide-react";
 
 export type ProjectTimelineStep = {
   title: string;
@@ -30,17 +29,20 @@ function StepDot({
   return (
     <div
       className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-background shadow-sm sm:h-10 sm:w-10",
-        completed && !rejected && "border-chart-6 bg-secondary/10 text-chart-6",
-        rejected && "border-red-500 bg-red-50 text-red-500",
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-background shadow-sm sm:h-10 sm:w-10",
+        completed &&
+          !rejected &&
+          "border-[var(--fab-timeline-complete)] bg-[var(--fab-timeline-complete-soft)] text-[var(--fab-timeline-complete)]",
+        rejected &&
+          "border-[var(--fab-timeline-rejected)] bg-[var(--fab-timeline-rejected-soft)] text-[var(--fab-timeline-rejected)]",
         active &&
           !completed &&
           !rejected &&
-          "border-primary bg-primary-muted text-primary",
+          "border-[var(--fab-timeline-active)] bg-[var(--fab-timeline-active-soft)] text-[var(--fab-timeline-active)]",
         !active &&
           !completed &&
           !rejected &&
-          "border-muted-foreground/20 bg-muted text-muted-foreground",
+          "border-[var(--fab-border-md)] bg-[var(--fab-bg-sidebar)] text-[var(--fab-text-dim)]",
       )}
     >
       {rejected ? (
@@ -54,121 +56,106 @@ function StepDot({
   );
 }
 
-export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
+function connectorCn(
+  nextCompleted?: boolean,
+  nextRejected?: boolean,
+  nextActive?: boolean,
+) {
+  if (nextRejected) return "bg-[var(--fab-timeline-rejected)]/50";
+  if (nextCompleted) return "bg-[var(--fab-timeline-complete)]/50";
+  if (nextActive) return "bg-[var(--fab-timeline-active)]/50";
+  return "bg-[var(--fab-border-md)]";
+}
 
+export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="md:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileOpen((prev) => !prev)}
-          className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-left"
-        >
-          <div>
-            <p className="text-sm font-semibold">Project Timeline</p>
-          </div>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform",
-              mobileOpen && "rotate-180",
-            )}
-          />
-        </button>
-
-        {mobileOpen && (
-          <div className="mt-3 rounded-xl border bg-background p-3">
-            <div className="space-y-0">
-              {steps.map((step, index) => {
-                const isLast = index === steps.length - 1;
-                return (
-                  <div key={step.title} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <StepDot
-                        active={step.active}
-                        completed={step.completed}
-                        rejected={step.rejected}
-                      />
-                      {!isLast && (
-                        <div className="my-2 h-full w-px flex-1 bg-muted-foreground/20" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1 pb-4">
-                      <h4 className="text-sm font-semibold leading-tight wrap-break-word">
-                        {step.title}
-                      </h4>
-                      <p
-                        className={cn(
-                          "text-xs",
-                          step.completed && "text-chart-6",
-                          step.active && !step.completed && "text-primary",
-                          !step.active &&
-                            !step.completed &&
-                            "text-muted-foreground",
-                        )}
-                      >
-                        {step.statusLabel}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        By: {step.byLabel}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+      {/* ── Mobile: vertical ─────────────────────────────────────── */}
+      <div className="flex flex-col md:hidden">
+        {steps.map((step, index) => {
+          const isLast = index === steps.length - 1;
+          return (
+            <div key={step.title} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <StepDot
+                  active={step.active}
+                  completed={step.completed}
+                  rejected={step.rejected}
+                />
+                {!isLast && (
+                  <div
+                    className={cn(
+                      "w-px min-h-8 flex-1",
+                      connectorCn(
+                        steps[index + 1].completed,
+                        steps[index + 1].rejected,
+                        steps[index + 1].active,
+                      ),
+                    )}
+                  />
+                )}
+              </div>
+              <div className={cn("min-w-0 flex-1", !isLast && "pb-6")}>
+                <h4 className="flex h-9 items-center text-sm font-semibold leading-tight text-[var(--fab-text-primary)]">
+                  {step.title}
+                </h4>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })}
       </div>
 
+      {/* ── Desktop: horizontal ──────────────────────────────────── */}
       <div className="hidden md:block overflow-x-auto">
-        <div className="flex min-w-180 items-start gap-3 pb-2 lg:min-w-0 lg:gap-4">
+        <div className="flex min-w-180 pb-2 lg:min-w-0">
           {steps.map((step, index) => {
+            const isFirst = index === 0;
             const isLast = index === steps.length - 1;
+            const next = steps[index + 1];
 
             return (
               <div
                 key={step.title}
-                className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4"
+                className="flex min-w-0 flex-1 flex-col items-center"
               >
-                <div className="flex w-36 shrink-0 flex-col items-center text-center sm:w-44 lg:w-full lg:max-w-44">
+                {/* Connector halves flanking the dot */}
+                <div className="flex w-full items-center">
+                  <div
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full",
+                      isFirst
+                        ? "invisible"
+                        : connectorCn(
+                            step.completed,
+                            step.rejected,
+                            step.active,
+                          ),
+                    )}
+                  />
                   <StepDot
                     active={step.active}
                     completed={step.completed}
                     rejected={step.rejected}
                   />
-
-                  <div className="mt-3 space-y-1">
-                    <h4 className="text-[11px] font-semibold leading-tight sm:text-sm wrap-break-word">
-                      {step.title}
-                    </h4>
-                    <p
-                      className={cn(
-                        "text-[10px] sm:text-xs",
-                        step.completed && "text-chart-6",
-                        step.active && !step.completed && "text-primary",
-                        !step.active &&
-                          !step.completed &&
-                          "text-muted-foreground",
-                      )}
-                    >
-                      {step.statusLabel}
-                    </p>
-                  </div>
+                  <div
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full",
+                      isLast
+                        ? "invisible"
+                        : connectorCn(
+                            next.completed,
+                            next.rejected,
+                            next.active,
+                          ),
+                    )}
+                  />
                 </div>
 
-                {!isLast && (
-                  <div className="mt-4 min-w-12 flex-1 sm:mt-5 sm:min-w-20">
-                    <div
-                      className={cn(
-                        "h-0.5 rounded-full bg-muted-foreground/20",
-                        step.completed && "bg-chart-6/70",
-                        step.active && !step.completed && "bg-primary/70",
-                      )}
-                    />
-                  </div>
-                )}
+                <div className="mt-3 px-1 text-center">
+                  <h4 className="text-[11px] font-semibold leading-tight text-[var(--fab-text-primary)] sm:text-sm break-words">
+                    {step.title}
+                  </h4>
+                </div>
               </div>
             );
           })}

@@ -64,7 +64,7 @@ export function PresenceIndicator({
   const overflow = online.length - 3;
 
   return (
-    <div className="flex items-center gap-2.5 shrink-0">
+    <div className="flex items-center gap-3 shrink-0">
       {/* Stacked avatars */}
       <div className="flex items-center">
         {visible.map((presence, i) => {
@@ -74,8 +74,8 @@ export function PresenceIndicator({
               key={presence.userId}
               title={presence.userId}
               className={cn(
-                "h-10 w-10 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden shrink-0",
-                i > 0 && "-ml-3",
+                "h-8 w-8 rounded-full border-2 border-background bg-sidebar flex items-center justify-center overflow-hidden shrink-0 shadow-sm",
+                i > 0 && "-ml-2.5",
               )}
             >
               {picUrl ? (
@@ -85,7 +85,13 @@ export function PresenceIndicator({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-[11px] font-bold text-muted-foreground leading-none select-none">
+                <span
+                  className="text-[10px] font-black leading-none select-none"
+                  style={{
+                    color: "var(--fab-text-muted)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
                   {getInitials(presence.userId)}
                 </span>
               )}
@@ -93,21 +99,39 @@ export function PresenceIndicator({
           );
         })}
         {overflow > 0 && (
-          <div className="h-10 w-10 rounded-full border-2 border-background bg-muted flex items-center justify-center -ml-3 shrink-0">
-            <span className="text-[11px] font-bold text-muted-foreground leading-none">
+          <div className="h-8 w-8 rounded-full border-2 border-background bg-sidebar flex items-center justify-center -ml-2.5 shrink-0 shadow-sm">
+            <span
+              className="text-[10px] font-black leading-none"
+              style={{
+                color: "var(--fab-text-muted)",
+                fontFamily: "var(--font-body)",
+              }}
+            >
               +{overflow}
             </span>
           </div>
         )}
       </div>
 
-      {/* Online label */}
-      <div className="flex items-center gap-1.5">
+      {/* Online label — subtle and on-brand */}
+      <div className="hidden sm:flex items-center gap-2 ml-1">
         <span className="relative flex h-2 w-2 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-60" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          <span
+            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+            style={{ background: "var(--fab-teal)" }}
+          />
+          <span
+            className="relative inline-flex rounded-full h-2 w-2"
+            style={{ background: "var(--fab-teal)" }}
+          />
         </span>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+        <span
+          className="text-xs font-black uppercase tracking-[0.12em] opacity-50"
+          style={{
+            color: "var(--fab-text-muted)",
+            fontFamily: "var(--font-body)",
+          }}
+        >
           {online.length} online
         </span>
       </div>

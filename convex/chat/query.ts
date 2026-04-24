@@ -33,12 +33,14 @@ export const getRoomMessages = authQuery({
       page: await Promise.all(
         messages.page.map(async (message) => {
           let senderName = message.sender;
+          let senderRole: string | null = null;
           let senderProfilePicUrl: string | null = null;
           const senderId = ctx.db.normalizeId("userProfile", message.sender);
           if (senderId) {
             const profile = await ctx.db.get(senderId);
             if (profile) {
               senderName = profile.name;
+              senderRole = profile.role;
               if (profile.profilePic) {
                 senderProfilePicUrl = await ctx.storage.getUrl(
                   profile.profilePic,
@@ -51,6 +53,7 @@ export const getRoomMessages = authQuery({
             return {
               ...message,
               sender: senderName,
+              senderRole,
               senderProfilePicUrl,
               files: [],
               fileUrl: null,
@@ -78,6 +81,7 @@ export const getRoomMessages = authQuery({
           return {
             ...message,
             sender: senderName,
+            senderRole,
             senderProfilePicUrl,
             files: filesData,
             // Legacy single-file fields kept for backward compatibility

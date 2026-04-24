@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useConvex } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
 import { resolveFileType } from "./utils";
@@ -79,6 +79,7 @@ export function useFileUpload({
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const trackUpload = useMutation(api.files.trackUpload);
+  const convex = useConvex();
 
   // Stable refs so effects never need callbacks in their dependency arrays.
   const onUploadingChangeRef = useRef(onUploadingChange);
@@ -166,13 +167,23 @@ export function useFileUpload({
           upload: storageId,
         });
 
+        // Fetch the permanent server-hosted URL, then revoke the blob URL.
+        const permanentUrl = await convex.query(api.files.getUrl, {
+          storageId,
+        });
+        const blobUrl = previewUrlMapRef.current.get(file);
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl);
+          previewUrlMapRef.current.delete(file);
+        }
+
         const uploadedFile: UploadedFile = {
           storageId,
           fileName: file.name,
           fileType: mimeType,
           fileSize: file.size,
           uploadedAt: new Date(),
-          url: previewUrlMapRef.current.get(file),
+          url: permanentUrl ?? undefined,
         };
 
         setUploadingFiles((prev) =>
@@ -211,6 +222,7 @@ export function useFileUpload({
     [
       generateUploadUrl,
       trackUpload,
+      convex,
       maxFileSizeMB,
       allowedTypes,
       onAddFile,
@@ -228,7 +240,10 @@ export function useFileUpload({
       const totalFiles =
         uploadingFiles.length + uploadedFiles.length + fileArray.length;
       if (totalFiles > maxFiles) {
-        alert(`You can only upload up to ${maxFiles} files at a time`);
+        onUploadError?.(
+          new Error(`You can only upload up to ${maxFiles} files at a time`),
+          fileArray[0],
+        );
         return;
       }
 

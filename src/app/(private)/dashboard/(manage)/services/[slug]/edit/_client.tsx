@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { ServiceForm } from "@/components/services/forms/service-form";
 import { useRouter } from "next/navigation";
-import { useMutation, usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { useMutation, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { AddServiceFormValues } from "@/types/add-service";
+import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 
 export function EditServiceClient({
@@ -15,7 +18,7 @@ export function EditServiceClient({
 }: {
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
-  const service = usePreloadedQuery(preloadedService);
+  const service = usePreloadedAuthQuery(preloadedService);
   const router = useRouter();
   const updateService = useMutation(api.services.mutate.updateService);
   const deleteService = useMutation(api.services.mutate.deleteService);
@@ -29,12 +32,53 @@ export function EditServiceClient({
     );
   }
 
+  const initialImages: UploadedFile[] = (service.images || []).map(
+    (id, index) => ({
+      storageId: id,
+      fileName: `Thumbnail ${index + 1}`,
+      fileType: "image/jpeg",
+      fileSize: 0,
+      uploadedAt: new Date(),
+      url: service.imageUrls?.[index] ?? undefined,
+    }),
+  );
+
+  const initialSamples: UploadedFile[] = (service.samples || []).map(
+    (id, index) => ({
+      storageId: id,
+      fileName: `Sample ${index + 1}`,
+      fileType: "image/jpeg",
+      fileSize: 0,
+      uploadedAt: new Date(),
+      url: service.sampleUrls?.[index] ?? undefined,
+    }),
+  );
+
   const initialValues: AddServiceFormValues = {
     name: service.name,
     description: service.description,
     serviceCategory: service.serviceCategory.type as "WORKSHOP" | "FABRICATION",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing: service.pricing as any,
+    pricing:
+      service.serviceCategory.type === "WORKSHOP"
+        ? {
+            type: "FIXED" as const,
+            amount: service.serviceCategory.amount,
+            variants: (service.serviceCategory.variants ?? []) as Array<{
+              name: string;
+              amount: number;
+            }>,
+          }
+        : {
+            type: "FABRICATION" as const,
+            setupFee: service.serviceCategory.setupFee,
+            unitName: service.serviceCategory.unitName,
+            timeRate: service.serviceCategory.timeRate,
+            variants: (service.serviceCategory.variants ?? []) as Array<{
+              name: string;
+              setupFee: number;
+              timeRate: number;
+            }>,
+          },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: service.status as any,
     images: service.images as string[],
@@ -53,76 +97,15 @@ export function EditServiceClient({
       service.serviceCategory.type === "FABRICATION"
         ? (service.serviceCategory.availableDays ?? [])
         : [],
-    date:
+    schedules:
       service.serviceCategory.type === "WORKSHOP"
-        ? service.serviceCategory.date
-        : undefined,
-    timeSlots:
-      service.serviceCategory.type === "WORKSHOP"
-        ? service.serviceCategory.timeSlots
+        ? service.serviceCategory.schedules
         : [],
   };
 
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
-      const getVal = (key: string) => {
-        const entry = Object.entries(value.pricing).find(([k]) => k === key);
-        return entry && entry[1] !== undefined && entry[1] !== ""
-          ? Number(entry[1])
-          : undefined;
-      };
-
-      const upAmount = getVal("upAmount");
-      const upBaseFee = getVal("upBaseFee");
-      const upRatePerUnit = getVal("upRatePerUnit");
-      const upTimeRate = getVal("upTimeRate");
-
-      const pricing =
-        value.pricing.type === "FIXED"
-          ? {
-              type: "FIXED" as const,
-              amount: value.pricing.amount,
-              variants:
-                upAmount !== undefined
-                  ? [{ name: "UP", amount: upAmount }]
-                  : undefined,
-            }
-          : value.pricing.type === "PER_UNIT"
-            ? {
-                type: "PER_UNIT" as const,
-                baseFee: value.pricing.baseFee,
-                unitName: value.pricing.unitName,
-                ratePerUnit: value.pricing.ratePerUnit,
-                variants:
-                  upBaseFee !== undefined || upRatePerUnit !== undefined
-                    ? [
-                        {
-                          name: "UP",
-                          baseFee: upBaseFee ?? value.pricing.baseFee,
-                          ratePerUnit:
-                            upRatePerUnit ?? value.pricing.ratePerUnit,
-                        },
-                      ]
-                    : undefined,
-              }
-            : {
-                type: "COMPOSITE" as const,
-                baseFee: value.pricing.baseFee,
-                unitName: value.pricing.unitName,
-                timeRate: value.pricing.timeRate,
-                variants:
-                  upBaseFee !== undefined || upTimeRate !== undefined
-                    ? [
-                        {
-                          name: "UP",
-                          baseFee: upBaseFee ?? value.pricing.baseFee,
-                          timeRate: upTimeRate ?? value.pricing.timeRate,
-                        },
-                      ]
-                    : undefined,
-              };
-
       await updateService({
         service: service._id as Id<"services">,
         name: value.name,
@@ -131,17 +114,37 @@ export function EditServiceClient({
           value.serviceCategory === "WORKSHOP"
             ? {
                 type: "WORKSHOP",
-                date: value.date as number,
-                timeSlots: value.timeSlots ?? [],
+                schedules: value.schedules ?? [],
+                amount:
+                  value.pricing.type === "FIXED" ? value.pricing.amount : 0,
+                variants:
+                  value.pricing.type === "FIXED" &&
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
+                    : undefined,
               }
             : {
                 type: "FABRICATION",
                 availableDays: value.availableDays,
                 materials: value.materials as Id<"materials">[],
+                setupFee:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.setupFee
+                    : 0,
+                unitName:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.unitName
+                    : ("hour" as const),
+                timeRate:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.timeRate
+                    : 0,
+                variants:
+                  value.pricing.type === "FABRICATION" &&
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
+                    : undefined,
               },
-        //TODO FIX AS ANY
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pricing: pricing as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         status: value.status as any,
         requirements: value.requirements.filter((r) => r.trim() !== ""),
@@ -152,12 +155,15 @@ export function EditServiceClient({
       toast.success("Service updated successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Failed to update service. Please try again.",
-      );
-      toast.error("Failed to update service. Please try again.");
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update service. Please try again.";
+      setSubmitError(message);
+      toast.error(message);
+      throw error;
     }
   };
 
@@ -184,6 +190,8 @@ export function EditServiceClient({
       <ServiceForm
         title={`Edit ${service.name}`}
         initialValues={initialValues}
+        initialImages={initialImages}
+        initialSamples={initialSamples}
         onSubmit={handleSubmit}
         onDiscard={() => {
           router.push("/dashboard/services");

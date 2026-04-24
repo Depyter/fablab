@@ -1,20 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import {
-  ChevronLeft,
-  HelpCircle,
-  PhilippinePeso,
-  CirclePercent,
-} from "lucide-react";
+import { ChevronLeft, CirclePercent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { BookingDialog } from "@/components/booking/dialog-form";
+import { useEffect } from "react";
+import posthog from "posthog-js";
 
 /**
  * ServiceDetailClient
@@ -29,15 +24,52 @@ export function ServiceDetailClient({
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
   const service = usePreloadedQuery(preloadedService);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    if (!service) return;
+    posthog.capture("service_detail_viewed", {
+      service_id: service._id,
+      service_name: service.name,
+      service_type: service.serviceCategory.type,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service?._id]);
+
+  const sortedFabricationDays =
+    service?.serviceCategory.type === "FABRICATION"
+      ? [...(service.serviceCategory.availableDays ?? [])].sort((a, b) => a - b)
+      : [];
+
+  const getFabricationDays = () => {
+    return sortedFabricationDays.map((day) => {
+      if (day === 1) return "Monday";
+      if (day === 2) return "Tuesday";
+      if (day === 3) return "Wednesday";
+      if (day === 4) return "Thursday";
+      if (day === 5) return "Friday";
+      if (day === 6) return "Saturday";
+      if (day === 0) return "Sunday";
+      return "Unknown";
+    });
+  };
+
+  const getBasePrice = () => {
+    if (service === null) return 0;
+    if (service.serviceCategory.type === "WORKSHOP")
+      return service.serviceCategory.amount;
+    return service.serviceCategory.setupFee;
+  };
+
+  const getRatePerHour = () => {
+    if (service === null) return 0;
+    if (service.serviceCategory.type === "WORKSHOP")
+      return service.serviceCategory.amount;
+    const rawRate = service.serviceCategory.timeRate;
+    const unitName = service.serviceCategory.unitName;
+    if (unitName === "minute") return rawRate * 60;
+    if (unitName === "day") return rawRate / 24;
+    return rawRate;
+  };
 
   if (service === null) {
     return (
@@ -49,21 +81,15 @@ export function ServiceDetailClient({
     );
   }
 
+  const fabricationUnitName =
+    service.serviceCategory.type === "FABRICATION"
+      ? service.serviceCategory.unitName
+      : null;
+
   return (
-    <main className="font-sans bg-background min-h-screen">
-      {/*
-          Section 1: Hero Header & Main Info
-          White background, minimal focus
-      */}
-      <header
-        className={cn(
-          "sticky top-0 z-50 w-full transition-all duration-500 px-6",
-          isScrolled
-            ? "bg-background/90 backdrop-blur-md py-4 border-b border-sidebar-border/30"
-            : "bg-transparent py-8",
-        )}
-      >
-        <div className="container mx-auto max-w-7xl flex items-center justify-between">
+    <main className="min-h-screen bg-background font-sans">
+      <header className="px-6 py-8">
+        <div className="container mx-auto flex max-w-7xl items-center justify-between">
           <Link href="/services">
             <Button
               variant="ghost"
@@ -74,166 +100,129 @@ export function ServiceDetailClient({
               Back to Services
             </Button>
           </Link>
-          <div
-            className={cn(
-              "transition-opacity duration-300",
-              isScrolled ? "opacity-100" : "opacity-0",
-            )}
-          >
-            <h2 className="text-xs font-black uppercase tracking-[0.2em]">
-              {service.name}
-            </h2>
-          </div>
+          <h2 className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/70">
+            {service.name}
+          </h2>
           <div className="w-24" />
         </div>
       </header>
 
-      <div className="bg-primary-muted">
-        <div className="container mx-auto max-w-7xl px-6 py-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-20 items-start">
-            {/* Left: Media Gallery */}
-            <div className="lg:col-span-7">
+      <section className="px-6 pb-16">
+        <div className="container mx-auto max-w-7xl">
+          <div className="grid grid-cols-1 items-stretch border border-black bg-background lg:grid-cols-2">
+            <div className="border-b border-black lg:border-b-0 lg:border-r">
               <ServiceGallery images={service.imageUrls} />
             </div>
 
-            {/* Right: Product Content */}
-            <div className="lg:col-span-5 flex flex-col pt-0">
-              <div className="mb-10">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-3 block">
+            <div className="flex h-full flex-col p-6 sm:p-8">
+              <div className="mb-6">
+                <span className="mb-3 block text-[10px] font-black uppercase tracking-[0.35em] text-foreground/60">
                   {service.status}
                 </span>
-                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-foreground mb-6">
+
+                <h1 className="mb-2 text-3xl font-black uppercase tracking-tight text-foreground lg:text-4xl">
                   {service.name}
                 </h1>
-                <div className="h-px w-12 bg-primary/30 mb-8" />
-                <p className="text-base text-muted-foreground leading-relaxed">
-                  {service.description}
-                </p>
+
+                <span className="mb-3 block text-[10px] font-black uppercase tracking-[0.35em] text-foreground/60">
+                  {getFabricationDays().length > 0
+                    ? getFabricationDays().map((day) => (
+                        <div
+                          key={day}
+                          className="inline-flex items-center gap-1 border bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground mr-2"
+                        >
+                          {day.slice(0, 3).toUpperCase()}
+                        </div>
+                      ))
+                    : ""}
+                </span>
               </div>
 
-              {/* Pricing Section */}
-              <div className="border-t border-sidebar-border/30 pt-10 mb-12">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                  {service.pricing.type === "FIXED" && (
-                    <div>
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
-                        <PhilippinePeso className="h-3 w-3" />
-                        Fixed Price
-                      </h4>
-                      <div className="flex flex-col items-start gap-1">
-                        <p className="text-xl font-black tracking-tight">
-                          ₱{service.pricing.amount.toLocaleString()}
-                        </p>
-                        {service.pricing.variants?.map((variant) => (
-                          <p
-                            key={variant.name}
-                            className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1"
-                          >
-                            <CirclePercent className="h-3 w-3" />
-                            {variant.name}: ₱{variant.amount.toLocaleString()}
-                          </p>
-                        ))}
-                      </div>
+              <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+                {service.description}
+              </p>
+
+              <div className="mb-8 -mx-6 grid grid-cols-2 border-y border-black sm:-mx-8">
+                <div className="border-r border-black p-4 sm:p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">
+                    Base Price
+                  </p>
+                  <p className="mt-1 text-lg font-semibold tracking-tight">
+                    ₱{getBasePrice().toLocaleString()}
+                  </p>
+
+                  {service.serviceCategory.type === "WORKSHOP" &&
+                  service.serviceCategory.variants?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {service.serviceCategory.variants.map((variant) => (
+                        <span
+                          key={variant.name}
+                          className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
+                        >
+                          <CirclePercent className="h-3 w-3" />
+                          {variant.name}: ₱{variant.amount.toLocaleString()}
+                        </span>
+                      ))}
                     </div>
-                  )}
-
-                  {service.pricing.type === "PER_UNIT" && (
-                    <>
-                      <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <PhilippinePeso className="h-3 w-3" />
-                          Base Fee
-                        </h4>
-                        <p className="text-xl font-black tracking-tight">
-                          ₱{service.pricing.baseFee.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
+                  ) : null}
+                  {service.serviceCategory.type === "FABRICATION" &&
+                  service.serviceCategory.variants?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {service.serviceCategory.variants.map((variant) => (
+                        <span
+                          key={variant.name}
+                          className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
+                        >
                           <CirclePercent className="h-3 w-3" />
-                          Rate Per {service.pricing.unitName}
-                        </h4>
-                        <div className="flex flex-col items-start gap-1">
-                          <p className="text-xl font-black tracking-tight text-primary">
-                            ₱{service.pricing.ratePerUnit.toLocaleString()}
-                          </p>
-                          {service.pricing.variants?.map((variant) => (
-                            <p
-                              key={variant.name}
-                              className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1"
-                            >
-                              <CirclePercent className="h-3 w-3" />
-                              {variant.name}: ₱
-                              {variant.ratePerUnit.toLocaleString()}
-                            </p>
-                          ))}
-                        </div>
-                        {service.pricing.variants?.map((variant) => (
-                          <p
-                            key={variant.name}
-                            className="text-xs font-bold text-muted-foreground mt-2 flex items-center gap-1"
-                          >
-                            {variant.name} Base Fee: ₱
-                            {variant.baseFee.toLocaleString()}
-                          </p>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                          {variant.name}: ₱{variant.setupFee.toLocaleString()}{" "}
+                          base
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
 
-                  {service.pricing.type === "COMPOSITE" && (
-                    <>
-                      <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <PhilippinePeso className="h-3 w-3" />
-                          Base Fee
-                        </h4>
-                        <p className="text-xl font-black tracking-tight">
-                          ₱{service.pricing.baseFee.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 flex items-center gap-1.5">
+                <div className="p-4 text-right sm:p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">
+                    Rate Per Hour
+                  </p>
+                  <p className="mt-1 text-lg font-semibold tracking-tight">
+                    ₱{getRatePerHour().toLocaleString()}
+                  </p>
+
+                  {service.serviceCategory.type === "WORKSHOP" &&
+                  service.serviceCategory.variants?.length ? (
+                    <div className="mt-3 flex flex-wrap justify-end gap-1.5">
+                      {service.serviceCategory.variants.map((variant) => (
+                        <span
+                          key={variant.name}
+                          className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
+                        >
                           <CirclePercent className="h-3 w-3" />
-                          Time Rate
-                        </h4>
-                        <div className="flex flex-col items-start gap-1">
-                          <p className="text-xl font-black tracking-tight text-primary flex items-baseline gap-2">
-                            ₱{service.pricing.timeRate.toLocaleString()}
-                            <span className="text-xs font-bold text-muted-foreground/60">
-                              /{service.pricing.unitName}
-                            </span>
-                          </p>
-                          {service.pricing.variants?.map((variant) => (
-                            <span
-                              key={variant.name}
-                              className="text-xs font-bold text-muted-foreground bg-sidebar-accent/50 px-2 py-0.5 rounded-full flex items-center gap-1"
-                            >
-                              <CirclePercent className="h-3 w-3" />
-                              {variant.name}: ₱
-                              {variant.timeRate.toLocaleString()}/
-                              {
-                                (service.pricing as { unitName: string })
-                                  .unitName
-                              }
-                            </span>
-                          ))}
-                          {service.pricing.variants?.map((variant) => (
-                            <p
-                              key={variant.name}
-                              className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1"
-                            >
-                              {variant.name} Base Fee: ₱
-                              {variant.baseFee.toLocaleString()}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                          {variant.name}: ₱{variant.amount.toLocaleString()}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {service.serviceCategory.type === "FABRICATION" &&
+                  service.serviceCategory.variants?.length ? (
+                    <div className="mt-3 flex flex-wrap justify-end gap-1.5">
+                      {service.serviceCategory.variants.map((variant) => (
+                        <span
+                          key={variant.name}
+                          className="inline-flex items-center gap-1 rounded-full bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground"
+                        >
+                          <CirclePercent className="h-3 w-3" />
+                          {variant.name}: ₱{variant.timeRate.toLocaleString()}/
+                          {fabricationUnitName}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex gap-3 mt-10 w-full">
+
+              <div className="mt-8 flex w-full gap-3">
                 <BookingDialog
                   serviceId={service._id}
                   serviceName={service.name}
@@ -241,27 +230,45 @@ export function ServiceDetailClient({
                   fileTypes={service.fileTypes ?? []}
                   availableDays={
                     service.serviceCategory.type === "FABRICATION"
-                      ? (service.serviceCategory.availableDays ?? [])
+                      ? sortedFabricationDays
                       : []
                   }
                   serviceMaterials={service.materialDetails ?? []}
                   hasUpPricing={
-                    service.pricing.variants !== undefined &&
-                    service.pricing.variants.length > 0
+                    (service.serviceCategory.variants?.length ?? 0) > 0
                   }
-                  servicePricing={service.pricing}
-                  serviceCategory={service.serviceCategory.type}
-                  timeSlots={
+                  pricingVariants={
+                    (service.serviceCategory.variants ?? []) as Array<{
+                      name: string;
+                    }>
+                  }
+                  servicePricing={
                     service.serviceCategory.type === "WORKSHOP"
-                      ? service.serviceCategory.timeSlots
-                      : []
+                      ? {
+                          type: "WORKSHOP",
+                          amount: service.serviceCategory.amount,
+                          variants: service.serviceCategory.variants,
+                        }
+                      : {
+                          type: "FABRICATION",
+                          setupFee: service.serviceCategory.setupFee,
+                          unitName: service.serviceCategory.unitName,
+                          timeRate: service.serviceCategory.timeRate,
+                          variants: service.serviceCategory.variants,
+                        }
+                  }
+                  serviceCategory={service.serviceCategory.type}
+                  schedules={
+                    service.serviceCategory.type === "WORKSHOP"
+                      ? service.serviceCategory.schedules
+                      : undefined
                   }
                 />
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/*
           Section 2: Detailed Specs / Requirements
@@ -298,12 +305,9 @@ export function ServiceDetailClient({
             </div>
             <div className="lg:col-span-5">
               <section className="bg-background p-10 rounded-sm border border-sidebar-border/30 shadow-sm">
-                <div className="flex items-center gap-2 mb-6">
-                  <HelpCircle className="h-4 w-4 text-primary/60" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">
-                    Need assistance?
-                  </h3>
-                </div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                  Need assistance?
+                </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-6">
                   Our lab experts are available to guide you through the
                   fabrication process. Contact us for custom consultations.

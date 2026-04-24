@@ -46,59 +46,40 @@ export const addService = authMutation({
     serviceCategory: v.union(
       v.object({
         type: v.literal("WORKSHOP"),
-        date: v.number(),
-        timeSlots: v.array(
+        schedules: v.array(
           v.object({
-            startTime: v.number(),
-            endTime: v.number(),
-            maxSlots: v.number(),
+            date: v.number(),
+            timeSlots: v.array(
+              v.object({
+                startTime: v.number(),
+                endTime: v.number(),
+                maxSlots: v.number(),
+                usedUpSlots: v.optional(v.number()),
+              }),
+            ),
           }),
+        ),
+        amount: v.number(),
+        variants: v.optional(
+          v.array(v.object({ name: v.string(), amount: v.number() })),
         ),
       }),
       v.object({
         type: v.literal("FABRICATION"),
         availableDays: v.optional(v.array(v.number())),
         materials: v.optional(v.array(v.id("materials"))),
-      }),
-    ),
-    pricing: v.union(
-      v.object({
-        type: v.literal("FIXED"),
-        amount: v.number(),
-        variants: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              amount: v.number(),
-            }),
-          ),
+        setupFee: v.number(),
+        unitName: v.union(
+          v.literal("minute"),
+          v.literal("hour"),
+          v.literal("day"),
         ),
-      }),
-      v.object({
-        type: v.literal("PER_UNIT"),
-        baseFee: v.number(),
-        unitName: v.string(),
-        ratePerUnit: v.number(),
-        variants: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              baseFee: v.number(),
-              ratePerUnit: v.number(),
-            }),
-          ),
-        ),
-      }),
-      v.object({
-        type: v.literal("COMPOSITE"),
-        baseFee: v.number(),
-        unitName: v.string(),
         timeRate: v.number(),
         variants: v.optional(
           v.array(
             v.object({
               name: v.string(),
-              baseFee: v.number(),
+              setupFee: v.number(),
               timeRate: v.number(),
             }),
           ),
@@ -110,13 +91,32 @@ export const addService = authMutation({
     status: v.union(v.literal("Unavailable"), v.literal("Available")),
   },
   handler: async (ctx, args) => {
+    const slug = slugify(args.name);
+    const existing = await ctx.db
+      .query("services")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (existing) {
+      throw new ConvexError(
+        `A service with the slug "${slug}" already exists. Choose a different name.`,
+      );
+    }
+
+    const finalServiceCategory = args.serviceCategory;
+    if (finalServiceCategory.type === "WORKSHOP") {
+      finalServiceCategory.schedules.forEach((schedule) => {
+        schedule.timeSlots.forEach((slot) => {
+          slot.usedUpSlots = 0;
+        });
+      });
+    }
+
     await ctx.db.insert("services", {
       name: args.name,
       slug: slugify(args.name),
       images: args.images,
       description: args.description,
-      serviceCategory: args.serviceCategory,
-      pricing: args.pricing,
+      serviceCategory: finalServiceCategory,
       fileTypes: args.fileTypes,
       resources: args.resources,
       status: args.status,
@@ -138,61 +138,40 @@ export const updateService = authMutation({
       v.union(
         v.object({
           type: v.literal("WORKSHOP"),
-          date: v.number(),
-          timeSlots: v.array(
+          schedules: v.array(
             v.object({
-              startTime: v.number(),
-              endTime: v.number(),
-              maxSlots: v.number(),
+              date: v.number(),
+              timeSlots: v.array(
+                v.object({
+                  startTime: v.number(),
+                  endTime: v.number(),
+                  maxSlots: v.number(),
+                  usedUpSlots: v.optional(v.number()),
+                }),
+              ),
             }),
+          ),
+          amount: v.number(),
+          variants: v.optional(
+            v.array(v.object({ name: v.string(), amount: v.number() })),
           ),
         }),
         v.object({
           type: v.literal("FABRICATION"),
           availableDays: v.optional(v.array(v.number())),
           materials: v.optional(v.array(v.id("materials"))),
-        }),
-      ),
-    ),
-    pricing: v.optional(
-      v.union(
-        v.object({
-          type: v.literal("FIXED"),
-          amount: v.number(),
-          variants: v.optional(
-            v.array(
-              v.object({
-                name: v.string(),
-                amount: v.number(),
-              }),
-            ),
+          setupFee: v.number(),
+          unitName: v.union(
+            v.literal("minute"),
+            v.literal("hour"),
+            v.literal("day"),
           ),
-        }),
-        v.object({
-          type: v.literal("PER_UNIT"),
-          baseFee: v.number(),
-          unitName: v.string(),
-          ratePerUnit: v.number(),
-          variants: v.optional(
-            v.array(
-              v.object({
-                name: v.string(),
-                baseFee: v.number(),
-                ratePerUnit: v.number(),
-              }),
-            ),
-          ),
-        }),
-        v.object({
-          type: v.literal("COMPOSITE"),
-          baseFee: v.number(),
-          unitName: v.string(),
           timeRate: v.number(),
           variants: v.optional(
             v.array(
               v.object({
                 name: v.string(),
-                baseFee: v.number(),
+                setupFee: v.number(),
                 timeRate: v.number(),
               }),
             ),
@@ -220,14 +199,70 @@ export const updateService = authMutation({
     const updates: Record<string, any> = {};
 
     if (args.name !== undefined) {
+      const slug = slugify(args.name);
+      const conflict = await ctx.db
+        .query("services")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first();
+      if (conflict && conflict._id !== args.service) {
+        throw new ConvexError(
+          `A service with the slug "${slug}" already exists. Choose a different name.`,
+        );
+      }
       updates.name = args.name;
-      updates.slug = slugify(args.name);
+      updates.slug = slug;
     }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
-    if (args.serviceCategory !== undefined)
+    if (args.serviceCategory !== undefined) {
+      if (args.serviceCategory.type === "WORKSHOP") {
+        const existingService = await ctx.db.get(args.service);
+        if (
+          existingService &&
+          existingService.serviceCategory.type === "WORKSHOP"
+        ) {
+          for (const incomingSchedule of args.serviceCategory.schedules) {
+            const existingSchedule =
+              existingService.serviceCategory.schedules.find(
+                (s) => s.date === incomingSchedule.date,
+              );
+            if (existingSchedule) {
+              for (const incomingSlot of incomingSchedule.timeSlots) {
+                const existingSlot = existingSchedule.timeSlots.find(
+                  (t) =>
+                    t.startTime === incomingSlot.startTime &&
+                    t.endTime === incomingSlot.endTime,
+                );
+                if (existingSlot) {
+                  const usedUp = existingSlot.usedUpSlots || 0;
+                  if (incomingSlot.maxSlots < usedUp) {
+                    throw new ConvexError(
+                      `Cannot reduce max slots below used up slots (${usedUp}) for schedule on ${new Date(
+                        incomingSchedule.date,
+                      ).toLocaleDateString()}`,
+                    );
+                  }
+                  incomingSlot.usedUpSlots = usedUp;
+                } else {
+                  incomingSlot.usedUpSlots = 0;
+                }
+              }
+            } else {
+              for (const incomingSlot of incomingSchedule.timeSlots) {
+                incomingSlot.usedUpSlots = 0;
+              }
+            }
+          }
+        } else {
+          for (const incomingSchedule of args.serviceCategory.schedules) {
+            for (const incomingSlot of incomingSchedule.timeSlots) {
+              incomingSlot.usedUpSlots = 0;
+            }
+          }
+        }
+      }
       updates.serviceCategory = args.serviceCategory;
-    if (args.pricing !== undefined) updates.pricing = args.pricing;
+    }
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;
     if (args.fileTypes !== undefined) updates.fileTypes = args.fileTypes;

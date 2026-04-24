@@ -1,27 +1,26 @@
 import { formOptions } from "@tanstack/react-form";
 import { ServiceStatus, type ServiceStatusType } from "@convex/constants";
 
+export type PricingVariant =
+  | { name: string; amount: number } // FIXED variant
+  | { name: string; setupFee: number; timeRate: number }; // FABRICATION variant
+
 export interface AddServiceFormValues {
   name: string;
   description: string;
   serviceCategory: "WORKSHOP" | "FABRICATION";
   pricing:
-    | { type: "FIXED"; amount: number; upAmount?: number }
     | {
-        type: "PER_UNIT";
-        baseFee: number;
-        upBaseFee?: number;
-        unitName: string;
-        ratePerUnit: number;
-        upRatePerUnit?: number;
+        type: "FIXED";
+        amount: number;
+        variants: Array<{ name: string; amount: number }>;
       }
     | {
-        type: "COMPOSITE";
-        baseFee: number;
-        upBaseFee?: number;
-        unitName: string;
+        type: "FABRICATION";
+        setupFee: number;
+        unitName: "minute" | "hour" | "day";
         timeRate: number;
-        upTimeRate?: number;
+        variants: Array<{ name: string; setupFee: number; timeRate: number }>;
       };
   status: ServiceStatusType;
   images: string[];
@@ -31,15 +30,17 @@ export interface AddServiceFormValues {
   resources: string[];
   materials: string[];
   availableDays: number[];
-  date?: number;
-  timeSlots?: { startTime: number; endTime: number; maxSlots: number }[];
+  schedules?: {
+    date: number;
+    timeSlots: { startTime: number; endTime: number; maxSlots: number }[];
+  }[];
 }
 
 export const defaultAddServiceValues: AddServiceFormValues = {
   name: "",
   description: "",
   serviceCategory: "WORKSHOP",
-  pricing: { type: "FIXED", amount: 0 },
+  pricing: { type: "FIXED" as const, amount: 0, variants: [] },
   status: ServiceStatus.AVAILABLE,
   images: [],
   samples: [],
@@ -48,7 +49,7 @@ export const defaultAddServiceValues: AddServiceFormValues = {
   resources: [],
   materials: [],
   availableDays: [],
-  timeSlots: [],
+  schedules: [],
 };
 
 export const addServiceFormOpts = formOptions({

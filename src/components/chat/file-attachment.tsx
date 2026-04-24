@@ -44,8 +44,8 @@ export function getFileInfo(
   )
     return {
       Icon: Box,
-      colorClass: "text-zinc-800 dark:text-zinc-200",
-      bgClass: "bg-zinc-800/10 dark:bg-zinc-200/10",
+      colorClass: "text-chart-4",
+      bgClass: "bg-chart-4/10",
       label: ext.toUpperCase() || "3D",
     };
 
@@ -53,8 +53,8 @@ export function getFileInfo(
   if (ext === "pdf" || mime === "application/pdf")
     return {
       Icon: FileText,
-      colorClass: "text-red-500",
-      bgClass: "bg-red-500/10",
+      colorClass: "text-chart-2",
+      bgClass: "bg-chart-2/10",
       label: "PDF",
     };
 
@@ -62,8 +62,8 @@ export function getFileInfo(
   if (["doc", "docx"].includes(ext) || mime.includes("word"))
     return {
       Icon: FileText,
-      colorClass: "text-blue-500",
-      bgClass: "bg-blue-500/10",
+      colorClass: "text-chart-4",
+      bgClass: "bg-chart-4/10",
       label: ext.toUpperCase() || "DOC",
     };
 
@@ -75,8 +75,8 @@ export function getFileInfo(
   )
     return {
       Icon: FileSpreadsheet,
-      colorClass: "text-green-500",
-      bgClass: "bg-green-500/10",
+      colorClass: "text-chart-1",
+      bgClass: "bg-chart-1/10",
       label: ext.toUpperCase() || "XLS",
     };
 
@@ -88,8 +88,8 @@ export function getFileInfo(
   )
     return {
       Icon: Presentation,
-      colorClass: "text-orange-500",
-      bgClass: "bg-orange-500/10",
+      colorClass: "text-chart-3",
+      bgClass: "bg-chart-3/10",
       label: ext.toUpperCase() || "PPT",
     };
 
@@ -101,8 +101,8 @@ export function getFileInfo(
   )
     return {
       Icon: FileArchive,
-      colorClass: "text-yellow-500",
-      bgClass: "bg-yellow-500/10",
+      colorClass: "text-chart-3",
+      bgClass: "bg-chart-3/10",
       label: ext.toUpperCase() || "ZIP",
     };
 
@@ -133,8 +133,8 @@ export function getFileInfo(
   )
     return {
       Icon: Code,
-      colorClass: "text-purple-500",
-      bgClass: "bg-purple-500/10",
+      colorClass: "text-chart-4",
+      bgClass: "bg-chart-4/10",
       label: ext.toUpperCase(),
     };
 
@@ -142,8 +142,8 @@ export function getFileInfo(
   if (mime.startsWith("image/"))
     return {
       Icon: FileImage,
-      colorClass: "text-pink-500",
-      bgClass: "bg-pink-500/10",
+      colorClass: "text-chart-2",
+      bgClass: "bg-chart-2/10",
       label: ext.toUpperCase() || "IMG",
     };
 
@@ -151,8 +151,8 @@ export function getFileInfo(
   if (mime.startsWith("video/"))
     return {
       Icon: FileVideo,
-      colorClass: "text-violet-500",
-      bgClass: "bg-violet-500/10",
+      colorClass: "text-chart-4",
+      bgClass: "bg-chart-4/10",
       label: ext.toUpperCase() || "VID",
     };
 
@@ -198,28 +198,30 @@ export function FileAttachmentCard({
           className={cn("h-5 w-5", isCurrentUser ? "text-white" : colorClass)}
         />
       </div>
+
       <div className="min-w-0 flex-1 flex flex-col justify-center">
         <p className="text-sm font-bold truncate leading-tight mb-0.5">
           {fileName}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
           <span
             className={cn(
-              "text-[10px] font-black uppercase tracking-widest opacity-60",
-              isCurrentUser ? "text-white/80" : "text-muted-foreground",
+              "text-[9px] font-black uppercase tracking-[0.15em] opacity-70",
+              isCurrentUser ? "text-white/90" : "text-muted-foreground",
             )}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             {label}
           </span>
           <div
             className={cn(
-              "h-1 w-1 rounded-full opacity-30",
+              "h-1 w-1 rounded-full opacity-30 shrink-0",
               isCurrentUser ? "bg-white" : "bg-black",
             )}
           />
           <span
             className={cn(
-              "text-[10px] font-bold opacity-40",
+              "text-[9px] font-bold opacity-40 truncate",
               isCurrentUser ? "text-white" : "text-black",
             )}
           >
@@ -227,11 +229,12 @@ export function FileAttachmentCard({
           </span>
         </div>
       </div>
+
       {href && (
         <div className="shrink-0 pl-2">
           <div
             className={cn(
-              "p-2 rounded-full transition-colors",
+              "p-2 rounded-xl transition-colors",
               isCurrentUser ? "hover:bg-white/10" : "hover:bg-black/5",
             )}
           >

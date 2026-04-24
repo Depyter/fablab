@@ -8,6 +8,7 @@ export const sendMessage = authMutation({
     room: v.id("rooms"),
     threadId: v.optional(v.id("threads")),
   },
+  rateLimit: "sendMessage",
   handler: async (ctx, args) => {
     await ctx.db.insert("messages", {
       content: args.content,
@@ -117,6 +118,7 @@ export const updateRoomName = authMutation({
 });
 
 export const addNewMember = authMutation({
+  role: ["maker", "admin"],
   args: {
     roomId: v.id("rooms"),
     userId: v.id("userProfile"),
@@ -125,13 +127,13 @@ export const addNewMember = authMutation({
     const room = await ctx.db.get(args.roomId);
     if (!room) throw new ConvexError("Room not found");
 
-    if (
-      ctx.profile.role !== "admin" &&
-      ctx.profile.role !== "maker" &&
-      room.creator !== ctx.profile._id
-    ) {
-      throw new ConvexError("Unauthorized to update room settings");
-    }
+    // if (
+    //   ctx.profile.role !== "admin" &&
+    //   ctx.profile.role !== "maker" &&
+    //   room.creator !== ctx.profile._id
+    // ) {
+    //   throw new ConvexError("Unauthorized to update room settings");
+    // }
 
     const existing = await ctx.db
       .query("roomMembers")
@@ -152,6 +154,7 @@ export const addNewMember = authMutation({
 });
 
 export const removeMember = authMutation({
+  role: ["maker", "admin"],
   args: {
     roomId: v.id("rooms"),
     userId: v.id("userProfile"),
@@ -160,13 +163,13 @@ export const removeMember = authMutation({
     const room = await ctx.db.get(args.roomId);
     if (!room) throw new ConvexError("Room not found");
 
-    if (
-      ctx.profile.role !== "admin" &&
-      ctx.profile.role !== "maker" &&
-      room.creator !== ctx.profile._id
-    ) {
-      throw new ConvexError("Unauthorized to update room settings");
-    }
+    // if (
+    //   ctx.profile.role !== "admin" &&
+    //   ctx.profile.role !== "maker" &&
+    //   room.creator !== ctx.profile._id
+    // ) {
+    //   throw new ConvexError("Unauthorized to update room settings");
+    // }
 
     const existing = await ctx.db
       .query("roomMembers")

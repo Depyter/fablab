@@ -14,7 +14,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Plus,
   Calendar as CalendarIcon,
 } from "lucide-react";
 
@@ -28,7 +27,11 @@ import {
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
-import { ResourceStatus, ServiceStatus } from "@convex/constants";
+import {
+  ResourceStatus,
+  ServiceStatus,
+  ProjectStatusType,
+} from "@convex/constants";
 import { STATUS_STYLES } from "@/components/projects/project-card";
 
 function getSnappedDecimalHours(ms: number, ceil = false) {
@@ -39,10 +42,23 @@ function getSnappedDecimalHours(ms: number, ceil = false) {
 
 export function ProjectCalendarView() {
   const [date, setDate] = React.useState<Date>(startOfToday());
+
+  const role = useQuery(api.users.getRole, {});
+  const isClient = role === "client";
+  const isAdminOrMaker = role === "admin" || role === "maker";
+
   const [activeTab, setActiveTab] = React.useState<string>("resources");
 
+  React.useEffect(() => {
+    if (isClient) {
+      setActiveTab("services");
+    }
+  }, [isClient]);
+
   const services = useQuery(api.services.query.getServices) || [];
-  const resources = useQuery(api.resource.query.getResources) || [];
+  const resources =
+    useQuery(api.resource.query.getResources, isAdminOrMaker ? {} : "skip") ||
+    [];
   const bookings =
     useQuery(api.resource.query.getBookings, {
       date: startOfDay(date).getTime(),
@@ -64,20 +80,23 @@ export function ProjectCalendarView() {
 
   const resourceUsages: MachineUsage[] = bookings
     .filter((b) => b.resource)
-    .map((b) => ({
-      id: b._id,
-      machineId: b.resource!._id,
-      projectId: b.project?._id || "",
-      projectAlias: b.project?.name || "Unknown Project",
-      projectStatus: b.project?.status || "pending",
-      makerName: b.maker?.name || "Unassigned",
-      date: b.date,
-      startTime: getSnappedDecimalHours(b.startTime, false),
-      endTime: getSnappedDecimalHours(b.endTime, true),
-      color:
-        STATUS_STYLES[b.project?.status || "pending"]?.badge ||
-        "bg-blue-500/10 border-blue-500 text-blue-700",
-    }));
+    .map((b) => {
+      const p = b.project;
+      return {
+        id: b._id,
+        machineId: b.resource!._id,
+        projectId: p?._id || "",
+        projectAlias: p?.name || "Unknown Project",
+        projectStatus: (p?.status || "pending") as ProjectStatusType,
+        makerName: b.maker?.name || "Unassigned",
+        date: b.startTime,
+        startTime: getSnappedDecimalHours(b.startTime, false),
+        endTime: getSnappedDecimalHours(b.endTime, true),
+        color:
+          STATUS_STYLES[p?.status || "pending"]?.badge ||
+          "bg-blue-500/10 border-blue-500 text-blue-700",
+      };
+    });
 
   const serviceMachines: Machine[] = services.map((s) => ({
     id: s._id,
@@ -91,20 +110,23 @@ export function ProjectCalendarView() {
 
   const serviceUsages: MachineUsage[] = bookings
     .filter((b) => b.service)
-    .map((b) => ({
-      id: b._id,
-      machineId: b.service!._id,
-      projectId: b.project?._id || "",
-      projectAlias: b.project?.name || "Unknown Project",
-      projectStatus: b.project?.status || "pending",
-      makerName: b.maker?.name || "Unknown Maker",
-      date: b.date,
-      startTime: getSnappedDecimalHours(b.startTime, false),
-      endTime: getSnappedDecimalHours(b.endTime, true),
-      color:
-        STATUS_STYLES[b.project?.status || "pending"]?.badge ||
-        "bg-purple-500/10 border-purple-500 text-purple-700",
-    }));
+    .map((b) => {
+      const p = b.project;
+      return {
+        id: b._id,
+        machineId: b.service!._id,
+        projectId: p?._id || "",
+        projectAlias: p?.name || "Unknown Project",
+        projectStatus: (p?.status || "pending") as ProjectStatusType,
+        makerName: b.maker?.name || "Unknown Maker",
+        date: b.startTime,
+        startTime: getSnappedDecimalHours(b.startTime, false),
+        endTime: getSnappedDecimalHours(b.endTime, true),
+        color:
+          STATUS_STYLES[p?.status || "pending"]?.badge ||
+          "bg-purple-500/10 border-purple-500 text-purple-700",
+      };
+    });
 
   const filteredResourceUsages = resourceUsages.filter((u) =>
     isSameDay(new Date(u.date), date),
@@ -163,7 +185,11 @@ export function ProjectCalendarView() {
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "EEE, MMM dd") : <span>Pick a date</span>}
+                {date ? (
+                  `${format(date, "EEE, MMM dd")} (PST)`
+                ) : (
+                  <span>Pick a date (PST)</span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -180,9 +206,11 @@ export function ProjectCalendarView() {
 
           {/* Tab switcher inline */}
           <TabsList className="h-8">
-            <TabsTrigger value="resources" className="text-xs h-7 px-3">
-              Machine Schedule
-            </TabsTrigger>
+            {isAdminOrMaker && (
+              <TabsTrigger value="resources" className="text-xs h-7 px-3">
+                Machine Schedule
+              </TabsTrigger>
+            )}
             <TabsTrigger value="services" className="text-xs h-7 px-3">
               Service Bookings
             </TabsTrigger>
@@ -191,22 +219,51 @@ export function ProjectCalendarView() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          <Button variant="default" size="sm" className="h-8 gap-1">
-            <Plus className="h-4 w-4" />
-            Add Usage
-          </Button>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium text-muted-foreground">
+              {format(new Date(), "hh:mm a")}
+            </span>
+            <div className="h-3 w-px bg-border" />
+            <span className="font-semibold">
+              {
+                new Set(
+                  [
+                    ...(isAdminOrMaker
+                      ? filteredResourceUsages.map((u) => u.projectId)
+                      : []),
+                    ...filteredServiceUsages.map((u) => u.projectId),
+                  ].filter(Boolean),
+                ).size
+              }
+            </span>
+            <span className="text-muted-foreground">
+              {new Set(
+                [
+                  ...(isAdminOrMaker
+                    ? filteredResourceUsages.map((u) => u.projectId)
+                    : []),
+                  ...filteredServiceUsages.map((u) => u.projectId),
+                ].filter(Boolean),
+              ).size === 1
+                ? "project"
+                : "projects"}{" "}
+              today
+            </span>
+          </div>
         </div>
 
         {/* Table content */}
-        <TabsContent
-          value="resources"
-          className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0"
-        >
-          <UsageTable
-            machines={resourceMachines}
-            usages={filteredResourceUsages}
-          />
-        </TabsContent>
+        {isAdminOrMaker && (
+          <TabsContent
+            value="resources"
+            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0"
+          >
+            <UsageTable
+              machines={resourceMachines}
+              usages={filteredResourceUsages}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent
           value="services"

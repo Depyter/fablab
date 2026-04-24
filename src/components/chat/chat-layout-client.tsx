@@ -22,14 +22,22 @@ export function ChatLayoutClient({
       {/* Chat list panel: full-width on mobile, fixed-width on desktop */}
       <div
         className={cn(
-          "shrink-0 h-full border-r",
-          "md:w-[400px] md:block",
+          "shrink-0 h-full",
+          "md:w-[300px] md:block",
           isInConversation ? "hidden" : "w-full",
         )}
+        style={{ borderRight: "1px solid var(--fab-border-md)" }}
       >
         <Suspense
           fallback={
-            <div className="h-full bg-sidebar flex items-center justify-center text-sm text-sidebar-foreground/50 uppercase tracking-widest font-bold">
+            <div
+              className="h-full flex items-center justify-center text-sm uppercase tracking-widest font-bold"
+              style={{
+                background: "var(--fab-bg-sidebar)",
+                color: "var(--fab-text-dim)",
+                fontFamily: "var(--font-body)",
+              }}
+            >
               Loading...
             </div>
           }
@@ -46,6 +54,7 @@ export function ChatLayoutClient({
             ? "hidden md:flex md:items-center md:justify-center"
             : "flex flex-col",
         )}
+        style={{ background: "var(--fab-bg-main)" }}
       >
         {children}
       </div>

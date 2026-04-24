@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import {
@@ -24,24 +25,12 @@ export default function AddServicePage() {
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
-      const getVal = (key: string) => {
-        const entry = Object.entries(value.pricing).find(([k]) => k === key);
-        return entry && entry[1] !== undefined && entry[1] !== ""
-          ? Number(entry[1])
-          : undefined;
-      };
-
-      const upAmount = getVal("upAmount");
-      const upBaseFee = getVal("upBaseFee");
-      const upRatePerUnit = getVal("upRatePerUnit");
-      const upTimeRate = getVal("upTimeRate");
-
       const {
         availableDays,
-        date,
-        timeSlots,
+        schedules,
         serviceCategory,
         materials,
+        pricing,
         ...restValue
       } = value;
 
@@ -51,72 +40,46 @@ export default function AddServicePage() {
           serviceCategory === "WORKSHOP"
             ? {
                 type: "WORKSHOP",
-                date: date as number,
-                timeSlots: timeSlots ?? [],
+                schedules: schedules ?? [],
+                amount: pricing.type === "FIXED" ? pricing.amount : 0,
+                variants:
+                  pricing.type === "FIXED" && pricing.variants.length > 0
+                    ? pricing.variants
+                    : undefined,
               }
             : {
                 type: "FABRICATION",
-                availableDays: availableDays,
+                availableDays,
                 materials: materials as Id<"materials">[],
+                setupFee: pricing.type === "FABRICATION" ? pricing.setupFee : 0,
+                unitName:
+                  pricing.type === "FABRICATION"
+                    ? pricing.unitName
+                    : ("hour" as const),
+                timeRate: pricing.type === "FABRICATION" ? pricing.timeRate : 0,
+                variants:
+                  pricing.type === "FABRICATION" && pricing.variants.length > 0
+                    ? pricing.variants
+                    : undefined,
               },
         images: value.images as Id<"_storage">[],
         samples: value.samples as Id<"_storage">[],
         resources: value.resources as Id<"resources">[],
         requirements: value.requirements.filter((r) => r.trim() !== ""),
-        pricing:
-          value.pricing.type === "FIXED"
-            ? {
-                type: "FIXED",
-                amount: value.pricing.amount,
-                variants:
-                  upAmount !== undefined
-                    ? [{ name: "UP", amount: upAmount }]
-                    : undefined,
-              }
-            : value.pricing.type === "PER_UNIT"
-              ? {
-                  type: "PER_UNIT",
-                  baseFee: value.pricing.baseFee,
-                  unitName: value.pricing.unitName,
-                  ratePerUnit: value.pricing.ratePerUnit,
-                  variants:
-                    upBaseFee !== undefined || upRatePerUnit !== undefined
-                      ? [
-                          {
-                            name: "UP",
-                            baseFee: upBaseFee ?? value.pricing.baseFee,
-                            ratePerUnit:
-                              upRatePerUnit ?? value.pricing.ratePerUnit,
-                          },
-                        ]
-                      : undefined,
-                }
-              : {
-                  type: "COMPOSITE",
-                  baseFee: value.pricing.baseFee,
-                  unitName: value.pricing.unitName,
-                  timeRate: value.pricing.timeRate,
-                  variants:
-                    upBaseFee !== undefined || upTimeRate !== undefined
-                      ? [
-                          {
-                            name: "UP",
-                            baseFee: upBaseFee ?? value.pricing.baseFee,
-                            timeRate: upTimeRate ?? value.pricing.timeRate,
-                          },
-                        ]
-                      : undefined,
-                },
       });
+
       toast.success("Service added successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Failed to add service. Please try again.",
-      );
-      toast.error("Failed to add service. Please try again.");
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to add service. Please try again.";
+      setSubmitError(message);
+      toast.error(message);
+      throw error;
     }
   };
 

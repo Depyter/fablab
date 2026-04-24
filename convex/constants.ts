@@ -8,6 +8,53 @@ export const ServiceStatus = {
   UNAVAILABLE: "Unavailable",
 } as const;
 
+export const MaterialCategory = {
+  FILAMENT: "Filament",
+  RESIN: "Resin",
+  WOOD: "Wood",
+  ACRYLIC: "Acrylic",
+  FOAM: "Foam",
+  FABRIC: "Fabric",
+  METAL: "Metal",
+  PAPER: "Paper",
+  VINYL: "Vinyl",
+  ELECTRONICS: "Electronics",
+  KITS: "Kits",
+  MISC: "Misc",
+} as const;
+
+export const MaterialUnit = {
+  // Weight
+  GRAMS: "g",
+  KILOGRAMS: "kg",
+  // Length
+  METERS: "m",
+  CENTIMETERS: "cm",
+  MILLIMETERS: "mm",
+  // Area
+  SQUARE_METERS: "m²",
+  // Volume
+  MILLILITERS: "mL",
+  LITERS: "L",
+  // Count
+  PIECES: "pcs",
+  SHEETS: "sheets",
+  ROLLS: "rolls",
+  SETS: "sets",
+} as const;
+
+export const MaterialStatus = {
+  IN_STOCK: "IN_STOCK",
+  LOW_STOCK: "LOW_STOCK",
+  OUT_OF_STOCK: "OUT_OF_STOCK",
+} as const;
+
+export const ResourceUnit = {
+  MINUTE: "minute",
+  HOUR: "hour",
+  DAY: "day",
+} as const;
+
 export const ResourceCategory = {
   ROOM: "room",
   MACHINE: "machine",
@@ -24,6 +71,18 @@ export const ResourceStatus = {
 export const ProjectServiceType = {
   SELF_SERVICE: "self-service",
   FULL_SERVICE: "full-service",
+  WORKSHOP: "workshop",
+} as const;
+
+export const FulfillmentMode = {
+  SELF_SERVICE: "self-service",
+  FULL_SERVICE: "full-service",
+  STAFF_LED: "staff-led",
+} as const;
+
+export const ProjectType = {
+  WORKSHOP: "WORKSHOP",
+  FABRICATION: "FABRICATION",
 } as const;
 
 export const ProjectMaterial = {
@@ -37,6 +96,7 @@ export const ProjectStatus = {
   REJECTED: "rejected",
   COMPLETED: "completed",
   CANCELLED: "cancelled",
+  PAID: "paid",
 } as const;
 
 export const PaymentMode = {
@@ -170,6 +230,12 @@ export const ALLOWED_MIME_TYPES = new Set([
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 // Type helpers for extracting the union types from the constants
+export type MaterialCategoryType =
+  (typeof MaterialCategory)[keyof typeof MaterialCategory];
+export type MaterialUnitType = (typeof MaterialUnit)[keyof typeof MaterialUnit];
+export type MaterialStatusType =
+  (typeof MaterialStatus)[keyof typeof MaterialStatus];
+export type ResourceUnitType = (typeof ResourceUnit)[keyof typeof ResourceUnit];
 export type FileStatusType = (typeof FileStatus)[keyof typeof FileStatus];
 export type ServiceStatusType =
   (typeof ServiceStatus)[keyof typeof ServiceStatus];
@@ -179,9 +245,41 @@ export type ResourceStatusType =
   (typeof ResourceStatus)[keyof typeof ResourceStatus];
 export type ProjectServiceTypeType =
   (typeof ProjectServiceType)[keyof typeof ProjectServiceType];
+export type FulfillmentModeType =
+  (typeof FulfillmentMode)[keyof typeof FulfillmentMode];
+export type ProjectTypeType = (typeof ProjectType)[keyof typeof ProjectType];
 export type ProjectMaterialType =
   (typeof ProjectMaterial)[keyof typeof ProjectMaterial];
 export type ProjectStatusType =
   (typeof ProjectStatus)[keyof typeof ProjectStatus];
 export type PaymentModeType = (typeof PaymentMode)[keyof typeof PaymentMode];
 export type UserRoleType = (typeof UserRole)[keyof typeof UserRole];
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatusType, string> = {
+  pending: "Review",
+  approved: "Fabrication",
+  completed: "Payment",
+  paid: "Claim",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+};
+
+export const PROJECT_STATUS_TRANSITIONS: Record<
+  ProjectStatusType,
+  readonly ProjectStatusType[]
+> = {
+  pending: [
+    ProjectStatus.APPROVED,
+    ProjectStatus.REJECTED,
+    ProjectStatus.CANCELLED,
+  ],
+  approved: [
+    ProjectStatus.PENDING,
+    ProjectStatus.COMPLETED,
+    ProjectStatus.CANCELLED,
+  ],
+  completed: [ProjectStatus.APPROVED, ProjectStatus.PAID],
+  paid: [ProjectStatus.COMPLETED],
+  rejected: [ProjectStatus.PENDING],
+  cancelled: [ProjectStatus.PENDING],
+};

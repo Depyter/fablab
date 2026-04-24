@@ -1,17 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UploadedFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
   threadId?: Id<"threads">;
 }
+
+const MESSAGE_PAGE_SIZE = 50;
 
 export function useChat({ roomId, threadId }: UseChatOptions) {
   const [input, setInput] = useState("");
@@ -28,11 +37,15 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   >([]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
   const isNearBottomRef = useRef(true);
+  const isTopVisibleRef = useRef(false);
   const initialScrollDoneRef = useRef(false);
+  // Track the oldest loaded message — changes only when loadMore resolves
+  const oldestMessageIdRef = useRef<string | null>(null);
 
   const {
     results: messages,
@@ -41,30 +54,71 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   } = usePaginatedQuery(
     api.chat.query.getRoomMessages,
     { room: roomId, threadId },
-    { initialNumItems: 50 },
+    { initialNumItems: MESSAGE_PAGE_SIZE },
   );
 
   const sendMessageMutation = useMutation(api.chat.mutate.sendMessage);
   const markReadMutation = useMutation(api.chat.mutate.markThreadRead);
 
-  // Scroll handling
-  const handleScroll = useCallback(() => {
+  const loadOlderMessages = useCallback(() => {
     const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
-
     if (
-      scrollTop < 100 &&
-      status === "CanLoadMore" &&
-      !isLoadingMoreRef.current
+      !container ||
+      status !== "CanLoadMore" ||
+      isLoadingMoreRef.current ||
+      !initialScrollDoneRef.current
     ) {
-      isLoadingMoreRef.current = true;
-      prevScrollHeightRef.current = scrollHeight;
-      loadMore(50);
+      return;
     }
-  }, [status, loadMore]);
+
+    prevScrollHeightRef.current = container.scrollHeight;
+    isLoadingMoreRef.current = true;
+    loadMore(MESSAGE_PAGE_SIZE);
+  }, [loadMore, status]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const topSentinel = topSentinelRef.current;
+    if (!container || !topSentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isTopVisibleRef.current = entry?.isIntersecting ?? false;
+
+        if (entry?.isIntersecting) {
+          loadOlderMessages();
+        }
+      },
+      { root: container },
+    );
+
+    observer.observe(topSentinel);
+
+    return () => observer.disconnect();
+  }, [loadOlderMessages, messages.length]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const bottomSentinel = bottomRef.current;
+    if (!container || !bottomSentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isNearBottomRef.current = entry?.isIntersecting ?? false;
+      },
+      { root: container },
+    );
+
+    observer.observe(bottomSentinel);
+
+    return () => observer.disconnect();
+  }, [messages.length]);
+
+  useEffect(() => {
+    if (isTopVisibleRef.current) {
+      loadOlderMessages();
+    }
+  }, [loadOlderMessages, messages.length, status]);
 
   useEffect(() => {
     if (threadId) {
@@ -72,27 +126,41 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     }
   }, [threadId, messages.length, markReadMutation]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
+
+    // messages[messages.length - 1] is the oldest (query returns newest-first)
+    const oldestId = messages[messages.length - 1]?._id ?? null;
 
     if (!initialScrollDoneRef.current && messages.length > 0) {
       bottomRef.current?.scrollIntoView();
       initialScrollDoneRef.current = true;
+      oldestMessageIdRef.current = oldestId;
       return;
     }
 
-    if (isLoadingMoreRef.current) {
+    // Older messages loaded: oldest message ID changed after loadMore resolved
+    if (isLoadingMoreRef.current && oldestId !== oldestMessageIdRef.current) {
       const newScrollHeight = container.scrollHeight;
       container.scrollTop += newScrollHeight - prevScrollHeightRef.current;
       isLoadingMoreRef.current = false;
+      oldestMessageIdRef.current = oldestId;
       return;
     }
+
+    if (isLoadingMoreRef.current && status === "Exhausted") {
+      isLoadingMoreRef.current = false;
+      oldestMessageIdRef.current = oldestId;
+    }
+
+    // New message arrived while loadMore is in-flight — don't restore scroll
+    if (isLoadingMoreRef.current) return;
 
     if (isNearBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, status]);
 
   const handleSendMessage = async () => {
     const hasText = input.trim();
@@ -117,7 +185,13 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         room: roomId,
         threadId,
       });
-      // toast.success("Message sent");
+      posthog.capture("chat_message_sent", {
+        room_id: roomId,
+        thread_id: threadId,
+        has_attachments: attachments.length > 0,
+        attachment_count: attachments.length,
+        message_length: content.trim().length,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error(
@@ -144,6 +218,10 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         previewUrl: f.url ?? "",
       })),
     );
+  };
+
+  const handleUploadError = (error: Error) => {
+    toast.error(error.message || "Failed to upload file");
   };
 
   const removeAttachment = (index: number) => {
@@ -182,11 +260,12 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     fileUploadKey,
     fileUploadInitialFiles,
     scrollContainerRef,
+    topSentinelRef,
     bottomRef,
-    handleScroll,
     handleSendMessage,
     handleKeyPress,
     handleFilesChange,
+    handleUploadError,
     removeAttachment,
   };
 }

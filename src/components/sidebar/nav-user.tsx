@@ -16,13 +16,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  ChevronsUpDownIcon,
-  BadgeCheckIcon,
-  BellIcon,
-  LogOutIcon,
-} from "lucide-react";
+import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react";
 import { UserProfileDialog } from "@/components/profile/profile-card";
+import { authClient } from "@/lib/auth-client";
+import posthog from "posthog-js";
 
 function getInitials(name: string): string {
   return name
@@ -44,6 +41,12 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const initials = getInitials(user.name);
+
+  const handleSignOut = async () => {
+    posthog.reset();
+    await authClient.signOut();
+    window.location.replace("/login");
+  };
 
   return (
     <SidebarMenu>
@@ -108,15 +111,14 @@ export function NavUser({
                   Account
                 </DropdownMenuItem>
               </UserProfileDialog>
-              <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-foreground">
-                <BellIcon className="size-4 text-sidebar-primary" />
-                Notifications
-              </DropdownMenuItem>
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator className="bg-sidebar-border" />
 
-            <DropdownMenuItem className="gap-2 cursor-pointer text-destructive focus:bg-sidebar-accent focus:text-destructive">
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer text-destructive focus:bg-sidebar-accent focus:text-destructive"
+              onClick={handleSignOut}
+            >
               <LogOutIcon className="size-4" />
               Log out
             </DropdownMenuItem>

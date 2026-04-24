@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ManageCard } from "@/components/manage/manage-card";
-import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -11,22 +10,17 @@ interface ServiceCardProps {
   title: string;
   description: string;
   pricing:
-    | { type: "FIXED"; amount: number; upAmount?: number }
     | {
-        type: "PER_UNIT";
-        baseFee: number;
-        upBaseFee?: number;
-        unitName: string;
-        ratePerUnit: number;
-        upRatePerUnit?: number;
+        type: "FIXED";
+        amount: number;
+        variants?: Array<{ name: string; amount: number }>;
       }
     | {
-        type: "COMPOSITE";
-        baseFee: number;
-        upBaseFee?: number;
+        type: "FABRICATION";
+        setupFee: number;
         unitName: string;
         timeRate: number;
-        upTimeRate?: number;
+        variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
       };
 
   // optional
@@ -52,7 +46,7 @@ export function ServiceCard({
   pricing,
   imageAlt = "Service image",
   badgeText = "Featured",
-  badgeVariant = "secondary",
+  // badgeVariant = "secondary",
   buttonText = "Edit Service",
   showBadge = true,
   className = "",
@@ -65,22 +59,14 @@ export function ServiceCard({
         <>
           {pricing.type === "FIXED" &&
             `₱${pricing.amount.toFixed(2)} Fixed${
-              pricing.upAmount !== undefined
-                ? ` (UP: ₱${pricing.upAmount.toFixed(2)})`
+              pricing.variants && pricing.variants.length > 0
+                ? ` (+${pricing.variants.length} variant${pricing.variants.length > 1 ? "s" : ""})`
                 : ""
             }`}
-          {pricing.type === "PER_UNIT" &&
-            `₱${pricing.baseFee.toFixed(2)} Base + ₱${pricing.ratePerUnit.toFixed(2)}/${pricing.unitName}${
-              pricing.upBaseFee !== undefined ||
-              pricing.upRatePerUnit !== undefined
-                ? " (UP Available)"
-                : ""
-            }`}
-          {pricing.type === "COMPOSITE" &&
-            `₱${pricing.baseFee.toFixed(2)} Base + ₱${pricing.timeRate.toFixed(2)}/hr${
-              pricing.upBaseFee !== undefined ||
-              pricing.upTimeRate !== undefined
-                ? " (UP Available)"
+          {pricing.type === "FABRICATION" &&
+            `₱${(pricing.setupFee ?? 0).toFixed(2)} Setup + ₱${pricing.timeRate.toFixed(2)}/${pricing.unitName}${
+              pricing.variants && pricing.variants.length > 0
+                ? ` (+${pricing.variants.length} variant${pricing.variants.length > 1 ? "s" : ""})`
                 : ""
             }`}
         </>

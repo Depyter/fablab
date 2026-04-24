@@ -1,7 +1,14 @@
 "use client";
-import { ReactNode, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { STATUS_STYLES } from "./project-card";
 import { useQuery, useMutation } from "convex/react";
@@ -11,11 +18,31 @@ import { Id } from "@convex/_generated/dataModel";
 import { OptionRadioGroupItem } from "../option-radio-group";
 import { AssignMakerContent } from "./assign-maker-content";
 import { ProjectDetailsContent } from "./project-details-content";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FileUpload } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/file-upload";
+import posthog from "posthog-js";
+
+import {
+  ProjectStatusType,
+  PaymentModeType,
+  UserRoleType,
+  ProjectMaterialType,
+  ProjectServiceTypeType,
+  FILE_CATEGORIES,
+} from "@convex/constants";
 
 interface ProjectDetailsProps {
-  projectId: Id<"projects">;
-  bookingDate?: number;
-  bookingTime?: number;
+  projectId?: Id<"projects"> | null;
   serviceName?: string;
   trigger?: ReactNode;
   triggerClassName?: string;
@@ -24,8 +51,6 @@ interface ProjectDetailsProps {
 
 export function ProjectDetails({
   projectId,
-  bookingDate,
-  bookingTime,
   trigger,
   triggerClassName,
   buttonLabel = "View Details",
@@ -36,33 +61,50 @@ export function ProjectDetails({
   );
   const [selectedMaker, setSelectedMaker] = useState("");
 
-  const project = useQuery(api.projects.query.getProject, {
-    projectId,
-  });
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [receiptNumber, setReceiptNumber] = useState("");
+  const [paymentMode, setPaymentMode] = useState<PaymentModeType>("cash");
+  const [proof, setProof] = useState("");
+  const [proofFiles, setProofFiles] = useState<UploadedFile[]>([]);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+
+  const project = useQuery(
+    api.projects.query.getProject,
+    projectId ? { projectId } : "skip",
+  );
 
   const updateProject = useMutation(api.projects.mutate.updateProject);
   const cancelOwnProject = useMutation(api.projects.mutate.cancelOwnProject);
-  const role = useQuery(api.users.getRole, {});
+  const markProjectPaid = useMutation(api.projects.mutate.markProjectPaid);
+  const updateOwnProjectDetails = useMutation(
+    api.projects.mutate.updateOwnProjectDetails,
+  );
+  const role = useQuery(api.users.getRole, {}) as UserRoleType | undefined;
   const isClient = role === "client";
+  const isAdminOrMaker = role === "admin" || role === "maker";
+  const makers = useQuery(api.users.getMakers, isAdminOrMaker ? {} : "skip");
 
-  const handleUpdateStatus = async (
-    newStatus:
-      | "pending"
-      | "approved"
-      | "rejected"
-      | "completed"
-      | "cancelled"
-      | string,
-  ) => {
+  if (!projectId) {
+    if (React.isValidElement<{ className?: string }>(trigger)) {
+      return React.cloneElement(trigger, {
+        className: cn(trigger.props.className, "cursor-default hover:ring-0"),
+      });
+    }
+    return <>{trigger}</>;
+  }
+
+  const handleUpdateStatus = async (newStatus: ProjectStatusType) => {
     try {
       await updateProject({
         projectId,
-        status: newStatus as
-          | "pending"
-          | "approved"
-          | "rejected"
-          | "completed"
-          | "cancelled",
+        status: newStatus,
+      });
+      posthog.capture("project_status_updated", {
+        project_id: projectId,
+        project_name: project?.name,
+        new_status: newStatus,
       });
       toast.success(`Project status updated to ${newStatus}!`);
     } catch {
@@ -73,9 +115,73 @@ export function ProjectDetails({
   const handleCancelProject = async () => {
     try {
       await cancelOwnProject({ projectId });
+      posthog.capture("project_cancelled", {
+        project_id: projectId,
+        project_name: project?.name,
+      });
       toast.success("Project request cancelled.");
     } catch {
       toast.error("Failed to cancel project request.");
+    }
+  };
+
+  const handleUpdateDetails = async (args: {
+    description?: string;
+    notes?: string;
+    material?: ProjectMaterialType;
+    serviceType?: ProjectServiceTypeType;
+    files?: string[];
+  }) => {
+    try {
+      await updateOwnProjectDetails({
+        projectId,
+        ...args,
+        files: args.files as Id<"_storage">[],
+      });
+      posthog.capture("project_details_updated", {
+        project_id: projectId,
+        project_name: project?.name,
+      });
+      toast.success("Project details updated.");
+    } catch {
+      toast.error("Failed to update project details.");
+      throw new Error("Update failed");
+    }
+  };
+
+  const handleMarkPaid = async () => {
+    if (!receiptNumber.trim()) {
+      toast.error("Please enter a receipt number.");
+      return;
+    }
+    if (!proof.trim()) {
+      toast.error("Please describe the proof of payment.");
+      return;
+    }
+    setIsPaying(true);
+    try {
+      await markProjectPaid({
+        projectId,
+        receiptString: receiptNumber.trim(),
+        paymentMode,
+        proof: proof.trim(),
+        proofFiles: proofFiles.map((f) => f.storageId as Id<"_storage">),
+      });
+      posthog.capture("project_payment_recorded", {
+        project_id: projectId,
+        project_name: project?.name,
+        payment_mode: paymentMode,
+      });
+      toast.success("Payment recorded. Project moved to claim.");
+      setPaymentDialogOpen(false);
+      setReceiptNumber("");
+      setProof("");
+      setPaymentMode("cash");
+      setProofFiles([]);
+    } catch {
+      toast.error("Failed to record payment.");
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -90,62 +196,86 @@ export function ProjectDetails({
     };
   }
 
-  const makers = useQuery(api.users.getMakers);
-
   const timelineSteps = project
     ? [
         {
-          title: "Request submitted",
+          title: "Submission",
           statusLabel: "Completed",
           byLabel: project.client?.name ?? "Client",
           completed: true,
         },
         {
-          title: "Admin review",
+          title: "Review",
           statusLabel:
             project.status === "rejected"
               ? "Rejected"
               : project.status === "cancelled"
                 ? "Cancelled"
                 : project.status === "pending"
-                  ? "Pending"
+                  ? "In progress"
                   : "Completed",
-          byLabel: project.status === "pending" ? "Waiting" : "Admin",
+          byLabel:
+            project.status === "pending" ? "FabLab Staff" : "FabLab Staff",
           active: project.status === "pending",
           completed:
-            project.status === "approved" || project.status === "completed",
+            project.status === "approved" ||
+            project.status === "completed" ||
+            project.status === "paid",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
         {
-          title: "Maker assignment",
+          title: "Fabrication",
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
               : project.status === "approved"
-                ? "Completed"
-                : project.status === "completed"
+                ? "In progress"
+                : project.status === "completed" || project.status === "paid"
                   ? "Completed"
                   : "Pending",
           byLabel: project.assignedMaker
             ? project.assignedMaker.name
             : "Waiting",
           active: project.status === "approved",
-          completed: project.status === "completed",
+          completed:
+            project.status === "completed" || project.status === "paid",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
         },
         {
-          title: "Project execution",
+          title: "Payment",
           statusLabel:
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
               : project.status === "completed"
+                ? "In progress"
+                : project.status === "paid"
+                  ? "Completed"
+                  : "Pending",
+          byLabel:
+            project.status === "paid"
+              ? "FabLab Staff"
+              : project.status === "completed"
+                ? "Waiting"
+                : "—",
+          active: project.status === "completed",
+          completed: project.status === "paid",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
+        },
+        {
+          title: "Claim",
+          statusLabel:
+            project.status === "rejected" || project.status === "cancelled"
+              ? "Cancelled"
+              : project.status === "paid"
                 ? "Completed"
                 : "Pending",
-          byLabel: project.assignedMaker
-            ? project.assignedMaker.name
-            : "Waiting",
-          active: project.status === "completed",
-          completed: project.status === "completed",
+          byLabel: project.status === "paid" ? "Client" : "—",
+          completed: project.status === "paid",
+          rejected:
+            project.status === "rejected" || project.status === "cancelled",
         },
       ]
     : [];
@@ -162,10 +292,35 @@ export function ProjectDetails({
 
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
-    if (!open) {
+    if (open) {
+      posthog.capture("project_details_opened", {
+        project_id: projectId,
+        project_name: project?.name,
+        project_status: project?.status,
+      });
+    } else {
       setDialogView("details");
       setSelectedMaker("");
+      setPaymentDialogOpen(false);
     }
+  };
+
+  const handleOpenPaymentDialog = () => {
+    // Pre-populate from existing receipt when updating
+    if (project?.receipt) {
+      setReceiptNumber(project.receipt.receiptString ?? "");
+      setPaymentMode(
+        (project.receipt.paymentMode as typeof paymentMode) ?? "cash",
+      );
+      setProof(project.receipt.proof ?? "");
+      setProofFiles([]);
+    } else {
+      setReceiptNumber("");
+      setPaymentMode("cash");
+      setProof("");
+      setProofFiles([]);
+    }
+    setPaymentDialogOpen(true);
   };
 
   const handleOpenAssignView = () => {
@@ -188,7 +343,12 @@ export function ProjectDetails({
         status: "approved",
         makerId: selectedMaker as Id<"userProfile">,
       });
-      toast.success("Project approved and maker assigned!");
+      posthog.capture("project_maker_assigned", {
+        project_id: projectId,
+        project_name: project?.name,
+        maker_id: selectedMaker,
+      });
+      toast.success("Project moved to fabrication and maker assigned.");
       setDialogView("details");
     } catch {
       toast.error("Failed to assign maker.");
@@ -207,8 +367,8 @@ export function ProjectDetails({
         </DialogTrigger>
       )}
 
-      <DialogContent className="max-h-[92vh] sm:max-w-6xl overflow-x-hidden overflow-y-auto rounded-xl p-4 sm:p-6">
-        {!project ? (
+      <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
+        {!project || role === undefined ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             Loading project details...
           </div>
@@ -222,17 +382,119 @@ export function ProjectDetails({
             onConfirm={handleAssignMaker}
           />
         ) : (
-          <ProjectDetailsContent
-            project={project}
-            bookingDate={bookingDate}
-            bookingTime={bookingTime}
-            styles={styles}
-            timelineSteps={timelineSteps}
-            onOpenAssignView={handleOpenAssignView}
-            onUpdateStatus={handleUpdateStatus}
-            isClient={isClient}
-            onCancelProject={handleCancelProject}
-          />
+          <>
+            <ProjectDetailsContent
+              project={project}
+              styles={styles}
+              timelineSteps={timelineSteps}
+              onOpenAssignView={handleOpenAssignView}
+              onUpdateStatus={handleUpdateStatus}
+              onMarkPaid={() => handleOpenPaymentDialog()}
+              isClient={isClient}
+              onCancelProject={handleCancelProject}
+              onUpdateDetails={isClient ? handleUpdateDetails : undefined}
+            />
+
+            {/* ── Mark as Paid dialog ─────────────────────────────────── */}
+            <Dialog
+              open={paymentDialogOpen}
+              onOpenChange={setPaymentDialogOpen}
+            >
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {project?.receipt
+                      ? "Update Payment Details"
+                      : "Record Payment and Move to Claim"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="receipt-number">Receipt Number</Label>
+                    <Input
+                      id="receipt-number"
+                      type="text"
+                      placeholder="e.g. OR-10042"
+                      value={receiptNumber}
+                      onChange={(e) => setReceiptNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="payment-mode">Payment Mode</Label>
+                    <Select
+                      value={paymentMode}
+                      onValueChange={(v) =>
+                        setPaymentMode(
+                          v as "cash" | "gcash" | "bank transfer" | "others",
+                        )
+                      }
+                    >
+                      <SelectTrigger id="payment-mode" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="gcash">GCash</SelectItem>
+                        <SelectItem value="bank transfer">
+                          Bank Transfer
+                        </SelectItem>
+                        <SelectItem value="others">Others</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="proof">Proof of Payment</Label>
+                    <Textarea
+                      id="proof"
+                      placeholder="Reference number, transaction ID, or other details…"
+                      rows={3}
+                      value={proof}
+                      onChange={(e) => setProof(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Attachments (optional)</Label>
+                    <FileUpload
+                      title="Upload proof (images or PDF)"
+                      variant="compact"
+                      multiple
+                      accept="image/*,.pdf"
+                      allowedTypes={[
+                        ...FILE_CATEGORIES.Images,
+                        "application/pdf",
+                      ]}
+                      value={proofFiles}
+                      onFilesChange={setProofFiles}
+                      onUploadingChange={setIsUploadingProof}
+                      autoUpload
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPaymentDialogOpen(false)}
+                    disabled={isPaying}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleMarkPaid}
+                    disabled={isPaying || isUploadingProof}
+                    style={{ background: "var(--fab-teal)", color: "#fff" }}
+                  >
+                    {isUploadingProof
+                      ? "Uploading…"
+                      : isPaying
+                        ? "Saving…"
+                        : project?.receipt
+                          ? "Update Payment"
+                          : "Record Payment"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
       </DialogContent>
     </Dialog>

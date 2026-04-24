@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { OptionRadioGroup, OptionRadioGroupItem } from "../option-radio-group";
 

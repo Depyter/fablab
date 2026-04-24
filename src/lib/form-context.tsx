@@ -1,4 +1,9 @@
 import { createFormHook, createFormHookContexts } from "@tanstack/react-form";
+import {
+  WorkshopTimeSlotPicker,
+  type WorkshopTimeSlotValue,
+  type WorkshopSchedule,
+} from "@/components/booking/workshop-time-slot-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
@@ -108,6 +113,25 @@ export const { useAppForm, withForm } = createFormHook({
             />
           )}
         </Field>
+      );
+    },
+    WorkshopTimeSlotPicker: (props: { schedules?: WorkshopSchedule[] }) => {
+      const field = useFieldContext<WorkshopTimeSlotValue>();
+      return (
+        <>
+          <WorkshopTimeSlotPicker
+            value={field.state.value}
+            onChange={field.handleChange}
+            schedules={props.schedules}
+          />
+          {field.state.meta.errors?.length > 0 && (
+            <FieldError
+              errors={field.state.meta.errors.map((err) => ({
+                message: err?.toString() ?? "Invalid value",
+              }))}
+            />
+          )}
+        </>
       );
     },
     SelectInput: (props: {

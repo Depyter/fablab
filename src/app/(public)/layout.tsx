@@ -1,54 +1,66 @@
-import { ConvexClientProvider } from "@/components/ConvexClientProvider";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { ReactNode } from "react";
 import { PublicMobileNav } from "@/components/sidebar/public-mobile-nav";
+import { hasValidSession } from "@/lib/auth-queries";
 
 export default async function PublicLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const isAuthenticated = await hasValidSession();
+
   return (
-    <ConvexClientProvider>
-      <div className="min-h-full flex flex-col">
-        <header className="sticky top-0 z-20 h-[8vh] bg-primary border-b border-sidebar-border/10">
-          <div className="mx-auto h-full max-w-7xl px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-4">
-            <Link href="/home" className="flex items-center min-w-0">
-              <Image
-                src="/fablab.svg"
-                alt="Fablab Logo"
-                width={120}
-                height={120}
-                className="h-8 w-auto"
-              />
-              <span className="ml-2 text-sm font-bold text-white tracking-[0.3em] truncate">
-                IskoLab
-              </span>
+    <div className="min-h-full flex flex-col">
+      <header className="sticky top-0 z-50 h-16 border-b-4 border-black bg-background">
+        <div className="mx-auto flex h-full max-w-full items-center justify-between px-6 sm:px-10 lg:px-16">
+          <Link
+            href="/"
+            className="text-3xl font-black uppercase tracking-tighter text-black transition-colors hover:text-fab-magenta sm:text-4xl"
+          >
+            IskoLab
+          </Link>
+
+          <div className="sm:hidden">
+            <PublicMobileNav />
+          </div>
+
+          <nav className="hidden items-center gap-8 sm:flex">
+            <Link
+              href="/about"
+              className="text-xl font-black uppercase tracking-tighter text-black hover:text-fab-magenta"
+            >
+              About
             </Link>
 
-            <div className="sm:hidden">
-              <PublicMobileNav />
-            </div>
+            <Link
+              href="/services"
+              className="text-xl font-black uppercase tracking-tighter text-black hover:text-fab-teal"
+            >
+              Services
+            </Link>
 
-            <nav className="hidden sm:flex items-center gap-4 md:gap-6 text-white">
-              <Link href="/about" className="text-sm font-medium">
-                About Us
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                className="border-4 border-black bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
+              >
+                Dashboard
               </Link>
-
-              <Link href="/services" className="text-sm font-medium">
-                Services
-              </Link>
-
-              <Link href="/login" className="text-sm font-medium">
+            ) : (
+              <Link
+                href="/login"
+                className="border-4 border-black bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
+              >
                 Login
               </Link>
-            </nav>
-          </div>
-        </header>
+            )}
+          </nav>
+        </div>
+      </header>
 
-        <main className="flex-1 min-h-0">{children}</main>
-      </div>
-    </ConvexClientProvider>
+      <main className="min-h-0 flex-1">{children}</main>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, test } from "vitest";
-import { api } from "../_generated/api";
+import { api } from "../convex/_generated/api";
 import { expect } from "vitest";
 import { setupUsers } from "./helper";
 
@@ -38,12 +38,12 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [storageId],
       samples: [sampleStorageId],
-      serviceCategory: { type: "FABRICATION", materials: [] },
-      pricing: {
-        type: "PER_UNIT",
-        baseFee: 2,
-        unitName: "min",
-        ratePerUnit: 4,
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [],
+        setupFee: 2,
+        unitName: "minute",
+        timeRate: 4,
       },
       requirements: ["design", "model"],
       fileTypes: [],
@@ -74,12 +74,12 @@ describe("Service functions", () => {
         name: "3d printing",
         images: [],
         samples: [],
-        serviceCategory: { type: "FABRICATION", materials: [] },
-        pricing: {
-          type: "PER_UNIT",
-          baseFee: 2,
-          unitName: "min",
-          ratePerUnit: 4,
+        serviceCategory: {
+          type: "FABRICATION",
+          materials: [],
+          setupFee: 2,
+          unitName: "minute",
+          timeRate: 4,
         },
         requirements: ["design", "model"],
         fileTypes: [],
@@ -93,12 +93,12 @@ describe("Service functions", () => {
         name: "3d printing",
         images: [],
         samples: [],
-        serviceCategory: { type: "FABRICATION", materials: [] },
-        pricing: {
-          type: "PER_UNIT",
-          baseFee: 2,
-          unitName: "min",
-          ratePerUnit: 4,
+        serviceCategory: {
+          type: "FABRICATION",
+          materials: [],
+          setupFee: 2,
+          unitName: "minute",
+          timeRate: 4,
         },
         requirements: ["design", "model"],
         fileTypes: [],
@@ -117,12 +117,12 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      serviceCategory: { type: "FABRICATION", materials: [] },
-      pricing: {
-        type: "PER_UNIT",
-        baseFee: 2,
-        unitName: "min",
-        ratePerUnit: 4,
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [],
+        setupFee: 2,
+        unitName: "minute",
+        timeRate: 4,
       },
       requirements: ["design", "model"],
       fileTypes: [],
@@ -216,12 +216,12 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [storageId],
       samples: [sampleStorageId],
-      serviceCategory: { type: "FABRICATION", materials: [] },
-      pricing: {
-        type: "PER_UNIT",
-        baseFee: 2,
-        unitName: "min",
-        ratePerUnit: 4,
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [],
+        setupFee: 2,
+        unitName: "minute",
+        timeRate: 4,
       },
       requirements: ["design", "model"],
       fileTypes: [],
@@ -254,12 +254,12 @@ describe("Service functions", () => {
       name: "3d printing",
       images: [],
       samples: [],
-      serviceCategory: { type: "FABRICATION", materials: [] },
-      pricing: {
-        type: "PER_UNIT",
-        baseFee: 2,
-        unitName: "min",
-        ratePerUnit: 4,
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [],
+        setupFee: 2,
+        unitName: "minute",
+        timeRate: 4,
       },
       requirements: ["design", "model"],
       fileTypes: [],

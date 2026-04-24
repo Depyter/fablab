@@ -1,6 +1,6 @@
 "use client";
 
-import { usePreloadedQuery } from "convex/react";
+import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { api } from "@convex/_generated/api";
 import { Preloaded } from "convex/react";
 import { useState, useEffect } from "react";
@@ -21,7 +21,7 @@ export function ServiceDetailClient({
 }: {
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
-  const service = usePreloadedQuery(preloadedService);
+  const service = usePreloadedAuthQuery(preloadedService);
   const router = useRouter();
   const deleteService = useMutation(api.services.mutate.deleteService);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -71,18 +71,18 @@ export function ServiceDetailClient({
     }
   };
 
-  const getPricingDisplays = (pricing: typeof service.pricing) => {
+  const getPricingDisplays = (cat: typeof service.serviceCategory) => {
     const displays = [];
 
-    if (pricing.type === "FIXED") {
+    if (cat.type === "WORKSHOP") {
       displays.push({
         label: "Regular Price",
-        price: pricing.amount,
+        price: cat.amount,
         unit: "fixed",
         isUp: false,
       });
-      if (pricing.variants) {
-        for (const variant of pricing.variants) {
+      if (cat.variants) {
+        for (const variant of cat.variants) {
           displays.push({
             label: `${variant.name} Price`,
             price: variant.amount,
@@ -91,60 +91,31 @@ export function ServiceDetailClient({
           });
         }
       }
-    } else if (pricing.type === "PER_UNIT") {
+    } else if (cat.type === "FABRICATION") {
       displays.push({
         label: "Regular Base",
-        price: pricing.baseFee,
-        unit: "base",
-        isUp: false,
-      });
-      displays.push({
-        label: "Regular Rate",
-        price: pricing.ratePerUnit,
-        unit: pricing.unitName,
-        isUp: false,
-      });
-      if (pricing.variants) {
-        for (const variant of pricing.variants) {
-          displays.push({
-            label: `${variant.name} Base`,
-            price: variant.baseFee,
-            unit: "base",
-            isUp: true,
-          });
-          displays.push({
-            label: `${variant.name} Rate`,
-            price: variant.ratePerUnit,
-            unit: pricing.unitName,
-            isUp: true,
-          });
-        }
-      }
-    } else if (pricing.type === "COMPOSITE") {
-      displays.push({
-        label: "Regular Base",
-        price: pricing.baseFee,
+        price: cat.setupFee,
         unit: "base",
         isUp: false,
       });
       displays.push({
         label: "Regular Time Rate",
-        price: pricing.timeRate,
-        unit: pricing.unitName,
+        price: cat.timeRate,
+        unit: cat.unitName,
         isUp: false,
       });
-      if (pricing.variants) {
-        for (const variant of pricing.variants) {
+      if (cat.variants) {
+        for (const variant of cat.variants) {
           displays.push({
             label: `${variant.name} Base`,
-            price: variant.baseFee,
+            price: variant.setupFee,
             unit: "base",
             isUp: true,
           });
           displays.push({
             label: `${variant.name} Time Rate`,
             price: variant.timeRate,
-            unit: pricing.unitName,
+            unit: cat.unitName,
             isUp: true,
           });
         }
@@ -154,7 +125,7 @@ export function ServiceDetailClient({
     return displays;
   };
 
-  const pricingDisplays = getPricingDisplays(service.pricing);
+  const pricingDisplays = getPricingDisplays(service.serviceCategory);
 
   return (
     <main className="container mx-auto max-w-6xl pb-24">

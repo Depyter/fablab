@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,6 +19,10 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
   --color-light-yellow: var(--light-yellow);
+  --color-fab-teal: var(--fab-teal);
+  --color-fab-magenta: var(--fab-magenta);
+  --color-fab-amber: var(--fab-amber);
+  --color-fab-purple: var(--fab-purple);
   --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -52,42 +57,88 @@
 }
 
 :root {
-  --background: #fdfbf7;
-  --foreground: #29253c;
-  --card: #fdfbf7;
-  --card-foreground: #29253c;
-  --popover: #fdfbf7;
-  --popover-foreground: #29253c;
-  --primary: #9e214e;
-  --primary-muted: #ffedf6;
-  --primary-foreground: #fdfbf7;
-  --secondary: #4a9e92;
-  --secondary-muted: oklch(97.36% 0.02008 189.541);
-  --secondary-foreground: #fdfbf7;
-  --muted: oklch(0.967 0.003 264.542);
-  --muted-foreground: oklch(0.551 0.027 264.364);
-  --accent: #4a9e92;
-  --accent-foreground: #fdfbf7;
+  /* ── FabLab brand tokens ─────────────────────────────────────────────── */
+  --fab-bg-deep: #f0eeff;
+  --fab-bg-sidebar: #e8e4fb;
+  --fab-bg-main: #faf9ff;
+  --fab-bg-card: #ffffff;
+  --fab-teal: #0fa896;
+  --fab-teal-light: #72cbc1;
+  --fab-magenta: #9d1a58;
+  --fab-magenta-light: #fcedf2;
+  --fab-amber: #ebaa57;
+  --fab-amber-light: #fef3dc;
+  --fab-timeline-complete: var(--fab-teal);
+  --fab-timeline-complete-soft: color-mix(in srgb, var(--fab-teal) 18%, white);
+  --fab-timeline-active: var(--fab-amber);
+  --fab-timeline-active-soft: var(--fab-amber-light);
+  --fab-timeline-rejected: var(--fab-magenta);
+  --fab-timeline-rejected-soft: var(--fab-magenta-light);
+  --fab-text-primary: #14112b;
+  --fab-text-muted: #5a5478;
+  --fab-text-dim: #9d99b8;
+  --fab-border: rgba(80, 60, 160, 0.1);
+  --fab-border-md: rgba(80, 60, 160, 0.15);
+  --fab-border-soft: rgba(80, 60, 160, 0.08);
+  --fab-grid: rgba(100, 80, 200, 0.06);
+  --fab-purple: #534ab7;
+  --fab-sidebar-hover: color-mix(in srgb, var(--fab-bg-main) 88%, white);
+  --fab-sidebar-active: color-mix(
+    in srgb,
+    var(--fab-magenta-light) 72%,
+    var(--fab-bg-main)
+  );
+  --fab-chat-thread-hover: color-mix(
+    in srgb,
+    var(--fab-amber-light) 20%,
+    var(--fab-bg-main)
+  );
+  --fab-chat-empty-card: color-mix(in srgb, var(--fab-bg-card) 84%, white);
+  --fab-chat-empty-glow: color-mix(in srgb, var(--fab-amber) 14%, transparent);
+  --fab-chat-system-bg: color-mix(in srgb, var(--fab-bg-sidebar) 52%, white);
+  --fab-chat-system-pill: color-mix(
+    in srgb,
+    var(--fab-magenta-light) 48%,
+    var(--fab-bg-main)
+  );
+
+  /* ── shadcn overrides ────────────────────────────────────────────────── */
+  --background: #f0eeff;
+  --foreground: #14112b;
+  --card: #ffffff;
+  --card-foreground: #14112b;
+  --popover: #ffffff;
+  --popover-foreground: #14112b;
+  --primary: #9d1a58;
+  --primary-muted: #9d1a58;
+  --primary-foreground: #ffffff;
+  --secondary: #e8e4fb;
+  --secondary-muted: #f0eeff;
+  --secondary-foreground: #14112b;
+  --muted: #e8e4fb;
+  --muted-foreground: #5a5478;
+  --accent: #dddaf5;
+  --accent-foreground: #14112b;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.928 0.006 264.531);
-  --input: oklch(0.928 0.006 264.531);
-  --ring: #9e214e;
-  --chart-1: #4a9e92;
-  --chart-2: #9e214e;
-  --chart-3: #d48a32;
-  --chart-4: oklch(0.25 0.04 285);
+  --border: rgba(80, 60, 160, 0.15);
+  --input: rgba(80, 60, 160, 0.15);
+  --ring: #0fa896;
+  --chart-1: #0fa896;
+  --chart-2: #b5204f;
+  --chart-3: #c47d08;
+  --chart-4: #534ab7;
   --chart-5: oklch(0.88 0.05 185);
-  --chart-6: #158680;
-  --light-yellow: oklch(98.986% 0.01724 96.136);
+  --chart-6: #0fa896;
+  --light-yellow: #fef3dc;
   --radius: 0.45rem;
-  --sidebar: oklch(0.985 0.002 247.839);
-  --sidebar-foreground: oklch(0.13 0.028 261.692);
-  --sidebar-primary: oklch(0.48 0.18 345);
-  --sidebar-primary-foreground: oklch(0.98 0.01 181);
-  --sidebar-accent: #ffedf6;
-  --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
-  --sidebar-border: oklch(0.928 0.006 264.531);
-  --sidebar-ring: oklch(0.707 0.022 261.325);
+  --sidebar: #e8e4fb;
+  --sidebar-foreground: #14112b;
+  --sidebar-primary: #0fa896;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--fab-sidebar-hover);
+  --sidebar-accent-foreground: #14112b;
+  --sidebar-border: rgba(80, 60, 160, 0.15);
+  --sidebar-ring: #0fa896;
 }
 
 .dark {
@@ -122,6 +173,13 @@
   --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --fab-timeline-complete-soft: color-mix(in srgb, var(--fab-teal) 22%, black);
+  --fab-timeline-active-soft: color-mix(in srgb, var(--fab-amber) 20%, black);
+  --fab-timeline-rejected-soft: color-mix(
+    in srgb,
+    var(--fab-magenta) 24%,
+    black
+  );
 }
 
 @layer base {
@@ -130,5 +188,64 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    color: var(--fab-text-primary);
   }
+}
+
+/* ── Message entrance animation ──────────────────────────────────────────── */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Usage table live indicator animations ───────────────────────────────── */
+@keyframes dotPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(15, 168, 150, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(15, 168, 150, 0);
+  }
+}
+
+@keyframes dotPulseMagenta {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(157, 26, 88, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(157, 26, 88, 0);
+  }
+}
+
+.message-enter {
+  animation: slideIn 0.2s ease;
+}
+
+/* ── Custom scrollbar ────────────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fab-border-md) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--fab-border-md);
+  border-radius: 99px;
 }

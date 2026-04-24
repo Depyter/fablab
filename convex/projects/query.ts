@@ -1,92 +1,169 @@
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
-import { Id } from "../_generated/dataModel";
+import { Id, Doc } from "../_generated/dataModel";
+import { QueryCtx } from "../_generated/server";
 import { authQuery } from "../helper";
 
 export const getProjects = authQuery({
   args: {
     paginationOpts: paginationOptsValidator,
+    statusFilter: v.optional(v.string()),
+    dateFilter: v.optional(v.string()),
+    sortBy: v.optional(v.string()),
+    searchText: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userProfile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
-      .first();
+    const { role, _id: callerId } = ctx.profile;
+    const isPrivileged = role === "admin" || role === "maker";
 
-    if (!userProfile) throw new ConvexError("User not authorized");
+    const hasStatusFilter =
+      args.statusFilter !== undefined && args.statusFilter !== "all";
 
+    type StatusUnion =
+      | "pending"
+      | "approved"
+      | "rejected"
+      | "completed"
+      | "cancelled"
+      | "paid";
+
+    // ── Search path: uses the search index, applies status as a filter field ─
+    if (args.searchText && args.searchText.trim() !== "") {
+      let searchQuery = ctx.db
+        .query("projects")
+        .withSearchIndex("search_body", (q) => {
+          const base = q.search("searchText", args.searchText!);
+          return hasStatusFilter
+            ? base.eq("status", args.statusFilter as StatusUnion)
+            : base;
+        });
+
+      if (!isPrivileged) {
+        searchQuery = searchQuery.filter((q) =>
+          q.eq(q.field("userId"), callerId),
+        );
+      }
+
+      const result = await searchQuery.paginate(args.paginationOpts);
+      const enrichedPage = await enrichProjects(ctx, result.page);
+      return { ...result, page: enrichedPage };
+    }
+
+    // ── Sorted / filtered path ────────────────────────────────────────────────
     const baseQuery = ctx.db.query("projects");
 
-    const isPrivileged =
-      userProfile.role === "admin" || userProfile.role === "maker";
-
-    const scopedQuery = isPrivileged
-      ? baseQuery
-      : baseQuery.withIndex("by_userProfile", (q) =>
-          q.eq("userId", userProfile._id),
+    let orderedQuery;
+    switch (args.sortBy) {
+      case "price-high":
+      case "price-low":
+        // No price index; fall through to default creation-time order
+        orderedQuery = baseQuery.order(
+          args.sortBy === "price-high" ? "desc" : "asc",
         );
+        break;
+      case "name-az":
+        orderedQuery = baseQuery.order("asc");
+        break;
+      case "oldest":
+        if (hasStatusFilter) {
+          orderedQuery = baseQuery
+            .withIndex("by_status", (q) =>
+              q.eq("status", args.statusFilter as StatusUnion),
+            )
+            .order("asc");
+        } else {
+          orderedQuery = baseQuery.order("asc");
+        }
+        break;
+      case "newest":
+      default:
+        if (hasStatusFilter) {
+          orderedQuery = baseQuery
+            .withIndex("by_status", (q) =>
+              q.eq("status", args.statusFilter as StatusUnion),
+            )
+            .order("desc");
+        } else {
+          orderedQuery = baseQuery.order("desc");
+        }
+        break;
+    }
 
-    const result = await scopedQuery
-      .order("desc")
-      .paginate(args.paginationOpts);
+    let query = orderedQuery;
 
-    const enrichedPage = await Promise.all(
-      result.page.map(async (project) => {
-        const clientProfile = await ctx.db.get(project.userId);
-        const service = await ctx.db.get(project.service);
+    if (!isPrivileged) {
+      query = query.filter((q) => q.eq(q.field("userId"), callerId));
+    }
 
-        // Find resource usage for date/time
-        const usages = await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", project.service))
-          .collect();
-        const usage = usages.find((u) => u.projects.includes(project._id));
+    if (
+      hasStatusFilter &&
+      args.sortBy !== "newest" &&
+      args.sortBy !== "oldest"
+    ) {
+      query = query.filter((q) =>
+        q.eq(q.field("status"), args.statusFilter as StatusUnion),
+      );
+    }
 
-        const coverUrl =
-          service?.images && service.images.length > 0
-            ? await ctx.storage.getUrl(service.images[0])
-            : null;
+    // dateFilter is not supported after the scheduling refactor
+    // (startTime now lives on resourceUsage, not projects)
 
-        const makerProfile = project.assignedMaker
-          ? await ctx.db.get(project.assignedMaker)
-          : null;
-        const makerPfpUrl = makerProfile?.profilePic
-          ? await ctx.storage.getUrl(makerProfile.profilePic)
-          : null;
-
-        return {
-          ...project,
-          clientName: clientProfile?.name ?? "Unknown Client",
-          serviceName: service?.name ?? "Unknown Service",
-          assignedMaker: makerProfile
-            ? {
-                _id: makerProfile._id,
-                name: makerProfile.name,
-                pfpUrl: makerPfpUrl,
-              }
-            : null,
-          bookingDate:
-            usage?.date ??
-            (service?.serviceCategory.type === "WORKSHOP"
-              ? service.serviceCategory.date
-              : undefined) ??
-            Date.now(),
-          bookingTime:
-            project.selectedTimeSlot?.startTime ??
-            usage?.startTime ??
-            Date.now(),
-          estimatedPrice: 0, // Fallback price calculation
-          coverUrl,
-        };
-      }),
-    );
-
-    return {
-      ...result,
-      page: enrichedPage,
-    };
+    const result = await query.paginate(args.paginationOpts);
+    const enrichedPage = await enrichProjects(ctx, result.page);
+    return { ...result, page: enrichedPage };
   },
 });
+
+// ── Shared enrichment helper ──────────────────────────────────────────────────
+
+async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
+  return Promise.all(
+    projects.map(async (project) => {
+      const [clientProfile, service] = await Promise.all([
+        ctx.db.get(project.userId as Id<"userProfile">),
+        ctx.db.get(project.service as Id<"services">),
+      ]);
+
+      // Fetch usage directly by project
+      const usage = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", project._id))
+        .first();
+
+      const coverUrl =
+        service?.images && service.images.length > 0
+          ? await ctx.storage.getUrl(service.images[0])
+          : null;
+
+      const makerProfile = project.assignedMaker
+        ? await ctx.db.get(project.assignedMaker as Id<"userProfile">)
+        : null;
+      const makerPfpUrl = makerProfile?.profilePic
+        ? await ctx.storage.getUrl(makerProfile.profilePic)
+        : null;
+
+      return {
+        ...project,
+        clientName: clientProfile?.name ?? "Unknown Client",
+        serviceName: service?.name ?? "Unknown Service",
+        assignedMaker: makerProfile
+          ? {
+              _id: makerProfile._id,
+              name: makerProfile.name,
+              pfpUrl: makerPfpUrl,
+            }
+          : null,
+        // Booking window from resourceUsage
+        bookingStartTime: usage?.startTime ?? null,
+        bookingEndTime: usage?.endTime ?? null,
+        // Audit dates
+        requestedDate: project._creationTime,
+        estimatedPrice: project.totalInvoice?.total ?? 0,
+        coverUrl,
+      };
+    }),
+  );
+}
 
 export const getProject = authQuery({
   args: {
@@ -94,11 +171,9 @@ export const getProject = authQuery({
   },
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
-
     if (!project) throw new ConvexError("Project not found.");
 
-    // Access control: admins and makers see all projects; a client can only
-    // access a project they initiated.
+    // Access control: admins and makers see all; clients only their own
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === "admin" || role === "maker";
 
@@ -107,29 +182,28 @@ export const getProject = authQuery({
     }
 
     // -------------------------------------------------------------------------
-    // Client profile — name + profile picture URL
+    // Client profile
     // -------------------------------------------------------------------------
-    const clientProfile = await ctx.db.get(project.userId);
+    const clientProfile = await ctx.db.get(project.userId as Id<"userProfile">);
     const clientPfpUrl = clientProfile?.profilePic
       ? await ctx.storage.getUrl(clientProfile.profilePic)
       : null;
 
     // -------------------------------------------------------------------------
-    // Service — surface level only (name + status)
+    // Service
     // -------------------------------------------------------------------------
-    const serviceDoc = await ctx.db.get(project.service);
+    const serviceDoc = await ctx.db.get(project.service as Id<"services">);
     const service = serviceDoc
       ? {
           _id: serviceDoc._id,
           name: serviceDoc.name,
           status: serviceDoc.status,
-          pricing: serviceDoc.pricing,
+          serviceCategory: serviceDoc.serviceCategory,
         }
       : null;
 
     // -------------------------------------------------------------------------
-    // Files — metadata from the `files` table + signed storage URL
-    // The project stores these as plain strings (storage IDs from the frontend).
+    // Files
     // -------------------------------------------------------------------------
     const resolvedFiles = project.files
       ? await Promise.all(
@@ -144,7 +218,7 @@ export const getProject = authQuery({
               ctx.storage.getUrl(storageId),
             ]);
 
-            if (!fileDoc)
+            if (!fileDoc) {
               return {
                 storageId,
                 url,
@@ -152,6 +226,7 @@ export const getProject = authQuery({
                 type: null,
                 status: null,
               };
+            }
 
             const { originalName, type, status } = fileDoc;
             return { storageId, url, originalName, type, status };
@@ -160,52 +235,108 @@ export const getProject = authQuery({
       : [];
 
     // -------------------------------------------------------------------------
-    // Receipt — full document
+    // Receipt
     // -------------------------------------------------------------------------
-    const receipt = project.receipt ? await ctx.db.get(project.receipt) : null;
+    const receipt = await (async () => {
+      if (!project.receipt) return null;
+      const doc = await ctx.db.get(project.receipt as Id<"receipts">);
+      if (!doc) return null;
+      const resolvedFiles = doc.files
+        ? await Promise.all(
+            doc.files.map(async (storageId) => {
+              const [fileDoc, url] = await Promise.all([
+                ctx.db
+                  .query("files")
+                  .withIndex("by_storageId", (q) =>
+                    q.eq("storageId", storageId),
+                  )
+                  .first(),
+                ctx.storage.getUrl(storageId),
+              ]);
+              return {
+                storageId,
+                url,
+                type: fileDoc?.type ?? null,
+                originalName: fileDoc?.originalName ?? null,
+              };
+            }),
+          )
+        : [];
+      return { ...doc, resolvedFiles };
+    })();
 
     // -------------------------------------------------------------------------
-    // Resource usages for this project — includes resolved maker and resource
+    // Resource usages — source of truth for booking window and resource
     // -------------------------------------------------------------------------
-    const allUsagesForService = await ctx.db
+    const usageDocs = await ctx.db
       .query("resourceUsage")
-      .withIndex("by_service", (q) => q.eq("service", project.service))
+      .withIndex("by_project", (q) => q.eq("projectId", project._id))
       .collect();
-
-    const usageDocs = allUsagesForService.filter((u) =>
-      u.projects.includes(project._id),
-    );
 
     const resourceUsages = await Promise.all(
       usageDocs.map(async (usage) => {
-        const makerProfile = usage.maker ? await ctx.db.get(usage.maker) : null;
         const resourceDoc = usage.resource
-          ? await ctx.db.get(usage.resource)
+          ? await ctx.db.get(usage.resource as Id<"resources">)
           : null;
 
-        const resourceImageUrls = resourceDoc?.images
+        const enrichedMaterialsUsed = usage.materialsUsed
           ? await Promise.all(
-              resourceDoc.images.map((id) => ctx.storage.getUrl(id)),
+              usage.materialsUsed.map(async (m) => {
+                if (m.snapshot) {
+                  return { ...m, name: m.snapshot.name, unit: m.snapshot.unit };
+                }
+                const materialDoc = await ctx.db.get(
+                  m.materialId as Id<"materials">,
+                );
+                return {
+                  ...m,
+                  name: materialDoc?.name ?? "Unknown Material",
+                  unit: materialDoc?.unit ?? "units",
+                };
+              }),
             )
           : [];
 
-        const makerPfpUrl = makerProfile?.profilePic
-          ? await ctx.storage.getUrl(makerProfile.profilePic)
-          : null;
+        const resourceDetails = {
+          _id: usage.resource ?? null,
+          name: usage.snapshot.name,
+          category: resourceDoc?.category ?? null,
+          type: resourceDoc?.type ?? null,
+          status: resourceDoc?.status ?? null,
+          description: resourceDoc?.description ?? null,
+        };
 
         return {
           ...usage,
-          makerName: makerProfile?.name ?? null,
-          makerPfpUrl,
-          resourceDetails: resourceDoc
-            ? {
-                ...resourceDoc,
-                imageUrls: resourceImageUrls.filter((url) => url !== null),
-              }
-            : null,
+          resourceDetails,
+          materialsUsed: enrichedMaterialsUsed,
         };
       }),
     );
+
+    // Derive the primary booking window from the first matching usage
+    const primaryUsage = usageDocs[0] ?? null;
+
+    // -------------------------------------------------------------------------
+    // Requested materials
+    // -------------------------------------------------------------------------
+    const requestedMaterials = project.requestedMaterials
+      ? (
+          await Promise.all(
+            project.requestedMaterials.map(async (id) => {
+              const doc = await ctx.db.get(id as Id<"materials">);
+              return doc
+                ? {
+                    _id: doc._id,
+                    name: doc.name,
+                    unit: doc.unit,
+                    pricePerUnit: doc.pricePerUnit ?? 0,
+                  }
+                : null;
+            }),
+          )
+        ).filter((m): m is NonNullable<typeof m> => m !== null)
+      : [];
 
     // -------------------------------------------------------------------------
     // Thread
@@ -216,10 +347,10 @@ export const getProject = authQuery({
       .first();
 
     // -------------------------------------------------------------------------
-    // Assigned Maker
+    // Assigned maker
     // -------------------------------------------------------------------------
     const assignedMakerProfile = project.assignedMaker
-      ? await ctx.db.get(project.assignedMaker)
+      ? await ctx.db.get(project.assignedMaker as Id<"userProfile">)
       : null;
     const assignedMakerPfpUrl = assignedMakerProfile?.profilePic
       ? await ctx.storage.getUrl(assignedMakerProfile.profilePic)
@@ -230,6 +361,12 @@ export const getProject = authQuery({
     // -------------------------------------------------------------------------
     return {
       ...project,
+      // Audit / tracking dates
+      requestedDate: project._creationTime,
+      // Booking window derived from resourceUsage
+      bookingStartTime: primaryUsage?.startTime ?? null,
+      bookingEndTime: primaryUsage?.endTime ?? null,
+      // Relations
       client: {
         _id: clientProfile?._id ?? null,
         name: clientProfile?.name ?? "Unknown Client",
@@ -246,6 +383,7 @@ export const getProject = authQuery({
       resolvedFiles,
       receipt,
       resourceUsages,
+      requestedMaterials,
       threadId: thread?._id ?? null,
       roomId: thread?.roomId ?? null,
     };

@@ -1,154 +1,104 @@
 import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
-import { FILE_CATEGORIES } from "../constants";
+import { Id } from "../_generated/dataModel";
 
-// Initialize a project
+import {
+  BookingWindow,
+  ProjectStatus,
+  buildSearchText,
+  resolveService,
+  validateFileTypes,
+  validateBookingTiming,
+  validateFabricationAvailability,
+  computeProvisionalCostBreakdown,
+  createWorkshopUsage,
+  createFabricationUsage,
+  incrementWorkshopSlot,
+  ensureProjectRoom,
+  createProjectThread,
+  computeCompletionCost,
+  consumeMaterials,
+  findProjectUsage,
+  sendProjectSystemMessage,
+  applyStatusChange,
+  applyMakerAssignment,
+  applyResourceAssignment,
+  applyMaterialAssignment,
+  syncMaterialUsageStock,
+  buildMaterialSnapshot,
+} from "./helper";
+
+// ============================================================================
+// Mutations
+// ============================================================================
+
 export const createProject = authMutation({
   args: {
     name: v.string(),
     description: v.string(),
-    serviceType: v.union(v.literal("self-service"), v.literal("full-service")),
+    fulfillmentMode: v.union(
+      v.literal("self-service"),
+      v.literal("full-service"),
+      v.literal("staff-led"),
+    ),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
-    requestedMaterialId: v.optional(v.id("materials")),
+    requestedMaterials: v.optional(v.array(v.id("materials"))),
     service: v.id("services"),
     pricing: v.string(),
     files: v.optional(v.array(v.id("_storage"))),
     notes: v.string(),
     assignedMaker: v.optional(v.id("userProfile")),
-    selectedTimeSlot: v.optional(
-      v.object({
-        startTime: v.number(),
-        endTime: v.number(),
-      }),
-    ),
-
-    booking: v.optional(
-      v.object({
-        startTime: v.number(),
-        endTime: v.number(),
-        date: v.number(),
-      }),
-    ),
-    sharedUsageId: v.optional(v.id("resourceUsage")),
+    booking: v.object({
+      startTime: v.number(),
+      endTime: v.number(),
+      date: v.number(),
+    }),
   },
+  rateLimit: "createProject",
   handler: async (ctx, args) => {
-    // assume user has already logged in
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Unauthorized");
+    // ── 1. Resolve service ────────────────────────────────────────────────────
+    const service = await resolveService(ctx, args.service);
+    const userProfile = ctx.profile;
 
-    const userProfile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
-      .first();
+    // ── 2. Validate uploaded file types ──────────────────────────────────────
+    await validateFileTypes(ctx, args.files ?? [], service);
 
-    if (!userProfile) throw new ConvexError("User not authorized");
+    // ── 3. Validate booking window ────────────────────────────────────────────
+    const booking: BookingWindow = args.booking;
+    validateBookingTiming(booking);
+    await validateFabricationAvailability(ctx, args.service, service, booking);
 
-    // get service name for alias
-    const service = await ctx.db.get(args.service);
-    if (!service) throw new ConvexError("Service not found!");
+    // ── 4. Determine project type from service ────────────────────────────────
+    const projectType =
+      service.serviceCategory.type === "WORKSHOP" ? "WORKSHOP" : "FABRICATION";
 
-    if (
-      args.files &&
-      args.files.length > 0 &&
-      service.fileTypes &&
-      service.fileTypes.length > 0
-    ) {
-      const allowedMimes = service.fileTypes.flatMap(
-        (cat) => FILE_CATEGORIES[cat] || [cat],
-      );
+    // ── 5. Compute provisional cost for snapshot ──────────────────────────────
+    const bookingDurationMs = booking.endTime - booking.startTime;
+    const provisional = computeProvisionalCostBreakdown(
+      service,
+      args.pricing,
+      args.fulfillmentMode,
+      bookingDurationMs,
+    );
 
-      for (const fileId of args.files) {
-        const fileDoc = await ctx.db
-          .query("files")
-          .withIndex("by_storageId", (q) => q.eq("storageId", fileId))
-          .first();
+    const usageSnapshot = {
+      name: service.name,
+      costAtTime: provisional.total,
+      unit:
+        service.serviceCategory.type === "FABRICATION"
+          ? service.serviceCategory.unitName
+          : "session",
+    };
 
-        if (fileDoc && !allowedMimes.includes(fileDoc.type)) {
-          throw new ConvexError(
-            `File type ${fileDoc.type} is not allowed for this service.`,
-          );
-        }
-      }
-    }
-
-    let finalBooking = args.booking;
-    let sharedUsage = null;
-
-    if (args.sharedUsageId) {
-      sharedUsage = await ctx.db.get(args.sharedUsageId);
-      if (!sharedUsage) throw new ConvexError("Shared event not found.");
-      if (sharedUsage.usageMode !== "SHARED") {
-        throw new ConvexError("This resource is not a shared event.");
-      }
-      if (
-        sharedUsage.maxCapacity &&
-        sharedUsage.projects.length >= sharedUsage.maxCapacity
-      ) {
-        throw new ConvexError("Shared event is at maximum capacity.");
-      }
-
-      finalBooking = {
-        startTime: sharedUsage.startTime,
-        endTime: sharedUsage.endTime,
-        date: sharedUsage.date,
-      };
-    } else if (!finalBooking) {
-      throw new ConvexError("Booking details are required.");
-    }
-
+    // ── 6. Insert the project record ──────────────────────────────────────────
     const now = Date.now();
-    if (finalBooking.startTime < now) {
-      throw new ConvexError("Cannot book a date or time in the past.");
-    }
-
-    if (finalBooking.endTime <= finalBooking.startTime) {
-      throw new ConvexError("End time must be after start time.");
-    }
-
-    if (
-      service.serviceCategory.type === "FABRICATION" &&
-      service.serviceCategory.availableDays &&
-      service.serviceCategory.availableDays.length > 0
-    ) {
-      const localDateString = new Date(finalBooking.date).toLocaleString(
-        "en-US",
-        { timeZone: "Asia/Manila" },
-      );
-      const dayOfWeek = new Date(localDateString).getDay();
-      if (!service.serviceCategory.availableDays.includes(dayOfWeek)) {
-        throw new ConvexError(
-          "Selected date falls on an unavailable day for this service.",
-        );
-      }
-    }
-
-    let costBreakdown = undefined;
-    if (args.sharedUsageId && service.pricing.type === "FIXED") {
-      let amount = service.pricing.amount;
-      if (service.pricing.variants) {
-        const variant = service.pricing.variants.find(
-          (v) => v.name === args.pricing,
-        );
-        if (variant) amount = variant.amount;
-      }
-
-      const baseFee = args.serviceType === "full-service" ? amount : 0;
-
-      costBreakdown = {
-        baseFee,
-        materialCost: 0,
-        timeCost: 0,
-        total: baseFee,
-      };
-    }
-
-    // create project
-    const project = await ctx.db.insert("projects", {
+    const projectId = await ctx.db.insert("projects", {
       name: args.name,
       description: args.description,
-      serviceType: args.serviceType,
+      type: projectType,
+      fulfillmentMode: args.fulfillmentMode,
       material: args.material,
-      requestedMaterialId: args.requestedMaterialId,
+      requestedMaterials: args.requestedMaterials,
       userId: userProfile._id,
       assignedMaker: args.assignedMaker,
       service: args.service,
@@ -156,124 +106,76 @@ export const createProject = authMutation({
       status: "pending",
       files: args.files,
       notes: args.notes,
-      selectedTimeSlot: args.selectedTimeSlot,
-      costBreakdown,
+      searchText: buildSearchText({
+        name: args.name,
+        description: args.description,
+        notes: args.notes,
+      }),
     });
 
-    if (args.sharedUsageId && sharedUsage) {
-      await ctx.db.patch(args.sharedUsageId, {
-        projects: [...sharedUsage.projects, project],
-      });
+    // ── 7. Create resource usage record ───────────────────────────────────────
+    if (projectType === "WORKSHOP") {
+      await createWorkshopUsage(
+        ctx,
+        args.service,
+        service,
+        booking,
+        projectId,
+        usageSnapshot,
+        args.requestedMaterials,
+      );
+      await incrementWorkshopSlot(ctx, service, booking);
     } else {
-      // create proposed usage
-      await ctx.db.insert("resourceUsage", {
-        service: args.service,
-        usageMode: "EXCLUSIVE",
-        projects: [project],
-        startTime: finalBooking.startTime,
-        endTime: finalBooking.endTime,
-        date: finalBooking.date,
-      });
+      await createFabricationUsage(
+        ctx,
+        args.service,
+        booking,
+        projectId,
+        usageSnapshot,
+        args.requestedMaterials,
+      );
     }
 
-    // Find if the user already has a dedicated workspace room
-    const workspaceName = `${userProfile.name}'s Channel`;
-    const existingRoom = await ctx.db
-      .query("rooms")
-      .withIndex("by_creator", (q) => q.eq("creator", userProfile._id))
-      .filter((q) => q.eq(q.field("createdVia"), "Project"))
-      .first();
+    // ── 8. Ensure client messaging room exists ────────────────────────────────
+    const roomId = await ensureProjectRoom(ctx, userProfile);
 
-    let roomId;
-    const admins = await ctx.db
-      .query("userProfile")
-      .withIndex("by_role", (q) => q.eq("role", "admin"))
-      .collect();
+    // ── 9. Create project thread + initial message ────────────────────────────
+    const threadId = await createProjectThread(
+      ctx,
+      roomId,
+      projectId,
+      userProfile,
+      service,
+      {
+        name: args.name,
+        description: args.description,
+        type: projectType,
+        fulfillmentMode: args.fulfillmentMode,
+        material: args.material,
+        pricing: args.pricing,
+        notes: args.notes,
+        files: args.files,
+      },
+      booking,
+      now,
+    );
 
-    if (existingRoom) {
-      roomId = existingRoom._id;
-    } else {
-      roomId = await ctx.db.insert("rooms", {
-        name: workspaceName,
-        color: "yellow",
-        creator: ctx.profile._id,
-        createdVia: "Project",
-      });
-
-      await ctx.db.insert("roomMembers", {
-        roomId: roomId,
-        participantId: userProfile._id,
-      });
-
-      for (const admin of admins) {
-        if (admin._id !== userProfile._id) {
-          await ctx.db.insert("roomMembers", {
-            roomId: roomId,
-            participantId: admin._id,
-          });
-        }
-      }
-
-      // Create a main workspace thread not associated with any project
-      const welcomeContent = `Welcome to ${workspaceName}! This is your main room for general inquiries.`;
-      const generalThreadId = await ctx.db.insert("threads", {
-        roomId: roomId,
-        title: "General",
-        createdBy: userProfile._id,
-        archived: "Active",
-        lastMessageText: welcomeContent,
-        lastMessageAt: Date.now(),
-        messageCount: 1,
-      });
-
-      await ctx.db.insert("messages", {
-        room: roomId,
-        threadId: generalThreadId,
-        content: welcomeContent,
-        sender: "System",
-      });
-    }
-
-    const messageContent = `New project created: ${args.name}\n\nService: ${service.name}\nDescription: ${args.description}\nService Type: ${args.serviceType}\nMaterial: ${args.material}\nPricing: ${args.pricing}\nNotes: ${args.notes}\nBooking: ${new Date(finalBooking.date).toDateString()} from ${new Date(finalBooking.startTime).toLocaleTimeString()} to ${new Date(finalBooking.endTime).toLocaleTimeString()}`;
-
-    // Create a thread for the project
-    const threadId = await ctx.db.insert("threads", {
-      roomId: roomId,
-      projectId: project,
-      title: args.name,
-      createdBy: userProfile._id,
-      archived: "Active",
-      lastMessageText: messageContent,
-      lastMessageAt: now,
-      messageCount: 1,
-    });
-
-    // create initial system message inside the thread
-    await ctx.db.insert("messages", {
-      room: roomId,
-      threadId: threadId,
-      content: messageContent,
-      sender: "System",
-      file: args.files,
-    });
-
+    // ── 10. Claim uploaded files ──────────────────────────────────────────────
     if (args.files && args.files.length > 0) {
       claimFiles(ctx, args.files);
     }
 
-    await ctx.db.patch(roomId, {
-      lastMessageText: messageContent,
-      lastMessageAt: now,
-    });
-
-    return { roomId, threadId };
+    return { projectId, roomId, threadId };
   },
 });
+
+// ============================================================================
 
 export const updateProject = authMutation({
   role: ["admin", "maker"],
   args: {
     projectId: v.id("projects"),
+    // Status transition
     status: v.optional(
       v.union(
         v.literal("pending"),
@@ -281,45 +183,249 @@ export const updateProject = authMutation({
         v.literal("rejected"),
         v.literal("completed"),
         v.literal("cancelled"),
+        v.literal("paid"),
       ),
     ),
+    // Assignments
     makerId: v.optional(v.id("userProfile")),
+    resourceId: v.optional(v.id("resources")),
+    materialIds: v.optional(v.array(v.id("materials"))),
   },
   handler: async (ctx, args) => {
-    const { projectId, status, makerId } = args;
-    const updates: Partial<{
-      status: "pending" | "approved" | "rejected" | "completed" | "cancelled";
-      assignedMaker: NonNullable<typeof args.makerId>;
-    }> = {};
+    const existingProject = await ctx.db.get(args.projectId);
+    if (!existingProject) throw new ConvexError("Project not found.");
 
-    if (status !== undefined) updates.status = status;
+    const messagelines: string[] = [];
 
-    if (makerId !== undefined) {
-      const makerProfile = await ctx.db.get(makerId);
-      if (!makerProfile || makerProfile.role !== "maker") {
-        throw new ConvexError("Assigned user must be a maker");
-      }
-      updates.assignedMaker = makerId;
+    // ── Status change ────────────────────────────────────────────────────────
+    if (args.status !== undefined) {
+      const lines = await applyStatusChange(
+        ctx,
+        existingProject,
+        existingProject,
+        args.status as ProjectStatus,
+      );
+      messagelines.push(...lines);
     }
 
-    await ctx.db.patch(projectId, updates);
+    // Re-fetch after potential status patch
+    const project = (await ctx.db.get(args.projectId))!;
 
-    if (makerId !== undefined) {
-      const project = await ctx.db.get(projectId);
-      if (project) {
-        const usages = await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", project.service))
-          .collect();
+    // ── Maker assignment ─────────────────────────────────────────────────────
+    if (args.makerId !== undefined) {
+      const lines = await applyMakerAssignment(ctx, project, args.makerId);
+      messagelines.push(...lines);
+    }
 
-        const usage = usages.find((u) => u.projects.includes(project._id));
-        if (usage) {
-          await ctx.db.patch(usage._id, { maker: makerId });
+    // ── Resource assignment ──────────────────────────────────────────────────
+    if (args.resourceId !== undefined) {
+      const lines = await applyResourceAssignment(
+        ctx,
+        project,
+        args.resourceId,
+      );
+      messagelines.push(...lines);
+    }
+
+    // ── Material assignment ──────────────────────────────────────────────────
+    if (args.materialIds !== undefined) {
+      const lines = await applyMaterialAssignment(
+        ctx,
+        project,
+        args.materialIds,
+      );
+      messagelines.push(...lines);
+    }
+
+    // ── System message ───────────────────────────────────────────────────────
+    await sendProjectSystemMessage(ctx, args.projectId, messagelines);
+  },
+});
+
+export const updateCostBreakdown = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    setupFee: v.number(),
+    timeCost: v.number(),
+    materialCost: v.number(),
+    materialsUsed: v.optional(
+      v.array(
+        v.object({
+          materialId: v.id("materials"),
+          amountUsed: v.number(),
+        }),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+
+    const subtotal = args.setupFee + args.timeCost + args.materialCost;
+    const total = subtotal;
+
+    // ── Detect what actually changed ─────────────────────────────────────────
+    const breakdownChanged = project.totalInvoice?.subtotal !== subtotal;
+
+    let usage = null;
+    let materialsChanged = false;
+
+    if (args.materialsUsed && args.materialsUsed.length > 0) {
+      usage = await findProjectUsage(ctx, project);
+      for (const { materialId, amountUsed } of args.materialsUsed) {
+        const existing =
+          usage?.materialsUsed?.find((m) => m.materialId === materialId)
+            ?.amountUsed ?? 0;
+        if (amountUsed !== existing) {
+          materialsChanged = true;
+          break;
         }
       }
     }
+
+    if (!breakdownChanged && !materialsChanged) return;
+
+    const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
+
+    // ── Persist invoice ───────────────────────────────────────────────────────
+    if (breakdownChanged) {
+      await ctx.db.patch(args.projectId, {
+        totalInvoice: { subtotal, tax: 0, total },
+      });
+
+      if (resolvedUsage) {
+        await ctx.db.patch(resolvedUsage._id, {
+          snapshot: { ...resolvedUsage.snapshot, costAtTime: total },
+        });
+      }
+    }
+
+    // ── Sync per-material amounts + stock ─────────────────────────────────────
+    if (materialsChanged && resolvedUsage && args.materialsUsed) {
+      let nextMaterials = [...(resolvedUsage.materialsUsed ?? [])];
+      const systemLines: string[] = [];
+
+      for (const { materialId, amountUsed } of args.materialsUsed) {
+        const existing = nextMaterials.find((m) => m.materialId === materialId);
+        const previousAmount = existing?.amountUsed ?? 0;
+        if (amountUsed === previousAmount) continue;
+
+        await syncMaterialUsageStock(
+          ctx,
+          materialId,
+          previousAmount,
+          amountUsed,
+        );
+
+        const materialDoc = await ctx.db.get(materialId);
+        nextMaterials = [
+          ...nextMaterials.filter((m) => m.materialId !== materialId),
+          {
+            materialId,
+            amountUsed,
+            snapshot: materialDoc
+              ? buildMaterialSnapshot(materialDoc)
+              : undefined,
+          },
+        ];
+
+        if (materialDoc) {
+          systemLines.push(
+            `- Material used: ${amountUsed} ${materialDoc.unit} of ${materialDoc.name}`,
+          );
+        }
+      }
+
+      await ctx.db.patch(resolvedUsage._id, { materialsUsed: nextMaterials });
+
+      // ── System message ──────────────────────────────────────────────────────
+      const lines: string[] = [];
+      if (breakdownChanged) {
+        lines.push(
+          `Invoice updated:`,
+          `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
+          `- Time cost: ₱${args.timeCost.toFixed(2)}`,
+          `- Material cost: ₱${args.materialCost.toFixed(2)}`,
+          `- **Total: ₱${total.toFixed(2)}**`,
+        );
+      }
+      lines.push(...systemLines);
+      await sendProjectSystemMessage(ctx, args.projectId, lines);
+      return;
+    }
+
+    // ── System message (breakdown only) ──────────────────────────────────────
+    if (breakdownChanged) {
+      await sendProjectSystemMessage(ctx, args.projectId, [
+        `Invoice updated:`,
+        `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
+        `- Time cost: ₱${args.timeCost.toFixed(2)}`,
+        `- Material cost: ₱${args.materialCost.toFixed(2)}`,
+        `- **Total: ₱${total.toFixed(2)}**`,
+      ]);
+    }
   },
 });
+
+export const markProjectPaid = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    receiptString: v.string(),
+    paymentMode: v.union(
+      v.literal("cash"),
+      v.literal("gcash"),
+      v.literal("bank transfer"),
+      v.literal("others"),
+    ),
+    proof: v.string(),
+    proofFiles: v.optional(v.array(v.id("_storage"))),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+    if (project.status !== "completed" && project.status !== "paid") {
+      throw new ConvexError(
+        "Only completed or paid projects can have payment details set.",
+      );
+    }
+
+    let receiptId: Id<"receipts">;
+    if (project.receipt) {
+      // Update existing receipt record
+      await ctx.db.patch(project.receipt, {
+        receiptString: args.receiptString,
+        paymentMode: args.paymentMode,
+        proof: args.proof,
+        ...(args.proofFiles !== undefined ? { files: args.proofFiles } : {}),
+      });
+      receiptId = project.receipt as Id<"receipts">;
+    } else {
+      receiptId = await ctx.db.insert("receipts", {
+        receiptString: args.receiptString,
+        paymentMode: args.paymentMode,
+        proof: args.proof,
+        files: args.proofFiles,
+      });
+    }
+
+    await ctx.db.patch(args.projectId, {
+      status: "paid",
+      receipt: receiptId,
+    });
+
+    const lines: string[] = [
+      `Payment recorded. Project moved to **claim**.`,
+      `- Receipt #: ${args.receiptString}`,
+      `- Payment mode: ${args.paymentMode}`,
+      ...(args.proof ? [`- Proof: ${args.proof}`] : []),
+    ];
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
+  },
+});
+
+// ============================================================================
 
 export const cancelOwnProject = authMutation({
   args: {
@@ -341,16 +447,18 @@ export const cancelOwnProject = authMutation({
     }
 
     if (
-      project.status === "completed" ||
-      project.status === "rejected" ||
-      project.status === "cancelled"
+      ["completed", "paid", "rejected", "cancelled"].includes(project.status)
     ) {
       throw new ConvexError("Cannot cancel a project in its current status.");
     }
 
-    await ctx.db.patch(args.projectId, { status: "cancelled" });
+    // applyStatusChange handles the patch, workshop slot release, and returns log lines
+    const lines = await applyStatusChange(ctx, project, project, "cancelled");
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });
+
+// ============================================================================
 
 export const completeProject = authMutation({
   role: ["admin", "maker"],
@@ -373,144 +481,156 @@ export const completeProject = authMutation({
     const service = await ctx.db.get(project.service);
     if (!service) throw new ConvexError("Service not found.");
 
-    let timeCost = 0;
-    let materialCost = 0;
-    let baseFee = 0;
+    // ── 1. Time-based cost ───────────────────────────────────────────────────
+    const { setupFee, timeCost } = computeCompletionCost(
+      service,
+      project,
+      args.actualDurationMs,
+    );
 
-    const hours = args.actualDurationMs / (1000 * 60 * 60);
-    const minutes = args.actualDurationMs / (1000 * 60);
+    // ── 2. Material cost + stock deduction ───────────────────────────────────
+    const materialCost =
+      project.material === "buy-from-lab" && args.materialsUsed?.length
+        ? await consumeMaterials(ctx, args.materialsUsed)
+        : 0;
 
-    if (service.pricing.type === "COMPOSITE") {
-      baseFee = service.pricing.baseFee;
-      let timeRate = service.pricing.timeRate;
-
-      if (service.pricing.variants) {
-        const variant = service.pricing.variants.find(
-          (v) => v.name === project.pricing,
-        );
-        if (variant) {
-          baseFee = variant.baseFee;
-          timeRate = variant.timeRate;
-        }
-      }
-
-      if (project.serviceType !== "full-service") {
-        baseFee = 0;
-      }
-
-      if (
-        service.pricing.unitName === "hour" ||
-        service.pricing.unitName === "hr"
-      ) {
-        timeCost = hours * timeRate;
-      } else if (
-        service.pricing.unitName === "minute" ||
-        service.pricing.unitName === "min"
-      ) {
-        timeCost = minutes * timeRate;
-      } else {
-        timeCost = hours * timeRate;
-      }
-    } else if (service.pricing.type === "PER_UNIT") {
-      baseFee = service.pricing.baseFee;
-      let ratePerUnit = service.pricing.ratePerUnit;
-
-      if (service.pricing.variants) {
-        const variant = service.pricing.variants.find(
-          (v) => v.name === project.pricing,
-        );
-        if (variant) {
-          baseFee = variant.baseFee;
-          ratePerUnit = variant.ratePerUnit;
-        }
-      }
-
-      if (project.serviceType !== "full-service") {
-        baseFee = 0;
-      }
-
-      if (
-        service.pricing.unitName === "hour" ||
-        service.pricing.unitName === "hr"
-      ) {
-        timeCost = hours * ratePerUnit;
-      } else if (
-        service.pricing.unitName === "minute" ||
-        service.pricing.unitName === "min"
-      ) {
-        timeCost = (args.actualDurationMs / (1000 * 60)) * ratePerUnit;
-      }
-    } else if (service.pricing.type === "FIXED") {
-      baseFee = service.pricing.amount;
-      if (service.pricing.variants) {
-        const variant = service.pricing.variants.find(
-          (v) => v.name === project.pricing,
-        );
-        if (variant) {
-          baseFee = variant.amount;
-        }
-      }
-
-      if (project.serviceType !== "full-service") {
-        baseFee = 0;
-      }
-    }
-
-    if (
-      project.material === "buy-from-lab" &&
-      args.materialsUsed &&
-      args.materialsUsed.length > 0
-    ) {
-      for (const usage of args.materialsUsed) {
-        const material = await ctx.db.get(usage.materialId);
-        if (material) {
-          const rate = material.pricePerUnit || 0;
-          materialCost += usage.amountUsed * rate;
-
-          const newStock = Math.max(
-            0,
-            material.currentStock - usage.amountUsed,
-          );
-          let newStatus = material.status;
-          if (newStock === 0) {
-            newStatus = "OUT_OF_STOCK";
-          } else if (
-            material.reorderThreshold &&
-            newStock <= material.reorderThreshold
-          ) {
-            newStatus = "LOW_STOCK";
-          }
-
-          await ctx.db.patch(material._id, {
-            currentStock: newStock,
-            status: newStatus,
-          });
-        }
-      }
-    }
-
-    const total = baseFee + timeCost + materialCost;
+    // ── 3. Persist final invoice ─────────────────────────────────────────────
+    const total = setupFee + timeCost + materialCost;
 
     await ctx.db.patch(args.projectId, {
       status: "completed",
-      costBreakdown: {
-        baseFee,
-        timeCost,
-        materialCost,
-        total,
-      },
+      totalInvoice: { subtotal: total, tax: 0, total },
     });
 
-    const usages = await ctx.db
-      .query("resourceUsage")
-      .withIndex("by_service", (q) => q.eq("service", project.service))
-      .collect();
-
-    const usage = usages.find((u) => u.projects.includes(project._id));
-    if (usage && args.materialsUsed) {
+    // ── 4. Update usage snapshot and record materials ─────────────────────────
+    const usage = await findProjectUsage(ctx, project);
+    if (usage) {
       await ctx.db.patch(usage._id, {
-        materialsUsed: args.materialsUsed,
+        snapshot: { ...usage.snapshot, costAtTime: total },
       });
+
+      if (args.materialsUsed) {
+        const materialsWithSnapshots = await Promise.all(
+          args.materialsUsed.map(async (m) => {
+            const materialDoc = await ctx.db.get(m.materialId);
+            return {
+              ...m,
+              snapshot: materialDoc
+                ? buildMaterialSnapshot(materialDoc)
+                : undefined,
+            };
+          }),
+        );
+        await ctx.db.patch(usage._id, {
+          materialsUsed: materialsWithSnapshots,
+        });
+      }
     }
+
+    // ── 5. System message ────────────────────────────────────────────────────
+    const durationHours = (args.actualDurationMs / (1000 * 60 * 60)).toFixed(2);
+    const lines: string[] = [
+      `Fabrication complete. Project moved to **payment**.`,
+      `- Actual duration: ${durationHours} hours`,
+      `- Setup fee: ₱${setupFee.toFixed(2)}`,
+      `- Time cost: ₱${timeCost.toFixed(2)}`,
+      `- Material cost: ₱${materialCost.toFixed(2)}`,
+      `- **Total: ₱${total.toFixed(2)}**`,
+    ];
+    if (args.materialsUsed && args.materialsUsed.length > 0) {
+      for (const m of args.materialsUsed) {
+        const materialDoc = await ctx.db.get(m.materialId);
+        lines.push(
+          `- Material consumed: ${m.amountUsed} ${materialDoc?.unit ?? "units"} of ${materialDoc?.name ?? m.materialId}`,
+        );
+      }
+    }
+    await sendProjectSystemMessage(ctx, args.projectId, lines);
+  },
+});
+
+// ============================================================================
+
+export const updateOwnProjectDetails = authMutation({
+  args: {
+    projectId: v.id("projects"),
+    description: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    material: v.optional(
+      v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
+    ),
+    fulfillmentMode: v.optional(
+      v.union(
+        v.literal("self-service"),
+        v.literal("full-service"),
+        v.literal("staff-led"),
+      ),
+    ),
+    files: v.optional(v.array(v.id("_storage"))),
+  },
+  handler: async (ctx, args) => {
+    const userProfile = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
+      .first();
+
+    if (!userProfile) throw new ConvexError("User not authorized");
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
+
+    if (project.userId !== userProfile._id) {
+      throw new ConvexError("You do not own this project.");
+    }
+
+    if (project.status !== "pending") {
+      throw new ConvexError(
+        "Project details can only be updated while still in review.",
+      );
+    }
+
+    const patch: Partial<typeof project> = {};
+    const changed: string[] = [];
+
+    if (
+      args.description !== undefined &&
+      args.description !== project.description
+    ) {
+      patch.description = args.description;
+      changed.push("description");
+    }
+    if (args.notes !== undefined && args.notes !== project.notes) {
+      patch.notes = args.notes;
+      changed.push("notes");
+    }
+    if (args.material !== undefined && args.material !== project.material) {
+      patch.material = args.material;
+      changed.push("material");
+    }
+    if (
+      args.fulfillmentMode !== undefined &&
+      args.fulfillmentMode !== project.fulfillmentMode
+    ) {
+      patch.fulfillmentMode = args.fulfillmentMode;
+      changed.push("fulfillment mode");
+    }
+    if (args.files !== undefined) {
+      patch.files = args.files;
+      changed.push("attachments");
+      await claimFiles(ctx, args.files);
+    }
+
+    if (Object.keys(patch).length === 0) return;
+
+    patch.searchText = buildSearchText({
+      name: project.name,
+      description: patch.description ?? project.description,
+      notes: patch.notes ?? project.notes,
+    });
+
+    await ctx.db.patch(args.projectId, patch);
+    await sendProjectSystemMessage(ctx, args.projectId, [
+      `Client updated: ${changed.join(", ")}.`,
+    ]);
   },
 });

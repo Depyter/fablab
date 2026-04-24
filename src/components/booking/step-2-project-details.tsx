@@ -5,7 +5,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft } from "lucide-react";
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,9 @@ import { Textarea } from "../ui/textarea";
 import { FileUpload } from "../file-upload";
 import { DateTimePicker } from "./date-time-picker";
 import { toast } from "sonner";
+import { WorkshopSchedule } from "./workshop-time-slot-picker";
+import posthog from "posthog-js";
+import { type UploadedFile } from "../file-upload/types";
 
 export function Step2ProjectDetails({
   form,
@@ -36,8 +38,10 @@ export function Step2ProjectDetails({
   availableDays,
   serviceMaterials,
   hasUpPricing,
+  pricingVariants = [],
   serviceCategory,
-  timeSlots,
+  schedules,
+  bookedTimeBlocks,
 }: {
   form: any;
   serviceName: string;
@@ -57,20 +61,11 @@ export function Step2ProjectDetails({
     unit?: string;
   }>;
   hasUpPricing: boolean;
+  pricingVariants?: Array<{ name: string }>;
   serviceCategory?: string;
-  timeSlots?: Array<{
-    startTime: number;
-    endTime: number;
-    maxSlots: number;
-  }>;
+  schedules?: WorkshopSchedule[];
+  bookedTimeBlocks?: { start: string; end: string }[];
 }) {
-  const getLocalTimeString = (dateNum: number) => {
-    const d = new Date(dateNum);
-    const h = d.getHours().toString().padStart(2, "0");
-    const m = d.getMinutes().toString().padStart(2, "0");
-    return `${h}:${m}`;
-  };
-
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -86,35 +81,78 @@ export function Step2ProjectDetails({
       return;
     }
 
-    const [startHours, startMinutes] = dateTime.startTime
-      .split(":")
-      .map(Number);
-    const [endHours, endMinutes] = dateTime.endTime.split(":").map(Number);
+    const [startH, startM] = dateTime.startTime.split(":");
+    const [endH, endM] = dateTime.endTime.split(":");
 
-    const startDate = new Date(dateTime.date);
-    startDate.setHours(startHours, startMinutes, 0, 0);
+    let startDateTs = 0;
+    let endDateTs = 0;
 
-    const endDate = new Date(dateTime.date);
-    endDate.setHours(endHours, endMinutes, 0, 0);
+    if (dateTime.originalStartTime && dateTime.originalEndTime) {
+      startDateTs = dateTime.originalStartTime;
+      endDateTs = dateTime.originalEndTime;
+    } else {
+      const year = dateTime.date.getFullYear();
+      const month = dateTime.date.getMonth() + 1;
+      const day = dateTime.date.getDate();
+      const dateString = `${month}/${day}/${year}`;
 
-    if (serviceCategory !== "WORKSHOP" && startDate.getTime() < Date.now()) {
+      const startDate = new Date(
+        `${dateString} ${startH}:${startM}:00 GMT+0800`,
+      );
+      startDateTs = startDate.getTime();
+
+      const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
+      endDateTs = endDate.getTime();
+    }
+
+    if (serviceCategory !== "WORKSHOP" && startDateTs < Date.now()) {
       toast.error("Cannot book a date or time in the past.");
       return;
     }
 
-    if (endDate.getTime() <= startDate.getTime()) {
+    if (endDateTs <= startDateTs) {
       toast.error("End time must be after start time.");
       return;
     }
+
+    console.log("=== DEBUG: Step 2 Form Submission ===");
+    console.log("Raw form.state.values.dateTime:", dateTime);
+    console.log(
+      "Parsed Time Strings - Start:",
+      startH,
+      startM,
+      "End:",
+      endH,
+      endM,
+    );
+    console.log(
+      "Computed startDateTs:",
+      startDateTs,
+      new Date(startDateTs).toString(),
+    );
+    console.log(
+      "Computed endDateTs:",
+      endDateTs,
+      new Date(endDateTs).toString(),
+    );
+    console.log("Date.now() reference:", Date.now(), new Date().toString());
+    console.log(
+      "Comparison (startDateTs < Date.now()):",
+      startDateTs < Date.now(),
+    );
+    console.log("=====================================");
+
+    posthog.capture("booking_details_completed", {
+      service_name: serviceName,
+      service_category: serviceCategory,
+      file_count: (form.state.values.files as UploadedFile[]).length,
+    });
 
     onNext(e);
   };
 
   return (
-    <form
-      onSubmit={handleNext}
-      className="flex flex-col h-full max-h-[80vh] sm:w-2xl"
-    >
+    <form onSubmit={handleNext} className="flex flex-col h-full min-h-0">
       <DialogHeader className="shrink-0 pb-4">
         <DialogTitle className="text-2xl font-extrabold">
           Book {serviceName}
@@ -124,69 +162,75 @@ export function Step2ProjectDetails({
         </DialogDescription>
       </DialogHeader>
 
-      <Card className="border border-gray-200 bg-gray-50 rounded-lg">
-        <CardContent className="pt-2 pb-2">
-          <div className="flex flex-col gap-2 text-gray-500">
-            <p className="font-semibold text-gray-700">File Guidelines</p>
-            {requirements.length > 0 ? (
-              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                {requirements.map((req, i) => (
-                  <li key={i}>{req}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-400 text-sm">
-                No strict requirements listed.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-2 text-gray-500 mb-4">
+        <p className="font-semibold text-gray-700">File Guidelines</p>
+        {requirements.length > 0 ? (
+          <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+            {requirements.map((req, i) => (
+              <li key={i}>{req}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-400 text-sm">
+            No strict requirements listed.
+          </p>
+        )}
+      </div>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
         <FieldGroup>
           <div className="flex flex-col gap-2 mb-2">
-            <Label className="font-bold text-lg">Project Details</Label>
+            <Label className="font-bold text-lg">
+              {serviceCategory === "WORKSHOP"
+                ? "Booking Details"
+                : "Project Details"}
+            </Label>
             <p className="text-sm text-muted-foreground">
-              Tell us about your project.
+              {serviceCategory === "WORKSHOP"
+                ? "Tell us more about your booking."
+                : "Tell us about your project."}
             </p>
           </div>
 
-          <form.Field
-            name="name"
-            children={(field: any) => (
-              <Field>
-                <Label htmlFor="name-1">Project Name</Label>
-                <Input
-                  id="name-1"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  required
-                  className="rounded-lg"
-                  placeholder="e.g. Custom Cup"
-                />
-              </Field>
-            )}
-          />
+          {serviceCategory !== "WORKSHOP" && (
+            <>
+              <form.Field
+                name="name"
+                children={(field: any) => (
+                  <Field>
+                    <Label htmlFor="name-1">Project Name</Label>
+                    <Input
+                      id="name-1"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      required
+                      className="rounded-lg"
+                      placeholder="e.g. Custom Cup"
+                    />
+                  </Field>
+                )}
+              />
 
-          <form.Field
-            name="description"
-            children={(field: any) => (
-              <Field>
-                <Label htmlFor="description-1">Project Description</Label>
-                <Textarea
-                  id="description-1"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  required
-                  className="rounded-lg resize-none h-24"
-                  placeholder="Describe your project, intended use, or specific details..."
-                />
-              </Field>
-            )}
-          />
+              <form.Field
+                name="description"
+                children={(field: any) => (
+                  <Field>
+                    <Label htmlFor="description-1">Project Description</Label>
+                    <Textarea
+                      id="description-1"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      required
+                      className="rounded-lg resize-none h-20 md:h-32"
+                      placeholder="Describe your project, intended use, or specific details..."
+                    />
+                  </Field>
+                )}
+              />
+            </>
+          )}
 
           <form.Field
             name="notes"
@@ -198,14 +242,14 @@ export function Step2ProjectDetails({
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="rounded-lg resize-none h-16"
+                  className="rounded-lg resize-none h-12 md:h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
             )}
           />
 
-          {hasUpPricing && (
+          {hasUpPricing && pricingVariants.length > 0 && (
             <form.Field
               name="pricing"
               children={(field: any) => (
@@ -213,9 +257,7 @@ export function Step2ProjectDetails({
                   <Label htmlFor="pricing-tier">Pricing Tier</Label>
                   <Select
                     value={field.state.value as string}
-                    onValueChange={(val) =>
-                      field.handleChange(val as "normal" | "UP")
-                    }
+                    onValueChange={(val) => field.handleChange(val)}
                     required
                   >
                     <SelectTrigger
@@ -225,10 +267,12 @@ export function Step2ProjectDetails({
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="normal">Normal Pricing</SelectItem>
-                      <SelectItem value="UP">
-                        UP Constituent / Affiliated
-                      </SelectItem>
+                      <SelectItem value="Default">Default Pricing</SelectItem>
+                      {pricingVariants.map((v) => (
+                        <SelectItem key={v.name} value={v.name}>
+                          {v.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </Field>
@@ -236,165 +280,138 @@ export function Step2ProjectDetails({
             />
           )}
 
-          <form.Field
-            name="material"
-            children={(field: any) => (
-              <Field>
-                <Label htmlFor="material-1">Material Preference</Label>
-                <RadioGroupChoiceCard
-                  value={field.state.value}
-                  disableBuyFromLab={serviceMaterials.length === 0}
-                  onValueChange={(val) =>
-                    field.handleChange(val as "provide-own" | "buy-from-lab")
-                  }
-                />
-              </Field>
-            )}
-          />
+          {serviceCategory !== "WORKSHOP" && (
+            <>
+              <form.Field
+                name="material"
+                children={(field: any) => (
+                  <Field>
+                    <Label htmlFor="material-1">Material Preference</Label>
+                    <RadioGroupChoiceCard
+                      value={field.state.value}
+                      disableBuyFromLab={serviceMaterials.length === 0}
+                      onValueChange={(val) =>
+                        field.handleChange(
+                          val as "provide-own" | "buy-from-lab",
+                        )
+                      }
+                    />
+                  </Field>
+                )}
+              />
 
-          <form.Subscribe
-            selector={(state: any) => state.values.material}
-            children={(material: string) =>
-              material === "buy-from-lab" &&
-              serviceMaterials.length > 0 && (
-                <form.Field
-                  name="requestedMaterialId"
-                  children={(field: any) => (
-                    <Field>
-                      <Label htmlFor="requestedMaterialId">
-                        Select Lab Material
-                      </Label>
-                      <div className="relative">
-                        <Select
-                          value={field.state.value || ""}
-                          onValueChange={field.handleChange}
-                        >
-                          <SelectTrigger
-                            id="requestedMaterialId"
-                            className="w-full bg-background border-input"
-                          >
-                            <SelectValue placeholder="Select a material..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {serviceMaterials.map((m) => (
-                              <SelectItem key={m._id} value={m._id}>
-                                {m.name} - ₱
-                                {m.pricePerUnit || m.costPerUnit || 0}/{m.unit}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <input
-                          type="text"
-                          required
-                          value={field.state.value || ""}
-                          className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
-                          tabIndex={-1}
-                          onChange={() => {}}
-                        />
-                      </div>
-                    </Field>
-                  )}
-                />
-              )
-            }
-          />
+              <form.Subscribe
+                selector={(state: any) => state.values.material}
+                children={(material: string) =>
+                  material === "buy-from-lab" &&
+                  serviceMaterials.length > 0 && (
+                    <form.Field
+                      name="requestedMaterialIds"
+                      children={(field: any) => {
+                        const selected: string[] = field.state.value ?? [];
+                        return (
+                          <Field>
+                            <Label htmlFor="requestedMaterialIds">
+                              Select Lab Materials
+                            </Label>
+                            <div className="flex flex-col gap-2 rounded-lg border border-input bg-background p-3">
+                              {serviceMaterials.map((m) => {
+                                const isChecked = selected.includes(m._id);
+                                return (
+                                  <label
+                                    key={m._id}
+                                    className="flex items-center gap-2.5 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          field.handleChange([
+                                            ...selected,
+                                            m._id,
+                                          ]);
+                                        } else {
+                                          field.handleChange(
+                                            selected.filter(
+                                              (id) => id !== m._id,
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                      className="h-4 w-4 rounded border-input accent-primary"
+                                    />
+                                    <span className="text-sm flex-1">
+                                      {m.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground shrink-0">
+                                      ₱{m.pricePerUnit ?? m.costPerUnit ?? 0}/
+                                      {m.unit}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={selected.join(",")}
+                              className="absolute opacity-0 pointer-events-none"
+                              tabIndex={-1}
+                              onChange={() => {}}
+                            />
+                          </Field>
+                        );
+                      }}
+                    />
+                  )
+                }
+              />
+            </>
+          )}
 
           <FieldSeparator className="my-2" />
 
-          <form.Field
+          <form.AppField
             name="dateTime"
             children={(field: any) => (
               <>
                 {serviceCategory === "WORKSHOP" ? (
-                  <>
-                    <div className="flex flex-col gap-1 mb-2">
-                      <Label className="font-bold text-lg">
-                        Select Workshop Time Slot
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Choose an available slot for this workshop.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {(timeSlots || []).map((slot, idx) => {
-                        const startFormatted = getLocalTimeString(
-                          slot.startTime,
-                        );
-                        const endFormatted = getLocalTimeString(slot.endTime);
-
-                        const isSelected =
-                          field.state.value?.startTime === startFormatted &&
-                          field.state.value?.endTime === endFormatted;
-
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => {
-                              field.handleChange({
-                                date: new Date(slot.startTime),
-                                startTime: startFormatted,
-                                endTime: endFormatted,
-                              });
-                            }}
-                            className={`cursor-pointer rounded-lg border p-4 transition-colors ${
-                              isSelected
-                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                : "border-gray-200 bg-white hover:border-primary/50"
-                            }`}
-                          >
-                            <p className="font-medium text-sm text-gray-900">
-                              {new Date(slot.startTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}{" "}
-                              -{" "}
-                              {new Date(slot.endTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Max capacity: {slot.maxSlots}
-                            </p>
-                          </div>
-                        );
-                      })}
-                      {(!timeSlots || timeSlots.length === 0) && (
-                        <p className="text-sm text-muted-foreground">
-                          No time slots available for this workshop.
-                        </p>
-                      )}
-                    </div>
-                  </>
+                  <field.WorkshopTimeSlotPicker schedules={schedules} />
                 ) : is3DPrinting ? (
                   <>
                     <div className="flex flex-col gap-1">
-                      <Label className="font-bold text-lg">Deadline</Label>
+                      <Label className="font-bold text-lg">
+                        Deadline (PST)
+                      </Label>
                       <p className="text-sm text-muted-foreground">
-                        Set the deadline of your project.
+                        Set the deadline of your project. All dates and times
+                        are in Philippine Standard Time (PST).
                       </p>
                     </div>
                     <DateTimePicker
                       value={field.state.value as any}
                       onChange={field.handleChange as any}
                       availableDays={availableDays}
+                      bookedTimeBlocks={bookedTimeBlocks}
                     />
                   </>
                 ) : (
                   <>
                     <div className="flex flex-col gap-1">
                       <Label className="font-bold text-lg">
-                        Booking Date & Time
+                        Booking Date & Time (PST)
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Set the date and time for your booking.
+                        Set the date and time for your booking. All dates and
+                        times are in Philippine Standard Time (PST).
                       </p>
                     </div>
                     <DateTimePicker
                       value={field.state.value as any}
                       onChange={field.handleChange as any}
                       availableDays={availableDays}
+                      bookedTimeBlocks={bookedTimeBlocks}
                     />
                   </>
                 )}
@@ -412,6 +429,15 @@ export function Step2ProjectDetails({
                 value={field.state.value as any}
                 onFilesChange={field.handleChange as any}
                 onUploadingChange={onUploadingChange}
+                onUploadComplete={(file: UploadedFile) => {
+                  posthog.capture("booking_file_uploaded", {
+                    service_name: serviceName,
+                    service_category: serviceCategory,
+                    file_name: file.fileName,
+                    file_type: file.fileType,
+                    file_size_bytes: file.fileSize,
+                  });
+                }}
                 accept="*/*"
                 allowedTypes={expandedFileTypes as any}
               />
@@ -421,14 +447,16 @@ export function Step2ProjectDetails({
       </div>
 
       <div className="shrink-0 pt-6 border-t mt-4 flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onPrev}
-          className="rounded-lg pl-3"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" /> Back
-        </Button>
+        {serviceCategory !== "WORKSHOP" && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPrev}
+            className="rounded-lg pl-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+        )}
         <Button type="submit" className="rounded-lg" disabled={isUploading}>
           {isUploading ? "Uploading..." : "Review & Estimate"}
         </Button>

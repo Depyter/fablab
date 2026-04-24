@@ -1,18 +1,26 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
 import { Step2ProjectDetails } from "./step-2-project-details";
-import { ActionDialog } from "../action-dialog";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
+import { useStore } from "@tanstack/react-form";
 import { UploadedFile } from "../file-upload/types";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { FILE_CATEGORIES } from "@convex/constants";
+import {
+  FILE_CATEGORIES,
+  FulfillmentMode,
+  ProjectMaterial,
+} from "@convex/constants";
+import { WorkshopSchedule } from "./workshop-time-slot-picker";
+import { type ServicePricing } from "@/lib/project-pricing";
+import posthog from "posthog-js";
 
 interface BookingDialog {
   serviceId: Id<"services">;
@@ -28,14 +36,10 @@ interface BookingDialog {
     unit?: string;
   }>;
   hasUpPricing?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  servicePricing?: any;
+  pricingVariants?: Array<{ name: string }>;
+  servicePricing?: ServicePricing;
   serviceCategory?: string;
-  timeSlots?: Array<{
-    startTime: number;
-    endTime: number;
-    maxSlots: number;
-  }>;
+  schedules?: WorkshopSchedule[];
 }
 
 type Step = 1 | 2 | 3;
@@ -45,8 +49,10 @@ interface LocalBookingFormValues extends Omit<
   "files" | "material"
 > {
   files: UploadedFile[];
-  material: "provide-own" | "buy-from-lab";
-  requestedMaterialId?: string;
+  material:
+    | typeof ProjectMaterial.PROVIDE_OWN
+    | typeof ProjectMaterial.BUY_FROM_LAB;
+  requestedMaterialIds: string[];
 }
 
 export function BookingDialog({
@@ -57,44 +63,42 @@ export function BookingDialog({
   availableDays = [],
   serviceMaterials = [],
   hasUpPricing = false,
+  pricingVariants = [] as Array<{ name: string }>,
   servicePricing,
   serviceCategory,
-  timeSlots,
+  schedules,
 }: BookingDialog) {
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
   );
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(
+    serviceCategory === "WORKSHOP" ? 2 : 1,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
+
+  const isUnauthenticatedBookingError = (error: unknown) => {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "";
+
+    return /unauthenticated|not\s+authenticated/i.test(message);
+  };
 
   const handleUploadingChange = useCallback((uploading: boolean) => {
     setIsUploading(uploading);
   }, []);
 
-  const form = useAppForm({
-    defaultValues: {
-      serviceType: "self-service",
-      name: "",
-      description: "",
-      notes: "",
-      material: "provide-own",
-      pricing: "normal",
-      requestedMaterialId: undefined,
-      dateTime: {
-        date: undefined,
-        startTime: "",
-        endTime: "",
-      },
-      files: [],
-    } as LocalBookingFormValues,
-    onSubmit: async ({ value: rawValue }) => {
+  const handleFormSubmit = useCallback(
+    async ({ value: rawValue }: { value: LocalBookingFormValues }) => {
       const value = rawValue as LocalBookingFormValues;
-      if (isSubmitting) return;
-
       if (!value.dateTime.date) {
         toast.error("Please select a date.");
         return;
@@ -102,69 +106,144 @@ export function BookingDialog({
 
       setIsSubmitting(true);
       try {
-        const [startHours, startMinutes] = value.dateTime.startTime
-          .split(":")
-          .map(Number);
-        const [endHours, endMinutes] = value.dateTime.endTime
-          .split(":")
-          .map(Number);
+        const year = value.dateTime.date.getFullYear();
+        const month = value.dateTime.date.getMonth() + 1;
+        const day = value.dateTime.date.getDate();
+        const dateString = `${month}/${day}/${year}`;
+        const baseDate = new Date(`${dateString} 00:00:00 GMT+0800`);
+        const bookingDateTs = value.dateTime.originalDate ?? baseDate.getTime();
 
-        const startDate = new Date(value.dateTime.date);
-        startDate.setHours(startHours, startMinutes, 0, 0);
+        const [startH, startM] = value.dateTime.startTime.split(":");
+        const startDate = new Date(
+          `${dateString} ${startH}:${startM}:00 GMT+0800`,
+        );
+        const startTimeTs = startDate.getTime();
 
-        const endDate = new Date(value.dateTime.date);
-        endDate.setHours(endHours, endMinutes, 0, 0);
+        const [endH, endM] = value.dateTime.endTime.split(":");
+        const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
+        const endTimeTs = endDate.getTime();
 
-        if (startDate.getTime() < Date.now()) {
+        if (startTimeTs < Date.now()) {
           toast.error("Cannot book a date or time in the past.");
           setIsSubmitting(false);
           return;
         }
 
-        if (endDate.getTime() <= startDate.getTime()) {
+        if (endTimeTs <= startTimeTs) {
           toast.error("End time must be after start time.");
           setIsSubmitting(false);
           return;
         }
 
         const { roomId, threadId } = await createProject({
-          name: value.name,
-          description: value.description,
-          serviceType: value.serviceType,
+          name: value.name || `${serviceName} Booking`,
+          description: value.description || `Booking for ${serviceName}`,
+          fulfillmentMode: value.serviceType,
           material: value.material,
-          requestedMaterialId: value.requestedMaterialId as
-            | Id<"materials">
-            | undefined,
+          requestedMaterials: value.requestedMaterialIds as Id<"materials">[],
           service: serviceId,
           pricing: value.pricing,
           notes: value.notes,
           files: value.files.map((f) => f.storageId as Id<"_storage">),
           booking: {
-            date: value.dateTime.date.getTime(),
-            startTime: startDate.getTime(),
-            endTime: endDate.getTime(),
+            date: bookingDateTs,
+            startTime:
+              serviceCategory === "WORKSHOP"
+                ? (value.dateTime.originalStartTime ?? startTimeTs)
+                : startTimeTs,
+            endTime:
+              serviceCategory === "WORKSHOP"
+                ? (value.dateTime.originalEndTime ?? endTimeTs)
+                : endTimeTs,
           },
-          ...(serviceCategory === "WORKSHOP"
-            ? {
-                selectedTimeSlot: {
-                  startTime: startDate.getTime(),
-                  endTime: endDate.getTime(),
-                },
-              }
-            : {}),
         });
 
+        posthog.capture("booking_submitted", {
+          service_id: serviceId,
+          service_name: serviceName,
+          service_category: serviceCategory,
+          file_count: value.files.length,
+        });
+
+        setIsSuccess(true);
         toast.success("Booking request created successfully!");
         router.push(`/dashboard/chat/${roomId}?thread=${threadId}`);
       } catch (error) {
+        setIsSubmitting(false);
+        if (isUnauthenticatedBookingError(error)) {
+          toast.error("You must be logged in to create a booking.");
+          setIsOpen(false);
+          router.push("/login");
+          return;
+        }
         toast.error(
           error instanceof Error ? error.message : "Failed to create booking.",
         );
-      } finally {
-        setIsSubmitting(false);
       }
     },
+    [serviceCategory, serviceId, serviceName, createProject, router],
+  );
+
+  const form = useAppForm({
+    defaultValues: {
+      serviceType:
+        serviceCategory === "WORKSHOP"
+          ? FulfillmentMode.STAFF_LED
+          : FulfillmentMode.SELF_SERVICE,
+      name: "",
+      description: "",
+      notes: "",
+      material: ProjectMaterial.PROVIDE_OWN,
+      pricing: "Default",
+      requestedMaterialIds: [],
+      dateTime: {
+        date: undefined,
+        startTime: "",
+        endTime: "",
+        originalDate: undefined,
+        originalStartTime: undefined,
+        originalEndTime: undefined,
+      },
+      files: [],
+    } as LocalBookingFormValues,
+    onSubmit: handleFormSubmit,
   });
+
+  const selectedDateRaw = useStore(
+    form.store,
+    (state: { values: LocalBookingFormValues }) => state.values.dateTime.date,
+  );
+  let queryDateTs: number | undefined;
+  if (selectedDateRaw) {
+    const year = selectedDateRaw.getFullYear();
+    const month = selectedDateRaw.getMonth() + 1;
+    const day = selectedDateRaw.getDate();
+    queryDateTs = new Date(
+      `${month}/${day}/${year} 00:00:00 GMT+0800`,
+    ).getTime();
+  }
+
+  const bookedTimeSlotsRaw = useQuery(
+    api.services.query.getBookedTimeSlots,
+    queryDateTs ? { serviceId, date: queryDateTs } : "skip",
+  );
+
+  const bookedTimeBlocks = (bookedTimeSlotsRaw || []).map(
+    (slot: { startTime: number; endTime: number }) => ({
+      start: new Date(slot.startTime).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Manila",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      end: new Date(slot.endTime).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Manila",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }),
+  );
 
   const is3DPrinting = serviceName.toLowerCase().includes("3d printing");
 
@@ -174,7 +253,8 @@ export function BookingDialog({
   };
 
   const handlePrevStep = () => {
-    if (step > 1) {
+    const minStep = serviceCategory === "WORKSHOP" ? 2 : 1;
+    if (step > minStep) {
       setStep((prev) => (prev - 1) as Step);
     }
   };
@@ -184,37 +264,62 @@ export function BookingDialog({
     if (!open) {
       // Reset state on close
       setTimeout(() => {
-        setStep(1);
+        setStep(serviceCategory === "WORKSHOP" ? 2 : 1);
         setIsSubmitting(false);
+        setIsSuccess(false);
         form.reset();
       }, 300);
     }
   };
 
-  const handleConfirmCancel = () => {
-    handleOpenChange(false);
+  const handleCreateBookingClick = async () => {
+    const session = await authClient.getSession();
+    if (!session?.data) {
+      toast.error("You must be logged in to create a booking.");
+      router.push("/login");
+      return;
+    }
+
+    posthog.capture("booking_dialog_opened", {
+      service_id: serviceId,
+      service_name: serviceName,
+      service_category: serviceCategory,
+    });
+    handleOpenChange(true);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="bg-primary hover:bg-primary/80 px-10 font-medium rounded-md text-white hover:text-white w-full"
-        >
-          Create Booking
-        </Button>
-      </DialogTrigger>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleCreateBookingClick}
+        className="bg-primary hover:bg-primary/80 px-10 font-medium rounded-md text-white hover:text-white w-full"
+      >
+        Create Booking
+      </Button>
 
-      <DialogContent className="h-auto w-auto min-w-[min(22rem,calc(100%-2rem))] max-w-[calc(100%-2rem)] sm:max-w-[min(80vw,80rem)] rounded-xl">
-        {step === 1 && (
+      <DialogContent className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none p-4 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl md:max-w-[80%] lg:max-w-[60vw]">
+        {step === 1 && serviceCategory !== "WORKSHOP" && (
           <Step1ServiceType
             form={form}
+            serviceName={serviceName}
+            serviceCategory={serviceCategory}
             onNext={() => {
-              if (availableDays.length === 0) {
+              if (
+                serviceCategory === "FABRICATION" &&
+                availableDays.length === 0
+              ) {
                 toast.error(
                   "This service is currently unavailable for booking.",
                 );
+                return;
+              }
+              if (
+                serviceCategory === "WORKSHOP" &&
+                (!schedules || schedules.length === 0)
+              ) {
+                toast.error("This workshop has no available schedules.");
                 return;
               }
               handleNextStep();
@@ -236,18 +341,20 @@ export function BookingDialog({
             availableDays={availableDays}
             serviceMaterials={serviceMaterials}
             hasUpPricing={hasUpPricing}
+            pricingVariants={pricingVariants}
             serviceCategory={serviceCategory}
-            timeSlots={timeSlots}
+            schedules={schedules}
+            bookedTimeBlocks={bookedTimeBlocks}
           />
         )}
 
         {step === 3 && (
           <form
-            className="w-full"
+            className="w-full flex flex-col h-full min-h-0"
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (isSubmitting) return;
+              if (isSubmitting || isSuccess) return;
               form.handleSubmit();
             }}
           >
@@ -262,24 +369,13 @@ export function BookingDialog({
                   }}
                   servicePricing={servicePricing}
                   serviceMaterials={serviceMaterials}
-                  isSubmitting={isSubmitting || formIsSubmitting}
-                  canSubmit={canSubmit}
+                  isSubmitting={isSubmitting || formIsSubmitting || isSuccess}
+                  canSubmit={canSubmit && !isSuccess}
                   onBack={handlePrevStep}
                 />
               )}
             />
           </form>
-        )}
-        {step !== 1 && (
-          <div className="absolute bottom-6 left-4 z-50">
-            <ActionDialog
-              onConfirm={handleConfirmCancel}
-              title="Cancel Project Request?"
-              description="Are you sure you want to cancel this request? All progress will be lost."
-              baseActionText="Cancel"
-              confirmButtonText="Yes, Cancel"
-            />
-          </div>
         )}
       </DialogContent>
     </Dialog>

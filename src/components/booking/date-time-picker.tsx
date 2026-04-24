@@ -49,12 +49,14 @@ export interface DateTimePickerProps {
   value: DateTimePickerValue;
   onChange: (value: DateTimePickerValue) => void;
   availableDays?: number[];
+  bookedTimeBlocks?: { start: string; end: string }[];
 }
 
 export function DateTimePicker({
   value,
   onChange,
   availableDays = [],
+  bookedTimeBlocks = [],
 }: DateTimePickerProps) {
   const { date, startTime, endTime } = value;
 
@@ -83,11 +85,6 @@ export function DateTimePicker({
         booked.getDate() === date.getDate(),
     );
   };
-
-  // Example of handling available times:
-  // 1. Fetch `bookedTimeBlocks` for the currently selected `date`
-  // A block might look like { start: "10:30", end: "11:30" }
-  const bookedTimeBlocks: { start: string; end: string }[] = [];
 
   const isTimeSlotBooked = (timeSlot: string) => {
     if (!date) return true; // Require date selection first
@@ -120,7 +117,7 @@ export function DateTimePicker({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Field className="sm:col-span-2">
-        <FieldLabel htmlFor="date">Date</FieldLabel>
+        <FieldLabel htmlFor="date">Date (PST)</FieldLabel>
         <Popover>
           <div className="relative">
             <PopoverTrigger asChild>
@@ -161,7 +158,7 @@ export function DateTimePicker({
         </Popover>
       </Field>
       <Field>
-        <FieldLabel htmlFor="time-from">Start Time</FieldLabel>
+        <FieldLabel htmlFor="time-from">Start Time (PST)</FieldLabel>
         <div className="relative">
           <Select
             value={startTime}
@@ -213,7 +210,7 @@ export function DateTimePicker({
         </div>
       </Field>
       <Field>
-        <FieldLabel htmlFor="time-to">End Time</FieldLabel>
+        <FieldLabel htmlFor="time-to">End Time (PST)</FieldLabel>
         <div className="relative">
           <Select
             value={endTime}
@@ -231,7 +228,18 @@ export function DateTimePicker({
                 const isBeforeOrEqualStart = startTime
                   ? slot <= startTime
                   : false;
-                const disabled = isTimeSlotBooked(slot) || isBeforeOrEqualStart;
+
+                let isOverlapping = false;
+                if (startTime && slot > startTime) {
+                  isOverlapping = bookedTimeBlocks.some(
+                    (block) => startTime < block.end && slot > block.start,
+                  );
+                }
+
+                const disabled =
+                  isTimeSlotBooked(slot) ||
+                  isBeforeOrEqualStart ||
+                  isOverlapping;
                 return (
                   <SelectItem
                     key={`end-${slot}`}

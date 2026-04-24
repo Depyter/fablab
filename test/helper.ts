@@ -1,6 +1,7 @@
-import schema from "../schema";
+import schema from "../convex/schema";
 import { convexTest } from "convex-test";
-import { internal, api } from "../_generated/api";
+import { api, internal } from "../convex/_generated/api";
+import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 
 /**
  *
@@ -8,6 +9,7 @@ import { internal, api } from "../_generated/api";
  */
 export async function setupUsers() {
   const t = convexTest(schema);
+  rateLimiterComponent.register(t);
 
   // Create Initial Users for mock
   await t.mutation(internal.users.createUserProfile, {
@@ -35,10 +37,10 @@ export async function setupProject() {
     name: "3d printing",
     images: [],
     samples: [],
-    serviceCategory: { type: "FABRICATION", materials: [] },
-    pricing: {
-      type: "COMPOSITE",
-      baseFee: 1,
+    serviceCategory: {
+      type: "FABRICATION",
+      materials: [],
+      setupFee: 1,
       unitName: "hour",
       timeRate: 2,
     },
@@ -58,7 +60,7 @@ export async function setupProject() {
     name: "test",
     pricing: "UP",
     description: "hello",
-    serviceType: "self-service",
+    fulfillmentMode: "self-service",
     material: "provide-own",
     files: [],
     service: serviceId,
