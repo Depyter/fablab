@@ -13,36 +13,30 @@ export default async function PublicLayout({
 
   return (
     <div className="min-h-full flex flex-col">
-      <header className="sticky top-0 z-20 h-[8vh] border-2 border-black bg-background">
-        <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
-          <Link href="/" className="flex min-w-0 items-center">
-            <Image
-              src="/fablab-dark.svg"
-              alt="Fablab Logo"
-              width={120}
-              height={120}
-              className="h-8 w-auto"
-            />
-            <span className="ml-2 truncate text-sm font-bold tracking-[0.3em] text-black">
-              IskoLab
-            </span>
+      <header className="sticky top-0 z-50 h-16 border-b-4 border-black bg-background">
+        <div className="mx-auto flex h-full max-w-full items-center justify-between px-6 sm:px-10 lg:px-16">
+          <Link
+            href="/"
+            className="text-3xl font-black uppercase tracking-tighter text-black transition-colors hover:text-fab-magenta sm:text-4xl"
+          >
+            IskoLab
           </Link>
 
           <div className="sm:hidden">
             <PublicMobileNav />
           </div>
 
-          <nav className="hidden items-center gap-4 md:gap-2 sm:flex">
+          <nav className="hidden items-center gap-8 sm:flex">
             <Link
               href="/about"
-              className="border-2 border-black px-3 py-1 text-sm font-medium text-black hover:bg-primary/20"
+              className="text-xl font-black uppercase tracking-tighter text-black hover:text-fab-magenta"
             >
-              About Us
+              About
             </Link>
 
             <Link
               href="/services"
-              className="border-2 border-black px-3 py-1 text-sm font-medium text-black hover:bg-primary/20"
+              className="text-xl font-black uppercase tracking-tighter text-black hover:text-fab-teal"
             >
               Services
             </Link>
@@ -50,14 +44,14 @@ export default async function PublicLayout({
             {isAuthenticated ? (
               <Link
                 href="/dashboard"
-                className="border-2 border-black bg-primary px-3 py-1 text-sm font-medium text-white hover:bg-primary/80"
+                className="border-4 border-black bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
               >
-                My Projects
+                Dashboard
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="border-2 border-black px-3 py-1 text-sm font-medium text-black hover:bg-primary/20"
+                className="border-4 border-black bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0"
               >
                 Login
               </Link>

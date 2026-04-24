@@ -1,41 +1,34 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {
   slug: string;
-  imageSrc: string;
-  hoverImageSrc?: string;
   title: string;
-  categoryLabel?: string;
-  priceLabel?: string;
-  badgeLabel?: string;
-  imageAlt?: string;
+  showBorderRight?: boolean;
+  showBorderBottom?: boolean;
+  hoverColor?: string;
 }
 
-/**
- * ServiceCardClient
- * Simplified minimalist aesthetic:
- * - Simple scale-up hover effect for images
- * - No sliding text or complex transformations
- * - Clean, centered typography
- */
 export function ServiceCardClient({
   slug,
-  imageSrc,
-  hoverImageSrc,
   title,
-
-  badgeLabel = "Featured",
-  imageAlt = "Service image",
+  showBorderRight = true,
+  showBorderBottom = true,
+  hoverColor = "hover:bg-fab-amber",
 }: ServiceCardProps) {
   return (
     <Link
       href={`/services/${slug}`}
-      className="group flex h-full min-w-100 flex-col bg-background border-r border-b border-black"
+      className={cn(
+        "group flex flex-col bg-background transition-colors",
+        hoverColor,
+        showBorderRight && "md:border-r-8 border-black",
+        showBorderBottom && "border-b-8 border-black",
+      )}
       onClick={() =>
         posthog.capture("service_card_clicked", {
           service_slug: slug,
@@ -43,43 +36,29 @@ export function ServiceCardClient({
         })
       }
     >
-      <div className="relative h-65 w-full overflow-hidden border-b border-black">
-        <span className="absolute right-3 top-3 z-20 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-background text-[10px] leading-none">
-          ♥
-        </span>
-
-        <Image
-          src={imageSrc}
-          alt={imageAlt}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className={cn(
-            "object-contain p-10 transition-all duration-500 ease-in-out group-hover:scale-105",
-            hoverImageSrc && "group-hover:opacity-0",
-          )}
-          priority
-        />
-
-        {hoverImageSrc && (
-          <Image
-            src={hoverImageSrc}
-            alt={`${imageAlt} hover`}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain p-10 opacity-0 transition-all duration-500 ease-in-out group-hover:opacity-100 group-hover:scale-105"
+      <div className="flex min-h-[250px] flex-1 items-center justify-between gap-6 px-6 py-12 sm:min-h-[400px] sm:p-10 lg:min-h-[500px] lg:p-24">
+        <h3 className="text-4xl font-black uppercase tracking-tighter text-black transition-colors group-hover:text-white leading-none sm:text-6xl lg:text-8xl">
+          {title}
+        </h3>
+        <div className="flex items-center text-black transition-colors group-hover:text-white">
+          <ChevronRight
+            className="h-12 w-12 transition-transform duration-150 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-4 sm:h-20 sm:w-20 lg:h-28 lg:w-28"
+            strokeWidth={8}
+            strokeLinecap="square"
+            strokeLinejoin="miter"
           />
-        )}
-      </div>
-
-      <div className="relative px-4 pb-4 pt-6">
-        <span className="absolute left-1/2 top-0 z-50 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black bg-black px-4 py-0.75 text-[8px] font-bold uppercase tracking-[0.18em] text-white">
-          {badgeLabel}
-        </span>
-
-        <div className="flex items-end justify-between gap-2">
-          <h3 className="font-serif text-[31px] leading-[1.02] font-semibold text-foreground transition-colors group-hover:text-primary">
-            {title}
-          </h3>
+          <ChevronRight
+            className="h-12 w-12 -ml-6 transition-transform duration-150 delay-75 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-4 opacity-60 sm:h-20 sm:w-20 sm:-ml-8 lg:h-28 lg:w-28 lg:-ml-10"
+            strokeWidth={8}
+            strokeLinecap="square"
+            strokeLinejoin="miter"
+          />
+          <ChevronRight
+            className="h-12 w-12 -ml-6 transition-transform duration-150 delay-150 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-4 opacity-30 sm:h-20 sm:w-20 sm:-ml-8 lg:h-28 lg:w-28 lg:-ml-10"
+            strokeWidth={8}
+            strokeLinecap="square"
+            strokeLinejoin="miter"
+          />
         </div>
       </div>
     </Link>

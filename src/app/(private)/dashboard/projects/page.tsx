@@ -251,7 +251,10 @@ export default function ProjectsList() {
           value={statusFilter}
           onValueChange={(v) => {
             setStatusFilter(v as StatusFilter);
-            posthog.capture("project_filter_changed", { filter: "status", value: v });
+            posthog.capture("project_filter_changed", {
+              filter: "status",
+              value: v,
+            });
           }}
         >
           <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">

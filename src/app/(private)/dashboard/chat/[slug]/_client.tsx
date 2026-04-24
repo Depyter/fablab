@@ -28,7 +28,7 @@ export function ChatRoomClient({
       room_id: roomId,
       thread_id: activeThreadId,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
   return (

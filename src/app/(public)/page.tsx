@@ -2,37 +2,35 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import Image from "next/image";
-import { Card } from "@/components/ui/card";
 import { useEffect } from "react";
-import { Leaf, Wrench, Boxes, DoorOpenIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const fablabGoals = [
-  {
-    title: "Open Access Making",
-    description:
-      "A practical space to explore fabrication tools with guidance.",
-    icon: DoorOpenIcon,
-  },
-  {
-    title: "Skill Building",
-    description:
-      "Encourage hands-on learning through workshops, peer mentoring, and shared experimentation.",
-    icon: Wrench,
-  },
-  {
-    title: "Prototype Support",
-    description:
-      "Help turn class ideas and research concepts into usable models, parts, and test pieces.",
-    icon: Boxes,
-  },
-  {
-    title: "Sustainable Innovation",
-    description:
-      "Promote responsible making, repair thinking, and solutions that serve the campus and community.",
-    icon: Leaf,
-  },
-];
+const ActionButton = ({
+  href,
+  children,
+  className,
+  variant = "primary",
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+  variant?: "primary" | "secondary";
+}) => (
+  <Link href={href} className="block w-full sm:w-auto">
+    <Button
+      size="lg"
+      className={cn(
+        "group h-20 w-full rounded-none border-4 border-black px-10 text-xl font-black uppercase tracking-tighter transition-colors duration-150 sm:h-28 sm:w-auto sm:px-16 sm:text-3xl",
+        variant === "primary"
+          ? "bg-fab-magenta text-white hover:bg-fab-teal"
+          : "bg-fab-amber text-black hover:bg-fab-magenta hover:text-white",
+        className,
+      )}
+    >
+      {children}
+    </Button>
+  </Link>
+);
 
 export default function HomePage() {
   useEffect(() => {
@@ -46,7 +44,7 @@ export default function HomePage() {
         });
       },
       {
-        threshold: 0.12,
+        threshold: 0.05,
         rootMargin: "50px",
       },
     );
@@ -59,177 +57,127 @@ export default function HomePage() {
     };
   }, []);
 
+  const marqueeText =
+    "3D Printing • Laser Cutting • CNC Milling • Electronics • Woodworking • Metalworking • Design • ";
+
   return (
-    <main className="relative overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-size-[32px_32px] opacity-35" />
+    <main className="relative min-h-screen overflow-hidden bg-background">
+      {/* Consistent Massive Grid Background */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_2px,transparent_2px),linear-gradient(to_bottom,var(--border)_2px,transparent_2px)] bg-[size:120px_120px] opacity-25" />
 
-      <section className="relative mx-auto w-full max-w-7xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 lg:px-10 lg:pt-14">
+      {/* Hero Section */}
+      <section className="relative z-10 flex min-h-[75vh] flex-col items-center justify-center px-4 pt-10 pb-10 text-center sm:px-6 lg:px-8">
+        <div className="landing-reveal z-10 space-y-8" data-animate>
+          <h1 className="max-w-7xl text-6xl leading-[0.8] font-black tracking-tighter text-black sm:text-9xl lg:text-[14rem]">
+            MAKE
+            <br />
+            ALMOST
+            <br />
+            ANYTHING.
+          </h1>
 
-        {/* <div className="grid items-stretch gap-6 lg:grid-cols-12"> */}
-          <div className="lg:col-span-7">
-            <Card
-              className="landing-reveal relative overflow-hidden rounded-none border-2 border-foreground bg-card p-6 shadow-[8px_8px_0_var(--foreground)] sm:p-8"
-              data-animate
-            >
-              
-            
-              <h1 className="max-w-2xl text-4xl leading-[0.95] font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Make
-                <br />
-                Almost
-                <br />
-                Anything.
-              </h1>
-
-              <p className="mt-5 max-w-xl text-sm leading-relaxed font-medium text-muted-foreground sm:text-base">
-                A one-stop fabrication lab for bold experiments, rapid
-                prototypes, and practical making with the UP Cebu community.
-              </p>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/login">
-                  <Button
-                    size="lg"
-                    className="rounded-none border-2 border-foreground bg-primary px-6 font-black text-primary-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
-                  >
-                    Start A Project
-                  </Button>
-                </Link>
-                <Link href="/services">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="rounded-none border-2 border-foreground bg-secondary px-6 font-black text-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
-                  >
-                    Explore Services
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          </div>
-
-          {/* <div className="lg:col-span-5">
-            <Card
-              className="landing-reveal relative h-full overflow-hidden rounded-none border-2 border-foreground bg-secondary p-3 shadow-[8px_8px_0_var(--foreground)]"
-              data-animate
-            >
-              <div className="relative h-80 overflow-hidden border-2 border-foreground bg-primary-muted sm:h-95 lg:h-full lg:min-h-115">
-                <Image
-                  src="/fablab_mural.png"
-                  alt="UP Cebu Fablab mural"
-                  fill
-                  priority
-                  className="object-cover object-center"
-                />
-                <div className="absolute inset-0 bg-primary/25" />
-                <div className="absolute left-3 top-3 border-2 border-foreground bg-light-yellow px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-foreground sm:text-xs">
-                  Fabricate • Iterate • Share
-                </div>
-              </div>
-            </Card>
-          </div> */}
-        </div>
-      </section>
-
-      
-
-      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
-        <div
-          className="landing-reveal relative overflow-x-hidden bg-secondary/30"
-          data-animate
-        >
-          <div className="pointer-events-none absolute top-12 bottom-0 left-0 z-0 hidden w-0.5 bg-foreground xl:block" />
-          <div className="pointer-events-none absolute top-12 bottom-0 right-0 z-0 hidden w-0.5 bg-foreground xl:block" />
-          <div className="pointer-events-none absolute left-0 right-0 top-12 z-0 hidden h-0.5 bg-foreground xl:block" />
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-0.5 bg-foreground" />
-          <div className="relative z-10 grid xl:grid-cols-4">
-            {fablabGoals.map((goal, index) => {
-              const Icon = goal.icon;
-
-              return (
-                <article
-                  key={goal.title}
-                  className="relative px-7 pt-22 pb-10"
-                >
-                  {index < fablabGoals.length - 1 ? (
-                    <div className="pointer-events-none absolute top-12 right-0 bottom-0 hidden w-0.5 bg-foreground xl:block" />
-                  ) : null}
-
-                  <div className="absolute left-7 top-12 z-20 flex h-18 w-18 -translate-y-1/2 items-center justify-center rounded-full border-2 border-foreground bg-background">
-                    <Icon className="h-8 w-8 text-foreground" strokeWidth={2.25} />
-                  </div>
-
-                  <h3 className="text-2xl leading-none font-black uppercase tracking-[0.04em] text-foreground md:text-3xl">
-                    {goal.title}
-                  </h3>
-                  <p className="mt-8 max-w-[32ch] text-base leading-[1.55] text-foreground/85 md:text-lg">
-                    {goal.description}
-                  </p>
-
-                  
-                </article>
-              );
-            })}
+          <div className="flex flex-col items-center justify-center gap-8 pt-8 sm:flex-row">
+            <ActionButton href="/login">Start A Project</ActionButton>
           </div>
         </div>
       </section>
 
-    
+      {/* Scrolling Ticker - Robust Implementation */}
+      <div className="relative z-10 overflow-hidden border-y-8 border-black bg-black py-8 sm:py-12">
+        <div className="flex animate-marquee whitespace-nowrap">
+          <div className="flex shrink-0 items-center gap-12 px-6 text-5xl font-black uppercase tracking-tighter text-white sm:text-7xl lg:text-8xl">
+            {[...Array(4)].map((_, i) => (
+              <span key={i}>{marqueeText}</span>
+            ))}
+          </div>
+          <div className="flex shrink-0 items-center gap-12 px-6 text-5xl font-black uppercase tracking-tighter text-white sm:text-7xl lg:text-8xl">
+            {[...Array(4)].map((_, i) => (
+              <span key={i}>{marqueeText}</span>
+            ))}
+          </div>
+        </div>
+      </div>
 
-      <section className="mx-auto w-full max-w-7xl px-4 pt-8 pb-14 sm:px-6 lg:px-10">
-        <Card
-          className="landing-reveal rounded-none border-2 border-foreground bg-primary p-7 text-primary-foreground shadow-[10px_10px_0_var(--foreground)] sm:p-10"
-          data-animate
-        >
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-foreground/85">
-            Ready To Make?
-          </p>
-          <h2 className="mt-3 max-w-3xl text-3xl leading-[1.05] font-black sm:text-4xl">
-            Join FabLab UP Cebu and turn your concept into a real prototype.
+      {/* Goals Section */}
+      <section className="relative z-10 grid border-b-8 border-black md:grid-cols-2">
+        <div className="border-b-8 border-black bg-fab-amber p-12 md:border-r-8 lg:p-20">
+          <h2 className="text-5xl font-black leading-none tracking-tighter uppercase sm:text-7xl lg:text-8xl">
+            Open
+            <br />
+            Access
           </h2>
-          <p className="mt-4 max-w-2xl text-sm text-primary-foreground/90 sm:text-base">
-            Access practical equipment, mentorship, and a collaborative space
-            built for students, researchers, and curious builders.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="rounded-none border-2 border-foreground bg-light-yellow px-6 font-black text-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
-              >
-                Get Started
-              </Button>
-            </Link>
-            <Link href="/services">
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-none border-2 border-foreground bg-background px-6 font-black text-foreground shadow-[4px_4px_0_var(--foreground)] transition-transform duration-150 hover:-translate-y-0.5"
-              >
-                See Services
-              </Button>
-            </Link>
-          </div>
-        </Card>
+        </div>
+        <div className="border-b-8 border-black bg-fab-magenta p-12 text-white lg:p-20">
+          <h2 className="text-5xl font-black leading-none tracking-tighter uppercase sm:text-7xl lg:text-8xl">
+            Skill
+            <br />
+            Building
+          </h2>
+        </div>
+        <div className="border-b-8 border-black bg-fab-teal p-12 text-white md:border-r-8 md:border-b-0 lg:p-20">
+          <h2 className="text-5xl font-black leading-none tracking-tighter uppercase sm:text-7xl lg:text-8xl">
+            Rapid
+            <br />
+            Prototyping
+          </h2>
+        </div>
+        <div className="bg-fab-purple p-12 text-white lg:p-20">
+          <h2 className="text-5xl font-black leading-none tracking-tighter uppercase sm:text-7xl lg:text-8xl">
+            Green
+            <br />
+            Making
+          </h2>
+        </div>
       </section>
 
-      <footer className="border-t-2 border-foreground bg-secondary py-10 text-center">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">
-          Built For Makers At Fablab
+      {/* Blank Section */}
+      <section className="relative z-10 min-h-[40vh] border-b-8 border-black">
+        {/* Intentionally left blank */}
+      </section>
+
+      {/* Call to Action */}
+      <section className="relative z-10 bg-black p-16 text-center text-white sm:p-32 lg:p-48">
+        <h2 className="text-5xl font-black leading-tight tracking-tighter uppercase sm:text-9xl">
+          Ready to Build?
+        </h2>
+        <div className="mt-12 flex justify-center sm:mt-20">
+          <ActionButton href="/login" variant="secondary">
+            Start a Project
+          </ActionButton>
+        </div>
+      </section>
+
+      <footer className="relative z-10 bg-background py-16 text-center sm:py-24 border-black">
+        <p className="text-xl font-black uppercase tracking-tighter text-black sm:text-3xl">
+          FabLab UP Cebu • Cebu City • © 2024
         </p>
       </footer>
 
       <style jsx>{`
         .landing-reveal {
           opacity: 0;
-          transform: translateY(18px);
-          transition: transform 0.5s cubic-bezier(0.2, 0.75, 0.2, 1),
+          transform: translateY(40px);
+          transition:
+            transform 0.5s cubic-bezier(0.2, 0.75, 0.2, 1),
             opacity 0.5s ease;
         }
 
         .landing-reveal.is-visible {
           opacity: 1;
           transform: translateY(0);
+        }
+
+        @keyframes marquee {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-100%);
+          }
+        }
+
+        .animate-marquee {
+          animation: marquee 30s linear infinite;
         }
       `}</style>
     </main>

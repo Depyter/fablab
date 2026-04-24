@@ -47,3 +47,6 @@ next-env.d.ts
 
 # wrangler preview
 .wrangler
+
+# ai skills
+skills/*

@@ -3,24 +3,15 @@
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCardClient } from "@/components/services/service-card-client";
-import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import posthog from "posthog-js";
 
-/**
- * ServicesListClient
- * Inspired by Blue Bottle Coffee's minimalist "All Coffee" page:
- * - Uses distinct section backgrounds to separate UI parts
- * - Clean, spacious typography
- * - Alternating stage backgrounds for service cards
- */
 export function ServicesListClient({
   preloadedServices,
 }: {
   preloadedServices: Preloaded<typeof api.services.query.getServices>;
 }) {
   const services = usePreloadedQuery(preloadedServices);
-  // type ServiceItem = (typeof services)[number];
 
   const fabricationServices = services.filter(
     (service) => service.serviceCategory?.type === "FABRICATION",
@@ -34,167 +25,116 @@ export function ServicesListClient({
       fabrication_count: fabricationServices.length,
       workshop_count: workshopServices.length,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const getGridColsClass = (count: number) => {
-    if (count <= 1) return "grid-cols-1 sm:grid-cols-1 lg:grid-cols-1";
-    if (count === 2) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2";
-    return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-  };
 
   if (services.length === 0) {
     return (
-      <div className="relative min-h-screen bg-background font-sans overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none z-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(var(--fab-grid) 1px, transparent 1px),
-              linear-gradient(90deg, var(--fab-grid) 1px, transparent 1px)
-            `,
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div className="relative z-10">
-          <header className="py-24 text-center">
-            <h1 className="text-sm font-black uppercase tracking-[0.5em] text-foreground/40">
-              Our Services
-            </h1>
-          </header>
-          <div className="py-32 bg-sidebar-accent/10 border-y border-sidebar-border/20 text-center">
-            <p className="text-muted-foreground font-medium uppercase tracking-widest text-[11px]">
-              New opportunities are brewing. Check back soon.
-            </p>
-          </div>
-        </div>
+      <div className="relative min-h-screen bg-background overflow-hidden flex flex-col items-center justify-center p-12">
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_2px,transparent_2px),linear-gradient(to_bottom,var(--border)_2px,transparent_2px)] bg-[size:80px_80px] opacity-25" />
+        <h1 className="relative z-10 text-6xl font-black uppercase tracking-tighter sm:text-8xl">
+          Coming Soon
+        </h1>
+        <p className="relative z-10 mt-6 text-2xl font-bold uppercase tracking-tighter">
+          New opportunities are brewing.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen font-sans overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(var(--fab-grid) 1px, transparent 1px),
-            linear-gradient(90deg, var(--fab-grid) 1px, transparent 1px)
-          `,
-          backgroundSize: "28px 28px",
-        }}
-      />
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      {/* Heavy Grid Background */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_2px,transparent_2px),linear-gradient(to_bottom,var(--border)_2px,transparent_2px)] bg-[size:80px_80px] opacity-25" />
+
       <div className="relative z-10">
-        {/*
-            Section 1: Hero Header
-            White background, minimal focus
-        */}
-        <header className="bg-background py-20 lg:py-32 text-center border-b border-sidebar-border/10">
-          <h1 className="text-sm font-black uppercase tracking-[0.6em] text-foreground/30 mb-4">
-            Fablab Services
+        {/* Hero Header */}
+        <header className="bg-fab-teal py-32 text-center text-white lg:py-64">
+          <h1 className="text-7xl font-black uppercase tracking-tighter sm:text-9xl lg:text-[12rem]">
+            SERVICES
           </h1>
-          <div className="h-px w-12 bg-primary/20 mx-auto" />
         </header>
 
-        {/*
-            Section 2: Main Grid
-            Lightest background to provide subtle contrast from the header
-        */}
-        <section className="bg-sidebar-accent/5 py-20 lg:py-24">
-          <div className="container mx-auto px-6 max-w-7xl">
-            <div className="space-y-20">
-              {fabricationServices.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-10 border-b border-sidebar-border/30 pb-4">
-                    <h2 className="text-lg font-black text-foreground uppercase tracking-[0.2em]">
-                      Digital Fabrication
-                    </h2>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {fabricationServices.length} Options Available
-                    </span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "inline-grid gap-0 border border-black",
-                      getGridColsClass(fabricationServices.length),
-                    )}
-                  >
-                    {fabricationServices.map((service) => (
-                      <ServiceCardClient
-                        key={service._id}
-                        slug={service.slug}
-                        imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-                        hoverImageSrc={
-                          service.imageUrls[1] ?? service.imageUrls[0]
-                        }
-                        title={service.name}
-                        badgeLabel="Featured"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {workshopServices.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-10 border-b border-sidebar-border/30 pb-4">
-                    <h2 className="text-lg font-black text-foreground uppercase tracking-[0.2em]">
-                      Workshop
-                    </h2>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {workshopServices.length} Options Available
-                    </span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "inline-grid gap-0 border border-black",
-                      getGridColsClass(workshopServices.length),
-                    )}
-                  >
-                    {workshopServices.map((service) => (
-                      <ServiceCardClient
-                        key={service._id}
-                        slug={service.slug}
-                        imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-                        hoverImageSrc={
-                          service.imageUrls[1] ?? service.imageUrls[0]
-                        }
-                        title={service.name}
-                        badgeLabel="Featured"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+        {/* Digital Fabrication Section */}
+        {fabricationServices.length > 0 && (
+          <section className="bg-background">
+            <div className="bg-fab-magenta p-10 text-white border-y-8 border-black sm:p-20 lg:p-32">
+              <h2 className="text-5xl font-black uppercase tracking-tighter sm:text-7xl lg:text-9xl">
+                Digital Fabrication
+              </h2>
             </div>
+            <div className="grid md:grid-cols-2">
+              {fabricationServices.map((service, index) => {
+                const isLastInRow = index % 2 === 1;
+                const isLastInCol =
+                  index >=
+                  fabricationServices.length -
+                    (fabricationServices.length % 2 || 2);
+
+                return (
+                  <ServiceCardClient
+                    key={service._id}
+                    slug={service.slug}
+                    title={service.name}
+                    showBorderRight={!isLastInRow}
+                    showBorderBottom={!isLastInCol}
+                    hoverColor="hover:bg-fab-magenta hover:text-white"
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Workshop Section */}
+        {workshopServices.length > 0 && (
+          <section className="bg-background">
+            <div className="bg-fab-amber p-10 text-black border-y-8 border-black sm:p-20 lg:p-32">
+              <h2 className="text-5xl font-black uppercase tracking-tighter sm:text-7xl lg:text-9xl">
+                Workshops
+              </h2>
+            </div>
+            <div className="grid md:grid-cols-2">
+              {workshopServices.map((service, index) => {
+                const isLastInRow = index % 2 === 1;
+                const isLastInCol =
+                  index >=
+                  workshopServices.length - (workshopServices.length % 2 || 2);
+
+                return (
+                  <ServiceCardClient
+                    key={service._id}
+                    slug={service.slug}
+                    title={service.name}
+                    showBorderRight={!isLastInRow}
+                    showBorderBottom={!isLastInCol}
+                    hoverColor="hover:bg-fab-amber hover:text-black"
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Call to Action */}
+        <section className="bg-fab-purple p-16 text-center text-white border-t-8 border-black sm:p-32 lg:p-64">
+          <h3 className="text-5xl font-black uppercase tracking-tighter sm:text-8xl">
+            Custom Projects?
+          </h3>
+          <p className="mx-auto mt-8 max-w-4xl text-2xl font-bold leading-tight sm:mt-12 lg:text-4xl">
+            If you have a specialized requirement not listed above, our
+            technicians are ready to assist with custom workflows.
+          </p>
+          <div className="mt-12 sm:mt-24">
+            <button className="border-4 border-black bg-white px-12 py-6 text-2xl font-black uppercase tracking-tighter text-black transition-transform hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 sm:px-24 sm:py-10 sm:text-4xl">
+              Get in Touch
+            </button>
           </div>
         </section>
 
-        {/*
-            Section 3: Call to Action / Support
-            Slightly darker stage for contrast
-        */}
-        <section className="bg-sidebar-accent/15 py-24 border-y border-sidebar-border/20">
-          <div className="container mx-auto px-6 max-w-7xl text-center">
-            <h3 className="text-xs font-black uppercase tracking-[0.4em] text-foreground/60 mb-6">
-              Custom Projects?
-            </h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed mb-10">
-              If you have a specialized fabrication requirement not listed
-              above, our technicians are ready to assist with custom workflows.
-            </p>
-            <div className="h-px w-8 bg-primary/30 mx-auto" />
-          </div>
-        </section>
-
-        {/* Footer minimal section */}
-        <footer className="bg-background py-16 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/30">
-            Built for Makers at Fablab
+        <footer className="bg-background py-20 text-center border-t-8 border-black sm:py-32 lg:py-48">
+          <p className="text-2xl font-black uppercase tracking-tighter text-foreground sm:text-3xl">
+            FabLab UP Cebu • Built for Makers
           </p>
         </footer>
       </div>

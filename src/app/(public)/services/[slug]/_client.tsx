@@ -32,7 +32,7 @@ export function ServiceDetailClient({
       service_name: service.name,
       service_type: service.serviceCategory.type,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service?._id]);
 
   const sortedFabricationDays =
@@ -119,19 +119,21 @@ export function ServiceDetailClient({
                 <span className="mb-3 block text-[10px] font-black uppercase tracking-[0.35em] text-foreground/60">
                   {service.status}
                 </span>
-                
+
                 <h1 className="mb-2 text-3xl font-black uppercase tracking-tight text-foreground lg:text-4xl">
                   {service.name}
                 </h1>
 
                 <span className="mb-3 block text-[10px] font-black uppercase tracking-[0.35em] text-foreground/60">
                   {getFabricationDays().length > 0
-                    ? getFabricationDays().map((day) => 
-                      <div key={day} className="inline-flex items-center gap-1 border bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground mr-2">
-                        {day.slice(0, 3).toUpperCase()}
-                      </div>
-                        
-                    )
+                    ? getFabricationDays().map((day) => (
+                        <div
+                          key={day}
+                          className="inline-flex items-center gap-1 border bg-sidebar-accent/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground mr-2"
+                        >
+                          {day.slice(0, 3).toUpperCase()}
+                        </div>
+                      ))
                     : ""}
                 </span>
               </div>
