@@ -74,7 +74,7 @@ export default function HomePage() {
         gsap.set(chars, {
           x: () => gsap.utils.random(-20, 12),
           y: () => gsap.utils.random(-25, 45),
-          rotation: () => gsap.utils.random(-90, 90),
+          rotation: () => gsap.utils.random(1, 10),
         });
 
         gsap.set(
@@ -91,15 +91,15 @@ export default function HomePage() {
         // everyone except M fixes fully
         tl.to(otherChars, {
           rotation: 0,
-          duration: 0.6,
-          stagger: 0.04,
+          duration: 0.4,
+          stagger: 0.07,
         });
 
         tl.to(otherChars, {
           x: 0,
           y: 0,
           duration: 0.5,
-          stagger: 0.1,
+          stagger: 0.03,
         });
 
         // M fixes too, but overshoots
@@ -120,6 +120,9 @@ export default function HomePage() {
         firstChar.style.cursor = "pointer";
 
         const fixFirstChar = () => {
+          const heroColors = ["#0fa896", "#9d1a58", "#ebaa57"];
+
+          // 1. Snap the "M" into place
           gsap.to(firstChar, {
             x: 0,
             y: 0,
@@ -128,7 +131,22 @@ export default function HomePage() {
             ease: "back.out(2)",
           });
 
-          // Clean up styles and listener after it's fixed
+          // 2. Color ALL characters (the M and every other character)
+          gsap.to(chars, {
+            color: () => gsap.utils.random(heroColors),
+            duration: 0.4,
+            stagger: 0.02, // Adds a quick wave effect to the color application
+          });
+
+          // 3. Revert back to the original black color after a delay
+          gsap.to(chars, {
+            color: "#000",
+            duration: 0.8,
+            delay: 5, // Stays colorful for 5 seconds
+            clearProps: "color", // Strips the inline style after animating so Tailwind takes over again
+          });
+
+          // 4. Clean up the click listener and cursor
           firstChar.style.cursor = "default";
           firstChar.removeEventListener("click", fixFirstChar);
         };
