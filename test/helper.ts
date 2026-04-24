@@ -1,6 +1,6 @@
 import schema from "../convex/schema";
 import { convexTest } from "convex-test";
-import { internal, api } from "@/convex/_generated/api";
+import { api, internal } from "../convex/_generated/api";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 
 /**
