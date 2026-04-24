@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Menu, X, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import gsap from "gsap";
 
 const navItems = [
   { href: "/about", label: "About", hoverColor: "hover:bg-fab-amber" },
@@ -20,6 +21,36 @@ const navItems = [
 
 export function PublicMobileNav() {
   const [open, setOpen] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const items =
+      navRef.current?.querySelectorAll<HTMLElement>("[data-nav-item]");
+    if (!items?.length) return;
+
+    if (open) {
+      gsap.fromTo(
+        items,
+        { y: -24, autoAlpha: 0 },
+        {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.35,
+          ease: "power3.out",
+          stagger: 0.07,
+          delay: 0.1,
+        },
+      );
+    } else {
+      gsap.to(items, {
+        y: -12,
+        autoAlpha: 0,
+        duration: 0.2,
+        ease: "power2.in",
+        stagger: 0.04,
+      });
+    }
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -59,14 +90,15 @@ export function PublicMobileNav() {
           </SheetHeader>
 
           <nav className="flex flex-1 flex-col justify-center">
-            <div className="border-b-4 border-black">
+            <div ref={navRef} className="border-b-4 border-black">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-nav-item
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "group flex items-center justify-between border-b-4 border-black bg-white p-10 transition-colors last:border-b-0",
+                    "group flex items-center justify-between border-b-4 border-black bg-white py-5 px-8 transition-colors last:border-b-0",
                     item.hoverColor,
                   )}
                 >
