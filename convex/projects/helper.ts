@@ -1,6 +1,7 @@
 import { ConvexError } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
   FILE_CATEGORIES,
@@ -739,4 +740,71 @@ export async function consumeMaterials(
   }
 
   return materialCost;
+}
+
+/**
+ * Schedules a project update email to be sent to the project owner.
+ * Fetches all necessary project, user, and usage data to populate the email template.
+ */
+export async function scheduleProjectUpdateEmail(
+  ctx: MutationCtx,
+  projectId: Id<"projects">,
+): Promise<void> {
+  const project = await ctx.db.get(projectId);
+  if (!project) return;
+  const user = await ctx.db.get(project.userId);
+  if (!user) return;
+  const service = await ctx.db.get(project.service);
+  const usage = await findProjectUsage(ctx, project);
+
+  const scheduledDate = usage
+    ? new Date(usage.startTime).toLocaleDateString("en-US", {
+        timeZone: "Asia/Manila",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : undefined;
+
+  const estimatedTime = usage
+    ? `${((usage.endTime - usage.startTime) / (1000 * 60 * 60)).toFixed(1)} hours`
+    : undefined;
+
+  const bookingDurationMinutes = usage
+    ? Math.floor((usage.endTime - usage.startTime) / (1000 * 60))
+    : 0;
+
+  const materialCost =
+    usage?.materialsUsed?.reduce((sum, m) => {
+      const price = m.snapshot?.pricePerUnit ?? 0;
+      return sum + m.amountUsed * price;
+    }, 0) ?? 0;
+
+  const pricingResult = derivePricingFromSchema({
+    servicePricing: service?.serviceCategory,
+    pricingVariant: project.pricing,
+    serviceType: project.fulfillmentMode,
+    bookingDurationMinutes,
+    materialCost,
+  });
+
+  ctx.scheduler.runAfter(0, internal.emails.emails.sendEmail, {
+    to: user.email,
+    subject: `Update on your project: ${project.name}`,
+    projectName: project.name,
+    requesterName: user.name,
+    status: project.status,
+    machine: usage?.snapshot.name ?? service?.name,
+    scheduledDate,
+    estimatedTime,
+    notes: project.notes,
+    dashboardUrl: "https://fablab.harleyvan.com/dashboard",
+    pricing: {
+      setupFee: pricingResult.setupFee,
+      materialCost: pricingResult.materialCost,
+      timeCost: pricingResult.timeCost,
+      total: pricingResult.total,
+    },
+  });
 }

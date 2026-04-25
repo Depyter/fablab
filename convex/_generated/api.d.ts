@@ -14,6 +14,9 @@ import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
 import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
+import type * as emails_FabLabEmail from "../emails/FabLabEmail.js";
+import type * as emails_emails from "../emails/emails.js";
+import type * as emails_send from "../emails/send.js";
 import type * as files from "../files.js";
 import type * as helper from "../helper.js";
 import type * as http from "../http.js";
@@ -29,7 +32,6 @@ import type * as resource_mutate from "../resource/mutate.js";
 import type * as resource_query from "../resource/query.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
-import type * as test_helper from "../../test/helper.js";
 import type * as users from "../users.js";
 
 import type {
@@ -45,6 +47,9 @@ declare const fullApi: ApiFromModules<{
   "chat/query": typeof chat_query;
   constants: typeof constants;
   crons: typeof crons;
+  "emails/FabLabEmail": typeof emails_FabLabEmail;
+  "emails/emails": typeof emails_emails;
+  "emails/send": typeof emails_send;
   files: typeof files;
   helper: typeof helper;
   http: typeof http;
@@ -60,7 +65,6 @@ declare const fullApi: ApiFromModules<{
   "resource/query": typeof resource_query;
   "services/mutate": typeof services_mutate;
   "services/query": typeof services_query;
-  "test/helper": typeof test_helper;
   users: typeof users;
 }>;
 
@@ -94,4 +98,5 @@ export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
   presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+  resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
 };
