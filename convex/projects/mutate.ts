@@ -26,6 +26,7 @@ import {
   applyMaterialAssignment,
   syncMaterialUsageStock,
   buildMaterialSnapshot,
+  scheduleProjectUpdateEmail,
 } from "./helper";
 
 // ============================================================================
@@ -165,6 +166,7 @@ export const createProject = authMutation({
       claimFiles(ctx, args.files);
     }
 
+    await scheduleProjectUpdateEmail(ctx, projectId);
     return { projectId, roomId, threadId };
   },
 });
@@ -206,6 +208,7 @@ export const updateProject = authMutation({
         args.status as ProjectStatus,
       );
       messagelines.push(...lines);
+      await scheduleProjectUpdateEmail(ctx, args.projectId);
     }
 
     // Re-fetch after potential status patch
@@ -415,6 +418,8 @@ export const markProjectPaid = authMutation({
       receipt: receiptId,
     });
 
+    await scheduleProjectUpdateEmail(ctx, args.projectId);
+
     const lines: string[] = [
       `Payment recorded. Project moved to **claim**.`,
       `- Receipt #: ${args.receiptString}`,
@@ -454,6 +459,7 @@ export const cancelOwnProject = authMutation({
 
     // applyStatusChange handles the patch, workshop slot release, and returns log lines
     const lines = await applyStatusChange(ctx, project, project, "cancelled");
+    await scheduleProjectUpdateEmail(ctx, args.projectId);
     await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });
@@ -501,6 +507,8 @@ export const completeProject = authMutation({
       status: "completed",
       totalInvoice: { subtotal: total, tax: 0, total },
     });
+
+    await scheduleProjectUpdateEmail(ctx, args.projectId);
 
     // ── 4. Update usage snapshot and record materials ─────────────────────────
     const usage = await findProjectUsage(ctx, project);

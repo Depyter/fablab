@@ -16,8 +16,8 @@ export default defineConfig([
           patterns: [
             {
               group: ["*/_generated/server"],
-              importNames: ["query", "mutation", "action"],
-              message: "Use helper.ts for query, mutation, or action",
+              importNames: ["query", "mutation"],
+              message: "Use helper.ts for queries and mutations",
             },
           ],
         },
