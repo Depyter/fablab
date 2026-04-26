@@ -15,7 +15,7 @@ export const getRoomMessages = authQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     room: v.id("rooms"),
-    threadId: v.optional(v.id("threads")),
+    threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {
     checkRoomMembership(args.room, ctx, ctx.user);
@@ -98,6 +98,7 @@ export const getRoomMessages = authQuery({
 export const getRooms = authQuery({
   args: {},
   handler: async (ctx) => {
+    // TODO: PAGINATED QUERY INSTEAD
     const roomMembers = await ctx.db
       .query("roomMembers")
       .withIndex("by_participantId", (q) =>

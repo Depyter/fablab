@@ -235,9 +235,6 @@ export default defineSchema({
       filterFields: ["status"],
     }),
 
-  // --------------------------------------------------------
-  // EXISTING TABLES: Keep existing unmodified
-  // --------------------------------------------------------
   receipts: defineTable({
     receiptString: v.string(),
     paymentMode: v.union(
@@ -292,8 +289,14 @@ export default defineSchema({
     file: v.optional(v.array(v.id("_storage"))),
     sender: v.union(v.string(), v.id("userProfile")),
     room: v.id("rooms"),
-    threadId: v.optional(v.id("threads")),
-  }).index("by_room_and_thread", ["room", "threadId"]),
+    threadId: v.id("threads"),
+  })
+    .index("by_room_and_thread", ["room", "threadId"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["room", "threadId", "sender"],
+      staged: false,
+    }),
 
   userProfile: defineTable({
     userId: v.string(),

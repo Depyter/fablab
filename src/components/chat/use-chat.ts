@@ -17,7 +17,7 @@ import posthog from "posthog-js";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
-  threadId?: Id<"threads">;
+  threadId: Id<"threads">;
 }
 
 const MESSAGE_PAGE_SIZE = 50;

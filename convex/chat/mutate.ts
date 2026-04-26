@@ -6,7 +6,7 @@ export const sendMessage = authMutation({
     content: v.string(),
     files: v.optional(v.array(v.id("_storage"))),
     room: v.id("rooms"),
-    threadId: v.optional(v.id("threads")),
+    threadId: v.id("threads"),
   },
   rateLimit: "sendMessage",
   handler: async (ctx, args) => {
@@ -27,14 +27,12 @@ export const sendMessage = authMutation({
       lastMessageAt: now,
     });
 
-    if (args.threadId) {
-      const thread = await ctx.db.get(args.threadId);
-      await ctx.db.patch(args.threadId, {
-        lastMessageText: args.content,
-        lastMessageAt: now,
-        messageCount: (thread?.messageCount ?? 0) + 1,
-      });
-    }
+    const thread = await ctx.db.get(args.threadId);
+    await ctx.db.patch(args.threadId, {
+      lastMessageText: args.content,
+      lastMessageAt: now,
+      messageCount: (thread?.messageCount ?? 0) + 1,
+    });
   },
 });
 
