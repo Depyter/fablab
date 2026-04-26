@@ -50,7 +50,7 @@ function ThreadTitle({
   threadId,
 }: {
   roomId: import("@convex/_generated/dataModel").Id<"rooms">;
-  threadId?: string;
+  threadId: string;
 }) {
   const threads = useQuery(api.chat.query.getThreads, { roomId });
   const title = threads?.find((t) => t._id === threadId)?.title;
@@ -69,7 +69,7 @@ function ThreadTitle({
           color: "var(--fab-text-primary)",
         }}
       >
-        {title ?? (threadId ? "channel" : "select a channel")}
+        {title ?? "channel"}
       </span>
     </div>
   );
@@ -139,13 +139,11 @@ export function ChatInterface({
         <ThreadTitle roomId={roomId} threadId={threadId} />
 
         {/* Presence */}
-        {threadId && (
-          <PresenceIndicator
-            threadId={threadId}
-            userId={currentUserName}
-            roomId={roomId}
-          />
-        )}
+        <PresenceIndicator
+          threadId={threadId}
+          userId={currentUserName}
+          roomId={roomId}
+        />
       </div>
       {/* ── Grid background ───────────────────────────────────────────────── */}
       <div

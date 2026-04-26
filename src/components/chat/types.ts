@@ -15,7 +15,7 @@ export interface PendingAttachment {
 
 export interface ChatInterfaceProps {
   roomId: Id<"rooms">;
-  threadId?: Id<"threads">;
+  threadId: Id<"threads">;
   currentUserName: string;
   showBackButton?: boolean;
 }
