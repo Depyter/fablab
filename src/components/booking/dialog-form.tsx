@@ -294,7 +294,7 @@ export function BookingDialog({
         type="button"
         variant="outline"
         onClick={handleCreateBookingClick}
-        className="bg-primary hover:bg-primary/80 px-10 font-medium rounded-md text-white hover:text-white w-full"
+        className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.3em] text-white shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-fab-teal hover:text-white sm:px-10"
       >
         Create Booking
       </Button>
