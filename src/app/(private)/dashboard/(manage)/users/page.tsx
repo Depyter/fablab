@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
+import { api } from "@convex/_generated/api";
 import {
   DataViewRoot,
   DataViewToolbar,
@@ -57,7 +56,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { UserRole, UserRoleType } from "../../../../../../convex/constants";
+import { UserRole, UserRoleType } from "@convex/constants";
 import { format } from "date-fns";
 
 export default function UsersPage() {
@@ -71,6 +70,8 @@ export default function UsersPage() {
   );
 
   const updateUserRole = useMutation(api.users.updateUserRole);
+  const banUserMutation = useMutation(api.users.banUser);
+  const unbanUserMutation = useMutation(api.users.unbanUser);
 
   // Modal States
   const [selectedUser, setSelectedUser] = React.useState<
@@ -98,9 +99,9 @@ export default function UsersPage() {
     if (!selectedUser) return;
     try {
       const duration = parseInt(banDuration);
-      await authClient.admin.banUser({
+      await banUserMutation({
         userId: selectedUser.userId,
-        banReason: banReason || "No reason provided",
+        banReason: banReason || undefined,
         banExpiresIn: duration > 0 ? duration : undefined,
       });
       toast.success(`User ${selectedUser.name} has been banned`);
@@ -116,9 +117,7 @@ export default function UsersPage() {
 
   const handleUnbanUser = async (user: (typeof results)[number]) => {
     try {
-      await authClient.admin.unbanUser({
-        userId: user.userId,
-      });
+      await unbanUserMutation({ userId: user.userId });
       toast.success(`User ${user.name} has been unbanned`);
     } catch (error) {
       toast.error(
