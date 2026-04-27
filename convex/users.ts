@@ -4,7 +4,7 @@ import { authQuery, authMutation, claimFiles } from "./helper";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { UserRole } from "./constants";
-import { authComponent } from "./auth";
+import { authComponent, createAuth } from "./auth";
 
 export const listUserProfiles = authQuery({
   role: ["admin"],
@@ -183,5 +183,51 @@ export const getMakers = authQuery({
           : null,
       })),
     );
+  },
+});
+
+export const banUser = authMutation({
+  role: ["admin"],
+  args: {
+    userId: v.string(),
+    banReason: v.optional(v.string()),
+    banExpiresIn: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { auth, headers } = await authComponent.getAuth(createAuth, ctx);
+    await auth.api.adminUpdateUser({
+      body: {
+        userId: args.userId,
+        data: {
+          banned: true,
+          banReason: args.banReason ?? "No reason provided",
+          ...(args.banExpiresIn
+            ? { banExpires: new Date(Date.now() + args.banExpiresIn * 1000) }
+            : {}),
+        },
+      },
+      headers,
+    });
+  },
+});
+
+export const unbanUser = authMutation({
+  role: ["admin"],
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { auth, headers } = await authComponent.getAuth(createAuth, ctx);
+    await auth.api.adminUpdateUser({
+      body: {
+        userId: args.userId,
+        data: {
+          banned: false,
+          banReason: null,
+          banExpires: null,
+        },
+      },
+      headers,
+    });
   },
 });
