@@ -194,7 +194,7 @@ export default function HomePage() {
   });
 
   const marqueeText =
-    "3D Printing • Laser Cutting • CNC Milling • 3D Scanning • Workshops • Pottery • Vacuum Forming • Tambay • ";
+    "3D Printing • Laser Cutting • CNC Milling • 3D Scanning • Workshops • Pottery • Vacuum Forming • ";
 
   return (
     <main

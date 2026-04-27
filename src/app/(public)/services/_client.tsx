@@ -32,7 +32,7 @@ export function ServicesListClient({
   if (services.length === 0) {
     return (
       <div className="relative min-h-screen bg-background overflow-hidden flex flex-col items-center justify-center p-12">
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-[size:120px_120px] opacity-35" />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
         <h1 className="relative z-10 text-6xl font-black uppercase tracking-tighter sm:text-8xl">
           Coming Soon
         </h1>
@@ -45,44 +45,34 @@ export function ServicesListClient({
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
-      {/* Heavy Grid Background */}
-      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-[size:120px_120px] opacity-35" />
-
       <div className="relative z-10">
         {/* Hero Header */}
-        <header className="bg-fab-teal py-32 text-center text-white lg:py-64">
-          <h1 className="text-7xl font-black uppercase tracking-tighter sm:text-9xl lg:text-[12rem]">
+        <header className="bg-fab-teal py-28 text-center text-white lg:py-52">
+          <h1 className="text-6xl font-black uppercase tracking-tighter sm:text-8xl lg:text-[10rem]">
             SERVICES
           </h1>
         </header>
 
         {/* Digital Fabrication Section */}
         {fabricationServices.length > 0 && (
-          <section className="bg-background">
-            <div className="bg-fab-magenta p-10 text-white border-y-8 border-black sm:p-20 lg:p-32">
-              <h2 className="text-5xl font-black uppercase tracking-tighter sm:text-7xl lg:text-9xl">
+          <section className="border-t-8 border-black bg-background">
+            <div className="bg-fab-magenta p-8 text-white border-b-8 border-black sm:p-14 lg:p-20">
+              <h2 className="text-4xl font-black uppercase tracking-tighter sm:text-5xl lg:text-6xl">
                 Digital Fabrication
               </h2>
             </div>
-            <div className="grid md:grid-cols-2">
-              {fabricationServices.map((service, index) => {
-                const isLastInRow = index % 2 === 1;
-                const isLastInCol =
-                  index >=
-                  fabricationServices.length -
-                    (fabricationServices.length % 2 || 2);
-
-                return (
+            <div className="relative overflow-hidden">
+              <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
+              <div className="relative z-10 mx-auto grid max-w-6xl gap-5 p-5 sm:p-8 md:grid-cols-2 lg:gap-7 lg:p-10">
+                {fabricationServices.map((service) => (
                   <ServiceCardClient
                     key={service._id}
                     slug={service.slug}
                     title={service.name}
-                    showBorderRight={!isLastInRow}
-                    showBorderBottom={!isLastInCol}
-                    hoverColor="hover:bg-fab-magenta hover:text-white"
+                    serviceType="FABRICATION"
                   />
-                );
-              })}
+                ))}
+              </div>
             </div>
           </section>
         )}
@@ -90,29 +80,23 @@ export function ServicesListClient({
         {/* Workshop Section */}
         {workshopServices.length > 0 && (
           <section className="bg-background">
-            <div className="bg-fab-amber p-10 text-black border-y-8 border-black sm:p-20 lg:p-32">
-              <h2 className="text-5xl font-black uppercase tracking-tighter sm:text-7xl lg:text-9xl">
+            <div className="bg-fab-amber p-8 text-black border-y-8 border-black sm:p-14 lg:p-20">
+              <h2 className="text-4xl font-black uppercase tracking-tighter sm:text-5xl lg:text-6xl">
                 Workshops
               </h2>
             </div>
-            <div className="grid md:grid-cols-2">
-              {workshopServices.map((service, index) => {
-                const isLastInRow = index % 2 === 1;
-                const isLastInCol =
-                  index >=
-                  workshopServices.length - (workshopServices.length % 2 || 2);
-
-                return (
+            <div className="relative overflow-hidden">
+              <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
+              <div className="relative z-10 mx-auto grid max-w-6xl gap-5 p-5 sm:p-8 md:grid-cols-2 lg:gap-7 lg:p-10">
+                {workshopServices.map((service) => (
                   <ServiceCardClient
                     key={service._id}
                     slug={service.slug}
                     title={service.name}
-                    showBorderRight={!isLastInRow}
-                    showBorderBottom={!isLastInCol}
-                    hoverColor="hover:bg-fab-amber hover:text-black"
+                    serviceType="WORKSHOP"
                   />
-                );
-              })}
+                ))}
+              </div>
             </div>
           </section>
         )}

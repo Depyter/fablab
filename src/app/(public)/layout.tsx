@@ -19,7 +19,12 @@ export default async function PublicLayout({
             href="/"
             className="text-3xl font-black uppercase tracking-tighter text-black transition-colors hover:text-fab-magenta sm:text-4xl"
           >
-            IskoLab
+            <Image
+              src="/logo_1.png"
+              alt="FabLab Logo"
+              width={125}
+              height={125}
+            />
           </Link>
 
           <div className="sm:hidden">
