@@ -310,5 +310,8 @@ export default defineSchema({
     ),
   })
     .index("by_userId", ["userId"])
-    .index("by_role", ["role"]),
+    .index("by_role", ["role"])
+    .searchIndex("search_email", {
+      searchField: "email",
+    }),
 });

@@ -2,6 +2,71 @@ import { internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { authQuery, authMutation, claimFiles } from "./helper";
 import { Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
+import { UserRole } from "./constants";
+import { authComponent } from "./auth";
+
+export const listUserProfiles = authQuery({
+  role: ["admin"],
+  args: {
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let paginatedProfiles;
+    if (args.search) {
+      paginatedProfiles = await ctx.db
+        .query("userProfile")
+        .withSearchIndex("search_email", (q) => q.search("email", args.search!))
+        .paginate(args.paginationOpts);
+    } else {
+      paginatedProfiles = await ctx.db
+        .query("userProfile")
+        .order("desc")
+        .paginate(args.paginationOpts);
+    }
+
+    // Enhance profiles with ban status from better-auth
+    const pageWithBanStatus = await Promise.all(
+      paginatedProfiles.page.map(async (profile) => {
+        const betterUser = await authComponent.getAnyUserById(
+          ctx,
+          profile.userId,
+        );
+
+        return {
+          ...profile,
+          banned: betterUser?.banned ?? false,
+          banReason: betterUser?.banReason ?? null,
+          banExpires: betterUser?.banExpires ?? null,
+        };
+      }),
+    );
+
+    return {
+      ...paginatedProfiles,
+      page: pageWithBanStatus,
+    };
+  },
+});
+
+export const updateUserRole = authMutation({
+  role: ["admin"],
+  args: {
+    id: v.id("userProfile"),
+    role: v.union(
+      v.literal(UserRole.ADMIN),
+      v.literal(UserRole.MAKER),
+      v.literal(UserRole.CLIENT),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.id);
+    if (!profile) throw new ConvexError("User profile not found");
+
+    await ctx.db.patch(args.id, { role: args.role });
+  },
+});
 
 export const getUserProfile = authQuery({
   args: {},
