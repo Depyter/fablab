@@ -78,11 +78,16 @@ export const getUserProfile = authQuery({
 
     if (!profile) return null;
 
+    const betterUser = await authComponent.getAnyUserById(ctx, profile.userId);
+
     return {
       ...profile,
       profilePicUrl: profile.profilePic
         ? await ctx.storage.getUrl(profile.profilePic)
         : null,
+      banned: betterUser?.banned ?? false,
+      banReason: betterUser?.banReason ?? null,
+      banExpires: betterUser?.banExpires ?? null,
     };
   },
 });

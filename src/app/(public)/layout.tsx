@@ -2,15 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { PublicMobileNav } from "@/components/sidebar/public-mobile-nav";
-import { hasValidSession } from "@/lib/auth-queries";
+import { PublicNavAuth } from "@/components/public-nav-auth";
 
-export default async function PublicLayout({
+export default function PublicLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const isAuthenticated = await hasValidSession();
-
   return (
     <div className="min-h-full flex flex-col">
       <header className="sticky top-0 z-50 h-16 border-b-4 border-black bg-background">
@@ -46,21 +44,7 @@ export default async function PublicLayout({
               Services
             </Link>
 
-            {isAuthenticated ? (
-              <Link
-                href="/dashboard"
-                className=" bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className=" bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
-              >
-                Login
-              </Link>
-            )}
+            <PublicNavAuth />
           </nav>
         </div>
       </header>
