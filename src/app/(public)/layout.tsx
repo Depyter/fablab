@@ -4,11 +4,7 @@ import { ReactNode } from "react";
 import { PublicMobileNav } from "@/components/sidebar/public-mobile-nav";
 import { PublicNavAuth } from "@/components/public-nav-auth";
 
-export default function PublicLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full flex flex-col">
       <header className="sticky top-0 z-50 h-16 border-b-4 border-black bg-background">

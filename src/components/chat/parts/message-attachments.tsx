@@ -9,13 +9,7 @@ import { MessageFile } from "../types";
 // FileGallery — gallery for generic file attachments (PDF, docs, etc.)
 // ---------------------------------------------------------------------------
 
-function FileGallery({
-  files,
-  isCurrentUser,
-}: {
-  files: MessageFile[];
-  isCurrentUser: boolean;
-}) {
+function FileGallery({ files }: { files: MessageFile[] }) {
   if (files.length === 0) return null;
 
   const renderFileCard = (f: MessageFile, isStacked = false) => {
@@ -33,7 +27,6 @@ function FileGallery({
         href={f.fileUrl}
         fileName={fileName}
         fileType={f.fileType}
-        isCurrentUser={isCurrentUser}
         className={isStacked ? "" : "mt-1"}
       />
     );
@@ -57,19 +50,13 @@ function FileGallery({
 // MessageAttachments — top-level renderer for a message's file array
 // ---------------------------------------------------------------------------
 
-export function MessageAttachments({
-  files,
-  isCurrentUser,
-}: {
-  files: MessageFile[];
-  isCurrentUser: boolean;
-}) {
+export function MessageAttachments({ files }: { files: MessageFile[] }) {
   const mediaFiles: MediaFile[] = files
     .filter(
       (f) =>
         !!f.fileUrl &&
-        (!!f.fileType?.startsWith("image/") ||
-          !!f.fileType?.startsWith("video/") ||
+        (f.fileType?.startsWith("image/") ||
+          f.fileType?.startsWith("video/") ||
           is3DModel(f.fileType, f.originalName)),
     )
     .map((f) => ({
@@ -78,20 +65,20 @@ export function MessageAttachments({
       originalName: f.originalName,
     }));
 
-  const genericFiles = files.filter(
-    (f) =>
-      !!f.fileUrl &&
-      !f.fileType?.startsWith("image/") &&
-      !f.fileType?.startsWith("video/") &&
-      !is3DModel(f.fileType, f.originalName),
-  );
+  const genericFiles = files.filter((f) => {
+    if (!f.fileUrl) return false;
+    // If it's in mediaFiles, don't put it in genericFiles
+    const isMedia =
+      f.fileType?.startsWith("image/") ||
+      f.fileType?.startsWith("video/") ||
+      is3DModel(f.fileType, f.originalName);
+    return !isMedia;
+  });
 
   return (
     <div className="space-y-1">
-      {mediaFiles.length > 0 && (
-        <MediaGallery mediaFiles={mediaFiles} isCurrentUser={isCurrentUser} />
-      )}
-      <FileGallery files={genericFiles} isCurrentUser={isCurrentUser} />
+      {mediaFiles.length > 0 && <MediaGallery mediaFiles={mediaFiles} />}
+      <FileGallery files={genericFiles} />
     </div>
   );
 }

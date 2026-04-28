@@ -11,7 +11,10 @@ export function getModelFormat(
   fileType?: string | null,
   originalName?: string | null,
 ): ModelFormat | null {
-  const ext = originalName?.split(".").pop()?.toLowerCase();
+  if (!originalName) return null;
+  const parts = originalName.split(".");
+  if (parts.length <= 1) return null;
+  const ext = parts.pop()?.toLowerCase();
   if (ext === "stl") return "stl";
   if (ext === "glb" || ext === "gltf") return ext as ModelFormat;
   if (ext === "obj") return "obj";
