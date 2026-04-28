@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { useStore } from "@tanstack/react-form";
 import { UploadedFile } from "../file-upload/types";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import {
@@ -81,6 +81,7 @@ export function BookingDialog({
     (cat) => FILE_CATEGORIES[cat] || [cat],
   );
   const router = useRouter();
+  const { isAuthenticated } = useConvexAuth();
   const [step, setStep] = useState<Step>(
     serviceCategory === "WORKSHOP" ? 2 : 1,
   );
@@ -282,8 +283,7 @@ export function BookingDialog({
   };
 
   const handleCreateBookingClick = async () => {
-    const session = await authClient.getSession();
-    if (!session?.data) {
+    if (!isAuthenticated) {
       toast.error("You must be logged in to create a booking.");
       router.push("/login");
       return;

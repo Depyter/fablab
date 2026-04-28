@@ -1,18 +1,13 @@
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getPreloadedUserProfile, hasValidSession } from "@/lib/auth-queries";
-import { redirect } from "next/navigation";
+import { getPreloadedUserProfile } from "@/lib/auth-queries";
 
 export default async function DashBoardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await hasValidSession())) {
-    redirect("/login");
-  }
-
   const preloadedProfile = await getPreloadedUserProfile();
 
   return (
