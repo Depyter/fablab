@@ -3,24 +3,35 @@ import { convexTest } from "convex-test";
 import { api, internal } from "../convex/_generated/api";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 
+process.env.RESEND_TEST_MODE = "true";
+process.env.RESEND_API_KEY ??= "test-api-key";
+process.env.DISABLE_SCHEDULED_EMAILS = "true";
+
+export async function flushScheduledFunctions(t: {
+  finishAllScheduledFunctions: (advanceTimers: () => void) => Promise<void>;
+}) {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await t.finishAllScheduledFunctions(() => {});
+}
+
 /**
  *
  * @returns Two users, Harley (Client) and Aera (Admin) roles.
  */
 export async function setupUsers() {
-  const t = convexTest(schema);
+  const t = convexTest(schema, import.meta.glob("../convex/**/*.{ts,tsx}"));
   rateLimiterComponent.register(t);
 
   // Create Initial Users for mock
   await t.mutation(internal.users.createUserProfile, {
     userId: "1",
-    email: "hello@gmail.com",
+    email: "delivered+harley@resend.dev",
     name: "Harley",
   });
 
   await t.mutation(internal.users.createAdmin, {
     userId: "2",
-    email: "hello2@gmail.com",
+    email: "delivered+aera@resend.dev",
     name: "Aera",
   });
 
@@ -56,28 +67,34 @@ export async function setupProject() {
     return service!._id;
   });
 
-  await tHarley.mutation(api.projects.mutate.createProject, {
-    name: "test",
-    pricing: "UP",
-    description: "hello",
-    fulfillmentMode: "self-service",
-    material: "provide-own",
-    files: [],
-    service: serviceId,
-    notes: "pls na",
-    booking: {
-      startTime: Date.now() + 1000 * 60 * 60,
-      endTime: Date.now() + 1000 * 60 * 60 * 2,
-      date: Date.now() + 1000 * 60 * 60 * 24,
+  const { projectId, roomId, threadId } = await tHarley.mutation(
+    api.projects.mutate.createProject,
+    {
+      name: "test",
+      pricing: "UP",
+      description: "hello",
+      fulfillmentMode: "self-service",
+      material: "provide-own",
+      files: [],
+      service: serviceId,
+      notes: "pls na",
+      booking: {
+        startTime: Date.now() + 1000 * 60 * 60,
+        endTime: Date.now() + 1000 * 60 * 60 * 2,
+        date: Date.now() + 1000 * 60 * 60 * 24,
+      },
     },
-  });
+  );
 
-  const { projectId, roomId } = await t.run(async (ctx) => {
-    const project = await ctx.db.query("projects").first();
-    const room = await ctx.db.query("rooms").first();
+  await flushScheduledFunctions(t);
 
-    return { projectId: project!._id, roomId: room!._id };
-  });
-
-  return { t, tHarley, tAera, serviceId, projectId, roomId };
+  return {
+    t,
+    tHarley,
+    tAera,
+    serviceId,
+    projectId,
+    roomId,
+    threadId,
+  };
 }
