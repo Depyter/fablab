@@ -36,24 +36,24 @@ That pattern is the backbone of the app. Almost every protected feature depends 
 
 ## Folder Map
 
-| Path | Purpose |
-| --- | --- |
-| `convex/schema.ts` | Defines every table, index, and search index. |
-| `convex/helper.ts` | Shared auth, file, and utility helpers. |
-| `convex/auth.ts` | Better Auth integration and user bootstrap. |
-| `convex/auth.config.ts` | Auth provider configuration for Convex auth. |
-| `convex/http.ts` | Registers HTTP routes for auth and other webhooks. |
-| `convex/crons.ts` | Scheduled background jobs. |
-| `convex/presence.ts` | Realtime presence wrapper backed by the Convex Presence component. |
-| `convex/files.ts` | Upload URL generation, upload tracking, and storage URL access. |
-| `convex/users.ts` | Profile reads and profile updates. |
-| `convex/chat/` | Chat threads, rooms, messages, membership, unread counts. |
-| `convex/projects/` | Project creation, updates, pricing, lifecycle, and related room/thread creation. |
-| `convex/services/` | Service catalog reads and mutations. |
-| `convex/materials/` | Material inventory reads and mutations. |
-| `convex/resource/` | Bookable resource reads, bookings, and resource usage edits. |
-| `convex/emails/` | Email templates and Resend delivery action. |
-| `convex/constants.ts` | Shared enums, labels, and constant lists used by the schema and helpers. |
+| Path                    | Purpose                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `convex/schema.ts`      | Defines every table, index, and search index.                                    |
+| `convex/helper.ts`      | Shared auth, file, and utility helpers.                                          |
+| `convex/auth.ts`        | Better Auth integration and user bootstrap.                                      |
+| `convex/auth.config.ts` | Auth provider configuration for Convex auth.                                     |
+| `convex/http.ts`        | Registers HTTP routes for auth and other webhooks.                               |
+| `convex/crons.ts`       | Scheduled background jobs.                                                       |
+| `convex/presence.ts`    | Realtime presence wrapper backed by the Convex Presence component.               |
+| `convex/files.ts`       | Upload URL generation, upload tracking, and storage URL access.                  |
+| `convex/users.ts`       | Profile reads and profile updates.                                               |
+| `convex/chat/`          | Chat threads, rooms, messages, membership, unread counts.                        |
+| `convex/projects/`      | Project creation, updates, pricing, lifecycle, and related room/thread creation. |
+| `convex/services/`      | Service catalog reads and mutations.                                             |
+| `convex/materials/`     | Material inventory reads and mutations.                                          |
+| `convex/resource/`      | Bookable resource reads, bookings, and resource usage edits.                     |
+| `convex/emails/`        | Email templates and Resend delivery action.                                      |
+| `convex/constants.ts`   | Shared enums, labels, and constant lists used by the schema and helpers.         |
 
 ## Data Model Overview
 
@@ -131,23 +131,23 @@ This makes list views fast and keeps the UI from needing to recompute conversati
 
 The relationships below are the important ones to keep in mind when making changes.
 
-| Parent | Child | Relationship |
-| --- | --- | --- |
-| `userProfile` | `projects` | A client owns projects through `projects.userId`. |
-| `userProfile` | `rooms` | A room has a `creator`. |
-| `userProfile` | `roomMembers` | Membership is stored by participant profile ID. |
-| `userProfile` | `threadReads` | Read state is per user per thread. |
-| `services` | `projects` | Each project is tied to one service. |
-| `services` | `resourceUsage` | A usage row records which service was consumed. |
-| `resources` | `resourceUsage` | Optional resource assignment is stored on usage. |
-| `materials` | `projects` / `services` / `resourceUsage` | Materials are referenced from project requests, service definitions, and session snapshots. |
-| `rooms` | `threads` | A room contains many threads. |
-| `rooms` | `roomMembers` | Room access is controlled by membership rows. |
-| `threads` | `messages` | Every message belongs to one thread. |
-| `rooms` | `messages` | Messages also store the parent room for quick filtering. |
-| `projects` | `resourceUsage` | Usage rows point back to the project that created them. |
-| `projects` | `rooms` / `threads` | Project creation can bootstrap messaging. |
-| `_storage` | `files` | Storage objects are tracked in the `files` table before being claimed. |
+| Parent        | Child                                     | Relationship                                                                                |
+| ------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `userProfile` | `projects`                                | A client owns projects through `projects.userId`.                                           |
+| `userProfile` | `rooms`                                   | A room has a `creator`.                                                                     |
+| `userProfile` | `roomMembers`                             | Membership is stored by participant profile ID.                                             |
+| `userProfile` | `threadReads`                             | Read state is per user per thread.                                                          |
+| `services`    | `projects`                                | Each project is tied to one service.                                                        |
+| `services`    | `resourceUsage`                           | A usage row records which service was consumed.                                             |
+| `resources`   | `resourceUsage`                           | Optional resource assignment is stored on usage.                                            |
+| `materials`   | `projects` / `services` / `resourceUsage` | Materials are referenced from project requests, service definitions, and session snapshots. |
+| `rooms`       | `threads`                                 | A room contains many threads.                                                               |
+| `rooms`       | `roomMembers`                             | Room access is controlled by membership rows.                                               |
+| `threads`     | `messages`                                | Every message belongs to one thread.                                                        |
+| `rooms`       | `messages`                                | Messages also store the parent room for quick filtering.                                    |
+| `projects`    | `resourceUsage`                           | Usage rows point back to the project that created them.                                     |
+| `projects`    | `rooms` / `threads`                       | Project creation can bootstrap messaging.                                                   |
+| `_storage`    | `files`                                   | Storage objects are tracked in the `files` table before being claimed.                      |
 
 ## Schema Tables and Indexes
 

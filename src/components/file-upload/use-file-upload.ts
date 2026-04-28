@@ -81,19 +81,12 @@ export function useFileUpload({
   const trackUpload = useMutation(api.files.trackUpload);
   const convex = useConvex();
 
-  // Stable refs so effects never need callbacks in their dependency arrays.
-  const onUploadingChangeRef = useRef(onUploadingChange);
-  onUploadingChangeRef.current = onUploadingChange;
-
-  const onFilesChangeRef = useRef(onFilesChange);
-  onFilesChangeRef.current = onFilesChange;
-
   useEffect(() => {
     const isUploading = uploadingFiles.some(
       (f) => f.status === "uploading" || f.status === "pending",
     );
-    onUploadingChangeRef.current?.(isUploading);
-  }, [uploadingFiles]);
+    onUploadingChange?.(isUploading);
+  }, [onUploadingChange, uploadingFiles]);
 
   // Skip the first render so we don't call onFilesChange with the initial
   // value and accidentally mark form fields dirty on mount.
@@ -103,8 +96,8 @@ export function useFileUpload({
       isFirstRender.current = false;
       return;
     }
-    onFilesChangeRef.current?.(uploadedFiles);
-  }, [uploadedFiles]);
+    onFilesChange?.(uploadedFiles);
+  }, [onFilesChange, uploadedFiles]);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -270,6 +263,7 @@ export function useFileUpload({
       autoUpload,
       uploadFile,
       getFilePreviewUrl,
+      onUploadError,
     ],
   );
 
