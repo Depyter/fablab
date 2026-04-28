@@ -155,7 +155,7 @@ export default function ModelViewerClient({
                     .color;
                 return (
                   <span
-                    key={index}
+                    key={`complexity-bar-${tier}`}
                     className="w-[10px] rounded-full transition-opacity border"
                     style={{
                       height: `${5 + index * 2}px`,

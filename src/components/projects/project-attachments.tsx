@@ -51,7 +51,7 @@ export function ProjectAttachments({ files }: ProjectAttachmentsProps) {
       )}
       {docFiles.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {docFiles.map((f, i) => {
+          {docFiles.map((f) => {
             const name =
               f.originalName ||
               decodeURIComponent(f.url.split("/").pop()?.split("?")[0] ?? "") ||
@@ -59,7 +59,7 @@ export function ProjectAttachments({ files }: ProjectAttachmentsProps) {
             const { Icon } = getFileInfo(name, f.type ?? null);
             return (
               <a
-                key={i}
+                key={f.url}
                 href={f.url}
                 target="_blank"
                 rel="noopener noreferrer"

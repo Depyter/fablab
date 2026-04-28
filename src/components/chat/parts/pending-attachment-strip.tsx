@@ -24,7 +24,7 @@ export function PendingAttachmentStrip({
     <div className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none">
       {attachments.map((attachment, i) => (
         <div
-          key={`${attachment.storageId}-${i}`}
+          key={attachment.storageId}
           className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-primary/10 bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/20"
         >
           {/* Remove button */}

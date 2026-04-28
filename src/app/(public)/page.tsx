@@ -9,6 +9,8 @@ import { CtaButton } from "@/components/cta-button";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
+const MARQUEE_COPY_KEYS = ["copy-0", "copy-1", "copy-2", "copy-3"];
+
 const ActionButton = ({
   href,
   children,
@@ -32,17 +34,26 @@ const ActionButton = ({
 function SplitWord({ word }: { word: string }) {
   return (
     <span className="inline-flex">
-      {word.split("").map((char, i) => (
-        <span key={i} className="inline-block leading-[0.85]">
+      {word.split("").map((char, index, chars) => {
+        const duplicateCount = chars
+          .slice(0, index)
+          .filter((item) => item === char).length;
+
+        return (
           <span
-            data-char
-            className="inline-block will-change-transform"
-            style={{ opacity: 0 }}
+            key={`${word}-${char}-${duplicateCount}`}
+            className="inline-block leading-[0.85]"
           >
-            {char}
+            <span
+              data-char
+              className="inline-block will-change-transform"
+              style={{ opacity: 0 }}
+            >
+              {char}
+            </span>
           </span>
-        </span>
-      ))}
+        );
+      })}
     </span>
   );
 }
@@ -233,13 +244,13 @@ export default function HomePage() {
           style={{ willChange: "transform" }}
         >
           <div className="flex shrink-0 items-center gap-12 px-6 text-5xl font-black uppercase tracking-tighter text-white sm:text-7xl lg:text-8xl">
-            {[...Array(4)].map((_, i) => (
-              <span key={i}>{marqueeText}</span>
+            {MARQUEE_COPY_KEYS.map((copyKey) => (
+              <span key={`marquee-primary-${copyKey}`}>{marqueeText}</span>
             ))}
           </div>
           <div className="flex shrink-0 items-center gap-12 px-6 text-5xl font-black uppercase tracking-tighter text-white sm:text-7xl lg:text-8xl">
-            {[...Array(4)].map((_, i) => (
-              <span key={i}>{marqueeText}</span>
+            {MARQUEE_COPY_KEYS.map((copyKey) => (
+              <span key={`marquee-secondary-${copyKey}`}>{marqueeText}</span>
             ))}
           </div>
         </div>

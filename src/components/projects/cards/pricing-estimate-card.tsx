@@ -102,6 +102,8 @@ interface PricingEstimateCardProps {
   readOnly?: boolean;
 }
 
+const EMPTY_REQUESTED_MATERIALS: RequestedMaterial[] = [];
+
 export function PricingEstimateCard({
   projectId,
   material,
@@ -110,7 +112,7 @@ export function PricingEstimateCard({
   serviceType,
   projectPricing = "Default",
   resourceUsages,
-  requestedMaterials = [],
+  requestedMaterials = EMPTY_REQUESTED_MATERIALS,
   assignedMaker,
   readOnly = false,
 }: PricingEstimateCardProps) {
@@ -186,10 +188,12 @@ export function PricingEstimateCard({
     duration: derived.duration,
   });
 
+  const initialMaterialAmounts = () => ({ ...storedMaterialAmounts });
+
   const [editValues, setEditValues] = useState(initialEditState);
   const [materialAmounts, setMaterialAmounts] = useState<
     Record<string, number>
-  >(() => storedMaterialAmounts);
+  >(initialMaterialAmounts);
 
   // ── Assignment edit state ────────────────────────────────────────────────
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
@@ -198,7 +202,7 @@ export function PricingEstimateCard({
   const [selectedResourceId, setSelectedResourceId] = useState<string>(
     primaryUsage?.resourceDetails?._id ?? "",
   );
-  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>(
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>(() =>
     requestedMaterials.map((m) => m._id),
   );
 
@@ -754,8 +758,7 @@ export function PricingEstimateCard({
               const matId = mat._id as string;
               const matUnit = (mat as RequestedMaterial).unit ?? "units";
               const matPrice = (mat as RequestedMaterial).pricePerUnit ?? 0;
-              const storedAmounts = initialMaterialAmounts();
-              const storedAmt = storedAmounts[matId] ?? 0;
+              const storedAmt = storedMaterialAmounts[matId] ?? 0;
               const displayAmt = isEditing
                 ? (materialAmounts[matId] ?? 0)
                 : storedAmt;

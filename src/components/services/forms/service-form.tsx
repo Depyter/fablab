@@ -32,6 +32,8 @@ const statusOptions = [
   { label: ServiceStatus.UNAVAILABLE, value: ServiceStatus.UNAVAILABLE },
 ];
 
+const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+
 export interface ServiceFormProps {
   title: string;
   initialValues: AddServiceFormValues;
@@ -45,8 +47,8 @@ export interface ServiceFormProps {
 export function ServiceForm({
   title,
   initialValues,
-  initialImages = [],
-  initialSamples = [],
+  initialImages = EMPTY_UPLOADED_FILES,
+  initialSamples = EMPTY_UPLOADED_FILES,
   onSubmit,
   onDiscard,
   submitError,

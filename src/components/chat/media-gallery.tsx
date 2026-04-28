@@ -28,6 +28,8 @@ export interface MediaFile {
   originalName: string | null;
 }
 
+const getMediaFileKey = (file: MediaFile) => file.fileUrl;
+
 // ---------------------------------------------------------------------------
 // MediaLightbox — full-screen dialog viewer with prev/next navigation
 // ---------------------------------------------------------------------------
@@ -282,9 +284,9 @@ function MediaLightbox({
 
             {count > 1 && (
               <div className="flex gap-1.5">
-                {mediaFiles.map((_, i) => (
+                {mediaFiles.map((mediaFile, i) => (
                   <button
-                    key={i}
+                    key={getMediaFileKey(mediaFile)}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -421,7 +423,7 @@ export function MediaGallery({
 
           return (
             <button
-              key={i}
+              key={getMediaFileKey(f)}
               type="button"
               onClick={() => openAt(i)}
               className={cn(

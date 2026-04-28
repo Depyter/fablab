@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer } from "react";
 import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -37,27 +37,61 @@ interface InventoryClientProps {
   preloadedMaterials: Preloaded<typeof api.materials.query.getMaterials>;
 }
 
+type InventoryDialog = "machine" | "tool" | "room" | "misc" | "material";
+type InventorySort = "name-az" | "status";
+
+interface InventoryClientState {
+  activeDialog: InventoryDialog | null;
+  search: string;
+  sortBy: InventorySort;
+}
+
+type InventoryClientAction =
+  | { type: "openDialog"; dialog: InventoryDialog }
+  | { type: "closeDialog" }
+  | { type: "setSearch"; search: string }
+  | { type: "setSortBy"; sortBy: InventorySort }
+  | { type: "clearFilters" };
+
+const INITIAL_STATE: InventoryClientState = {
+  activeDialog: null,
+  search: "",
+  sortBy: "name-az",
+};
+
+function inventoryClientReducer(
+  state: InventoryClientState,
+  action: InventoryClientAction,
+): InventoryClientState {
+  switch (action.type) {
+    case "openDialog":
+      return { ...state, activeDialog: action.dialog };
+    case "closeDialog":
+      return { ...state, activeDialog: null };
+    case "setSearch":
+      return { ...state, search: action.search };
+    case "setSortBy":
+      return { ...state, sortBy: action.sortBy };
+    case "clearFilters":
+      return { ...state, search: "", sortBy: "name-az" };
+    default:
+      return state;
+  }
+}
+
 export function InventoryClient({
   preloadedResources,
   preloadedMaterials,
 }: InventoryClientProps) {
   const resources = usePreloadedAuthQuery(preloadedResources) ?? [];
   const materials = usePreloadedAuthQuery(preloadedMaterials) ?? [];
-
-  const [machineOpen, setMachineOpen] = useState(false);
-  const [toolOpen, setToolOpen] = useState(false);
-  const [roomOpen, setRoomOpen] = useState(false);
-  const [miscOpen, setMiscOpen] = useState(false);
-  const [materialOpen, setMaterialOpen] = useState(false);
-
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"name-az" | "status">("name-az");
+  const [state, dispatch] = useReducer(inventoryClientReducer, INITIAL_STATE);
 
   const filteredResources = (() => {
     let result = [...resources];
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    if (state.search.trim()) {
+      const q = state.search.toLowerCase();
       result = result.filter(
         (r) =>
           r.name.toLowerCase().includes(q) ||
@@ -66,8 +100,8 @@ export function InventoryClient({
     }
 
     result.sort((a, b) => {
-      if (sortBy === "name-az") return a.name.localeCompare(b.name);
-      if (sortBy === "status") return a.status.localeCompare(b.status);
+      if (state.sortBy === "name-az") return a.name.localeCompare(b.name);
+      if (state.sortBy === "status") return a.status.localeCompare(b.status);
       return 0;
     });
 
@@ -77,8 +111,8 @@ export function InventoryClient({
   const filteredMaterials = (() => {
     let result = [...materials];
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    if (state.search.trim()) {
+      const q = state.search.toLowerCase();
       result = result.filter(
         (m) =>
           m.name.toLowerCase().includes(q) ||
@@ -87,8 +121,8 @@ export function InventoryClient({
     }
 
     result.sort((a, b) => {
-      if (sortBy === "name-az") return a.name.localeCompare(b.name);
-      if (sortBy === "status") return a.status.localeCompare(b.status);
+      if (state.sortBy === "name-az") return a.name.localeCompare(b.name);
+      if (state.sortBy === "status") return a.status.localeCompare(b.status);
       return 0;
     });
 
@@ -98,13 +132,13 @@ export function InventoryClient({
   const totalItems = resources.length + materials.length;
   const filteredTotal = filteredResources.length + filteredMaterials.length;
 
-  const activeFilterCount = [search.trim() !== "", sortBy !== "name-az"].filter(
-    Boolean,
-  ).length;
+  const activeFilterCount = [
+    state.search.trim() !== "",
+    state.sortBy !== "name-az",
+  ].filter(Boolean).length;
 
-  const clearFilters = () => {
-    setSearch("");
-    setSortBy("name-az");
+  const setDialogOpen = (dialog: InventoryDialog, open: boolean) => {
+    dispatch(open ? { type: "openDialog", dialog } : { type: "closeDialog" });
   };
 
   return (
@@ -125,19 +159,39 @@ export function InventoryClient({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setMachineOpen(true)}>
+              <DropdownMenuItem
+                onSelect={() =>
+                  dispatch({ type: "openDialog", dialog: "machine" })
+                }
+              >
                 Add Machine
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setToolOpen(true)}>
+              <DropdownMenuItem
+                onSelect={() =>
+                  dispatch({ type: "openDialog", dialog: "tool" })
+                }
+              >
                 Add Tool
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setRoomOpen(true)}>
+              <DropdownMenuItem
+                onSelect={() =>
+                  dispatch({ type: "openDialog", dialog: "room" })
+                }
+              >
                 Add Room
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setMiscOpen(true)}>
+              <DropdownMenuItem
+                onSelect={() =>
+                  dispatch({ type: "openDialog", dialog: "misc" })
+                }
+              >
                 Add Misc Item
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setMaterialOpen(true)}>
+              <DropdownMenuItem
+                onSelect={() =>
+                  dispatch({ type: "openDialog", dialog: "material" })
+                }
+              >
                 Add Material
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -146,15 +200,17 @@ export function InventoryClient({
       />
 
       <DataViewFilters
-        search={search}
-        onSearchChange={setSearch}
+        search={state.search}
+        onSearchChange={(search) => dispatch({ type: "setSearch", search })}
         searchPlaceholder="Search inventory…"
         activeFilterCount={activeFilterCount}
-        onClearFilters={clearFilters}
+        onClearFilters={() => dispatch({ type: "clearFilters" })}
       >
         <Select
-          value={sortBy}
-          onValueChange={(v: "name-az" | "status") => setSortBy(v)}
+          value={state.sortBy}
+          onValueChange={(sortBy: InventorySort) =>
+            dispatch({ type: "setSortBy", sortBy })
+          }
         >
           <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
             <SelectValue placeholder="Sort" />
@@ -177,48 +233,63 @@ export function InventoryClient({
       />
 
       {/* Dialogs rendered outside DropdownMenu to prevent unmounting/hydration issues */}
-      <Dialog open={machineOpen} onOpenChange={setMachineOpen}>
+      <Dialog
+        open={state.activeDialog === "machine"}
+        onOpenChange={(open) => setDialogOpen("machine", open)}
+      >
         <DialogContent
           className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          <AddMachineForm onSuccess={() => setMachineOpen(false)} />
+          <AddMachineForm onSuccess={() => dispatch({ type: "closeDialog" })} />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={toolOpen} onOpenChange={setToolOpen}>
+      <Dialog
+        open={state.activeDialog === "tool"}
+        onOpenChange={(open) => setDialogOpen("tool", open)}
+      >
         <DialogContent
           className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          <AddToolForm onSuccess={() => setToolOpen(false)} />
+          <AddToolForm onSuccess={() => dispatch({ type: "closeDialog" })} />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={roomOpen} onOpenChange={setRoomOpen}>
+      <Dialog
+        open={state.activeDialog === "room"}
+        onOpenChange={(open) => setDialogOpen("room", open)}
+      >
         <DialogContent
           className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          <AddRoomForm onSuccess={() => setRoomOpen(false)} />
+          <AddRoomForm onSuccess={() => dispatch({ type: "closeDialog" })} />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={miscOpen} onOpenChange={setMiscOpen}>
+      <Dialog
+        open={state.activeDialog === "misc"}
+        onOpenChange={(open) => setDialogOpen("misc", open)}
+      >
         <DialogContent
           className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          <AddMiscForm onSuccess={() => setMiscOpen(false)} />
+          <AddMiscForm onSuccess={() => dispatch({ type: "closeDialog" })} />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={materialOpen} onOpenChange={setMaterialOpen}>
+      <Dialog
+        open={state.activeDialog === "material"}
+        onOpenChange={(open) => setDialogOpen("material", open)}
+      >
         <DialogContent
           className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          <MaterialForm onSuccess={() => setMaterialOpen(false)} />
+          <MaterialForm onSuccess={() => dispatch({ type: "closeDialog" })} />
         </DialogContent>
       </Dialog>
     </DataViewRoot>

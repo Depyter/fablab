@@ -52,11 +52,16 @@ export interface DateTimePickerProps {
   bookedTimeBlocks?: { start: string; end: string }[];
 }
 
+type BookedTimeBlock = { start: string; end: string };
+
+const EMPTY_AVAILABLE_DAYS: number[] = [];
+const EMPTY_BOOKED_TIME_BLOCKS: BookedTimeBlock[] = [];
+
 export function DateTimePicker({
   value,
   onChange,
-  availableDays = [],
-  bookedTimeBlocks = [],
+  availableDays = EMPTY_AVAILABLE_DAYS,
+  bookedTimeBlocks = EMPTY_BOOKED_TIME_BLOCKS,
 }: DateTimePickerProps) {
   const { date, startTime, endTime } = value;
 

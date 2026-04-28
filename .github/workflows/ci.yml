@@ -33,7 +33,7 @@ jobs:
         run: bun run format:check
 
       - name: Lint Check
-        run: bun run lint # make sure this covers .tsx per above
+        run: bun run lint
 
       - name: Run Vitest
         run: bun run vitest --run # --run prevents watch mode hanging CI

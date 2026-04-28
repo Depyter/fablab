@@ -25,6 +25,10 @@ import { WorkshopSchedule } from "./workshop-time-slot-picker";
 import posthog from "posthog-js";
 import { type UploadedFile } from "../file-upload/types";
 
+type PricingVariantOption = { name: string };
+
+const EMPTY_PRICING_VARIANTS: PricingVariantOption[] = [];
+
 export function Step2ProjectDetails({
   form,
   serviceName,
@@ -38,7 +42,7 @@ export function Step2ProjectDetails({
   availableDays,
   serviceMaterials,
   hasUpPricing,
-  pricingVariants = [],
+  pricingVariants = EMPTY_PRICING_VARIANTS,
   serviceCategory,
   schedules,
   bookedTimeBlocks,
@@ -61,7 +65,7 @@ export function Step2ProjectDetails({
     unit?: string;
   }>;
   hasUpPricing: boolean;
-  pricingVariants?: Array<{ name: string }>;
+  pricingVariants?: PricingVariantOption[];
   serviceCategory?: string;
   schedules?: WorkshopSchedule[];
   bookedTimeBlocks?: { start: string; end: string }[];
@@ -167,7 +171,13 @@ export function Step2ProjectDetails({
         {requirements.length > 0 ? (
           <ul className="list-disc list-inside text-sm space-y-1 ml-2">
             {requirements.map((req, i) => (
-              <li key={i}>{req}</li>
+              <li
+                key={`${req}-${
+                  requirements.slice(0, i).filter((item) => item === req).length
+                }`}
+              >
+                {req}
+              </li>
             ))}
           </ul>
         ) : (

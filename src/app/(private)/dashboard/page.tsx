@@ -1,6 +1,15 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
+const dashboardOverviewSkeletonKeys = Array.from(
+  { length: 24 },
+  (_, slot) => `dashboard-overview-skeleton-${slot}`,
+);
+const dashboardActivitySkeletonKeys = Array.from(
+  { length: 24 },
+  (_, slot) => `dashboard-activity-skeleton-${slot}`,
+);
+
 export default function Page() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -27,17 +36,17 @@ export default function Page() {
           <div className="bg-muted/50 min-h-screen flex-1 rounded-xl md:min-h-min" />
         </div>
         <div className="flex flex-1 flex-col gap-4 p-4">
-          {Array.from({ length: 24 }).map((_, index) => (
+          {dashboardOverviewSkeletonKeys.map((key) => (
             <div
-              key={index}
+              key={key}
               className="bg-muted/50 aspect-video h-12 w-full rounded-lg"
             />
           ))}
         </div>
         <div className="flex flex-1 flex-col gap-4 p-4">
-          {Array.from({ length: 24 }).map((_, index) => (
+          {dashboardActivitySkeletonKeys.map((key) => (
             <div
-              key={index}
+              key={key}
               className="bg-muted/50 aspect-video h-12 w-full rounded-lg"
             />
           ))}

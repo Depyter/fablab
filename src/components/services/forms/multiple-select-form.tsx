@@ -55,7 +55,7 @@ export function MultipleSelectForm({
           const label = options.find((o) => o.value === machineValue)?.label;
           return (
             <div
-              key={index}
+              key={machineValue}
               className="flex items-center justify-between p-2 border rounded-lg bg-gray-50"
             >
               <span>{label ?? machineValue}</span>
