@@ -83,10 +83,15 @@ export function useFileUpload({
 
   // Stable refs so effects never need callbacks in their dependency arrays.
   const onUploadingChangeRef = useRef(onUploadingChange);
-  onUploadingChangeRef.current = onUploadingChange;
-
   const onFilesChangeRef = useRef(onFilesChange);
-  onFilesChangeRef.current = onFilesChange;
+
+  useEffect(() => {
+    onUploadingChangeRef.current = onUploadingChange;
+  }, [onUploadingChange]);
+
+  useEffect(() => {
+    onFilesChangeRef.current = onFilesChange;
+  }, [onFilesChange]);
 
   useEffect(() => {
     const isUploading = uploadingFiles.some(
@@ -270,6 +275,7 @@ export function useFileUpload({
       autoUpload,
       uploadFile,
       getFilePreviewUrl,
+      onUploadError,
     ],
   );
 

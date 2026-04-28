@@ -137,8 +137,12 @@ export function PricingEstimateCard({
 
   const primaryUsage = resourceUsages?.[0];
 
-  const servicePricing: ServicePricing | undefined = service
-    ? service.serviceCategory.type === "WORKSHOP"
+  const servicePricing = useMemo<ServicePricing | undefined>(() => {
+    if (!service) {
+      return undefined;
+    }
+
+    return service.serviceCategory.type === "WORKSHOP"
       ? {
           type: "WORKSHOP",
           amount: service.serviceCategory.amount,
@@ -150,8 +154,8 @@ export function PricingEstimateCard({
           unitName: service.serviceCategory.unitName,
           timeRate: service.serviceCategory.timeRate,
           variants: service.serviceCategory.variants,
-        }
-    : undefined;
+        };
+  }, [service]);
 
   const derived = useMemo(() => {
     return derivePricingFromSchema({
@@ -166,7 +170,7 @@ export function PricingEstimateCard({
   const [isEditing, setIsEditing] = useState(false);
 
   // Per-material amounts: materialId → amountUsed
-  const initialMaterialAmounts = (): Record<string, number> => {
+  const storedMaterialAmounts = useMemo(() => {
     const amounts: Record<string, number> = {};
     for (const usage of resourceUsages ?? []) {
       for (const m of usage.materialsUsed ?? []) {
@@ -174,7 +178,7 @@ export function PricingEstimateCard({
       }
     }
     return amounts;
-  };
+  }, [resourceUsages]);
 
   const initialEditState = () => ({
     setupFee: derived.setupFee,
@@ -185,7 +189,7 @@ export function PricingEstimateCard({
   const [editValues, setEditValues] = useState(initialEditState);
   const [materialAmounts, setMaterialAmounts] = useState<
     Record<string, number>
-  >(initialMaterialAmounts);
+  >(() => storedMaterialAmounts);
 
   // ── Assignment edit state ────────────────────────────────────────────────
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
@@ -236,8 +240,7 @@ export function PricingEstimateCard({
 
   // Material cost when not editing: sum from stored amounts × pricePerUnit
   const storedMaterialCost = requestedMaterials.reduce((acc, mat) => {
-    const stored = initialMaterialAmounts();
-    return acc + (stored[mat._id] ?? 0) * mat.pricePerUnit;
+    return acc + (storedMaterialAmounts[mat._id] ?? 0) * mat.pricePerUnit;
   }, 0);
 
   const displayMaterialCost = isEditing
@@ -255,7 +258,7 @@ export function PricingEstimateCard({
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleEdit = () => {
     setEditValues(initialEditState());
-    setMaterialAmounts(initialMaterialAmounts());
+    setMaterialAmounts(storedMaterialAmounts);
     setSelectedMakerId(assignedMaker?._id ?? "");
     setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
     setSelectedMaterialIds(requestedMaterials.map((m) => m._id));

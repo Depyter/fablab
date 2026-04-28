@@ -47,13 +47,10 @@ export function ProjectCalendarView() {
   const isClient = role === "client";
   const isAdminOrMaker = role === "admin" || role === "maker";
 
-  const [activeTab, setActiveTab] = React.useState<string>("resources");
-
-  React.useEffect(() => {
-    if (isClient) {
-      setActiveTab("services");
-    }
-  }, [isClient]);
+  const [selectedTab, setSelectedTab] = React.useState<
+    "resources" | "services"
+  >("resources");
+  const activeTab = isClient ? "services" : selectedTab;
 
   const services = useQuery(api.services.query.getServices) || [];
   const resources =
@@ -140,7 +137,11 @@ export function ProjectCalendarView() {
     <div className="flex flex-col h-full bg-background overflow-hidden">
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={(value) => {
+          if (value === "resources" || value === "services") {
+            setSelectedTab(value);
+          }
+        }}
         className="flex-1 flex flex-col overflow-hidden"
       >
         {/* Single combined toolbar */}

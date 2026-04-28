@@ -37,7 +37,7 @@ export interface ServiceFormProps {
   initialValues: AddServiceFormValues;
   initialImages?: UploadedFile[];
   initialSamples?: UploadedFile[];
-  onSubmit: (values: AddServiceFormValues) => Promise<void>;
+  onSubmit: (values: AddServiceFormValues) => Promise<boolean>;
   onDiscard: (formValues: AddServiceFormValues) => Promise<void> | void;
   submitError: string | null;
 }
@@ -73,20 +73,15 @@ export function ServiceForm({
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const form = useAppForm({
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
-      try {
-        await onSubmit(value);
-        setIsSuccess(true);
-      } catch (error) {
-        setIsSuccess(false);
-        throw error;
-      }
+      const didSubmit = await onSubmit(value);
+      setIsSuccess(didSubmit);
     },
   });
 

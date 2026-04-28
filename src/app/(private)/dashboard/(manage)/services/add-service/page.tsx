@@ -70,6 +70,7 @@ export default function AddServicePage() {
 
       toast.success("Service added successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
+      return true;
     } catch (error) {
       const message =
         error instanceof ConvexError
@@ -79,7 +80,7 @@ export default function AddServicePage() {
             : "Failed to add service. Please try again.";
       setSubmitError(message);
       toast.error(message);
-      throw error;
+      return false;
     }
   };
 

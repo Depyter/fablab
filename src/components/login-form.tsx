@@ -22,9 +22,9 @@ export function LoginForm({
         email,
         password,
       });
+      setIsLoading(false);
     } catch (error) {
       console.error("Sign in error:", error);
-    } finally {
       setIsLoading(false);
     }
   };

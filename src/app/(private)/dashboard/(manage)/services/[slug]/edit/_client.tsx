@@ -154,6 +154,7 @@ export function EditServiceClient({
 
       toast.success("Service updated successfully!");
       setTimeout(() => router.push("/dashboard/services"), 1000);
+      return true;
     } catch (error) {
       const message =
         error instanceof ConvexError
@@ -163,7 +164,7 @@ export function EditServiceClient({
             : "Failed to update service. Please try again.";
       setSubmitError(message);
       toast.error(message);
-      throw error;
+      return false;
     }
   };
 
