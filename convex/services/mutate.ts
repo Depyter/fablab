@@ -8,6 +8,23 @@ import {
   slugify,
 } from "../helper";
 
+const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
+
+function normalizeFabricationCategory<
+  T extends {
+    type: "FABRICATION";
+    availableDays?: number[];
+  },
+>(serviceCategory: T): T & { availableDays: number[] } {
+  return {
+    ...serviceCategory,
+    availableDays:
+      serviceCategory.availableDays && serviceCategory.availableDays.length > 0
+        ? serviceCategory.availableDays
+        : [...EVERY_DAY],
+  };
+}
+
 // called when user discards current service
 export const deleteOrphanedFiles = authMutation({
   role: ["admin", "maker"],
@@ -102,7 +119,10 @@ export const addService = authMutation({
       );
     }
 
-    const finalServiceCategory = args.serviceCategory;
+    const finalServiceCategory =
+      args.serviceCategory.type === "FABRICATION"
+        ? normalizeFabricationCategory(args.serviceCategory)
+        : args.serviceCategory;
     if (finalServiceCategory.type === "WORKSHOP") {
       finalServiceCategory.schedules.forEach((schedule) => {
         schedule.timeSlots.forEach((slot) => {
@@ -215,7 +235,11 @@ export const updateService = authMutation({
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
     if (args.serviceCategory !== undefined) {
-      if (args.serviceCategory.type === "WORKSHOP") {
+      if (args.serviceCategory.type === "FABRICATION") {
+        updates.serviceCategory = normalizeFabricationCategory(
+          args.serviceCategory,
+        );
+      } else {
         const existingService = await ctx.db.get(args.service);
         if (
           existingService &&
@@ -260,8 +284,8 @@ export const updateService = authMutation({
             }
           }
         }
+        updates.serviceCategory = args.serviceCategory;
       }
-      updates.serviceCategory = args.serviceCategory;
     }
     if (args.requirements !== undefined)
       updates.requirements = args.requirements;

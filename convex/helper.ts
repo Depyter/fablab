@@ -87,7 +87,7 @@ export async function deleteFiles(
 }
 
 export function slugify(str: string): string {
-  return str.trim().replace(/\s+/g, "-");
+  return str.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
 export async function ensureAuthentication(ctx: QueryCtx | MutationCtx) {

@@ -5,6 +5,7 @@ import {
   claimFiles,
   deleteFiles,
 } from "../helper";
+import { syncProjectTotalInvoice } from "../projects/helper";
 
 export const addResource = authMutation({
   role: ["admin", "maker"],
@@ -172,6 +173,7 @@ export const updateUsage = authMutation({
     if (args.endTime !== undefined) updates.endTime = args.endTime;
 
     await ctx.db.patch(args.id, updates);
+    await syncProjectTotalInvoice(ctx, usage.projectId);
   },
 });
 
@@ -185,5 +187,6 @@ export const deleteUsage = authMutation({
     if (!usage) throw new ConvexError("Usage not found!");
 
     await ctx.db.delete(args.usage);
+    await syncProjectTotalInvoice(ctx, usage.projectId);
   },
 });
