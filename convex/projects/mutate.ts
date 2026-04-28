@@ -11,14 +11,17 @@ import {
   validateBookingTiming,
   validateFabricationAvailability,
   computeProvisionalCostBreakdown,
+  buildTotalInvoice,
   createWorkshopUsage,
   createFabricationUsage,
   incrementWorkshopSlot,
   ensureProjectRoom,
   createProjectThread,
   computeCompletionCost,
+  computeMaterialsUsedCost,
   consumeMaterials,
   findProjectUsage,
+  syncProjectTotalInvoice,
   sendProjectSystemMessage,
   applyStatusChange,
   applyMakerAssignment,
@@ -103,6 +106,7 @@ export const createProject = authMutation({
       userId: userProfile._id,
       assignedMaker: args.assignedMaker,
       service: args.service,
+      totalInvoice: buildTotalInvoice(provisional.total),
       pricing: args.pricing,
       status: "pending",
       files: args.files,
@@ -136,6 +140,10 @@ export const createProject = authMutation({
         args.requestedMaterials,
       );
     }
+
+    await syncProjectTotalInvoice(ctx, projectId, {
+      fallbackTotal: provisional.total,
+    });
 
     // ── 8. Ensure client messaging room exists ────────────────────────────────
     const roomId = await ensureProjectRoom(ctx, userProfile);
@@ -291,19 +299,21 @@ export const updateCostBreakdown = authMutation({
 
     const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
 
-    // ── Persist invoice ───────────────────────────────────────────────────────
-    if (breakdownChanged) {
-      await ctx.db.patch(args.projectId, {
-        totalInvoice: { subtotal, tax: 0, total },
-      });
+    const expectedMaterialCost = args.materialsUsed
+      ? await computeMaterialsUsedCost(ctx, args.materialsUsed)
+      : (resolvedUsage?.materialsUsed?.reduce(
+          (sum, material) =>
+            sum + material.amountUsed * (material.snapshot?.pricePerUnit ?? 0),
+          0,
+        ) ?? 0);
 
-      if (resolvedUsage) {
-        await ctx.db.patch(resolvedUsage._id, {
-          snapshot: { ...resolvedUsage.snapshot, costAtTime: total },
-        });
-      }
+    if (Math.abs(expectedMaterialCost - args.materialCost) > 0.0001) {
+      throw new ConvexError(
+        "Material cost must match the selected materials and quantities.",
+      );
     }
 
+    // ── Persist invoice ───────────────────────────────────────────────────────
     // ── Sync per-material amounts + stock ─────────────────────────────────────
     if (materialsChanged && resolvedUsage && args.materialsUsed) {
       let nextMaterials = [...(resolvedUsage.materialsUsed ?? [])];
@@ -341,6 +351,14 @@ export const updateCostBreakdown = authMutation({
       }
 
       await ctx.db.patch(resolvedUsage._id, { materialsUsed: nextMaterials });
+      await syncProjectTotalInvoice(ctx, args.projectId, {
+        fallbackTotal: total,
+        manualBreakdown: {
+          setupFee: args.setupFee,
+          timeCost: args.timeCost,
+          materialCost: args.materialCost,
+        },
+      });
 
       // ── System message ──────────────────────────────────────────────────────
       const lines: string[] = [];
@@ -356,6 +374,17 @@ export const updateCostBreakdown = authMutation({
       lines.push(...systemLines);
       await sendProjectSystemMessage(ctx, args.projectId, lines);
       return;
+    }
+
+    if (breakdownChanged || materialsChanged) {
+      await syncProjectTotalInvoice(ctx, args.projectId, {
+        fallbackTotal: total,
+        manualBreakdown: {
+          setupFee: args.setupFee,
+          timeCost: args.timeCost,
+          materialCost: args.materialCost,
+        },
+      });
     }
 
     // ── System message (breakdown only) ──────────────────────────────────────
@@ -505,18 +534,11 @@ export const completeProject = authMutation({
 
     await ctx.db.patch(args.projectId, {
       status: "completed",
-      totalInvoice: { subtotal: total, tax: 0, total },
     });
-
-    await scheduleProjectUpdateEmail(ctx, args.projectId);
 
     // ── 4. Update usage snapshot and record materials ─────────────────────────
     const usage = await findProjectUsage(ctx, project);
     if (usage) {
-      await ctx.db.patch(usage._id, {
-        snapshot: { ...usage.snapshot, costAtTime: total },
-      });
-
       if (args.materialsUsed) {
         const materialsWithSnapshots = await Promise.all(
           args.materialsUsed.map(async (m) => {
@@ -534,6 +556,12 @@ export const completeProject = authMutation({
         });
       }
     }
+
+    await syncProjectTotalInvoice(ctx, args.projectId, {
+      fallbackTotal: total,
+      actualDurationMs: args.actualDurationMs,
+    });
+    await scheduleProjectUpdateEmail(ctx, args.projectId);
 
     // ── 5. System message ────────────────────────────────────────────────────
     const durationHours = (args.actualDurationMs / (1000 * 60 * 60)).toFixed(2);

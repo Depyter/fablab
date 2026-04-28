@@ -173,6 +173,57 @@ export function computeProvisionalCostBreakdown(
   };
 }
 
+export function buildTotalInvoice(total: number) {
+  return {
+    subtotal: total,
+    tax: 0,
+    total,
+  };
+}
+
+function sortProjectUsages(usages: Doc<"resourceUsage">[]) {
+  return [...usages].sort(
+    (a, b) =>
+      a.startTime - b.startTime ||
+      a._creationTime - b._creationTime ||
+      a._id.localeCompare(b._id),
+  );
+}
+
+function getUsageDurationMs(usage: Doc<"resourceUsage">) {
+  return Math.max(0, usage.endTime - usage.startTime);
+}
+
+function getUsageMaterialCost(usage: Doc<"resourceUsage">) {
+  return (
+    usage.materialsUsed?.reduce(
+      (sum, material) =>
+        sum + material.amountUsed * (material.snapshot?.pricePerUnit ?? 0),
+      0,
+    ) ?? 0
+  );
+}
+
+function allocateByWeights(total: number, weights: number[]) {
+  if (weights.length === 0) return [];
+  if (total === 0) return weights.map(() => 0);
+
+  const safeWeights = weights.map((weight) => Math.max(0, weight));
+  const weightTotal = safeWeights.reduce((sum, weight) => sum + weight, 0);
+
+  if (weightTotal === 0) {
+    return safeWeights.map((_, index) => (index === 0 ? total : 0));
+  }
+
+  let remaining = total;
+  return safeWeights.map((weight, index) => {
+    if (index === safeWeights.length - 1) return remaining;
+    const share = (weight / weightTotal) * total;
+    remaining -= share;
+    return share;
+  });
+}
+
 // ============================================================================
 // Helpers — Resource Usage
 // ============================================================================
@@ -534,6 +585,153 @@ export async function findProjectUsage(
     .first();
 }
 
+export async function syncProjectTotalInvoice(
+  ctx: MutationCtx,
+  projectId: Id<"projects">,
+  options?: {
+    fallbackTotal?: number;
+    actualDurationMs?: number;
+    manualBreakdown?: {
+      setupFee: number;
+      timeCost: number;
+      materialCost: number;
+    };
+  },
+): Promise<number | undefined> {
+  const project = await ctx.db.get(projectId);
+  if (!project) return options?.fallbackTotal;
+
+  const service = await ctx.db.get(project.service);
+
+  const usageDocs = await ctx.db
+    .query("resourceUsage")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .collect();
+  const usages = sortProjectUsages(usageDocs);
+
+  const fallbackTotal =
+    options?.manualBreakdown !== undefined
+      ? options.manualBreakdown.setupFee +
+        options.manualBreakdown.timeCost +
+        options.manualBreakdown.materialCost
+      : options?.fallbackTotal;
+
+  if (!service || usages.length === 0) {
+    await ctx.db.patch(projectId, {
+      totalInvoice:
+        fallbackTotal !== undefined
+          ? buildTotalInvoice(fallbackTotal)
+          : undefined,
+    });
+    return fallbackTotal;
+  }
+
+  let normalizedUsages = usages;
+
+  if (
+    options?.actualDurationMs !== undefined &&
+    service.serviceCategory.type === "FABRICATION"
+  ) {
+    const allocatedDurations = allocateByWeights(
+      options.actualDurationMs,
+      usages.map(getUsageDurationMs),
+    );
+
+    normalizedUsages = await Promise.all(
+      usages.map(async (usage, index) => {
+        const nextEndTime = usage.startTime + allocatedDurations[index];
+        if (nextEndTime !== usage.endTime) {
+          await ctx.db.patch(usage._id, { endTime: nextEndTime });
+        }
+
+        return {
+          ...usage,
+          endTime: nextEndTime,
+        };
+      }),
+    );
+  }
+
+  const usageTotals =
+    options?.manualBreakdown !== undefined
+      ? (() => {
+          const timeShares = allocateByWeights(
+            options.manualBreakdown.timeCost,
+            normalizedUsages.map(getUsageDurationMs),
+          );
+          const materialShares = normalizedUsages.map(getUsageMaterialCost);
+          const materialTotal = materialShares.reduce(
+            (sum, materialCost) => sum + materialCost,
+            0,
+          );
+
+          return normalizedUsages.map((_, index) => {
+            const materialCost =
+              materialTotal > 0
+                ? materialShares[index]
+                : index === 0
+                  ? options.manualBreakdown!.materialCost
+                  : 0;
+            return (
+              timeShares[index] +
+              materialCost +
+              (index === 0 ? options.manualBreakdown!.setupFee : 0)
+            );
+          });
+        })()
+      : service.serviceCategory.type === "WORKSHOP"
+        ? normalizedUsages.map((usage) => {
+            const sessionPrice = derivePricingFromSchema({
+              servicePricing: service.serviceCategory,
+              pricingVariant: project.pricing,
+              serviceType: project.fulfillmentMode,
+              materialCost: getUsageMaterialCost(usage),
+            });
+
+            return sessionPrice.total;
+          })
+        : (() => {
+            const setupFee = derivePricingFromSchema({
+              servicePricing: service.serviceCategory,
+              pricingVariant: project.pricing,
+              serviceType: project.fulfillmentMode,
+              bookingDurationMinutes: 0,
+            }).setupFee;
+
+            return normalizedUsages.map((usage, index) => {
+              const materialCost = getUsageMaterialCost(usage);
+              const timeCost = derivePricingFromSchema({
+                servicePricing: service.serviceCategory,
+                pricingVariant: project.pricing,
+                serviceType: project.fulfillmentMode,
+                bookingDurationMinutes: getUsageDurationMs(usage) / (1000 * 60),
+              }).timeCost;
+
+              return timeCost + materialCost + (index === 0 ? setupFee : 0);
+            });
+          })();
+
+  await Promise.all(
+    normalizedUsages.map(async (usage, index) => {
+      if (usage.snapshot.costAtTime === usageTotals[index]) return;
+      await ctx.db.patch(usage._id, {
+        snapshot: {
+          ...usage.snapshot,
+          costAtTime: usageTotals[index],
+        },
+      });
+    }),
+  );
+
+  const total = usageTotals.reduce((sum, usageTotal) => sum + usageTotal, 0);
+
+  await ctx.db.patch(projectId, {
+    totalInvoice: buildTotalInvoice(total),
+  });
+
+  return total;
+}
+
 /**
  * Sends a system message into the project's thread.
  * Lines should already be formatted (markdown supported).
@@ -595,6 +793,7 @@ export async function applyStatusChange(
       if (usage) {
         await decrementWorkshopSlot(ctx, service, usage);
         await ctx.db.delete(usage._id);
+        await syncProjectTotalInvoice(ctx, project._id);
       }
     }
   }
@@ -692,6 +891,7 @@ export async function applyMaterialAssignment(
   }
 
   await ctx.db.patch(project._id, { requestedMaterials: materialIds });
+  await syncProjectTotalInvoice(ctx, project._id);
 
   return lines;
 }
@@ -737,6 +937,21 @@ export async function consumeMaterials(
       currentStock: newStock,
       status: resolveMaterialStatus(newStock, material.reorderThreshold),
     });
+  }
+
+  return materialCost;
+}
+
+export async function computeMaterialsUsedCost(
+  ctx: MutationCtx,
+  materialsUsed: { materialId: Id<"materials">; amountUsed: number }[],
+): Promise<number> {
+  let materialCost = 0;
+
+  for (const usage of materialsUsed) {
+    const material = await ctx.db.get(usage.materialId);
+    if (!material) throw new ConvexError("Material not found.");
+    materialCost += usage.amountUsed * (material.pricePerUnit ?? 0);
   }
 
   return materialCost;
