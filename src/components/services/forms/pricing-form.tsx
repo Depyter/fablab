@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
 import { FormSection } from "@/components/ui/form-section";
@@ -29,6 +30,26 @@ const TIME_UNITS: { value: TimeUnit; label: string }[] = [
 export const PricingForm = withForm({
   ...addServiceFormOpts,
   render: function PricingRender({ form }) {
+    const pricingValue = form.state.values.pricing;
+    const nextVariantKeyRef = useRef(0);
+    const createVariantKey = () =>
+      `pricing-variant-${nextVariantKeyRef.current++}`;
+    const [variantKeys, setVariantKeys] = useState(() =>
+      Array.from({ length: pricingValue.variants.length }, createVariantKey),
+    );
+
+    useEffect(() => {
+      setVariantKeys((prev) => {
+        const nextLength = pricingValue.variants.length;
+        if (prev.length === nextLength) return prev;
+        if (prev.length > nextLength) return prev.slice(0, nextLength);
+        return [
+          ...prev,
+          ...Array.from({ length: nextLength - prev.length }, createVariantKey),
+        ];
+      });
+    }, [pricingValue.type, pricingValue.variants.length]);
+
     return (
       <div className="w-full sm:max-w-3xl space-y-6">
         <form.Field
@@ -97,6 +118,7 @@ export const PricingForm = withForm({
             };
 
             const addVariant = () => {
+              setVariantKeys((prev) => [...prev, createVariantKey()]);
               if (pricing.type === "FIXED") {
                 field.handleChange({
                   ...pricing,
@@ -121,6 +143,7 @@ export const PricingForm = withForm({
             const getVariants = () => pricing.variants as any[];
 
             const removeVariant = (index: number) => {
+              setVariantKeys((prev) => prev.filter((_, i) => i !== index));
               field.handleChange({
                 ...pricing,
                 variants: getVariants().filter((_, i) => i !== index),
@@ -180,7 +203,7 @@ export const PricingForm = withForm({
                           </p>
                           {pricing.variants.map((variant, i) => (
                             <div
-                              key={i}
+                              key={variantKeys[i]}
                               className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end p-3 rounded-lg border border-dashed border-input bg-muted/30"
                             >
                               <Field>
@@ -332,7 +355,7 @@ export const PricingForm = withForm({
                           </p>
                           {pricing.variants.map((variant, i) => (
                             <div
-                              key={i}
+                              key={variantKeys[i]}
                               className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end p-3 rounded-lg border border-dashed border-input bg-muted/30"
                             >
                               <Field>

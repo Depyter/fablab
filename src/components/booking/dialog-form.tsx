@@ -22,21 +22,25 @@ import { WorkshopSchedule } from "./workshop-time-slot-picker";
 import { type ServicePricing } from "@/lib/project-pricing";
 import posthog from "posthog-js";
 
+type BookingServiceMaterial = {
+  _id: string;
+  name: string;
+  pricePerUnit?: number;
+  costPerUnit?: number;
+  unit?: string;
+};
+
+type BookingPricingVariant = { name: string };
+
 interface BookingDialog {
   serviceId: Id<"services">;
   serviceName: string;
   requirements: string[];
   fileTypes?: string[];
   availableDays?: number[];
-  serviceMaterials?: Array<{
-    _id: string;
-    name: string;
-    pricePerUnit?: number;
-    costPerUnit?: number;
-    unit?: string;
-  }>;
+  serviceMaterials?: BookingServiceMaterial[];
   hasUpPricing?: boolean;
-  pricingVariants?: Array<{ name: string }>;
+  pricingVariants?: BookingPricingVariant[];
   servicePricing?: ServicePricing;
   serviceCategory?: string;
   schedules?: WorkshopSchedule[];
@@ -55,15 +59,20 @@ interface LocalBookingFormValues extends Omit<
   requestedMaterialIds: string[];
 }
 
+const EMPTY_FILE_TYPES: string[] = [];
+const EMPTY_AVAILABLE_DAYS: number[] = [];
+const EMPTY_SERVICE_MATERIALS: BookingServiceMaterial[] = [];
+const EMPTY_PRICING_VARIANTS: BookingPricingVariant[] = [];
+
 export function BookingDialog({
   serviceId,
   serviceName,
   requirements,
-  fileTypes = [],
-  availableDays = [],
-  serviceMaterials = [],
+  fileTypes = EMPTY_FILE_TYPES,
+  availableDays = EMPTY_AVAILABLE_DAYS,
+  serviceMaterials = EMPTY_SERVICE_MATERIALS,
   hasUpPricing = false,
-  pricingVariants = [] as Array<{ name: string }>,
+  pricingVariants = EMPTY_PRICING_VARIANTS,
   servicePricing,
   serviceCategory,
   schedules,

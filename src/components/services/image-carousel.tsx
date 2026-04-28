@@ -80,9 +80,9 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
           <div className="absolute bottom-0 left-0 z-0 h-12 w-full bg-background" />
 
           <div className="hidden">
-            {images.map((_, idx) => (
+            {images.map((src, idx) => (
               <button
-                key={idx}
+                key={src}
                 onClick={() => setCurrent(idx)}
                 className={cn(
                   "text-sm font-sans transition-all",

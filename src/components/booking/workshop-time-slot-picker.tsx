@@ -30,10 +30,12 @@ export interface WorkshopTimeSlotPickerProps {
   schedules?: WorkshopSchedule[];
 }
 
+const EMPTY_WORKSHOP_SCHEDULES: WorkshopSchedule[] = [];
+
 export function WorkshopTimeSlotPicker({
   value,
   onChange,
-  schedules = [],
+  schedules = EMPTY_WORKSHOP_SCHEDULES,
 }: WorkshopTimeSlotPickerProps) {
   const getLocalTimeString = (dateNum: number) => {
     const d = new Date(dateNum);
@@ -57,8 +59,8 @@ export function WorkshopTimeSlotPicker({
         </p>
       </div>
       <div className="flex flex-col gap-6">
-        {schedules.map((schedule, sIdx) => (
-          <div key={sIdx} className="space-y-3">
+        {schedules.map((schedule) => (
+          <div key={schedule.date} className="space-y-3">
             <h4 className="font-semibold text-gray-900">
               {new Date(schedule.date).toLocaleDateString("en-US", {
                 timeZone: "Asia/Manila",
@@ -68,7 +70,7 @@ export function WorkshopTimeSlotPicker({
               })}
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(schedule.timeSlots || []).map((slot, idx) => {
+              {(schedule.timeSlots || []).map((slot) => {
                 const startFormatted = getLocalTimeString(slot.startTime);
                 const endFormatted = getLocalTimeString(slot.endTime);
 
@@ -83,7 +85,7 @@ export function WorkshopTimeSlotPicker({
 
                 return (
                   <div
-                    key={idx}
+                    key={`${schedule.date}-${slot.startTime}-${slot.endTime}`}
                     onClick={() => {
                       if (isFull) return;
                       onChange({

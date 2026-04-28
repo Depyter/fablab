@@ -18,7 +18,7 @@ function FileGallery({
 }) {
   if (files.length === 0) return null;
 
-  const renderFileCard = (f: MessageFile, i?: number) => {
+  const renderFileCard = (f: MessageFile, isStacked = false) => {
     const fileName =
       f.originalName ||
       (f.fileUrl
@@ -30,12 +30,11 @@ function FileGallery({
 
     return (
       <FileAttachmentCard
-        key={i}
         href={f.fileUrl}
         fileName={fileName}
         fileType={f.fileType}
         isCurrentUser={isCurrentUser}
-        className={i === undefined ? "mt-1" : ""}
+        className={isStacked ? "" : "mt-1"}
       />
     );
   };
@@ -47,7 +46,9 @@ function FileGallery({
   // Multiple files — vertical stack of cards
   return (
     <div className="mt-1 space-y-1">
-      {files.map((f, i) => renderFileCard(f, i))}
+      {files.map((f) => (
+        <div key={f.fileUrl}>{renderFileCard(f, true)}</div>
+      ))}
     </div>
   );
 }

@@ -35,10 +35,12 @@ interface MaterialFormProps {
   onSuccess?: () => void;
 }
 
+const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+
 export function MaterialForm({
   mode = "add",
   initialValues,
-  initialImages = [],
+  initialImages = EMPTY_UPLOADED_FILES,
   onSuccess,
 }: MaterialFormProps) {
   const [thumbnailUploading, setThumbnailUploading] = useState(false);

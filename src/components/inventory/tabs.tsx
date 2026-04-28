@@ -11,7 +11,12 @@ interface InventoryTabProps {
 
 import { ResourceCategory } from "@convex/constants";
 
-export function InventoryTab({ items, materials = [] }: InventoryTabProps) {
+const EMPTY_MATERIAL_ITEMS: MaterialItem[] = [];
+
+export function InventoryTab({
+  items,
+  materials = EMPTY_MATERIAL_ITEMS,
+}: InventoryTabProps) {
   // Filter items by category based on the backend schema
   // Group items by category
   const machines = items.filter(

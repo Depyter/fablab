@@ -281,19 +281,27 @@ export function ServiceDetailClient({
             <div className="border-2 border-black bg-background p-6 sm:p-8">
               {service.requirements.length > 0 ? (
                 <ul className="space-y-4">
-                  {service.requirements.map((req, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-4 border-b border-black/10 pb-4 last:border-0 last:pb-0"
-                    >
-                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center border border-black bg-fab-amber text-[10px] font-black uppercase tracking-[0.2em] text-black">
-                        0{i + 1}
-                      </span>
-                      <span className="text-sm leading-relaxed text-foreground/80">
-                        {req}
-                      </span>
-                    </li>
-                  ))}
+                  {service.requirements.map((req, i) =>
+                    (() => {
+                      const duplicateCount = service.requirements
+                        .slice(0, i)
+                        .filter((item) => item === req).length;
+
+                      return (
+                        <li
+                          key={`${req}-${duplicateCount}`}
+                          className="flex items-start gap-4 border-b border-black/10 pb-4 last:border-0 last:pb-0"
+                        >
+                          <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center border border-black bg-fab-amber text-[10px] font-black uppercase tracking-[0.2em] text-black">
+                            0{i + 1}
+                          </span>
+                          <span className="text-sm leading-relaxed text-foreground/80">
+                            {req}
+                          </span>
+                        </li>
+                      );
+                    })(),
+                  )}
                 </ul>
               ) : (
                 <p className="text-sm italic text-muted-foreground">
@@ -328,7 +336,7 @@ export function ServiceDetailClient({
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5">
             {service.sampleUrls.map((url, index) => (
               <div
-                key={index}
+                key={url}
                 className="relative aspect-square overflow-hidden border border-black bg-sidebar-accent/10"
               >
                 <Image

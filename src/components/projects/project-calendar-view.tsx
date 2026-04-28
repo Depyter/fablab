@@ -41,7 +41,7 @@ function getSnappedDecimalHours(ms: number, ceil = false) {
 }
 
 export function ProjectCalendarView() {
-  const [date, setDate] = React.useState<Date>(startOfToday());
+  const [date, setDate] = React.useState<Date>(() => startOfToday());
 
   const role = useQuery(api.users.getRole, {});
   const isClient = role === "client";

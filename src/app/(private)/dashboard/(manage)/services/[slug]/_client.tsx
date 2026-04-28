@@ -177,9 +177,9 @@ export function ServiceDetailClient({
           {/* Right Content */}
           <div className="lg:col-span-7 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {pricingDisplays.map((display, idx) => (
+              {pricingDisplays.map((display) => (
                 <PriceTile
-                  key={idx}
+                  key={`${display.label}-${display.unit}`}
                   label={display.label}
                   price={display.price}
                   unit={display.unit}
@@ -218,7 +218,15 @@ export function ServiceDetailClient({
                 {service.requirements.length > 0 ? (
                   <ul className="list-disc list-inside text-gray-500 text-sm space-y-2">
                     {service.requirements.map((req, i) => (
-                      <li key={i}>{req}</li>
+                      <li
+                        key={`${req}-${
+                          service.requirements
+                            .slice(0, i)
+                            .filter((item) => item === req).length
+                        }`}
+                      >
+                        {req}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -234,7 +242,7 @@ export function ServiceDetailClient({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {service.sampleUrls.map((url, i) => (
                       <div
-                        key={i}
+                        key={url}
                         className="relative aspect-square rounded-xl overflow-hidden border border-gray-100"
                       >
                         <Image

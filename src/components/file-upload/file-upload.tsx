@@ -28,6 +28,17 @@ import {
 import type { FileUploadProps, UploadedFile, UploadingFile } from "./types";
 import { EXT_MIME } from "@convex/constants";
 
+const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+
+const getUploadingFileKey = (file: UploadingFile) =>
+  file.storageId ??
+  `${file.file.name}-${file.file.size}-${file.file.lastModified}`;
+
+const getUploadedFileKey = (file: UploadedFile) =>
+  file.storageId ??
+  file.url ??
+  `${file.fileName}-${file.fileSize}-${file.uploadedAt.toISOString()}`;
+
 // ---------------------------------------------------------------------------
 // Thumbnail sub-renders
 // ---------------------------------------------------------------------------
@@ -140,7 +151,7 @@ export function FileUpload({
   multiple = true,
   variant = "default",
   autoUpload = true,
-  value = [],
+  value = EMPTY_UPLOADED_FILES,
 }: FileUploadProps) {
   const {
     uploadingFiles,
@@ -237,7 +248,7 @@ export function FileUpload({
           <div className="space-y-1">
             {uploadingFiles.map((file, index) => (
               <div
-                key={index}
+                key={getUploadingFileKey(file)}
                 className="flex items-center gap-2 text-sm p-2 rounded border"
               >
                 <UploadingThumb
@@ -258,7 +269,7 @@ export function FileUpload({
             ))}
             {uploadedFiles.map((file, index) => (
               <div
-                key={index}
+                key={getUploadedFileKey(file)}
                 className="flex items-center gap-2 text-sm p-2 rounded border bg-muted/50"
               >
                 <UploadedThumb uf={file} size="sm" />
@@ -312,7 +323,7 @@ export function FileUpload({
           <div className="space-y-2">
             {uploadingFiles.map((file, index) => (
               <div
-                key={index}
+                key={getUploadingFileKey(file)}
                 className="flex items-center gap-3 p-2 rounded-lg border bg-card"
               >
                 <UploadingThumb
@@ -340,7 +351,7 @@ export function FileUpload({
             ))}
             {uploadedFiles.map((file, index) => (
               <div
-                key={index}
+                key={getUploadedFileKey(file)}
                 className="flex items-center gap-3 p-2 rounded-lg border bg-muted/50"
               >
                 <UploadedThumb uf={file} size="sm" />
@@ -445,7 +456,7 @@ export function FileUpload({
             <div className="space-y-2">
               {uploadingFiles.map((uploadingFile, index) => (
                 <div
-                  key={index}
+                  key={getUploadingFileKey(uploadingFile)}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card"
                 >
                   <UploadingThumb
@@ -484,7 +495,7 @@ export function FileUpload({
 
               {uploadedFiles.map((uploadedFile, index) => (
                 <div
-                  key={index}
+                  key={getUploadedFileKey(uploadedFile)}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50"
                 >
                   <UploadedThumb uf={uploadedFile} size="md" />

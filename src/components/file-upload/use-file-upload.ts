@@ -6,6 +6,8 @@ import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
 import { resolveFileType } from "./utils";
 
+const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+
 export interface UseFileUploadOptions {
   maxFiles?: number;
   maxFileSizeMB?: number;
@@ -44,7 +46,7 @@ export function useFileUpload({
   disabled = false,
   autoUpload = true,
   allowedTypes,
-  value = [],
+  value = EMPTY_UPLOADED_FILES,
   onAddFile,
   onUploadComplete,
   onUploadError,

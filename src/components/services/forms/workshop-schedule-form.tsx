@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
 import { FormSection } from "@/components/ui/form-section";
@@ -51,6 +52,69 @@ const getDefaultTime = (baseDate: number, hours: number, minutes: number) => {
 export const WorkshopScheduleForm = withForm({
   ...addServiceFormOpts,
   render: function WorkshopScheduleRender({ form }) {
+    const schedules = useMemo(
+      () => form.state.values.schedules || [],
+      [form.state.values.schedules],
+    );
+    const nextScheduleKeyRef = useRef(0);
+    const nextSlotKeyRef = useRef(0);
+    const createScheduleKey = () =>
+      `workshop-schedule-${nextScheduleKeyRef.current++}`;
+    const createSlotKey = () => `workshop-slot-${nextSlotKeyRef.current++}`;
+    const [scheduleKeys, setScheduleKeys] = useState(() =>
+      schedules.map(() => createScheduleKey()),
+    );
+    const [slotKeysBySchedule, setSlotKeysBySchedule] = useState(() =>
+      schedules.map((schedule) =>
+        (schedule.timeSlots || []).map(() => createSlotKey()),
+      ),
+    );
+    const slotCounts = schedules
+      .map((schedule) => schedule.timeSlots?.length ?? 0)
+      .join(",");
+
+    useEffect(() => {
+      setScheduleKeys((prev) => {
+        if (prev.length === schedules.length) return prev;
+        if (prev.length > schedules.length)
+          return prev.slice(0, schedules.length);
+        return [
+          ...prev,
+          ...Array.from(
+            { length: schedules.length - prev.length },
+            createScheduleKey,
+          ),
+        ];
+      });
+
+      setSlotKeysBySchedule((prev) => {
+        let changed = prev.length !== schedules.length;
+        const next = schedules.map((schedule, scheduleIndex) => {
+          const existing = prev[scheduleIndex] ?? [];
+          const desiredLength = schedule.timeSlots?.length ?? 0;
+
+          if (existing.length === desiredLength) {
+            return existing;
+          }
+
+          changed = true;
+          if (existing.length > desiredLength) {
+            return existing.slice(0, desiredLength);
+          }
+
+          return [
+            ...existing,
+            ...Array.from(
+              { length: desiredLength - existing.length },
+              createSlotKey,
+            ),
+          ];
+        });
+
+        return changed ? next : prev;
+      });
+    }, [schedules, slotCounts]);
+
     return (
       <div className="w-full sm:max-w-3xl">
         <form.Subscribe
@@ -74,6 +138,14 @@ export const WorkshopScheduleForm = withForm({
                           size="sm"
                           onClick={() => {
                             const now = Date.now();
+                            setScheduleKeys((prev) => [
+                              ...prev,
+                              createScheduleKey(),
+                            ]);
+                            setSlotKeysBySchedule((prev) => [
+                              ...prev,
+                              [createSlotKey()],
+                            ]);
                             schedulesField.pushValue({
                               date: now,
                               timeSlots: [
@@ -92,7 +164,7 @@ export const WorkshopScheduleForm = withForm({
                       {(schedulesField.state.value || []).map(
                         (_, scheduleIndex) => (
                           <div
-                            key={scheduleIndex}
+                            key={scheduleKeys[scheduleIndex]}
                             className="p-4 border rounded-md space-y-4 relative bg-card"
                           >
                             <Button
@@ -100,9 +172,15 @@ export const WorkshopScheduleForm = withForm({
                               variant="ghost"
                               size="icon"
                               className="absolute top-2 right-2 text-destructive hover:bg-destructive/10 hover:text-destructive z-10"
-                              onClick={() =>
-                                schedulesField.removeValue(scheduleIndex)
-                              }
+                              onClick={() => {
+                                setScheduleKeys((prev) =>
+                                  prev.filter((_, i) => i !== scheduleIndex),
+                                );
+                                setSlotKeysBySchedule((prev) =>
+                                  prev.filter((_, i) => i !== scheduleIndex),
+                                );
+                                schedulesField.removeValue(scheduleIndex);
+                              }}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -246,6 +324,13 @@ export const WorkshopScheduleForm = withForm({
                                           (schedulesField.state.value || [])[
                                             scheduleIndex
                                           ]?.date || Date.now();
+                                        setSlotKeysBySchedule((prev) =>
+                                          prev.map((keys, currentIndex) =>
+                                            currentIndex === scheduleIndex
+                                              ? [...keys, createSlotKey()]
+                                              : keys,
+                                          ),
+                                        );
                                         timeSlotsField.pushValue({
                                           startTime: getDefaultTime(
                                             baseDate,
@@ -268,7 +353,11 @@ export const WorkshopScheduleForm = withForm({
                                     {(timeSlotsField.state.value || []).map(
                                       (_, slotIndex) => (
                                         <div
-                                          key={slotIndex}
+                                          key={
+                                            slotKeysBySchedule[scheduleIndex]?.[
+                                              slotIndex
+                                            ]
+                                          }
                                           className="flex flex-col gap-4 py-4 first:pt-2 last:pb-0"
                                         >
                                           <div className="flex items-end justify-between gap-4">
@@ -333,11 +422,23 @@ export const WorkshopScheduleForm = withForm({
                                               variant="ghost"
                                               size="icon"
                                               className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-                                              onClick={() =>
+                                              onClick={() => {
+                                                setSlotKeysBySchedule((prev) =>
+                                                  prev.map(
+                                                    (keys, currentIndex) =>
+                                                      currentIndex ===
+                                                      scheduleIndex
+                                                        ? keys.filter(
+                                                            (_, i) =>
+                                                              i !== slotIndex,
+                                                          )
+                                                        : keys,
+                                                  ),
+                                                );
                                                 timeSlotsField.removeValue(
                                                   slotIndex,
-                                                )
-                                              }
+                                                );
+                                              }}
                                             >
                                               <X className="h-4 w-4" />
                                             </Button>

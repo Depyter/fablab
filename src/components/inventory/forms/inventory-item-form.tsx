@@ -85,11 +85,13 @@ interface InventoryItemFormProps {
   onSuccess?: () => void;
 }
 
+const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+
 export function InventoryItemForm({
   itemType,
   mode = "add",
   initialValues,
-  initialImages = [],
+  initialImages = EMPTY_UPLOADED_FILES,
   onSuccess,
 }: InventoryItemFormProps) {
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
