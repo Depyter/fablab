@@ -67,7 +67,6 @@ export function PendingAttachmentStrip({
               <FileAttachmentThumbnail
                 fileName={attachment.fileName}
                 fileType={attachment.fileType}
-                isCurrentUser={false}
               />
             </div>
           )}

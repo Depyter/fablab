@@ -171,7 +171,6 @@ export function getFileInfo(
 interface FileAttachmentCardProps {
   fileName: string;
   fileType: string | null;
-  isCurrentUser: boolean;
   /** When provided the card is rendered as a plain anchor tag. */
   href?: string;
   className?: string;
@@ -180,7 +179,6 @@ interface FileAttachmentCardProps {
 export function FileAttachmentCard({
   fileName,
   fileType,
-  isCurrentUser,
   href,
   className,
 }: FileAttachmentCardProps) {
@@ -191,12 +189,10 @@ export function FileAttachmentCard({
       <div
         className={cn(
           "shrink-0 rounded-lg p-2.5 flex items-center justify-center transition-colors",
-          isCurrentUser ? "bg-white/10" : bgClass,
+          bgClass,
         )}
       >
-        <Icon
-          className={cn("h-5 w-5", isCurrentUser ? "text-white" : colorClass)}
-        />
+        <Icon className={cn("h-5 w-5", colorClass)} />
       </div>
 
       <div className="min-w-0 flex-1 flex flex-col justify-center">
@@ -207,7 +203,7 @@ export function FileAttachmentCard({
           <span
             className={cn(
               "text-[9px] font-black uppercase tracking-[0.15em] opacity-70",
-              isCurrentUser ? "text-white/90" : "text-muted-foreground",
+              "text-muted-foreground",
             )}
             style={{ fontFamily: "var(--font-body)" }}
           >
@@ -216,13 +212,13 @@ export function FileAttachmentCard({
           <div
             className={cn(
               "h-1 w-1 rounded-full opacity-30 shrink-0",
-              isCurrentUser ? "bg-white" : "bg-black",
+              "bg-black",
             )}
           />
           <span
             className={cn(
               "text-[9px] font-bold opacity-40 truncate",
-              isCurrentUser ? "text-white" : "text-black",
+              "text-black",
             )}
           >
             ATTACHMENT
@@ -235,14 +231,11 @@ export function FileAttachmentCard({
           <div
             className={cn(
               "p-2 rounded-xl transition-colors",
-              isCurrentUser ? "hover:bg-white/10" : "hover:bg-black/5",
+              "hover:bg-black/5",
             )}
           >
             <Download
-              className={cn(
-                "h-4 w-4 opacity-50",
-                isCurrentUser ? "text-white" : "text-muted-foreground",
-              )}
+              className={cn("h-4 w-4 opacity-50", "text-muted-foreground")}
             />
           </div>
         </div>
@@ -252,9 +245,7 @@ export function FileAttachmentCard({
 
   const sharedClassName = cn(
     "group flex items-center gap-4 rounded-2xl border px-3 py-2.5 transition-all duration-200",
-    isCurrentUser
-      ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
-      : "border-border/50 bg-secondary/50 text-foreground hover:bg-secondary/80",
+    "border-border/50 bg-secondary/50 text-foreground hover:bg-secondary/80",
     className,
   );
 
@@ -281,14 +272,12 @@ export function FileAttachmentCard({
 interface FileAttachmentThumbnailProps {
   fileName: string;
   fileType: string | null;
-  isCurrentUser: boolean;
   className?: string;
 }
 
 export function FileAttachmentThumbnail({
   fileName,
   fileType,
-  isCurrentUser,
   className,
 }: FileAttachmentThumbnailProps) {
   const { Icon, colorClass, bgClass, label } = getFileInfo(fileName, fileType);
@@ -297,21 +286,12 @@ export function FileAttachmentThumbnail({
     <div
       className={cn(
         "w-full h-full border-0 flex flex-col items-center justify-center p-3 text-center transition-all duration-200",
-        isCurrentUser
-          ? "bg-white/5 text-white hover:bg-white/10"
-          : "bg-muted/50 text-foreground hover:bg-muted/80",
+        "bg-muted/50 text-foreground hover:bg-muted/80",
         className,
       )}
     >
-      <div
-        className={cn(
-          "rounded-xl p-2.5 mb-2 shadow-sm",
-          isCurrentUser ? "bg-white/10" : bgClass,
-        )}
-      >
-        <Icon
-          className={cn("h-6 w-6", isCurrentUser ? "text-white" : colorClass)}
-        />
+      <div className={cn("rounded-xl p-2.5 mb-2 shadow-sm", bgClass)}>
+        <Icon className={cn("h-6 w-6", colorClass)} />
       </div>
       <div className="w-full space-y-0.5">
         <p className="text-xs font-bold truncate leading-tight w-full px-1">
@@ -320,7 +300,7 @@ export function FileAttachmentThumbnail({
         <p
           className={cn(
             "text-[9px] font-black uppercase tracking-widest opacity-40",
-            isCurrentUser ? "text-white/80" : "text-muted-foreground",
+            "text-muted-foreground",
           )}
         >
           {label}

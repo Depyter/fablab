@@ -390,10 +390,7 @@ export function ChatInterface({
 
                           {messageFiles.length > 0 && (
                             <div className={cn(message.content ? "mt-2" : "")}>
-                              <MessageAttachments
-                                files={messageFiles}
-                                isCurrentUser={false}
-                              />
+                              <MessageAttachments files={messageFiles} />
                             </div>
                           )}
                         </div>
@@ -564,10 +561,7 @@ export function ChatInterface({
 
                         {messageFiles.length > 0 && (
                           <div className={cn(message.content ? "mt-2" : "")}>
-                            <MessageAttachments
-                              files={messageFiles}
-                              isCurrentUser={isCurrentUser}
-                            />
+                            <MessageAttachments files={messageFiles} />
                           </div>
                         )}
                       </div>

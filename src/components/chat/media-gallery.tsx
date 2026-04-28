@@ -314,13 +314,7 @@ function MediaLightbox({
 // MediaGallery — renders 1-N image/video thumbnails with lightbox on click
 // ---------------------------------------------------------------------------
 
-export function MediaGallery({
-  mediaFiles,
-  isCurrentUser,
-}: {
-  mediaFiles: MediaFile[];
-  isCurrentUser: boolean;
-}) {
+export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxCurrent, setLightboxCurrent] = useState(0);
 
@@ -351,7 +345,6 @@ export function MediaGallery({
             <FileAttachmentCard
               fileName={f.originalName || "File"}
               fileType={f.fileType}
-              isCurrentUser={isCurrentUser}
               className="max-w-md"
             />
           ) : f.fileType?.startsWith("video/") ? (
@@ -435,7 +428,6 @@ export function MediaGallery({
                 <FileAttachmentThumbnail
                   fileName={f.originalName || "File"}
                   fileType={f.fileType}
-                  isCurrentUser={isCurrentUser}
                   className={isFirstOfThree ? "h-32" : "h-24"}
                 />
               ) : f.fileType?.startsWith("video/") ? (
