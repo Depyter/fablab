@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { setupProject, setupUsers } from "./helper";
+import { flushScheduledFunctions, setupProject, setupUsers } from "./helper";
 import { api, internal } from "../convex/_generated/api";
 
 describe("Project and Chat functionality", () => {
@@ -69,16 +69,18 @@ describe("Project and Chat functionality", () => {
   });
 
   test("Chat messaging", async () => {
-    const { t, tAera, tHarley, roomId } = await setupProject();
+    const { t, tAera, tHarley, roomId, threadId } = await setupProject();
 
     await tAera.mutation(api.chat.mutate.sendMessage, {
       content: "Hello this project...",
       room: roomId,
+      threadId,
     });
 
     await tHarley.mutation(api.chat.mutate.sendMessage, {
       content: "Hello Aera",
       room: roomId,
+      threadId,
     });
 
     // Check if the message is sent
@@ -96,17 +98,17 @@ describe("Project and Chat functionality", () => {
       const messages = await ctx.db
         .query("messages")
         .withIndex("by_room_and_thread", (q) =>
-          q.eq("room", roomId).eq("threadId", undefined),
+          q.eq("room", roomId).eq("threadId", threadId),
         )
         .collect();
 
-      expect(messages.length).toBe(2);
-      // system message is in a thread, so these are the first root messages
-      expect(messages[0].sender).toBe(userAera!._id);
-      expect(messages[1].sender).toBe(userHarley!._id);
+      expect(messages).toHaveLength(3);
+      expect(messages[0].sender).toBe("System");
+      expect(messages[1].sender).toBe(userAera!._id);
+      expect(messages[2].sender).toBe(userHarley!._id);
 
-      expect(messages[0].content).toBe("Hello this project...");
-      expect(messages[1].content).toBe("Hello Aera");
+      expect(messages[1].content).toBe("Hello this project...");
+      expect(messages[2].content).toBe("Hello Aera");
     });
   });
 
@@ -132,6 +134,8 @@ describe("Project and Chat functionality", () => {
       status: "approved",
       makerId,
     });
+
+    await flushScheduledFunctions(t);
 
     await t.run(async (ctx) => {
       const project = await ctx.db.get(projectId);
@@ -196,6 +200,8 @@ describe("Project and Chat functionality", () => {
         date: Date.now() + 1000 * 60 * 60 * 24,
       },
     });
+
+    await flushScheduledFunctions(t);
 
     const projectId = await t.run(async (ctx) => {
       const project = await ctx.db.query("projects").first();
