@@ -107,8 +107,6 @@ export function ServiceDetailClient({
               Back to Services
             </Button>
           </Link>
-          
-         
         </div>
       </header>
 
@@ -165,7 +163,8 @@ export function ServiceDetailClient({
                     ₱{getBasePrice().toLocaleString()}
                   </p>
 
-                  {service.serviceCategory.type === "WORKSHOP" && hasVariants ? (
+                  {service.serviceCategory.type === "WORKSHOP" &&
+                  hasVariants ? (
                     <div className="mt-4 flex flex-wrap gap-2">
                       {service.serviceCategory.variants?.map((variant) => (
                         <span
@@ -178,7 +177,8 @@ export function ServiceDetailClient({
                       ))}
                     </div>
                   ) : null}
-                  {service.serviceCategory.type === "FABRICATION" && hasVariants ? (
+                  {service.serviceCategory.type === "FABRICATION" &&
+                  hasVariants ? (
                     <div className="mt-4 flex flex-wrap gap-2">
                       {service.serviceCategory.variants?.map((variant) => (
                         <span
@@ -186,7 +186,8 @@ export function ServiceDetailClient({
                           className="inline-flex items-center gap-1 border border-black/10 bg-sidebar-accent/50 px-2.5 py-1 text-[10px] font-bold text-muted-foreground"
                         >
                           <CirclePercent className="h-3 w-3" />
-                          {variant.name}: ₱{variant.setupFee.toLocaleString()} base
+                          {variant.name}: ₱{variant.setupFee.toLocaleString()}{" "}
+                          base
                         </span>
                       ))}
                     </div>
@@ -201,7 +202,8 @@ export function ServiceDetailClient({
                     ₱{getRatePerHour().toLocaleString()}
                   </p>
 
-                  {service.serviceCategory.type === "FABRICATION" && hasVariants ? (
+                  {service.serviceCategory.type === "FABRICATION" &&
+                  hasVariants ? (
                     <div className="mt-4 flex flex-wrap gap-2 sm:justify-end">
                       {service.serviceCategory.variants?.map((variant) => (
                         <span
@@ -261,7 +263,6 @@ export function ServiceDetailClient({
                     : undefined
                 }
               />
-              
             </div>
           </div>
         </div>

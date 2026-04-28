@@ -5,9 +5,7 @@ interface ErrorPageProps {
   searchParams: Promise<{ error?: string; error_description?: string }>;
 }
 
-export default async function ErrorPage({
-  searchParams,
-}: ErrorPageProps) {
+export default async function ErrorPage({ searchParams }: ErrorPageProps) {
   const { error, error_description } = await searchParams;
 
   if (error !== "banned") {

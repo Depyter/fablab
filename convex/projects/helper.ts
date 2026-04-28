@@ -750,6 +750,13 @@ export async function scheduleProjectUpdateEmail(
   ctx: MutationCtx,
   projectId: Id<"projects">,
 ): Promise<void> {
+  if (
+    typeof process !== "undefined" &&
+    process.env.DISABLE_SCHEDULED_EMAILS === "true"
+  ) {
+    return;
+  }
+
   const project = await ctx.db.get(projectId);
   if (!project) return;
   const user = await ctx.db.get(project.userId);
