@@ -50,6 +50,9 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       },
     },
     baseURL: process.env.SITE_URL!,
+    onAPIError: {
+      errorURL: `${process.env.SITE_URL!}/error`,
+    },
     database: authComponent.adapter(ctx),
     socialProviders: {
       // github: {
