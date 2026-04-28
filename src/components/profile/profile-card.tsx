@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { User, Camera, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
+import type { Doc, Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +17,68 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+type UserProfile = Doc<"userProfile"> & {
+  profilePicUrl: string | null;
+};
+
 export function UserProfileDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-
   const profile = useQuery(api.users.getUserProfile);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      {open ? (
+        profile === undefined ? (
+          <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Edit Profile
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="pt-4 text-sm text-muted-foreground">
+              Loading profile...
+            </div>
+          </DialogContent>
+        ) : profile === null ? (
+          <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Edit Profile
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="pt-4 text-sm text-muted-foreground">
+              Profile unavailable.
+            </div>
+          </DialogContent>
+        ) : (
+          <UserProfileDialogForm
+            key={profile._id}
+            profile={profile}
+            onOpenChange={setOpen}
+          />
+        )
+      ) : null}
+    </Dialog>
+  );
+}
+
+function UserProfileDialogForm({
+  profile,
+  onOpenChange,
+}: {
+  profile: UserProfile;
+  onOpenChange: (open: boolean) => void;
+}) {
   const updateProfile = useMutation(api.users.updateProfile);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const trackUpload = useMutation(api.files.trackUpload);
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(profile.name);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(
     null,
@@ -34,20 +87,6 @@ export function UserProfileDialog({ children }: { children: React.ReactNode }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset form state each time the dialog opens
-  useEffect(() => {
-    if (open && profile) {
-      setName(profile.name);
-      setPendingFile(null);
-      if (pendingPreviewUrl) {
-        URL.revokeObjectURL(pendingPreviewUrl);
-        setPendingPreviewUrl(null);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Clean up object URL on unmount
   useEffect(() => {
     return () => {
       if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
@@ -102,133 +141,126 @@ export function UserProfileDialog({ children }: { children: React.ReactNode }) {
       });
 
       toast.success("Profile updated");
-      setOpen(false);
+      setIsSaving(false);
+      onOpenChange(false);
     } catch {
       toast.error("Failed to update profile");
-    } finally {
       setIsSaving(false);
     }
   };
 
-  const previewSrc = pendingPreviewUrl ?? profile?.profilePicUrl ?? null;
-  const hasChanges = name !== (profile?.name ?? "") || pendingFile !== null;
+  const previewSrc = pendingPreviewUrl ?? profile.profilePicUrl ?? null;
+  const hasChanges = name !== profile.name || pendingFile !== null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" />
+          Edit Profile
+        </DialogTitle>
+      </DialogHeader>
 
-      <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-primary" />
-            Edit Profile
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-6 pt-4">
-          {/* Avatar */}
-          <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-16 w-16 rounded-full bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
-                {previewSrc ? (
-                  <img
-                    src={previewSrc}
-                    alt={name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="h-7 w-7 text-muted-foreground/40" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 p-1.5 bg-primary text-primary-foreground rounded-full shadow pointer-events-none"
-                tabIndex={-1}
-                aria-hidden
-              >
-                <Camera className="h-3 w-3" />
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept="image/*"
-                className="sr-only"
-                tabIndex={-1}
-              />
-            </div>
-
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Profile Photo
-              </span>
-              <span className="text-xs text-muted-foreground/60">
-                JPG, PNG or GIF · max 1 MB
-              </span>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs text-primary hover:underline text-left mt-0.5"
-              >
-                {pendingFile ? pendingFile.name : "Upload photo"}
-              </button>
-            </div>
-          </div>
-
-          {/* Name */}
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="profile-name"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      <div className="flex flex-col gap-6 pt-4">
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-16 w-16 rounded-full bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              Display Name
-            </Label>
-            <Input
-              id="profile-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && !isSaving && hasChanges && handleSave()
-              }
-              placeholder="Your name"
-              className="h-9 bg-muted/40 shadow-none border-border/40"
+              {previewSrc ? (
+                <img
+                  src={previewSrc}
+                  alt={name || profile.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="h-7 w-7 text-muted-foreground/40" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 p-1.5 bg-primary text-primary-foreground rounded-full shadow pointer-events-none"
+              tabIndex={-1}
+              aria-hidden
+            >
+              <Camera className="h-3 w-3" />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              className="sr-only"
+              tabIndex={-1}
             />
           </div>
 
-          {/* Footer */}
-          <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-              disabled={isSaving}
-              className="text-muted-foreground"
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Profile Photo
+            </span>
+            <span className="text-xs text-muted-foreground/60">
+              JPG, PNG or GIF · max 1 MB
+            </span>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-xs text-primary hover:underline text-left mt-0.5"
             >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={isSaving || !hasChanges}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
+              {pendingFile ? pendingFile.name : "Upload photo"}
+            </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="flex flex-col gap-2">
+          <Label
+            htmlFor="profile-name"
+            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            Display Name
+          </Label>
+          <Input
+            id="profile-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === "Enter" && !isSaving && hasChanges && handleSave()
+            }
+            placeholder="Your name"
+            className="h-9 bg-muted/40 shadow-none border-border/40"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+            className="text-muted-foreground"
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
   );
 }

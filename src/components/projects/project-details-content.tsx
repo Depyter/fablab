@@ -56,7 +56,7 @@ interface ProjectDetailsContentProps {
     material?: ProjectMaterialType;
     fulfillmentMode?: string;
     files?: string[];
-  }) => Promise<void>;
+  }) => Promise<boolean>;
 }
 
 const STATUS_PILL: Record<
@@ -147,18 +147,17 @@ export function ProjectDetailsContent({
   async function saveEdit() {
     if (!onUpdateDetails) return;
     setIsSaving(true);
-    try {
-      await onUpdateDetails({
-        description: editDescription,
-        notes: editNotes,
-        material: editMaterial,
-        fulfillmentMode: editServiceType,
-        files: editFiles.map((f) => f.storageId),
-      });
+    const didUpdate = await onUpdateDetails({
+      description: editDescription,
+      notes: editNotes,
+      material: editMaterial,
+      fulfillmentMode: editServiceType,
+      files: editFiles.map((f) => f.storageId),
+    });
+    if (didUpdate) {
       setIsEditing(false);
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   }
 
   const primaryUsage = project.resourceUsages?.[0];

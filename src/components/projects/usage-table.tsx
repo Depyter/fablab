@@ -146,7 +146,8 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
 
   // Total unique projects scheduled today
   const totalProjects = React.useMemo(
-    () => new Set(usages.map((u) => u.projectId).filter(Boolean)).size,
+    () =>
+      new Set(usages.flatMap((u) => (u.projectId ? [u.projectId] : []))).size,
     [usages],
   );
 

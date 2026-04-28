@@ -143,9 +143,10 @@ export function ProjectDetails({
         project_name: project?.name,
       });
       toast.success("Project details updated.");
+      return true;
     } catch {
       toast.error("Failed to update project details.");
-      throw new Error("Update failed");
+      return false;
     }
   };
 
@@ -178,9 +179,9 @@ export function ProjectDetails({
       setProof("");
       setPaymentMode("cash");
       setProofFiles([]);
+      setIsPaying(false);
     } catch {
       toast.error("Failed to record payment.");
-    } finally {
       setIsPaying(false);
     }
   };

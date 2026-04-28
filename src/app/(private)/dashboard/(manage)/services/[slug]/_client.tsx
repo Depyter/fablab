@@ -31,7 +31,7 @@ export function ServiceDetailClient({
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -63,10 +63,10 @@ export function ServiceDetailClient({
         error: "Failed to delete service. Please try again.",
       });
       await deletePromise;
+      setIsDeleting(false);
       router.push("/dashboard/services");
     } catch (error) {
       console.error("Failed to delete service:", error);
-    } finally {
       setIsDeleting(false);
     }
   };
