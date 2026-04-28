@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { User, Camera, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -34,32 +34,25 @@ export function UserProfileDialog({ children }: { children: React.ReactNode }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Reset form state each time the dialog opens
+  useEffect(() => {
+    if (open && profile) {
+      setName(profile.name);
+      setPendingFile(null);
+      if (pendingPreviewUrl) {
+        URL.revokeObjectURL(pendingPreviewUrl);
+        setPendingPreviewUrl(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   // Clean up object URL on unmount
   useEffect(() => {
     return () => {
       if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
     };
   }, [pendingPreviewUrl]);
-
-  const handleOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      setOpen(nextOpen);
-
-      if (!nextOpen) {
-        return;
-      }
-
-      setName(profile?.name ?? "");
-      setPendingFile(null);
-      setPendingPreviewUrl((currentPreviewUrl) => {
-        if (currentPreviewUrl) {
-          URL.revokeObjectURL(currentPreviewUrl);
-        }
-        return null;
-      });
-    },
-    [profile?.name],
-  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -121,7 +114,7 @@ export function UserProfileDialog({ children }: { children: React.ReactNode }) {
   const hasChanges = name !== (profile?.name ?? "") || pendingFile !== null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
