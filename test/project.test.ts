@@ -38,6 +38,15 @@ describe("Project and Chat functionality", () => {
           tax: 0,
           total: 2,
         });
+        expect(project[0].pricingSnapshot).toEqual({
+          setupFee: 0,
+          timeCost: 2,
+          materialCost: 0,
+          total: 2,
+          duration: 1,
+          rate: 2,
+          unitName: "hour",
+        });
 
         const usage = await ctx.db
           .query("resourceUsage")
@@ -118,6 +127,15 @@ describe("Project and Chat functionality", () => {
           tax: 0,
           total: 2,
         });
+        expect(project!.pricingSnapshot).toEqual({
+          setupFee: 0,
+          timeCost: 2,
+          materialCost: 0,
+          total: 2,
+          duration: 1,
+          rate: 2,
+          unitName: "hour",
+        });
 
         expect(usage).toMatchObject({
           projectId,
@@ -134,6 +152,15 @@ describe("Project and Chat functionality", () => {
         subtotal: 2,
         tax: 0,
         total: 2,
+      });
+      expect(details.pricingSnapshot).toEqual({
+        setupFee: 0,
+        timeCost: 2,
+        materialCost: 0,
+        total: 2,
+        duration: 1,
+        rate: 2,
+        unitName: "hour",
       });
       expect(details.resourceUsages).toHaveLength(1);
       expect(details.resourceUsages[0].snapshot.costAtTime).toBe(2);
@@ -222,6 +249,15 @@ describe("Project and Chat functionality", () => {
           tax: 0,
           total: 350,
         });
+        expect(project!.pricingSnapshot).toEqual({
+          setupFee: 350,
+          timeCost: 0,
+          materialCost: 0,
+          total: 350,
+          duration: 0,
+          rate: 0,
+          unitName: "unit",
+        });
 
         expect(usage).toMatchObject({
           projectId,
@@ -275,6 +311,15 @@ describe("Project and Chat functionality", () => {
         subtotal: 350,
         tax: 0,
         total: 350,
+      });
+      expect(details.pricingSnapshot).toEqual({
+        setupFee: 350,
+        timeCost: 0,
+        materialCost: 0,
+        total: 350,
+        duration: 0,
+        rate: 0,
+        unitName: "unit",
       });
       expect(details.resourceUsages).toHaveLength(1);
       expect(details.resourceUsages[0].snapshot.costAtTime).toBe(350);
@@ -573,6 +618,8 @@ describe("Project and Chat functionality", () => {
       await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
         projectId,
         setupFee: 1,
+        duration: 1,
+        rate: 2,
         timeCost: 2,
         materialCost: 20,
         materialsUsed: [{ materialId, amountUsed: 10 }],
@@ -588,6 +635,15 @@ describe("Project and Chat functionality", () => {
           subtotal: 23,
           tax: 0,
           total: 23,
+        });
+        expect(project!.pricingSnapshot).toEqual({
+          setupFee: 1,
+          timeCost: 2,
+          materialCost: 20,
+          total: 23,
+          duration: 1,
+          rate: 2,
+          unitName: "hour",
         });
         expect(usage!.projectId).toBe(projectId);
         expect(usage!.service).toBe(serviceId);
@@ -609,6 +665,8 @@ describe("Project and Chat functionality", () => {
       await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
         projectId,
         setupFee: 1,
+        duration: 1,
+        rate: 2,
         timeCost: 2,
         materialCost: 6,
         materialsUsed: [{ materialId, amountUsed: 3 }],
@@ -624,6 +682,15 @@ describe("Project and Chat functionality", () => {
           subtotal: 9,
           tax: 0,
           total: 9,
+        });
+        expect(project!.pricingSnapshot).toEqual({
+          setupFee: 1,
+          timeCost: 2,
+          materialCost: 6,
+          total: 9,
+          duration: 1,
+          rate: 2,
+          unitName: "hour",
         });
         expect(usage!.snapshot.costAtTime).toBe(9);
         expect(usage!.materialsUsed).toEqual([
@@ -707,6 +774,8 @@ describe("Project and Chat functionality", () => {
         tAera.mutation(api.projects.mutate.updateCostBreakdown, {
           projectId,
           setupFee: 1,
+          duration: 1,
+          rate: 2,
           timeCost: 2,
           materialCost: 5,
           materialsUsed: [{ materialId, amountUsed: 3 }],
@@ -714,6 +783,71 @@ describe("Project and Chat functionality", () => {
       ).rejects.toThrow(
         "Material cost must match the selected materials and quantities.",
       );
+    });
+
+    test("Update cost breakdown persists overridden duration and rate even when the total stays the same", async () => {
+      const { t, tAera, tHarley, projectId } = await setupProject();
+
+      await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
+        projectId,
+        setupFee: 250,
+        duration: 12,
+        rate: 10,
+        timeCost: 120,
+        materialCost: 0,
+      });
+
+      await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
+        projectId,
+        setupFee: 250,
+        duration: 24,
+        rate: 5,
+        timeCost: 120,
+        materialCost: 0,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+
+        expect(project!.totalInvoice).toEqual({
+          subtotal: 370,
+          tax: 0,
+          total: 370,
+        });
+        expect(project!.pricingSnapshot).toEqual({
+          setupFee: 250,
+          timeCost: 120,
+          materialCost: 0,
+          total: 370,
+          duration: 24,
+          rate: 5,
+          unitName: "hour",
+        });
+        expect(usage!.snapshot.costAtTime).toBe(370);
+      });
+
+      expect(details.totalInvoice).toEqual({
+        subtotal: 370,
+        tax: 0,
+        total: 370,
+      });
+      expect(details.pricingSnapshot).toEqual({
+        setupFee: 250,
+        timeCost: 120,
+        materialCost: 0,
+        total: 370,
+        duration: 24,
+        rate: 5,
+        unitName: "hour",
+      });
     });
 
     test("Material assignment syncs invoice after removing consumed materials", async () => {
@@ -781,6 +915,8 @@ describe("Project and Chat functionality", () => {
       await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
         projectId,
         setupFee: 0,
+        duration: 1,
+        rate: 2,
         timeCost: 2,
         materialCost: 8,
         materialsUsed: [{ materialId, amountUsed: 4 }],
