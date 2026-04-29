@@ -212,6 +212,17 @@ export default defineSchema({
         total: v.number(),
       }),
     ),
+    pricingSnapshot: v.optional(
+      v.object({
+        setupFee: v.number(),
+        timeCost: v.number(),
+        materialCost: v.number(),
+        total: v.number(),
+        duration: v.number(),
+        rate: v.number(),
+        unitName: v.string(),
+      }),
+    ),
 
     pricing: v.string(), // Chosen variant name (e.g., "Default", "UP", "KID")
 

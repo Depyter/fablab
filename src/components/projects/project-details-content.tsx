@@ -465,6 +465,7 @@ export function ProjectDetailsContent({
               projectId={project._id}
               material={project.material}
               totalInvoice={project.totalInvoice ?? undefined}
+              pricingSnapshot={project.pricingSnapshot ?? undefined}
               service={project.service ?? undefined}
               serviceType={project.fulfillmentMode}
               resourceUsages={project.resourceUsages}

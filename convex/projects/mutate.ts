@@ -12,6 +12,7 @@ import {
   validateFabricationAvailability,
   computeProvisionalCostBreakdown,
   buildTotalInvoice,
+  buildPricingSnapshot,
   createWorkshopUsage,
   createFabricationUsage,
   incrementWorkshopSlot,
@@ -107,6 +108,14 @@ export const createProject = authMutation({
       assignedMaker: args.assignedMaker,
       service: args.service,
       totalInvoice: buildTotalInvoice(provisional.total),
+      pricingSnapshot: buildPricingSnapshot({
+        setupFee: provisional.setupFee,
+        timeCost: provisional.timeCost,
+        materialCost: provisional.materialCost,
+        duration: provisional.duration,
+        rate: provisional.rate,
+        unitName: provisional.unitName,
+      }),
       pricing: args.pricing,
       status: "pending",
       files: args.files,
@@ -258,6 +267,8 @@ export const updateCostBreakdown = authMutation({
   args: {
     projectId: v.id("projects"),
     setupFee: v.number(),
+    duration: v.number(),
+    rate: v.number(),
     timeCost: v.number(),
     materialCost: v.number(),
     materialsUsed: v.optional(
@@ -272,9 +283,24 @@ export const updateCostBreakdown = authMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
+    const service = await ctx.db.get(project.service);
+    if (!service) throw new ConvexError("Service not found.");
 
     const subtotal = args.setupFee + args.timeCost + args.materialCost;
     const total = subtotal;
+    const unitName =
+      service.serviceCategory.type === "FABRICATION"
+        ? service.serviceCategory.unitName
+        : "unit";
+    const pricingSnapshotChanged =
+      !project.pricingSnapshot ||
+      Math.abs(project.pricingSnapshot.setupFee - args.setupFee) > 0.0001 ||
+      Math.abs(project.pricingSnapshot.duration - args.duration) > 0.0001 ||
+      Math.abs(project.pricingSnapshot.rate - args.rate) > 0.0001 ||
+      Math.abs(project.pricingSnapshot.timeCost - args.timeCost) > 0.0001 ||
+      Math.abs(project.pricingSnapshot.materialCost - args.materialCost) >
+        0.0001 ||
+      project.pricingSnapshot.unitName !== unitName;
 
     // ── Detect what actually changed ─────────────────────────────────────────
     const breakdownChanged = project.totalInvoice?.subtotal !== subtotal;
@@ -295,7 +321,15 @@ export const updateCostBreakdown = authMutation({
       }
     }
 
-    if (!breakdownChanged && !materialsChanged) return;
+    if (Math.abs(args.duration * args.rate - args.timeCost) > 0.0001) {
+      throw new ConvexError(
+        "Time cost must match the provided duration and rate.",
+      );
+    }
+
+    if (!breakdownChanged && !pricingSnapshotChanged && !materialsChanged) {
+      return;
+    }
 
     const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
 
@@ -353,16 +387,19 @@ export const updateCostBreakdown = authMutation({
       await ctx.db.patch(resolvedUsage._id, { materialsUsed: nextMaterials });
       await syncProjectTotalInvoice(ctx, args.projectId, {
         fallbackTotal: total,
-        manualBreakdown: {
+        manualSnapshot: {
           setupFee: args.setupFee,
+          duration: args.duration,
+          rate: args.rate,
           timeCost: args.timeCost,
           materialCost: args.materialCost,
+          unitName,
         },
       });
 
       // ── System message ──────────────────────────────────────────────────────
       const lines: string[] = [];
-      if (breakdownChanged) {
+      if (breakdownChanged || pricingSnapshotChanged) {
         lines.push(
           `Invoice updated:`,
           `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
@@ -376,19 +413,22 @@ export const updateCostBreakdown = authMutation({
       return;
     }
 
-    if (breakdownChanged || materialsChanged) {
+    if (breakdownChanged || pricingSnapshotChanged || materialsChanged) {
       await syncProjectTotalInvoice(ctx, args.projectId, {
         fallbackTotal: total,
-        manualBreakdown: {
+        manualSnapshot: {
           setupFee: args.setupFee,
+          duration: args.duration,
+          rate: args.rate,
           timeCost: args.timeCost,
           materialCost: args.materialCost,
+          unitName,
         },
       });
     }
 
     // ── System message (breakdown only) ──────────────────────────────────────
-    if (breakdownChanged) {
+    if (breakdownChanged || pricingSnapshotChanged) {
       await sendProjectSystemMessage(ctx, args.projectId, [
         `Invoice updated:`,
         `- Setup fee: ₱${args.setupFee.toFixed(2)}`,

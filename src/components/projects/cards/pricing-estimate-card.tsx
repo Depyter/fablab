@@ -35,6 +35,16 @@ interface TotalInvoice {
   total: number;
 }
 
+interface PricingSnapshot {
+  setupFee: number;
+  timeCost: number;
+  materialCost: number;
+  total: number;
+  duration: number;
+  rate: number;
+  unitName: string;
+}
+
 interface RequestedMaterial {
   _id: string;
   name: string;
@@ -74,6 +84,7 @@ interface PricingEstimateCardProps {
   projectId: Id<"projects">;
   material: string;
   totalInvoice?: TotalInvoice;
+  pricingSnapshot?: PricingSnapshot;
   service?: {
     serviceCategory:
       | {
@@ -108,6 +119,7 @@ export function PricingEstimateCard({
   projectId,
   material,
   totalInvoice,
+  pricingSnapshot,
   service,
   serviceType,
   projectPricing = "Default",
@@ -183,9 +195,9 @@ export function PricingEstimateCard({
   }, [resourceUsages]);
 
   const initialEditState = () => ({
-    setupFee: derived.setupFee,
-    rate: derived.rate,
-    duration: derived.duration,
+    setupFee: pricingSnapshot?.setupFee ?? derived.setupFee,
+    rate: pricingSnapshot?.rate ?? derived.rate,
+    duration: pricingSnapshot?.duration ?? derived.duration,
   });
 
   const initialMaterialAmounts = () => ({ ...storedMaterialAmounts });
@@ -237,10 +249,19 @@ export function PricingEstimateCard({
     editValues.setupFee + computedTimeCost + computedMaterialCost;
 
   // ── Displayed values ─────────────────────────────────────────────────────
-  const displaySetupFee = isEditing ? editValues.setupFee : derived.setupFee;
+  const persistedUnitName = pricingSnapshot?.unitName ?? derived.unitName;
+  const displayDuration = isEditing
+    ? editValues.duration
+    : (pricingSnapshot?.duration ?? derived.duration);
+  const displayRate = isEditing
+    ? editValues.rate
+    : (pricingSnapshot?.rate ?? derived.rate);
+  const displaySetupFee = isEditing
+    ? editValues.setupFee
+    : (pricingSnapshot?.setupFee ?? derived.setupFee);
   const displayTimeCost = isEditing
     ? computedTimeCost
-    : derived.rate * derived.duration;
+    : (pricingSnapshot?.timeCost ?? derived.rate * derived.duration);
 
   // Material cost when not editing: sum from stored amounts × pricePerUnit
   const storedMaterialCost = requestedMaterials.reduce((acc, mat) => {
@@ -249,7 +270,7 @@ export function PricingEstimateCard({
 
   const displayMaterialCost = isEditing
     ? computedMaterialCost
-    : storedMaterialCost;
+    : (pricingSnapshot?.materialCost ?? storedMaterialCost);
 
   const displayTotal = isEditing
     ? computedTotal
@@ -293,6 +314,8 @@ export function PricingEstimateCard({
         updateCostBreakdown({
           projectId,
           setupFee: editValues.setupFee,
+          duration: editValues.duration,
+          rate: editValues.rate,
           timeCost: computedTimeCost,
           materialCost: computedMaterialCost,
           materialsUsed: materialsUsedPayload,
@@ -672,7 +695,7 @@ export function PricingEstimateCard({
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Duration ({derived.unitName}s)
+              Duration ({persistedUnitName}s)
             </span>
             {isEditing ? (
               <Input
@@ -693,7 +716,7 @@ export function PricingEstimateCard({
                 className="text-[13px] font-medium"
                 style={{ color: "var(--fab-text-primary)" }}
               >
-                {derived.duration.toFixed(2)} {derived.unitName}s
+                {displayDuration.toFixed(2)} {persistedUnitName}s
               </span>
             )}
           </div>
@@ -703,7 +726,7 @@ export function PricingEstimateCard({
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Rate / {derived.unitName}
+              Rate / {persistedUnitName}
             </span>
             {isEditing ? (
               <Input
@@ -724,7 +747,7 @@ export function PricingEstimateCard({
                 className="text-[13px] font-medium"
                 style={{ color: "var(--fab-text-primary)" }}
               >
-                ₱{derived.rate.toFixed(2)}
+                ₱{displayRate.toFixed(2)}
               </span>
             )}
           </div>

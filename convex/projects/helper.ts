@@ -40,6 +40,15 @@ export type BookingWindow = {
 };
 
 export type ServiceDoc = Doc<"services">;
+export type ProjectPricingSnapshot = {
+  setupFee: number;
+  timeCost: number;
+  materialCost: number;
+  total: number;
+  duration: number;
+  rate: number;
+  unitName: string;
+};
 
 export function resolveMaterialStatus(
   stock: number,
@@ -154,7 +163,7 @@ export function computeProvisionalCostBreakdown(
   pricingVariant: string,
   fulfillmentMode: string,
   bookingDurationMs: number,
-): { setupFee: number; materialCost: number; timeCost: number; total: number } {
+): ProjectPricingSnapshot {
   const breakdown = derivePricingFromSchema({
     servicePricing: service.serviceCategory,
     pricingVariant,
@@ -170,6 +179,9 @@ export function computeProvisionalCostBreakdown(
     materialCost: 0,
     timeCost: breakdown.timeCost,
     total: breakdown.total,
+    duration: breakdown.duration,
+    rate: breakdown.rate,
+    unitName: breakdown.unitName,
   };
 }
 
@@ -178,6 +190,15 @@ export function buildTotalInvoice(total: number) {
     subtotal: total,
     tax: 0,
     total,
+  };
+}
+
+export function buildPricingSnapshot(
+  snapshot: Omit<ProjectPricingSnapshot, "total">,
+) {
+  return {
+    ...snapshot,
+    total: snapshot.setupFee + snapshot.timeCost + snapshot.materialCost,
   };
 }
 
@@ -202,6 +223,37 @@ function getUsageMaterialCost(usage: Doc<"resourceUsage">) {
       0,
     ) ?? 0
   );
+}
+
+function deriveProjectPricingSnapshot(
+  project: Doc<"projects">,
+  service: ServiceDoc,
+  usages: Doc<"resourceUsage">[],
+): ProjectPricingSnapshot {
+  const materialCost = usages.reduce(
+    (sum, usage) => sum + getUsageMaterialCost(usage),
+    0,
+  );
+  const bookingDurationMinutes = usages.reduce(
+    (sum, usage) => sum + getUsageDurationMs(usage) / (1000 * 60),
+    0,
+  );
+  const derived = derivePricingFromSchema({
+    servicePricing: service.serviceCategory,
+    pricingVariant: project.pricing,
+    serviceType: project.fulfillmentMode,
+    bookingDurationMinutes,
+    materialCost,
+  });
+
+  return buildPricingSnapshot({
+    setupFee: derived.setupFee,
+    timeCost: derived.timeCost,
+    materialCost: derived.materialCost,
+    duration: derived.duration,
+    rate: derived.rate,
+    unitName: derived.unitName,
+  });
 }
 
 function allocateByWeights(total: number, weights: number[]) {
@@ -591,11 +643,7 @@ export async function syncProjectTotalInvoice(
   options?: {
     fallbackTotal?: number;
     actualDurationMs?: number;
-    manualBreakdown?: {
-      setupFee: number;
-      timeCost: number;
-      materialCost: number;
-    };
+    manualSnapshot?: Omit<ProjectPricingSnapshot, "total">;
   },
 ): Promise<number | undefined> {
   const project = await ctx.db.get(projectId);
@@ -610,10 +658,10 @@ export async function syncProjectTotalInvoice(
   const usages = sortProjectUsages(usageDocs);
 
   const fallbackTotal =
-    options?.manualBreakdown !== undefined
-      ? options.manualBreakdown.setupFee +
-        options.manualBreakdown.timeCost +
-        options.manualBreakdown.materialCost
+    options?.manualSnapshot !== undefined
+      ? options.manualSnapshot.setupFee +
+        options.manualSnapshot.timeCost +
+        options.manualSnapshot.materialCost
       : options?.fallbackTotal;
 
   if (!service || usages.length === 0) {
@@ -621,6 +669,10 @@ export async function syncProjectTotalInvoice(
       totalInvoice:
         fallbackTotal !== undefined
           ? buildTotalInvoice(fallbackTotal)
+          : undefined,
+      pricingSnapshot:
+        options?.manualSnapshot !== undefined
+          ? buildPricingSnapshot(options.manualSnapshot)
           : undefined,
     });
     return fallbackTotal;
@@ -653,10 +705,10 @@ export async function syncProjectTotalInvoice(
   }
 
   const usageTotals =
-    options?.manualBreakdown !== undefined
+    options?.manualSnapshot !== undefined
       ? (() => {
           const timeShares = allocateByWeights(
-            options.manualBreakdown.timeCost,
+            options.manualSnapshot.timeCost,
             normalizedUsages.map(getUsageDurationMs),
           );
           const materialShares = normalizedUsages.map(getUsageMaterialCost);
@@ -670,12 +722,12 @@ export async function syncProjectTotalInvoice(
               materialTotal > 0
                 ? materialShares[index]
                 : index === 0
-                  ? options.manualBreakdown!.materialCost
+                  ? options.manualSnapshot!.materialCost
                   : 0;
             return (
               timeShares[index] +
               materialCost +
-              (index === 0 ? options.manualBreakdown!.setupFee : 0)
+              (index === 0 ? options.manualSnapshot!.setupFee : 0)
             );
           });
         })()
@@ -724,9 +776,14 @@ export async function syncProjectTotalInvoice(
   );
 
   const total = usageTotals.reduce((sum, usageTotal) => sum + usageTotal, 0);
+  const pricingSnapshot =
+    options?.manualSnapshot !== undefined
+      ? buildPricingSnapshot(options.manualSnapshot)
+      : deriveProjectPricingSnapshot(project, service, normalizedUsages);
 
   await ctx.db.patch(projectId, {
     totalInvoice: buildTotalInvoice(total),
+    pricingSnapshot,
   });
 
   return total;
@@ -1003,13 +1060,22 @@ export async function scheduleProjectUpdateEmail(
       return sum + m.amountUsed * price;
     }, 0) ?? 0;
 
-  const pricingResult = derivePricingFromSchema({
+  const derivedPricing = derivePricingFromSchema({
     servicePricing: service?.serviceCategory,
     pricingVariant: project.pricing,
     serviceType: project.fulfillmentMode,
     bookingDurationMinutes,
     materialCost,
   });
+  const pricingResult = project.pricingSnapshot ?? {
+    setupFee: derivedPricing.setupFee,
+    materialCost: derivedPricing.materialCost,
+    timeCost: derivedPricing.timeCost,
+    total: derivedPricing.total,
+    duration: derivedPricing.duration,
+    rate: derivedPricing.rate,
+    unitName: derivedPricing.unitName,
+  };
 
   ctx.scheduler.runAfter(0, internal.emails.emails.sendEmail, {
     to: user.email,
