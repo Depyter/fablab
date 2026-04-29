@@ -5,7 +5,11 @@ import {
   claimFiles,
   deleteFiles,
 } from "../helper";
-import { syncProjectTotalInvoice } from "../projects/helper";
+import {
+  scheduleProjectUpdateEmail,
+  sendProjectSystemMessage,
+  syncProjectTotalInvoice,
+} from "../projects/helper";
 
 export const addResource = authMutation({
   role: ["admin", "maker"],
@@ -140,15 +144,8 @@ export const updateUsage = authMutation({
     const usage = await ctx.db.get(args.id);
     if (!usage) throw new Error("Usage not found!");
 
-    let isOwner = false;
     const project = await ctx.db.get(usage.projectId);
-    if (project) {
-      const profile = await ctx.db
-        .query("userProfile")
-        .withIndex("by_userId", (q) => q.eq("userId", project.userId))
-        .first();
-      isOwner = ctx.user.subject === profile?.userId;
-    }
+    const isOwner = project?.userId === ctx.profile._id;
 
     const isPrivileged = await checkAuthority(
       ["admin", "maker"],
@@ -166,14 +163,66 @@ export const updateUsage = authMutation({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {};
+    const lines: string[] = [];
 
-    if (args.resource !== undefined) updates.resource = args.resource;
-    if (args.service !== undefined) updates.service = args.service;
-    if (args.startTime !== undefined) updates.startTime = args.startTime;
-    if (args.endTime !== undefined) updates.endTime = args.endTime;
+    if (args.resource !== undefined && args.resource !== usage.resource) {
+      updates.resource = args.resource;
+      const resource = await ctx.db.get(args.resource);
+      lines.push(
+        `Resource usage updated:`,
+        `- Resource: **${resource?.name ?? "Unknown"}**`,
+      );
+    }
+    if (args.service !== undefined && args.service !== usage.service) {
+      updates.service = args.service;
+      const service = await ctx.db.get(args.service);
+      if (lines.length === 0) {
+        lines.push(`Resource usage updated:`);
+      }
+      lines.push(`- Service: **${service?.name ?? "Unknown"}**`);
+    }
+    if (args.startTime !== undefined && args.startTime !== usage.startTime) {
+      updates.startTime = args.startTime;
+    }
+    if (args.endTime !== undefined && args.endTime !== usage.endTime) {
+      updates.endTime = args.endTime;
+    }
+
+    if (updates.startTime !== undefined || updates.endTime !== undefined) {
+      const nextStartTime = updates.startTime ?? usage.startTime;
+      const nextEndTime = updates.endTime ?? usage.endTime;
+      const bookingDate = new Date(nextStartTime).toLocaleDateString("en-US", {
+        timeZone: "Asia/Manila",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const startTime = new Date(nextStartTime).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Manila",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const endTime = new Date(nextEndTime).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Manila",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      if (lines.length === 0) {
+        lines.push(`Booking updated:`);
+      }
+      lines.push(
+        `- Schedule: ${bookingDate} from ${startTime} to ${endTime} (PST)`,
+      );
+    }
+
+    if (Object.keys(updates).length === 0) return;
 
     await ctx.db.patch(args.id, updates);
     await syncProjectTotalInvoice(ctx, usage.projectId);
+    await scheduleProjectUpdateEmail(ctx, usage.projectId);
+    await sendProjectSystemMessage(ctx, usage.projectId, lines);
   },
 });
 

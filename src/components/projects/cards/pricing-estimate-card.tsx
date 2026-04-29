@@ -25,6 +25,27 @@ import {
   type ServicePricing,
 } from "@/lib/project-pricing";
 
+function formatDateInputValue(timestamp: number) {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeInputValue(timestamp: number) {
+  const date = new Date(timestamp);
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function buildTimestamp(dateValue: string, timeValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -80,6 +101,12 @@ interface ResourceUsage {
   }>;
 }
 
+interface BookingEditState {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
 interface PricingEstimateCardProps {
   projectId: Id<"projects">;
   material: string;
@@ -132,6 +159,7 @@ export function PricingEstimateCard({
     api.projects.mutate.updateCostBreakdown,
   );
   const updateAssignments = useMutation(api.projects.mutate.updateProject);
+  const updateUsage = useMutation(api.resource.mutate.updateUsage);
 
   // ── Assignment data (admin/maker only) ───────────────────────────────────
   const makers = useQuery(api.users.getMakers, readOnly ? "skip" : {});
@@ -201,11 +229,18 @@ export function PricingEstimateCard({
   });
 
   const initialMaterialAmounts = () => ({ ...storedMaterialAmounts });
+  const initialBookingState = (): BookingEditState => ({
+    date: primaryUsage ? formatDateInputValue(primaryUsage.startTime) : "",
+    startTime: primaryUsage ? formatTimeInputValue(primaryUsage.startTime) : "",
+    endTime: primaryUsage ? formatTimeInputValue(primaryUsage.endTime) : "",
+  });
 
   const [editValues, setEditValues] = useState(initialEditState);
   const [materialAmounts, setMaterialAmounts] = useState<
     Record<string, number>
   >(initialMaterialAmounts);
+  const [bookingValues, setBookingValues] =
+    useState<BookingEditState>(initialBookingState);
 
   // ── Assignment edit state ────────────────────────────────────────────────
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
@@ -287,6 +322,7 @@ export function PricingEstimateCard({
     setSelectedMakerId(assignedMaker?._id ?? "");
     setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
     setSelectedMaterialIds(requestedMaterials.map((m) => m._id));
+    setBookingValues(initialBookingState());
     setIsEditing(true);
   };
 
@@ -297,10 +333,12 @@ export function PricingEstimateCard({
     setSelectedMakerId(assignedMaker?._id ?? "");
     setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
     setSelectedMaterialIds(requestedMaterials.map((m) => m._id));
+    setBookingValues(initialBookingState());
   };
 
   const handleSave = async () => {
     try {
+      const mutations: Promise<unknown>[] = [];
       const materialsUsedPayload = isBuyFromLab
         ? Object.entries(materialAmounts)
             .filter(([, amt]) => amt > 0)
@@ -310,7 +348,36 @@ export function PricingEstimateCard({
             }))
         : undefined;
 
-      await Promise.all([
+      if (
+        primaryUsage &&
+        bookingValues.date &&
+        bookingValues.startTime &&
+        bookingValues.endTime
+      ) {
+        const nextStartTime = buildTimestamp(
+          bookingValues.date,
+          bookingValues.startTime,
+        );
+        const nextEndTime = buildTimestamp(
+          bookingValues.date,
+          bookingValues.endTime,
+        );
+
+        if (nextEndTime <= nextStartTime) {
+          toast.error("End time must be after start time.");
+          return;
+        }
+
+        mutations.push(
+          updateUsage({
+            id: primaryUsage._id as Id<"resourceUsage">,
+            startTime: nextStartTime,
+            endTime: nextEndTime,
+          }),
+        );
+      }
+
+      mutations.push(
         updateCostBreakdown({
           projectId,
           setupFee: editValues.setupFee,
@@ -320,6 +387,8 @@ export function PricingEstimateCard({
           materialCost: computedMaterialCost,
           materialsUsed: materialsUsedPayload,
         }),
+      );
+      mutations.push(
         updateAssignments({
           projectId,
           makerId: selectedMakerId
@@ -332,7 +401,8 @@ export function PricingEstimateCard({
             ? (selectedMaterialIds as Id<"materials">[])
             : [],
         }),
-      ]);
+      );
+      await Promise.all(mutations);
       toast.success("Project updated.");
       setIsEditing(false);
     } catch {
@@ -521,6 +591,89 @@ export function PricingEstimateCard({
               </p>
             )}
           </div>
+
+          {primaryUsage && (
+            <div className="space-y-1">
+              <p
+                className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Booking
+              </p>
+              {isEditing ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <Input
+                    type="date"
+                    value={bookingValues.date}
+                    onChange={(e) =>
+                      setBookingValues((prev) => ({
+                        ...prev,
+                        date: e.target.value,
+                      }))
+                    }
+                    className="h-8 rounded-md text-sm"
+                  />
+                  <Input
+                    type="time"
+                    value={bookingValues.startTime}
+                    onChange={(e) =>
+                      setBookingValues((prev) => ({
+                        ...prev,
+                        startTime: e.target.value,
+                      }))
+                    }
+                    className="h-8 rounded-md text-sm"
+                  />
+                  <Input
+                    type="time"
+                    value={bookingValues.endTime}
+                    onChange={(e) =>
+                      setBookingValues((prev) => ({
+                        ...prev,
+                        endTime: e.target.value,
+                      }))
+                    }
+                    className="h-8 rounded-md text-sm"
+                  />
+                </div>
+              ) : (
+                <div className="min-w-0">
+                  <p
+                    className="text-[12px] font-medium"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {new Date(primaryUsage.startTime).toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )}
+                  </p>
+                  <p
+                    className="text-[10px] mt-0.5"
+                    style={{ color: "var(--fab-text-muted)" }}
+                  >
+                    {`${new Date(primaryUsage.startTime).toLocaleTimeString(
+                      "en-US",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )} - ${new Date(primaryUsage.endTime).toLocaleTimeString(
+                      "en-US",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Materials (only relevant for buy-from-lab) */}
           {isBuyFromLab && (

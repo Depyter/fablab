@@ -154,6 +154,20 @@ export async function validateFabricationAvailability(
   }
 }
 
+export function validateProjectFulfillmentMode(
+  service: ServiceDoc,
+  fulfillmentMode: string,
+): void {
+  if (
+    service.serviceCategory.type === "WORKSHOP" &&
+    fulfillmentMode === "staff-led"
+  ) {
+    throw new ConvexError(
+      "Workshop services cannot use staff-led fulfillment.",
+    );
+  }
+}
+
 // ============================================================================
 // Helpers — Cost
 // ============================================================================
@@ -804,12 +818,25 @@ export async function sendProjectSystemMessage(
     .withIndex("projectId", (q) => q.eq("projectId", projectId))
     .first();
   if (!thread) return;
+  const content = lines.join("\n");
+  const now = Date.now();
   await ctx.db.insert("messages", {
     room: thread.roomId,
     threadId: thread._id,
-    content: lines.join("\n"),
+    content,
     sender: "System",
   });
+  await Promise.all([
+    ctx.db.patch(thread._id, {
+      lastMessageText: content,
+      lastMessageAt: now,
+      messageCount: (thread.messageCount ?? 0) + 1,
+    }),
+    ctx.db.patch(thread.roomId, {
+      lastMessageText: content,
+      lastMessageAt: now,
+    }),
+  ]);
 }
 
 /**
@@ -837,22 +864,39 @@ export async function applyStatusChange(
     `Status updated to: **${PROJECT_STATUS_LABELS[status]}**`,
   ];
 
-  // Release workshop slot on cancellation / rejection
+  // Release bookings, workshop slots, and any reserved materials on
+  // cancellation / rejection so the project no longer holds resources.
   if (
-    project.type === "WORKSHOP" &&
     (status === "cancelled" || status === "rejected") &&
     existingProject.status !== "cancelled" &&
     existingProject.status !== "rejected"
   ) {
     const service = await ctx.db.get(project.service);
-    if (service && service.serviceCategory.type === "WORKSHOP") {
-      const usage = await findProjectUsage(ctx, project);
-      if (usage) {
+    const usages = await ctx.db
+      .query("resourceUsage")
+      .withIndex("by_project", (q) => q.eq("projectId", project._id))
+      .collect();
+
+    for (const usage of usages) {
+      if (service && service.serviceCategory.type === "WORKSHOP") {
         await decrementWorkshopSlot(ctx, service, usage);
-        await ctx.db.delete(usage._id);
-        await syncProjectTotalInvoice(ctx, project._id);
       }
+
+      for (const material of usage.materialsUsed ?? []) {
+        if (material.amountUsed > 0) {
+          await syncMaterialUsageStock(
+            ctx,
+            material.materialId,
+            material.amountUsed,
+            0,
+          );
+        }
+      }
+
+      await ctx.db.delete(usage._id);
     }
+
+    await syncProjectTotalInvoice(ctx, project._id);
   }
 
   return lines;

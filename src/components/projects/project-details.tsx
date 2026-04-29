@@ -37,7 +37,7 @@ import {
   PaymentModeType,
   UserRoleType,
   ProjectMaterialType,
-  ProjectServiceTypeType,
+  FulfillmentModeType,
   FILE_CATEGORIES,
 } from "@convex/constants";
 
@@ -129,7 +129,7 @@ export function ProjectDetails({
     description?: string;
     notes?: string;
     material?: ProjectMaterialType;
-    serviceType?: ProjectServiceTypeType;
+    fulfillmentMode?: FulfillmentModeType;
     files?: string[];
   }) => {
     try {
@@ -393,7 +393,9 @@ export function ProjectDetails({
               onMarkPaid={() => handleOpenPaymentDialog()}
               isClient={isClient}
               onCancelProject={handleCancelProject}
-              onUpdateDetails={isClient ? handleUpdateDetails : undefined}
+              onUpdateDetails={
+                isClient || isAdminOrMaker ? handleUpdateDetails : undefined
+              }
             />
 
             {/* ── Mark as Paid dialog ─────────────────────────────────── */}

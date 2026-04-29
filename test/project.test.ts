@@ -205,7 +205,7 @@ describe("Project and Chat functionality", () => {
           name: "workshop invoice",
           pricing: "Student",
           description: "learn the workflow",
-          fulfillmentMode: "staff-led",
+          fulfillmentMode: "full-service",
           material: "provide-own",
           files: [],
           service: serviceId,
@@ -372,6 +372,67 @@ describe("Project and Chat functionality", () => {
       });
     });
 
+    test("System messages increase client unread counts after the client marks the room as read", async () => {
+      const { t, tAera, tHarley, roomId, threadId, projectId } =
+        await setupProject();
+
+      const generalThreadId = await t.run(async (ctx) => {
+        const threads = await ctx.db
+          .query("threads")
+          .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+          .collect();
+        return threads.find((thread) => thread._id !== threadId)!._id;
+      });
+
+      await tHarley.mutation(api.chat.mutate.markThreadRead, {
+        threadId: generalThreadId,
+      });
+      await tHarley.mutation(api.chat.mutate.markThreadRead, {
+        threadId,
+      });
+
+      const roomsBefore = await tHarley.query(api.chat.query.getRooms, {});
+      const roomBefore = roomsBefore.find((room) => room._id === roomId);
+      const projectThreadBefore = roomBefore?.threads.find(
+        (thread) => thread._id === threadId,
+      );
+
+      expect(roomBefore?.unreadCount).toBe(0);
+      expect(projectThreadBefore?.unreadCount).toBe(0);
+
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "approved",
+      });
+
+      const roomsAfter = await tHarley.query(api.chat.query.getRooms, {});
+      const roomAfter = roomsAfter.find((room) => room._id === roomId);
+      const projectThreadAfter = roomAfter?.threads.find(
+        (thread) => thread._id === threadId,
+      );
+
+      await t.run(async (ctx) => {
+        const thread = await ctx.db.get(threadId);
+        const room = await ctx.db.get(roomId);
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_room_and_thread", (q) =>
+            q.eq("room", roomId).eq("threadId", threadId),
+          )
+          .collect();
+
+        expect(thread?.messageCount).toBe(2);
+        expect(thread?.lastMessageText).toContain("Status updated to:");
+        expect(room?.lastMessageText).toContain("Status updated to:");
+        expect(messages).toHaveLength(2);
+        expect(messages[1].sender).toBe("System");
+        expect(messages[1].content).toContain("Status updated to:");
+      });
+
+      expect(roomAfter?.unreadCount).toBe(1);
+      expect(projectThreadAfter?.unreadCount).toBe(1);
+    });
+
     test("Cancelling a workshop project clears invoice summary when usage is removed", async () => {
       const { t, tAera, tHarley } = await setupUsers();
       const date = Date.now() + 48 * HOUR_MS;
@@ -409,7 +470,7 @@ describe("Project and Chat functionality", () => {
           name: "cancelled workshop",
           pricing: "Default",
           description: "booked then cancelled",
-          fulfillmentMode: "staff-led",
+          fulfillmentMode: "full-service",
           material: "provide-own",
           files: [],
           service: serviceId,
@@ -434,12 +495,177 @@ describe("Project and Chat functionality", () => {
 
         expect(project!.status).toBe("cancelled");
         expect(project!.totalInvoice).toBeUndefined();
+        expect(project!.pricingSnapshot).toBeUndefined();
         expect(usage).toBeNull();
 
         expect(service?.serviceCategory.type).toBe("WORKSHOP");
         if (!service || service.serviceCategory.type !== "WORKSHOP") {
           throw new Error("Expected workshop service");
         }
+        expect(
+          service.serviceCategory.schedules[0].timeSlots[0].usedUpSlots,
+        ).toBe(0);
+      });
+    });
+
+    test("Cancelling a fabrication project releases usages and restores reserved material stock", async () => {
+      const { t, tAera, tHarley } = await setupUsers();
+
+      await tAera.mutation(api.materials.mutate.addMaterial, {
+        name: "PLA",
+        category: "Filament",
+        unit: "g",
+        currentStock: 100,
+        pricePerUnit: 2,
+        reorderThreshold: 10,
+        status: "IN_STOCK",
+      });
+
+      const materialId = await t.run(async (ctx) => {
+        const material = await ctx.db.query("materials").first();
+        return material!._id;
+      });
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "3d printing",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "FABRICATION",
+          materials: [materialId],
+          setupFee: 1,
+          unitName: "hour",
+          timeRate: 2,
+        },
+        requirements: ["design"],
+        fileTypes: [],
+        description: "std to 3d printed model",
+        status: "Available",
+      });
+
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db.query("services").first();
+        return service!._id;
+      });
+
+      const { projectId } = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "cancelled fabrication",
+          pricing: "Default",
+          description: "reserve then cancel",
+          fulfillmentMode: "self-service",
+          material: "buy-from-lab",
+          requestedMaterials: [materialId],
+          files: [],
+          service: serviceId,
+          notes: "cancel later",
+          booking: {
+            startTime: Date.now() + HOUR_MS,
+            endTime: Date.now() + 2 * HOUR_MS,
+            date: Date.now() + 24 * HOUR_MS,
+          },
+        },
+      );
+
+      await tAera.mutation(api.projects.mutate.updateCostBreakdown, {
+        projectId,
+        setupFee: 0,
+        duration: 1,
+        rate: 2,
+        timeCost: 2,
+        materialCost: 8,
+        materialsUsed: [{ materialId, amountUsed: 4 }],
+      });
+
+      await tHarley.mutation(api.projects.mutate.cancelOwnProject, {
+        projectId,
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        const usages = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .collect();
+        const material = await ctx.db.get(materialId);
+
+        expect(project!.status).toBe("cancelled");
+        expect(project!.totalInvoice).toBeUndefined();
+        expect(project!.pricingSnapshot).toBeUndefined();
+        expect(usages).toEqual([]);
+        expect(material!.currentStock).toBe(100);
+      });
+    });
+
+    test("Rejecting a workshop project releases usage, slot counts, and invoice state", async () => {
+      const { t, tAera, tHarley } = await setupUsers();
+      const date = Date.now() + 96 * HOUR_MS;
+      const startTime = date + HOUR_MS;
+      const endTime = startTime + HOUR_MS;
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "rejected workshop",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "WORKSHOP",
+          amount: 250,
+          schedules: [
+            {
+              date,
+              timeSlots: [{ startTime, endTime, maxSlots: 3 }],
+            },
+          ],
+        },
+        requirements: [],
+        fileTypes: [],
+        description: "rejectable workshop",
+        status: "Available",
+      });
+
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db.query("services").first();
+        return service!._id;
+      });
+
+      const { projectId } = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "reject me",
+          pricing: "Default",
+          description: "reserve then reject",
+          fulfillmentMode: "full-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "reject later",
+          booking: { startTime, endTime, date },
+        },
+      );
+
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "rejected",
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        const service = await ctx.db.get(serviceId);
+
+        expect(project!.status).toBe("rejected");
+        expect(project!.totalInvoice).toBeUndefined();
+        expect(project!.pricingSnapshot).toBeUndefined();
+        expect(usage).toBeNull();
+
+        if (!service || service.serviceCategory.type !== "WORKSHOP") {
+          throw new Error("Expected workshop service");
+        }
+
         expect(
           service.serviceCategory.schedules[0].timeSlots[0].usedUpSlots,
         ).toBe(0);
@@ -478,7 +704,371 @@ describe("Project and Chat functionality", () => {
       });
     });
 
-    test("Update Project (Non-privileged)", async () => {});
+    test("Owning client can update pending project details", async () => {
+      const { t, tHarley, projectId, threadId, roomId } = await setupProject();
+
+      await tHarley.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        description: "updated by client",
+        notes: "client note",
+        material: "buy-from-lab",
+        fulfillmentMode: "full-service",
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_room_and_thread", (q) =>
+            q.eq("room", roomId).eq("threadId", threadId),
+          )
+          .collect();
+
+        expect(project).toMatchObject({
+          description: "updated by client",
+          notes: "client note",
+          material: "buy-from-lab",
+          fulfillmentMode: "full-service",
+        });
+        expect(messages.at(-1)?.content).toBe(
+          "Client updated: description, notes, material, fulfillment mode.",
+        );
+      });
+    });
+
+    test("Admin and maker can update pending project details", async () => {
+      const { t, tAera, projectId, threadId, roomId } = await setupProject();
+
+      await t.mutation(internal.users.createMaker, {
+        userId: "3",
+        email: "maker@gmail.com",
+        name: "Maker",
+      });
+      const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
+
+      await tAera.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        description: "updated by admin",
+        notes: "admin note",
+      });
+
+      await tMaker.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        material: "buy-from-lab",
+        fulfillmentMode: "full-service",
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_room_and_thread", (q) =>
+            q.eq("room", roomId).eq("threadId", threadId),
+          )
+          .collect();
+
+        expect(project).toMatchObject({
+          description: "updated by admin",
+          notes: "admin note",
+          material: "buy-from-lab",
+          fulfillmentMode: "full-service",
+        });
+        expect(messages.at(-2)?.content).toBe(
+          "Admin updated: description, notes.",
+        );
+        expect(messages.at(-1)?.content).toBe(
+          "Maker updated: material, fulfillment mode.",
+        );
+      });
+    });
+
+    test("Other clients cannot update another client's project details", async () => {
+      const { t, tHarley, projectId } = await setupProject();
+
+      await t.mutation(internal.users.createUserProfile, {
+        userId: "4",
+        email: "other-client@gmail.com",
+        name: "Other Client",
+      });
+      const tOtherClient = t.withIdentity({
+        subject: "4",
+        name: "Other Client",
+      });
+
+      await expect(
+        tOtherClient.mutation(api.projects.mutate.updateOwnProjectDetails, {
+          projectId,
+          description: "unauthorized",
+        }),
+      ).rejects.toThrow("You do not own this project.");
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+      expect(details.description).toBe("hello");
+    });
+
+    test("Workshop services reject staff-led fulfillment on creation and detail updates for all editors", async () => {
+      const { t, tAera, tHarley } = await setupUsers();
+      const date = Date.now() + 72 * HOUR_MS;
+      const startTime = date + 2 * HOUR_MS;
+      const endTime = startTime + 2 * HOUR_MS;
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "laser workshop",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "WORKSHOP",
+          amount: 500,
+          schedules: [
+            {
+              date,
+              timeSlots: [{ startTime, endTime, maxSlots: 2 }],
+            },
+          ],
+        },
+        requirements: [],
+        fileTypes: [],
+        description: "laser cutting basics",
+        status: "Available",
+      });
+
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db.query("services").first();
+        return service!._id;
+      });
+
+      await expect(
+        tHarley.mutation(api.projects.mutate.createProject, {
+          name: "invalid workshop mode",
+          pricing: "Default",
+          description: "not allowed",
+          fulfillmentMode: "staff-led",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "nope",
+          booking: { startTime, endTime, date },
+        }),
+      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+
+      const { projectId } = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "valid workshop mode",
+          pricing: "Default",
+          description: "allowed",
+          fulfillmentMode: "full-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "okay",
+          booking: { startTime, endTime, date },
+        },
+      );
+
+      await t.mutation(internal.users.createMaker, {
+        userId: "3",
+        email: "maker@gmail.com",
+        name: "Maker",
+      });
+      const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
+
+      await expect(
+        tHarley.mutation(api.projects.mutate.updateOwnProjectDetails, {
+          projectId,
+          fulfillmentMode: "staff-led",
+        }),
+      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+
+      await expect(
+        tAera.mutation(api.projects.mutate.updateOwnProjectDetails, {
+          projectId,
+          fulfillmentMode: "staff-led",
+        }),
+      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+
+      await expect(
+        tMaker.mutation(api.projects.mutate.updateOwnProjectDetails, {
+          projectId,
+          fulfillmentMode: "staff-led",
+        }),
+      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+    });
+  });
+
+  describe("Booking updates and permissions", () => {
+    test("Client can update their own booking", async () => {
+      const { t, tHarley, projectId } = await setupProject();
+
+      const usageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      const updatedStart = Date.now() + 144 * HOUR_MS;
+      const updatedEnd = updatedStart + 4 * HOUR_MS;
+
+      await tHarley.mutation(api.resource.mutate.updateUsage, {
+        id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(details.bookingStartTime).toBe(updatedStart);
+      expect(details.bookingEndTime).toBe(updatedEnd);
+      expect(details.resourceUsages[0]).toMatchObject({
+        _id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+    });
+
+    test("Admin can update a booking", async () => {
+      const { t, tAera, tHarley, projectId } = await setupProject();
+
+      const usageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      const updatedStart = Date.now() + 168 * HOUR_MS;
+      const updatedEnd = updatedStart + 5 * HOUR_MS;
+
+      await tAera.mutation(api.resource.mutate.updateUsage, {
+        id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(details.bookingStartTime).toBe(updatedStart);
+      expect(details.bookingEndTime).toBe(updatedEnd);
+      expect(details.resourceUsages[0]).toMatchObject({
+        _id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+    });
+
+    test("Maker can update a booking", async () => {
+      const { t, tHarley, projectId } = await setupProject();
+
+      await t.mutation(internal.users.createMaker, {
+        userId: "3",
+        email: "maker@gmail.com",
+        name: "Maker",
+      });
+      const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
+
+      const usageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      const updatedStart = Date.now() + 192 * HOUR_MS;
+      const updatedEnd = updatedStart + 6 * HOUR_MS;
+
+      await tMaker.mutation(api.resource.mutate.updateUsage, {
+        id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(details.bookingStartTime).toBe(updatedStart);
+      expect(details.bookingEndTime).toBe(updatedEnd);
+      expect(details.resourceUsages[0]).toMatchObject({
+        _id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+    });
+
+    test("Booking updates send a system message and increase client unread counts", async () => {
+      const { t, tAera, tHarley, roomId, threadId, projectId } =
+        await setupProject();
+
+      const generalThreadId = await t.run(async (ctx) => {
+        const threads = await ctx.db
+          .query("threads")
+          .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+          .collect();
+        return threads.find((thread) => thread._id !== threadId)!._id;
+      });
+
+      const usageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      await tHarley.mutation(api.chat.mutate.markThreadRead, {
+        threadId: generalThreadId,
+      });
+      await tHarley.mutation(api.chat.mutate.markThreadRead, {
+        threadId,
+      });
+
+      const updatedStart = Date.now() + 216 * HOUR_MS;
+      const updatedEnd = updatedStart + 3 * HOUR_MS;
+
+      await tAera.mutation(api.resource.mutate.updateUsage, {
+        id: usageId,
+        startTime: updatedStart,
+        endTime: updatedEnd,
+      });
+
+      const roomsAfter = await tHarley.query(api.chat.query.getRooms, {});
+      const roomAfter = roomsAfter.find((room) => room._id === roomId);
+      const projectThreadAfter = roomAfter?.threads.find(
+        (thread) => thread._id === threadId,
+      );
+
+      await t.run(async (ctx) => {
+        const thread = await ctx.db.get(threadId);
+        const room = await ctx.db.get(roomId);
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_room_and_thread", (q) =>
+            q.eq("room", roomId).eq("threadId", threadId),
+          )
+          .collect();
+
+        expect(thread?.messageCount).toBe(2);
+        expect(thread?.lastMessageText).toContain("Booking updated:");
+        expect(room?.lastMessageText).toContain("Booking updated:");
+        expect(messages).toHaveLength(2);
+        expect(messages[1].sender).toBe("System");
+        expect(messages[1].content).toContain("Booking updated:");
+        expect(messages[1].content).toContain("Schedule:");
+      });
+
+      expect(roomAfter?.unreadCount).toBe(1);
+      expect(projectThreadAfter?.unreadCount).toBe(1);
+    });
   });
 
   describe("Project pricing synchronization", () => {
