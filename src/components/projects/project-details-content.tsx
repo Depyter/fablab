@@ -34,7 +34,7 @@ import {
   PROJECT_STATUS_TRANSITIONS,
   ProjectStatusType,
   ProjectMaterialType,
-  ProjectServiceTypeType,
+  FulfillmentModeType,
 } from "@convex/constants";
 
 export type ProjectData = NonNullable<
@@ -54,7 +54,7 @@ interface ProjectDetailsContentProps {
     description?: string;
     notes?: string;
     material?: ProjectMaterialType;
-    fulfillmentMode?: string;
+    fulfillmentMode?: FulfillmentModeType;
     files?: string[];
   }) => Promise<boolean>;
 }
@@ -107,24 +107,24 @@ export function ProjectDetailsContent({
   onCancelProject,
   onUpdateDetails,
 }: ProjectDetailsContentProps) {
-  // ── Edit state (client only, review stage) ─────────────────────────────
+  // ── Edit state (review stage) ───────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editMaterial, setEditMaterial] =
     useState<ProjectMaterialType>("provide-own");
   const [editServiceType, setEditServiceType] =
-    useState<ProjectServiceTypeType>("self-service");
+    useState<FulfillmentModeType>("self-service");
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const canEdit = isClient && project.status === "pending" && !!onUpdateDetails;
+  const canEdit = project.status === "pending" && !!onUpdateDetails;
 
   function openEdit() {
     setEditDescription(project.description ?? "");
     setEditNotes(project.notes ?? "");
     setEditMaterial(project.material as ProjectMaterialType);
-    setEditServiceType(project.fulfillmentMode as ProjectServiceTypeType);
+    setEditServiceType(project.fulfillmentMode as FulfillmentModeType);
     setEditFiles(
       (project.resolvedFiles ?? [])
         .filter((f) => !!f.url)
@@ -427,6 +427,7 @@ export function ProjectDetailsContent({
           <div className="min-w-0 space-y-4 lg:col-span-7">
             <ProjectInfoCard
               description={project.description}
+              projectType={project.type}
               serviceType={project.fulfillmentMode}
               material={project.material}
               bookingDateStr={bookingDateStr}

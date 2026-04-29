@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  FulfillmentModeType,
+  ProjectMaterialType,
+  ProjectTypeType,
+} from "@convex/constants";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -21,7 +26,8 @@ interface ResolvedFile {
 
 interface ProjectInfoCardProps {
   description?: string | null;
-  serviceType: string;
+  projectType: ProjectTypeType;
+  serviceType: FulfillmentModeType;
   material: string;
   notes?: string | null;
   bookingDateStr: string;
@@ -43,14 +49,15 @@ interface ProjectInfoCardProps {
   setEditNotes: (v: string) => void;
   editFiles: UploadedFile[];
   setEditFiles: (files: UploadedFile[]) => void;
-  editMaterial: "provide-own" | "buy-from-lab";
-  setEditMaterial: (v: "provide-own" | "buy-from-lab") => void;
-  editServiceType: "self-service" | "full-service" | "workshop";
-  setEditServiceType: (v: "self-service" | "full-service" | "workshop") => void;
+  editMaterial: ProjectMaterialType;
+  setEditMaterial: (v: ProjectMaterialType) => void;
+  editServiceType: FulfillmentModeType;
+  setEditServiceType: (v: FulfillmentModeType) => void;
 }
 
 export function ProjectInfoCard({
   description,
+  projectType,
   serviceType,
   material,
   notes,
@@ -125,9 +132,7 @@ export function ProjectInfoCard({
             <Select
               value={editServiceType}
               onValueChange={(v) =>
-                setEditServiceType(
-                  v as "self-service" | "full-service" | "workshop",
-                )
+                setEditServiceType(v as FulfillmentModeType)
               }
             >
               <SelectTrigger className="h-8 text-sm">
@@ -136,7 +141,9 @@ export function ProjectInfoCard({
               <SelectContent>
                 <SelectItem value="self-service">Self Service</SelectItem>
                 <SelectItem value="full-service">Full Service</SelectItem>
-                <SelectItem value="workshop">Workshop</SelectItem>
+                {projectType === "FABRICATION" && (
+                  <SelectItem value="staff-led">Staff Led</SelectItem>
+                )}
               </SelectContent>
             </Select>
           ) : (

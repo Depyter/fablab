@@ -10,6 +10,7 @@ import {
   validateFileTypes,
   validateBookingTiming,
   validateFabricationAvailability,
+  validateProjectFulfillmentMode,
   computeProvisionalCostBreakdown,
   buildTotalInvoice,
   buildPricingSnapshot,
@@ -72,6 +73,7 @@ export const createProject = authMutation({
     const booking: BookingWindow = args.booking;
     validateBookingTiming(booking);
     await validateFabricationAvailability(ctx, args.service, service, booking);
+    validateProjectFulfillmentMode(service, args.fulfillmentMode);
 
     // ── 4. Determine project type from service ────────────────────────────────
     const projectType =
@@ -515,6 +517,8 @@ export const cancelOwnProject = authMutation({
 
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
+    const service = await ctx.db.get(project.service);
+    if (!service) throw new ConvexError("Service not found.");
 
     if (project.userId !== userProfile._id) {
       throw new ConvexError("You do not own this project.");
@@ -628,6 +632,7 @@ export const completeProject = authMutation({
 // ============================================================================
 
 export const updateOwnProjectDetails = authMutation({
+  role: ["admin", "maker", "client"],
   args: {
     projectId: v.id("projects"),
     description: v.optional(v.string()),
@@ -645,17 +650,15 @@ export const updateOwnProjectDetails = authMutation({
     files: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
-    const userProfile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
-      .first();
-
-    if (!userProfile) throw new ConvexError("User not authorized");
-
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
+    const service = await ctx.db.get(project.service);
+    if (!service) throw new ConvexError("Service not found.");
 
-    if (project.userId !== userProfile._id) {
+    const isPrivileged =
+      ctx.profile.role === "admin" || ctx.profile.role === "maker";
+
+    if (!isPrivileged && project.userId !== ctx.profile._id) {
       throw new ConvexError("You do not own this project.");
     }
 
@@ -687,6 +690,7 @@ export const updateOwnProjectDetails = authMutation({
       args.fulfillmentMode !== undefined &&
       args.fulfillmentMode !== project.fulfillmentMode
     ) {
+      validateProjectFulfillmentMode(service, args.fulfillmentMode);
       patch.fulfillmentMode = args.fulfillmentMode;
       changed.push("fulfillment mode");
     }
@@ -705,8 +709,20 @@ export const updateOwnProjectDetails = authMutation({
     });
 
     await ctx.db.patch(args.projectId, patch);
+    if (patch.fulfillmentMode !== undefined) {
+      await syncProjectTotalInvoice(ctx, args.projectId);
+    }
+    await scheduleProjectUpdateEmail(ctx, args.projectId);
+
+    const actorLabel =
+      ctx.profile.role === "client"
+        ? "Client"
+        : ctx.profile.role === "admin"
+          ? "Admin"
+          : "Maker";
+
     await sendProjectSystemMessage(ctx, args.projectId, [
-      `Client updated: ${changed.join(", ")}.`,
+      `${actorLabel} updated: ${changed.join(", ")}.`,
     ]);
   },
 });
