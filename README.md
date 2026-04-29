@@ -1,173 +1,154 @@
 # FabLab Management System
 
-A web application for managing fabrication lab services, project bookings, and client communications. Built for a university FabLab to handle the full lifecycle of a client request — from browsing available services to job completion.
+> A full-lifecycle web app for university fabrication labs — from service browsing to job completion.
 
-## 💻 Tech Stack
+## Tech Stack
 
-### Frontend & UI
+**Frontend**
+![Next.js](https://img.shields.io/badge/Next.js_16-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?style=flat-square&logo=shadcnui&logoColor=white)
+![TanStack Form](https://img.shields.io/badge/TanStack_Form-FF4154?style=flat-square&logo=react-query&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-black?style=flat-square&logo=three.js)
 
-- **[Next.js 16](https://nextjs.org/)** — App Router, SSR, and file-based routing
-- **[React 19](https://react.dev/)** — Core UI library
-- **[Tailwind CSS v4](https://tailwindcss.com/)** — Utility-first styling
-- **[shadcn/ui](https://ui.shadcn.com/)** — Accessible component library (via Radix UI primitives)
-- **[TanStack Form](https://tanstack.com/form)** — Type-safe form state management
-- **[Threejs](https://threejs.org)** — Render 3d models using Javascript
+**Backend & Auth**
+![Convex](https://img.shields.io/badge/Convex-EE342F?style=flat-square&logo=convex&logoColor=white)
+![Better Auth](https://img.shields.io/badge/Better_Auth-4F46E5?style=flat-square&logo=auth0&logoColor=white)
 
-### Backend & Data
+**Infrastructure & Observability**
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)
+![PostHog](https://img.shields.io/badge/PostHog-000000?style=flat-square&logo=posthog&logoColor=white)
+[![Oracle Cloud](https://custom-icon-badges.demolab.com/badge/Oracle%20Cloud-F80000?logo=oracle&logoColor=white)](#)
 
-- **[Convex](https://convex.dev/)** — Real-time database, server functions, and file storage
-
-### Authentication
-
-- **[Better Auth](https://better-auth.com/)** — Identity management (email/password and Google OAuth) with `@convex-dev/better-auth` integration
-
-### Infrastructure & Deployment
-
-- **[Cloudflare Workers](https://workers.cloudflare.com/)** — Edge deployment target via `@opennextjs/cloudflare`
-
-### Testing & QA
-
-- **[Vitest](https://vitest.dev/)** — Unit testing suite with `convex-test`
+**Tooling**
+![Bun](https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white)
 
 ---
 
-## 🗺️ Roadmap
+## Roles & Permissions
 
-### Phase 1: Core Foundation & Access (Completed)
-
-- [x] **Authentication Setup** — Email/password and Google OAuth login.
-- [x] **Role-Based Access Control** — Distinct roles for `admin`, `maker`, and `client`.
-- [x] **Role-Aware Navigation** — Sidebar adapts dynamically based on the authenticated user's permissions.
-
-### Phase 2: Services & Project Lifecycle (Completed)
-
-- [x] **Service Management** — Public listings; admin/maker dashboard for CRUD operations with image/file uploads.
-- [x] **Project Requests** — Clients can submit jobs tied to specific services.
-- [x] **File Storage** — Convex file storage integration for service images, sample outputs, and project files.
-- [x] **Real-Time Communication** — Dedicated, auto-generated chat rooms for every project with paginated message history.
-
-### Phase 3: Operations & Dashboarding (In Progress)
-
-- [ ] **Dashboard Overview** — Replace placeholder UI with interactive summary widgets on the main dashboard.
-- [x] **Project Management** — Project tracking.
-- [x] **Inventory Management** — Machine and material tracking.
-- [x] **Receipts & Payments** — Proof of payment tracking and receipt generation.
-
-### Phase 4: Analytics, Notifications & QA (Planned)
-
-- [ ] **Reporting System** — Overview, analytics, usage statistics, and data export.
-- [ ] **In-App Notifications** — Robust notification center for project updates and chat pings.
-- [ ] **PWA Push Notifications** — Native-feeling alerts for the Progressive Web App.
-- [ ] **Observability** — User behavior tracking and analytics integration via PostHog.
-- [ ] **End-to-End Testing** — Automated UI and flow testing using Playwright.
+| Role     | Browse Services | Submit Projects | Manage Services | View All Projects | Admin Access |
+| -------- | :-------------: | :-------------: | :-------------: | :---------------: | :----------: |
+| `client` |       ✅        |       ✅        |       ❌        |        ❌         |      ❌      |
+| `maker`  |       ✅        |       ✅        |       ✅        |        ✅         |      ❌      |
+| `admin`  |       ✅        |       ✅        |       ✅        |        ✅         |      ✅      |
 
 ---
 
-## 👥 Roles & Permissions
+## Roadmap
 
-| Role     | Capabilities                                                                     |
-| -------- | -------------------------------------------------------------------------------- |
-| `client` | Browse services, submit project requests, view own projects, access project chat |
-| `maker`  | All client capabilities + manage services, view all projects                     |
-| `admin`  | All maker capabilities + full administrative access                              |
+| Phase                       | Items                                                                |     Status     |
+| --------------------------- | -------------------------------------------------------------------- | :------------: |
+| **1 · Foundation**          | Auth (email + OAuth), RBAC, role-aware nav                           |    ✅ Done     |
+| **2 · Services & Projects** | Service CRUD, project requests, file storage, real-time chat         |    ✅ Done     |
+| **3 · Operations**          | Project & inventory tracking, receipts & payments, dashboard widgets | 🔄 In Progress |
+| **4 · Analytics & QA**      | Reporting, in-app & PWA notifications, PostHog, Playwright E2E       |   📅 Planned   |
 
 ---
 
-## 📂 Project Structure
+## Architecture
+
+```mermaid
+graph TD
+    Client["🌐 Browser / PWA"]
+    Edge["Cloudflare Workers"]
+    Analytics["PostHog"]
+
+    subgraph NextJS ["Next.js 16 (App Router)"]
+        Public["(public)\nLogin · Services · Profile"]
+        Private["(private)\nDashboard · Chat · Projects · Reports"]
+    end
+
+    subgraph Auth ["Better Auth"]
+        OAuth["Google OAuth"]
+    end
+
+    subgraph Docker ["Docker Compose (Self-Hosted)"]
+        subgraph Convex ["Convex Backend"]
+            DB["Real-Time Database"]
+            Storage["File Storage"]
+            Fns["Server Functions"]
+        end
+    end
+
+    Client --> Edge
+    Edge --> NextJS
+    Public -->|unauthenticated| Fns
+    Private --> Auth
+    Auth --> |authenticated| Fns
+    Fns --> DB
+    Fns --> Storage
+    Client --> Analytics
+```
+
+---
+
+## Project Structure
 
 ```text
 src/
   app/
-    (public)/         # Unauthenticated routes: login, services listing, profile
+    (public)/         # Login, services listing, profile
     (private)/
-      dashboard/      # Authenticated dashboard
-        (manage)/     # Admin/maker-only: services management, reports
+      dashboard/
+        (manage)/     # Admin/maker: services, reports
         chat/         # Real-time messaging
         projects/     # Project management
 convex/
-  services/           # Service CRUD mutations & queries
-  projects/           # Project creation & listing
-  chat/               # Room and message queries/mutations
+  services/           # Service CRUD
+  projects/           # Project lifecycle
+  chat/               # Rooms & messages
   notification/       # (planned)
   emails/             # Email helpers
-  schema.ts           # Full database schema
-  auth.ts             # Better Auth configuration
-  files.ts            # File upload/storage helpers
+  schema.ts           # Database schema
+  auth.ts             # Auth config
+  files.ts            # File storage
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18+
-- [Bun](https://bun.sh/) installed locally
-- A [Convex](https://dashboard.convex.dev/) account and project
-- (Optional) Google OAuth credentials for social login
-
-### Installation
-
-1. Clone the repository and install dependencies:
+**Prerequisites:** Node.js 18+, [Bun](https://bun.sh/), a [Convex](https://dashboard.convex.dev/) account.
 
 ```sh
+# 1. Install dependencies
 bun install
-```
 
-2. Set up your Convex backend. On the first run, this will prompt you to log in and link a project:
-
-```sh
+# 2. Link Convex project (prompts login on first run)
 bunx convex dev --until-success
+
+# 3. Configure environment
+cp .dev.vars.example .dev.vars   # fill in BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, etc.
+
+# 4. Start dev server
+bun run dev   # → http://localhost:3000
 ```
 
-3. Copy `.dev.vars.example` to `.dev.vars` (if provided) and fill in the required environment variables:
+## Scripts
 
-```env
-BETTER_AUTH_SECRET=...
-GOOGLE_CLIENT_ID=...       # optional, for Google OAuth
-GOOGLE_CLIENT_SECRET=...   # optional, for Google OAuth
-```
+| Command                   | Description                                   |
+| ------------------------- | --------------------------------------------- |
+| `bun run dev`             | Frontend + Convex backend (concurrent)        |
+| `bun run build`           | Build Next.js app                             |
+| `bun run preview`         | Build & preview on Cloudflare Workers locally |
+| `bun run deploy`          | Build & deploy to Cloudflare Workers          |
+| `bun run test`            | Unit tests (watch mode)                       |
+| `bun run test:once`       | Unit tests (single run)                       |
+| `bun run test:coverage`   | Tests with coverage report                    |
+| `bun run lint` / `format` | ESLint / Prettier                             |
 
-4. Start the development server (runs Next.js and Convex concurrently):
+## Deployment
 
 ```sh
-bun run dev
-```
-
-The app will be available at `http://localhost:3000`.
-
----
-
-## 📜 Scripts
-
-| Command                 | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| `bun run dev`           | Start frontend and Convex backend concurrently    |
-| `bun run build`         | Build the Next.js app                             |
-| `bun run preview`       | Build and preview with Cloudflare Workers locally |
-| `bun run deploy`        | Build and deploy to Cloudflare Workers            |
-| `bun run test`          | Run unit tests (watch mode)                       |
-| `bun run test:once`     | Run unit tests once                               |
-| `bun run test:coverage` | Run tests with coverage report                    |
-| `bun run lint`          | Run ESLint                                        |
-| `bun run format`        | Format all files with Prettier                    |
-
----
-
-## ☁️ Deployment
-
-This project is configured for deployment to **Cloudflare Workers** using [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare).
-
-1. Create the R2 bucket for incremental cache (first time only):
-
-```sh
+# First time only — create R2 cache bucket
 bunx wrangler r2 bucket create fablab-opennext-cache
-```
 
-2. Deploy:
-
-```sh
+# Deploy
 bun run deploy
 ```
 
-_Note: Environment variables must also be set in the Cloudflare dashboard or via `wrangler secret put` before deploying._
+> Set secrets via the Cloudflare dashboard or `wrangler secret put` before deploying.
