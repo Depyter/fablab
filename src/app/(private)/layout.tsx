@@ -1,10 +1,17 @@
 import { ClientAuthBoundary } from "@/components/ClientAuthBoundary";
 import { ReactNode } from "react";
+import { ConvexClientProvider } from "@/components/ConvexClientProvider";
+import { getToken } from "@/lib/auth-server";
 
-export default function AuthenticatedLayout({
+export default async function AuthenticatedLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  return <ClientAuthBoundary>{children}</ClientAuthBoundary>;
+  const token = await getToken();
+  return (
+    <ConvexClientProvider initialToken={token}>
+      <ClientAuthBoundary>{children}</ClientAuthBoundary>
+    </ConvexClientProvider>
+  );
 }

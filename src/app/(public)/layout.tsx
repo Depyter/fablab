@@ -3,11 +3,13 @@ import Link from "next/link";
 import { ReactNode } from "react";
 import { PublicMobileNav } from "@/components/sidebar/public-mobile-nav";
 import { PublicNavAuth } from "@/components/public-nav-auth";
+import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-full flex flex-col">
-      <header className="sticky top-0 z-50 h-16 border-b-4 border-black bg-background">
+    <ConvexClientProvider>
+      <div className="min-h-full flex flex-col">
+        <header className="sticky top-0 z-50 h-16 border-b-4 border-black bg-background">
         <div className="mx-auto flex h-full max-w-full items-center justify-between px-6 sm:px-10 lg:px-16">
           <Link
             href="/"
@@ -51,5 +53,6 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         </p>
       </footer>
     </div>
+    </ConvexClientProvider>
   );
 }

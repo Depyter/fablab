@@ -1,19 +1,17 @@
 "use client";
 
-import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { CtaSection } from "@/components/cta-section";
 import { ServiceCardClient } from "@/components/services/service-card-client";
 import { useEffect } from "react";
 import posthog from "posthog-js";
+import { FunctionReturnType } from "convex/server";
 
 export function ServicesListClient({
-  preloadedServices,
+  services,
 }: {
-  preloadedServices: Preloaded<typeof api.services.query.getServices>;
+  services: FunctionReturnType<typeof api.services.query.getServices>;
 }) {
-  const services = usePreloadedQuery(preloadedServices);
-
   const fabricationServices = services.filter(
     (service) => service.serviceCategory?.type === "FABRICATION",
   );

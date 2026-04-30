@@ -1,6 +1,5 @@
 "use client";
 
-import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ChevronLeft, CirclePercent } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import Image from "next/image";
 import { BookingDialog } from "@/components/booking/dialog-form";
 import { useEffect } from "react";
 import posthog from "posthog-js";
+import { FunctionReturnType } from "convex/server";
 
 /**
  * ServiceDetailClient
@@ -17,11 +17,10 @@ import posthog from "posthog-js";
  * and services pages while keeping the same service content and booking flow.
  */
 export function ServiceDetailClient({
-  preloadedService,
+  service,
 }: {
-  preloadedService: Preloaded<typeof api.services.query.getService>;
+  service: NonNullable<FunctionReturnType<typeof api.services.query.getService>>;
 }) {
-  const service = usePreloadedQuery(preloadedService);
 
   useEffect(() => {
     if (!service) return;
