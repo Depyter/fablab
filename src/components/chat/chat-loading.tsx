@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Hash, Paperclip, Send } from "lucide-react";
+import { ChevronDown, Hash, Paperclip, Send } from "lucide-react";
 
 const messageSkeletonKeys = Array.from(
   { length: 21 },
@@ -73,42 +73,43 @@ export function ChatMessageSkeleton({ index }: { index: number }) {
   );
 }
 
-export function ChatSidebarLoading() {
-  return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div
-        className="flex h-14 shrink-0 items-center gap-2 px-3"
-        style={{ borderBottom: "1px solid var(--fab-border-md)" }}
-      >
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <div className="flex flex-1 items-center gap-2">
-          <Skeleton className="h-3 w-20 rounded-full opacity-60" />
-        </div>
-      </div>
-      <ChatSidebarRoomsLoading />
-    </div>
-  );
-}
-
 export function ChatSidebarRoomsLoading() {
   return (
-    <div className="flex-1 overflow-y-auto py-1">
+    <>
       {sidebarRoomKeys.map((key) => (
         <div key={key} className="flex flex-col">
           <div className="relative mx-1 flex flex-col gap-0.5 rounded-md px-3 py-2">
             <div className="flex w-full min-w-0 items-center gap-2">
-              <Skeleton className="h-5 w-5 shrink-0 rounded" />
+              <div
+                className="rounded p-0.5 -ml-1 shrink-0 transition-colors"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                <ChevronDown className="h-5 w-5" />
+              </div>
               <Skeleton className="h-5 flex-1 rounded-md" />
+              <div
+                className="mr-1 h-2 w-2 shrink-0 rounded-full opacity-50"
+                style={{ background: "var(--fab-magenta)" }}
+              />
             </div>
           </div>
-          <div className="relative flex flex-col pb-2 pl-7">
-            <Skeleton className="my-0.5 h-8 w-[85%] rounded-md" />
-            <Skeleton className="my-0.5 h-8 w-[70%] rounded-md" />
-            <Skeleton className="my-0.5 h-8 w-[75%] rounded-md" />
+          <div className="relative flex flex-col pb-2">
+            {["w-[85%]", "w-[70%]", "w-[75%]"].map((widthClass, index) => (
+              <div
+                key={`${key}-thread-${index}`}
+                className="relative flex items-center gap-2 py-2 pl-7 pr-3"
+              >
+                <Hash
+                  className="h-4 w-4 shrink-0"
+                  style={{ color: "var(--fab-text-dim)" }}
+                />
+                <Skeleton className={cn("h-4 rounded-md", widthClass)} />
+              </div>
+            ))}
           </div>
         </div>
       ))}
-    </div>
+    </>
   );
 }
 

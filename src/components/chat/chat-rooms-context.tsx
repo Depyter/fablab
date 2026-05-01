@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import { Preloaded } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -35,14 +34,8 @@ const ChatRoomsContext = React.createContext<ChatRoomsContextValue | null>(
   null,
 );
 
-export function ChatRoomsProvider({
-  preloadedRooms,
-  children,
-}: {
-  preloadedRooms: Preloaded<typeof api.chat.query.getRooms>;
-  children: React.ReactNode;
-}) {
-  const rooms = usePreloadedAuthQuery(preloadedRooms) as
+export function ChatRoomsProvider({ children }: { children: React.ReactNode }) {
+  const rooms = useQuery(api.chat.query.getRooms, {}) as
     | (ChatRoomSummary | null)[]
     | undefined;
 
