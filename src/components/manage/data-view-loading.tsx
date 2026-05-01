@@ -89,7 +89,11 @@ export function InventoryDataViewLoadingState() {
   );
 }
 
-export function DataViewLoadingState({ view = "gallery" }: { view?: ViewMode }) {
+export function DataViewLoadingState({
+  view = "gallery",
+}: {
+  view?: ViewMode;
+}) {
   if (view === "list") return <DataViewListLoadingState />;
   if (view === "calendar") {
     return (
