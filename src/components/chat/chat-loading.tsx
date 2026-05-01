@@ -88,19 +88,19 @@ export function ChatSidebarRoomsLoading() {
               </div>
               <Skeleton className="h-5 flex-1 rounded-md" />
               <div
-                className="mr-1 h-2 w-2 shrink-0 rounded-full opacity-50"
+                className="mr-1 h-2 w-2 shrink-0 rounded-full opacity-20"
                 style={{ background: "var(--fab-magenta)" }}
               />
             </div>
           </div>
           <div className="relative flex flex-col pb-2">
-            {["w-[85%]", "w-[70%]", "w-[75%]"].map((widthClass, index) => (
+            {["w-[80%]", "w-[65%]", "w-[72%]"].map((widthClass, index) => (
               <div
                 key={`${key}-thread-${index}`}
                 className="relative flex items-center gap-2 py-2 pl-7 pr-3"
               >
                 <Hash
-                  className="h-4 w-4 shrink-0"
+                  className="h-4 w-4 shrink-0 opacity-40"
                   style={{ color: "var(--fab-text-dim)" }}
                 />
                 <Skeleton className={cn("h-4 rounded-md", widthClass)} />

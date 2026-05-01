@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import { Preloaded } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@convex/_generated/api";
 import { InventoryTab } from "@/components/inventory/tabs";
@@ -18,10 +16,7 @@ import {
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
 
-interface InventoryClientProps {
-  preloadedResources: Preloaded<typeof api.resource.query.getResources>;
-  preloadedMaterials: Preloaded<typeof api.materials.query.getMaterials>;
-}
+import { useQuery } from "convex/react";
 
 type InventoryDialog = "machine" | "tool" | "room" | "misc" | "material";
 type InventorySort = "name-az" | "status";
@@ -35,16 +30,13 @@ const DIALOG_OPTIONS: InventoryDialog[] = [
   "material",
 ];
 
-export function InventoryClient({
-  preloadedResources,
-  preloadedMaterials,
-}: InventoryClientProps) {
+export function InventoryClient() {
   const { replaceParams } = useDataViewRouteState();
   const searchParams = useSearchParams();
-  const resourcesQuery = usePreloadedAuthQuery(preloadedResources);
-  const materialsQuery = usePreloadedAuthQuery(preloadedMaterials);
-  const resources = React.useMemo(() => resourcesQuery ?? [], [resourcesQuery]);
-  const materials = React.useMemo(() => materialsQuery ?? [], [materialsQuery]);
+
+  const resources = useQuery(api.resource.query.getResources);
+  const materials = useQuery(api.materials.query.getMaterials);
+
   const search = getSearchParam(searchParams, "search");
   const sortRaw = getSearchParam(searchParams, "sort", "name-az");
   const dialogRaw = searchParams.get("dialog");
@@ -57,10 +49,11 @@ export function InventoryClient({
   )
     ? (dialogRaw as InventoryDialog)
     : null;
-  const isLoading =
-    resourcesQuery === undefined || materialsQuery === undefined;
+
+  const isLoading = resources === undefined || materials === undefined;
 
   const filteredResources = React.useMemo(() => {
+    if (!resources) return [];
     let result = [...resources];
 
     if (search.trim()) {
@@ -82,6 +75,7 @@ export function InventoryClient({
   }, [resources, search, sortBy]);
 
   const filteredMaterials = React.useMemo(() => {
+    if (!materials) return [];
     let result = [...materials];
 
     if (search.trim()) {

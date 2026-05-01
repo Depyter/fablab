@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import type { Preloaded } from "convex/react";
 
 export interface ChatThreadSummary {
   _id: string;
@@ -28,29 +27,27 @@ export interface ChatRoomSummary {
 
 interface ChatRoomsContextValue {
   roomList: ChatRoomSummary[];
+  isLoading: boolean;
 }
 
 const ChatRoomsContext = React.createContext<ChatRoomsContextValue | null>(
   null,
 );
 
-export function ChatRoomsProvider({
-  children,
-  preloadedRooms,
-}: {
-  children: React.ReactNode;
-  preloadedRooms: Preloaded<typeof api.chat.query.getRooms>;
-}) {
-  const rooms = usePreloadedAuthQuery(preloadedRooms) as
-    | (ChatRoomSummary | null)[]
-    | undefined;
+export function ChatRoomsProvider({ children }: { children: React.ReactNode }) {
+  const rooms = useQuery(api.chat.query.getRooms);
 
   const roomList = React.useMemo(
     () => (rooms?.filter(Boolean) as ChatRoomSummary[]) ?? [],
     [rooms],
   );
 
-  const value = React.useMemo(() => ({ roomList }), [roomList]);
+  const isLoading = rooms === undefined;
+
+  const value = React.useMemo(
+    () => ({ roomList, isLoading }),
+    [roomList, isLoading],
+  );
 
   return (
     <ChatRoomsContext.Provider value={value}>

@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import { Preloaded } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
 import { PackageOpen, Search } from "lucide-react";
@@ -13,27 +12,27 @@ import {
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
+import { DataViewGridLoadingState } from "@/components/manage/data-view-loading";
 
 type ServicesSort = "name-az" | "price-high" | "price-low";
 
 const SORT_OPTIONS: ServicesSort[] = ["name-az", "price-high", "price-low"];
 
-export function ServicesListClient({
-  preloadedServices,
-}: {
-  preloadedServices: Preloaded<typeof api.services.query.getServices>;
-}) {
+export function ServicesListClient() {
   const { searchParams, replaceParams } = useDataViewRouteState();
-  const servicesQuery = usePreloadedAuthQuery(preloadedServices);
-  const services = React.useMemo(() => servicesQuery ?? [], [servicesQuery]);
+  const services = useQuery(api.services.query.getServices);
+  
   const search = getSearchParam(searchParams, "search");
   const sortRaw = getSearchParam(searchParams, "sort", "name-az");
+  
   const sortBy: ServicesSort = SORT_OPTIONS.includes(sortRaw as ServicesSort)
     ? (sortRaw as ServicesSort)
     : "name-az";
-  const isLoading = servicesQuery === undefined;
+
+  const isLoading = services === undefined;
 
   const filteredServices = React.useMemo(() => {
+    if (!services) return [];
     let result = [...services];
 
     if (search.trim()) {
@@ -64,6 +63,10 @@ export function ServicesListClient({
 
     return result;
   }, [search, services, sortBy]);
+
+  if (isLoading) {
+    return <DataViewGridLoadingState />;
+  }
 
   return (
     <DataViewContent

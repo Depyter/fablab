@@ -1,24 +1,22 @@
 "use client";
 
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import { Preloaded } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { useChatThreadTitle } from "@/components/chat/chat-rooms-context";
 import { useEffect } from "react";
+import { ChatThreadLoading } from "@/components/chat/chat-loading";
 import posthog from "posthog-js";
 
 export function ChatThreadClient({
   roomId,
   threadId,
-  preloadedCurrentUser,
 }: {
   roomId: Id<"rooms">;
   threadId: Id<"threads">;
-  preloadedCurrentUser: Preloaded<typeof api.auth.getCurrentUser>;
 }) {
-  const currentUser = usePreloadedAuthQuery(preloadedCurrentUser);
+  const currentUser = useQuery(api.auth.getCurrentUser);
   const threadTitle = useChatThreadTitle(roomId, threadId);
 
   useEffect(() => {
@@ -27,6 +25,10 @@ export function ChatThreadClient({
       thread_id: threadId,
     });
   }, [roomId, threadId]);
+
+  if (currentUser === undefined) {
+    return <ChatThreadLoading />;
+  }
 
   return (
     <div className="flex h-full overflow-hidden min-h-0 relative">
