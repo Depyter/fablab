@@ -4,13 +4,13 @@ import * as React from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
-  DataViewRoot,
-  DataViewToolbar,
-  DataViewFilters,
   DataViewContent,
   DataViewLoadMore,
 } from "@/components/manage/data-view";
-import { useDebounce } from "@/hooks/use-debounce";
+import {
+  getSearchParam,
+  useDataViewRouteState,
+} from "@/components/manage/data-view-route-state";
 import {
   Table,
   TableBody,
@@ -60,13 +60,13 @@ import { UserRole, UserRoleType } from "@convex/constants";
 import { format } from "date-fns";
 
 export default function UsersPage() {
-  const [search, setSearch] = React.useState("");
-  const debouncedSearch = useDebounce(search, 500);
+  const { searchParams } = useDataViewRouteState();
+  const search = getSearchParam(searchParams, "search");
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.users.listUserProfiles,
-    { search: debouncedSearch || undefined },
-    { initialNumItems: 10 },
+    { search: search.trim() || undefined },
+    { initialNumItems: 24 },
   );
 
   const updateUserRole = useMutation(api.users.updateUserRole);
@@ -127,153 +127,141 @@ export default function UsersPage() {
   };
 
   return (
-    <DataViewRoot defaultView="list">
-      <div className="flex flex-col flex-1 h-full overflow-hidden">
-        <DataViewToolbar
-          title="User Management"
-          subtitle="Manage roles and access for all users."
-        />
-
-        <DataViewFilters
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search by email..."
-        />
-
-        <DataViewContent
-          items={results}
-          totalItems={results.length}
-          isLoading={status === "LoadingFirstPage"}
-          viewSlots={{
-            list: (
-              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-                <div className="border rounded-lg bg-background overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {results.map((user) => (
-                        <TableRow key={user._id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={user.profilePic} />
-                                <AvatarFallback>{user.name[0]}</AvatarFallback>
-                              </Avatar>
-                              <span>{user.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                user.role === "admin" ? "default" : "secondary"
-                              }
-                            >
-                              {user.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {user.banned ? (
-                              <div className="flex flex-col gap-1">
-                                <Badge
-                                  variant="destructive"
-                                  className="gap-1 w-fit"
-                                >
-                                  <ShieldAlert className="h-3 w-3" />
-                                  Banned
-                                </Badge>
-                                {user.banReason && (
-                                  <span
-                                    className="text-xs text-muted-foreground line-clamp-1"
-                                    title={user.banReason}
-                                  >
-                                    {user.banReason}
-                                  </span>
-                                )}
-                                {user.banExpires && (
-                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                    <Clock className="h-2.5 w-2.5" />
-                                    Expires:{" "}
-                                    {format(user.banExpires, "MMM d, yyyy")}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
+    <>
+      <DataViewContent
+        view="list"
+        items={results}
+        totalItems={results.length}
+        isLoading={status === "LoadingFirstPage"}
+        viewSlots={{
+          list: (
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+              <div className="border rounded-lg bg-background overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results.map((user) => (
+                      <TableRow key={user._id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.profilePic} />
+                              <AvatarFallback>{user.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <span>{user.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              user.role === "admin" ? "default" : "secondary"
+                            }
+                          >
+                            {user.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {user.banned ? (
+                            <div className="flex flex-col gap-1">
                               <Badge
-                                variant="outline"
-                                className="gap-1 text-green-600 border-green-200 bg-green-50"
+                                variant="destructive"
+                                className="gap-1 w-fit"
                               >
-                                <UserCheck className="h-3 w-3" />
-                                Active
+                                <ShieldAlert className="h-3 w-3" />
+                                Banned
                               </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              {user.banReason && (
+                                <span
+                                  className="text-xs text-muted-foreground line-clamp-1"
+                                  title={user.banReason}
+                                >
+                                  {user.banReason}
+                                </span>
+                              )}
+                              {user.banExpires && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Clock className="h-2.5 w-2.5" />
+                                  Expires:{" "}
+                                  {format(user.banExpires, "MMM d, yyyy")}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 text-green-600 border-green-200 bg-green-50"
+                            >
+                              <UserCheck className="h-3 w-3" />
+                              Active
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsRoleDialogOpen(true);
+                                }}
+                              >
+                                <UserCog className="mr-2 h-4 w-4" />
+                                Change Role
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {user.banned ? (
                                 <DropdownMenuItem
+                                  className="text-green-600"
+                                  onClick={() => handleUnbanUser(user)}
+                                >
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Unban User
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  className="text-destructive"
                                   onClick={() => {
                                     setSelectedUser(user);
-                                    setIsRoleDialogOpen(true);
+                                    setIsBanDialogOpen(true);
                                   }}
                                 >
-                                  <UserCog className="mr-2 h-4 w-4" />
-                                  Change Role
+                                  <Ban className="mr-2 h-4 w-4" />
+                                  Ban User
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {user.banned ? (
-                                  <DropdownMenuItem
-                                    className="text-green-600"
-                                    onClick={() => handleUnbanUser(user)}
-                                  >
-                                    <UserCheck className="mr-2 h-4 w-4" />
-                                    Unban User
-                                  </DropdownMenuItem>
-                                ) : (
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => {
-                                      setSelectedUser(user);
-                                      setIsBanDialogOpen(true);
-                                    }}
-                                  >
-                                    <Ban className="mr-2 h-4 w-4" />
-                                    Ban User
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            ),
-          }}
-          renderItem={(user) => null} // Handled by list viewSlot
-        />
+            </div>
+          ),
+        }}
+        renderItem={(user) => null} // Handled by list viewSlot
+      />
 
-        <DataViewLoadMore
-          canLoadMore={status === "CanLoadMore"}
-          onLoadMore={() => loadMore(10)}
-        />
-      </div>
+      <DataViewLoadMore
+        canLoadMore={status === "CanLoadMore"}
+        onLoadMore={() => loadMore(12)}
+      />
 
       {/* Role Update Dialog */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
@@ -360,6 +348,6 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DataViewRoot>
+    </>
   );
 }

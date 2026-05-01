@@ -6,5 +6,6 @@ export default async function ServicesPage() {
   const preloadedServices = await preloadAuthQuery(
     api.services.query.getServices,
   );
+
   return <ServicesListClient preloadedServices={preloadedServices} />;
 }
