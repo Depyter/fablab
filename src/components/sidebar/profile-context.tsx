@@ -13,7 +13,9 @@ function useSidebarProfile(
 
 type SidebarProfile = ReturnType<typeof useSidebarProfile>;
 
-const ProfileContext = React.createContext<SidebarProfile | undefined>(undefined);
+const ProfileContext = React.createContext<SidebarProfile | undefined>(
+  undefined,
+);
 
 export function ProfileProvider({
   preloadedProfile,
@@ -24,7 +26,9 @@ export function ProfileProvider({
   const profile = useSidebarProfile(preloadedProfile);
 
   return (
-    <ProfileContext.Provider value={profile}>{children}</ProfileContext.Provider>
+    <ProfileContext.Provider value={profile}>
+      {children}
+    </ProfileContext.Provider>
   );
 }
 

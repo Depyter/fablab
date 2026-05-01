@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ArrowLeft, Hash, Paperclip, Send } from "lucide-react";
 
 const messageSkeletonKeys = Array.from(
   { length: 21 },
@@ -134,16 +135,40 @@ export function ChatHeaderSkeleton() {
       }}
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-        <Skeleton className="h-6 w-6 rounded-lg shrink-0" />
-        <Skeleton className="h-5 w-32 rounded-md" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg">
+          <ArrowLeft
+            className="h-5 w-5"
+            style={{ color: "var(--fab-text-primary)" }}
+          />
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Hash
+            className="h-3.5 w-3.5 shrink-0"
+            style={{ color: "var(--fab-text-primary)" }}
+          />
+          <span
+            className="font-mono text-[18px] font-semibold truncate"
+            style={{ color: "var(--fab-text-primary)" }}
+          >
+            channel
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
         <div className="flex -space-x-1.5">
-          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
-          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
+          <div className="h-6 w-6 rounded-full border-2 border-background bg-sidebar shadow-sm" />
+          <div className="h-6 w-6 rounded-full border-2 border-background bg-sidebar shadow-sm" />
         </div>
-        <Skeleton className="h-3.5 w-16 rounded-full" />
+        <span
+          className="text-xs font-black uppercase tracking-[0.12em] opacity-50"
+          style={{
+            color: "var(--fab-text-muted)",
+            fontFamily: "var(--font-body)",
+          }}
+        >
+          0 online
+        </span>
       </div>
     </div>
   );
@@ -168,11 +193,39 @@ export function ChatInputSkeleton() {
           boxShadow: "0 1px 4px rgba(80,60,160,0.06)",
         }}
       >
-        <Skeleton className="h-6 w-6 rounded-md shrink-0 mx-1" />
+        <button
+          type="button"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+          aria-label="Attach files"
+          disabled
+          style={{ color: "var(--fab-text-dim)", cursor: "not-allowed" }}
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
         <div className="flex-1 h-8 flex items-center">
-          <Skeleton className="h-4 w-32 rounded-md" />
+          <span
+            className="text-sm"
+            style={{
+              color: "var(--fab-text-dim)",
+              fontFamily: "var(--font-body)",
+            }}
+          >
+            Type a message…
+          </span>
         </div>
-        <Skeleton className="h-[32px] w-[32px] rounded-[7px] shrink-0" />
+        <button
+          type="button"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px]"
+          aria-label="Send message"
+          disabled
+          style={{
+            background: "transparent",
+            color: "var(--fab-text-dim)",
+            cursor: "not-allowed",
+          }}
+        >
+          <Send className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
