@@ -99,6 +99,8 @@ export const getRooms = authQuery({
   args: {},
   handler: async (ctx) => {
     // TODO: PAGINATED QUERY INSTEAD
+    // TODO: Split this into lightweight room summaries plus per-room thread
+    // queries as chat grows so the shell does not preload every thread up front.
     const roomMembers = await ctx.db
       .query("roomMembers")
       .withIndex("by_participantId", (q) =>

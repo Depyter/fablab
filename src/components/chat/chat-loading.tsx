@@ -1,0 +1,210 @@
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+const messageSkeletonKeys = Array.from(
+  { length: 21 },
+  (_, index) => `chat-thread-skeleton-${index}`,
+);
+
+const sidebarRoomKeys = Array.from(
+  { length: 4 },
+  (_, index) => `chat-sidebar-room-skeleton-${index}`,
+);
+
+export function ChatMessageSkeleton({ index }: { index: number }) {
+  // Simulate grouped vs first-in-group messages
+  const isFirstInGroup = index % 3 === 0;
+  const hasFiles = index % 5 === 2;
+
+  return (
+    <div
+      className={cn(
+        "flex w-full gap-3 px-4 transition-colors",
+        isFirstInGroup ? "mt-2" : "mt-0.5",
+      )}
+      style={{
+        paddingTop: isFirstInGroup ? 4 : 0,
+        paddingBottom: isFirstInGroup ? 1 : 0,
+      }}
+    >
+      {/* Avatar column - fixed 34px width to match ChatInterface */}
+      <div
+        className="shrink-0 w-[34px]"
+        style={{ marginTop: isFirstInGroup ? 2 : 0 }}
+      >
+        {isFirstInGroup ? (
+          <Skeleton className="h-[34px] w-[34px] rounded-[8px]" />
+        ) : null}
+      </div>
+
+      {/* Content column */}
+      <div className="flex flex-col flex-1 min-w-0 max-w-2xl gap-1.5">
+        {isFirstInGroup ? (
+          <div className="flex items-baseline gap-2 mb-0.5">
+            <Skeleton className="h-4 w-24 rounded-full" />
+            <Skeleton className="h-3 w-12 rounded-full" />
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-2">
+          <Skeleton
+            className={cn(
+              "h-3 w-full max-w-[90%]",
+              index % 2 === 0 ? "max-w-[80%]" : "max-w-[95%]",
+            )}
+          />
+          {index % 4 === 0 && <Skeleton className="h-3 w-[60%]" />}
+
+          {hasFiles && (
+            <div className="mt-1 space-y-1">
+              {/* FileAttachmentCard Skeleton */}
+              <div className="flex items-center gap-4 rounded-2xl border border-border/50 bg-secondary/50 px-3 py-2.5 max-w-md">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                  <Skeleton className="h-3.5 w-[70%] rounded-full" />
+                  <Skeleton className="h-2 w-[40%] rounded-full opacity-60" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ChatSidebarLoading() {
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <div
+        className="flex h-14 shrink-0 items-center gap-2 px-3"
+        style={{ borderBottom: "1px solid var(--fab-border-md)" }}
+      >
+        <Skeleton className="h-8 w-8 rounded-md" />
+        <div className="flex flex-1 items-center gap-2">
+          <Skeleton className="h-3 w-20 rounded-full opacity-60" />
+        </div>
+      </div>
+      <ChatSidebarRoomsLoading />
+    </div>
+  );
+}
+
+export function ChatSidebarRoomsLoading() {
+  return (
+    <div className="flex-1 overflow-y-auto py-1">
+      {sidebarRoomKeys.map((key) => (
+        <div key={key} className="flex flex-col">
+          <div className="relative mx-1 flex flex-col gap-0.5 rounded-md px-3 py-2">
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <Skeleton className="h-5 w-5 shrink-0 rounded" />
+              <Skeleton className="h-5 flex-1 rounded-md" />
+            </div>
+          </div>
+          <div className="relative flex flex-col pb-2 pl-7">
+            <Skeleton className="my-0.5 h-8 w-[85%] rounded-md" />
+            <Skeleton className="my-0.5 h-8 w-[70%] rounded-md" />
+            <Skeleton className="my-0.5 h-8 w-[75%] rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ChatMessagesSkeletonList() {
+  return (
+    <div className="flex flex-col gap-1">
+      {messageSkeletonKeys.map((key, index) => (
+        <ChatMessageSkeleton key={key} index={index} />
+      ))}
+    </div>
+  );
+}
+
+export function ChatHeaderSkeleton() {
+  return (
+    <div
+      className="sticky top-0 z-10 flex items-center gap-3 px-4 h-14 shrink-0"
+      style={{
+        background:
+          "linear-gradient(to right, rgba(250,249,255,0.96), rgba(232,228,251,0.85))",
+        backdropFilter: "blur(12px)",
+        borderBottom: "1px solid var(--fab-border-md)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
+    >
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        <Skeleton className="h-6 w-6 rounded-lg shrink-0" />
+        <Skeleton className="h-5 w-32 rounded-md" />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex -space-x-1.5">
+          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
+          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
+        </div>
+        <Skeleton className="h-3.5 w-16 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+export function ChatInputSkeleton() {
+  return (
+    <div
+      className="sticky bottom-0 z-10 px-4 pb-4 pt-2 shrink-0"
+      style={{
+        background: "rgba(250,249,255,0.92)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        borderTop: "1px solid var(--fab-border)",
+      }}
+    >
+      <div
+        className="flex items-center gap-2 px-2 py-1.5 rounded-[10px]"
+        style={{
+          background: "#ffffff",
+          border: "1px solid var(--fab-border-md)",
+          boxShadow: "0 1px 4px rgba(80,60,160,0.06)",
+        }}
+      >
+        <Skeleton className="h-6 w-6 rounded-md shrink-0 mx-1" />
+        <div className="flex-1 h-8 flex items-center">
+          <Skeleton className="h-4 w-32 rounded-md" />
+        </div>
+        <Skeleton className="h-[32px] w-[32px] rounded-[7px] shrink-0" />
+      </div>
+    </div>
+  );
+}
+
+export function ChatThreadLoading() {
+  return (
+    <div
+      className="relative flex h-full min-h-0 flex-col overflow-hidden"
+      style={{ background: "var(--fab-bg-main)" }}
+    >
+      <ChatHeaderSkeleton />
+
+      {/* Grid background */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(var(--fab-grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--fab-grid) 1px, transparent 1px)
+          `,
+          backgroundSize: "28px 28px",
+        }}
+      />
+
+      {/* Messages area */}
+      <div className="relative z-[1] flex-1 overflow-y-auto px-4 py-4">
+        <ChatMessagesSkeletonList />
+      </div>
+
+      <ChatInputSkeleton />
+    </div>
+  );
+}

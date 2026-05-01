@@ -177,7 +177,7 @@ export function BookingDialog({
 
         setIsSuccess(true);
         toast.success("Booking request created successfully!");
-        router.push(`/dashboard/chat/${roomId}?thread=${threadId}`);
+        router.push(`/dashboard/chat/${roomId}/${threadId}`);
       } catch (error) {
         setIsSubmitting(false);
         if (isUnauthenticatedBookingError(error)) {

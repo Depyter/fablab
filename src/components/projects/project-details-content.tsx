@@ -396,9 +396,7 @@ export function ProjectDetailsContent({
                   className="gap-1.5 h-8 text-xs"
                   asChild
                 >
-                  <Link
-                    href={`/dashboard/chat/${project.roomId}?thread=${project.threadId}`}
-                  >
+                    <Link href={`/dashboard/chat/${project.roomId}/${project.threadId}`}>
                     <MessageSquare className="h-3.5 w-3.5" />
                     {isClient ? "Message Staff" : "Message Client"}
                   </Link>

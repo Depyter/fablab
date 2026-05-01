@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Loader2, Send, User, Hash, ArrowLeft } from "lucide-react";
-import { useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
 import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
@@ -17,6 +15,7 @@ import { MessageAttachments } from "./parts/message-attachments";
 import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
 import { PresenceIndicator } from "./presence-indicator";
 import { ChatInterfaceProps, MessageFile } from "./types";
+import { ChatMessagesSkeletonList } from "./chat-loading";
 import Image from "next/image";
 import posthog from "posthog-js";
 
@@ -45,16 +44,7 @@ function getInitials(name: string): string {
     .join("");
 }
 
-function ThreadTitle({
-  roomId,
-  threadId,
-}: {
-  roomId: import("@convex/_generated/dataModel").Id<"rooms">;
-  threadId: string;
-}) {
-  const threads = useQuery(api.chat.query.getThreads, { roomId });
-  const title = threads?.find((t) => t._id === threadId)?.title;
-
+function ThreadTitle({ title }: { title?: string }) {
   return (
     <div className="flex items-center gap-1.5 min-w-0 flex-1">
       <div className="h-6 w-6 rounded-lg flex items-center justify-center shrink-0">
@@ -78,6 +68,7 @@ function ThreadTitle({
 export function ChatInterface({
   roomId,
   threadId,
+  threadTitle,
   currentUserName,
   showBackButton,
 }: ChatInterfaceProps) {
@@ -136,7 +127,7 @@ export function ChatInterface({
         )}
 
         {/* Thread name */}
-        <ThreadTitle roomId={roomId} threadId={threadId} />
+        <ThreadTitle title={threadTitle} />
 
         {/* Presence */}
         <PresenceIndicator
@@ -166,17 +157,7 @@ export function ChatInterface({
         className="flex-1 overflow-y-auto px-4 py-4 relative z-2"
       >
         {isLoading ? (
-          <div className="flex justify-center items-center h-full">
-            <p
-              className="text-sm"
-              style={{
-                color: "var(--fab-text-dim)",
-                fontFamily: "var(--font-body)",
-              }}
-            >
-              Loading messages...
-            </p>
-          </div>
+          <ChatMessagesSkeletonList />
         ) : messages.length === 0 ? (
           <div className="flex justify-center items-center h-full">
             <span
