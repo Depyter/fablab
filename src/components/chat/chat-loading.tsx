@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Hash, Paperclip, Send } from "lucide-react";
+import { Hash, Paperclip, Send } from "lucide-react";
 
 const messageSkeletonKeys = Array.from(
   { length: 21 },
@@ -114,7 +114,7 @@ export function ChatSidebarRoomsLoading() {
 
 export function ChatMessagesSkeletonList() {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col">
       {messageSkeletonKeys.map((key, index) => (
         <ChatMessageSkeleton key={key} index={index} />
       ))}
@@ -134,41 +134,24 @@ export function ChatHeaderSkeleton() {
         WebkitBackdropFilter: "blur(12px)",
       }}
     >
-      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <Skeleton className="-ml-2 h-9 w-9 shrink-0 rounded-md md:hidden" />
+
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg">
-          <ArrowLeft
-            className="h-5 w-5"
-            style={{ color: "var(--fab-text-primary)" }}
-          />
-        </div>
-        <div className="flex min-w-0 items-center gap-1.5">
           <Hash
             className="h-3.5 w-3.5 shrink-0"
             style={{ color: "var(--fab-text-primary)" }}
           />
-          <span
-            className="font-mono text-[18px] font-semibold truncate"
-            style={{ color: "var(--fab-text-primary)" }}
-          >
-            channel
-          </span>
         </div>
+        <Skeleton className="h-5 w-36 max-w-[60%] rounded-md" />
       </div>
 
       <div className="flex items-center gap-2">
         <div className="flex -space-x-1.5">
-          <div className="h-6 w-6 rounded-full border-2 border-background bg-sidebar shadow-sm" />
-          <div className="h-6 w-6 rounded-full border-2 border-background bg-sidebar shadow-sm" />
+          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
+          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
         </div>
-        <span
-          className="text-xs font-black uppercase tracking-[0.12em] opacity-50"
-          style={{
-            color: "var(--fab-text-muted)",
-            fontFamily: "var(--font-body)",
-          }}
-        >
-          0 online
-        </span>
+        <Skeleton className="h-3.5 w-16 rounded-full" />
       </div>
     </div>
   );
