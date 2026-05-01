@@ -1,51 +1,121 @@
 "use client";
 
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import { Preloaded } from "convex/react";
-import { api } from "@convex/_generated/api";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Hash, ChevronDown, ChevronRight } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { Id } from "@convex/_generated/dataModel";
-
 import { RoomSettingsDialog } from "./room-settings-dialog";
+import { ChatThreadSummary, useChatRooms } from "./chat-rooms-context";
+import { ChatSidebarRoomsLoading } from "./chat-loading";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
-interface RoomWithLastMessage {
-  _id?: string;
-  _creationTime?: number;
-  name?: string;
-  members?: string;
-  color?: string;
-  lastMessageText?: string;
-  lastMessageAt?: number;
-  unreadCount?: number;
-  threads?: {
-    _id: string;
-    title: string;
-    lastMessageText?: string;
-    unreadCount?: number;
-    archived?: "Archived" | "Active";
-  }[];
+function ChatThreadLink({
+  roomId,
+  roomName,
+  thread,
+  isArchived,
+}: {
+  roomId: string;
+  roomName?: string;
+  thread: ChatThreadSummary;
+  isArchived: boolean;
+}) {
+  const pathname = usePathname();
+  const href = `/dashboard/chat/${roomId}/${thread._id}`;
+  const isThreadActive = pathname === href;
+  const hasUnreads = Boolean(thread.unreadCount && thread.unreadCount > 0);
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "relative flex items-center gap-2 transition-colors duration-150 group",
+        isArchived ? "pl-11 pr-3 py-2" : "pl-7 pr-3 py-2",
+      )}
+      onClick={() =>
+        posthog.capture("chat_thread_opened", {
+          room_id: roomId,
+          room_name: roomName,
+          thread_id: thread._id,
+          thread_title: thread.title,
+          is_archived: isArchived,
+        })
+      }
+      style={
+        isThreadActive
+          ? {
+              background: "var(--fab-amber-light)",
+              borderLeft: "4px solid var(--fab-amber)",
+              paddingLeft: isArchived
+                ? "calc(2.75rem - 4px)"
+                : "calc(1.75rem - 4px)",
+            }
+          : undefined
+      }
+      onMouseEnter={(e) => {
+        if (!isThreadActive) {
+          e.currentTarget.style.background = "var(--fab-chat-thread-hover)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isThreadActive) {
+          e.currentTarget.style.background = "transparent";
+        }
+      }}
+    >
+      <Hash
+        className="h-4 w-4 shrink-0"
+        style={{
+          color: isThreadActive
+            ? isArchived
+              ? "var(--fab-text-primary)"
+              : "var(--foreground)"
+            : hasUnreads && !isArchived
+              ? "var(--fab-magenta)"
+              : "var(--fab-text-dim)",
+        }}
+      />
+      <span
+        className={cn(
+          "truncate flex-1",
+          isArchived ? "text-[13px]" : "text-[14px]",
+          isThreadActive && "font-bold",
+          !isArchived && hasUnreads && !isThreadActive && "font-extrabold",
+          !isArchived && !hasUnreads && !isThreadActive && "font-medium",
+          isArchived && !isThreadActive && "font-medium opacity-70",
+        )}
+        style={{
+          fontFamily: "var(--font-body)",
+          color: isThreadActive
+            ? isArchived
+              ? "var(--fab-text-primary)"
+              : "var(--foreground)"
+            : hasUnreads && !isArchived
+              ? "var(--fab-text-primary)"
+              : "var(--fab-text-muted)",
+          opacity: isArchived && !isThreadActive ? 0.7 : 1,
+        }}
+      >
+        {thread.title}
+      </span>
+
+      {hasUnreads && !isThreadActive ? (
+        <div
+          className="h-4 min-w-4 shrink-0 rounded-full px-1.5 text-[10px] font-bold text-white flex items-center justify-center"
+          style={{ background: "var(--fab-magenta)" }}
+        >
+          {thread.unreadCount}
+        </div>
+      ) : null}
+    </Link>
+  );
 }
 
-export function ChatSidebar({
-  preloadedRooms,
-  className,
-}: {
-  preloadedRooms: Preloaded<typeof api.chat.query.getRooms>;
-  className?: string;
-}) {
-  const rooms = usePreloadedAuthQuery(preloadedRooms) as
-    | (RoomWithLastMessage | null)[]
-    | undefined;
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [unreadsOnly, setUnreadsOnly] = React.useState(false);
-  const searchParams = useSearchParams();
-  const activeThreadId = searchParams.get("thread");
+export function ChatSidebar({ className }: { className?: string }) {
+  const { roomList, isLoading } = useChatRooms();
 
   const [collapsedRooms, setCollapsedRooms] = React.useState<
     Record<string, boolean>
@@ -66,13 +136,6 @@ export function ChatSidebar({
     setExpandedArchived((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
   };
 
-  const filteredRooms = !rooms
-    ? []
-    : (rooms.filter(
-        (room) =>
-          room && room.name?.toLowerCase().includes(searchTerm.toLowerCase()),
-      ) as RoomWithLastMessage[]);
-
   return (
     <div
       className={cn("flex flex-col h-full overflow-hidden", className)}
@@ -81,13 +144,12 @@ export function ChatSidebar({
           "linear-gradient(180deg, var(--fab-bg-sidebar) 0%, rgba(250,249,255,0.8) 100%)",
       }}
     >
-      {/* ── Header ───────────────────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-2 px-3 h-14 shrink-0"
+        className="flex h-14 shrink-0 items-center gap-2 px-3"
         style={{ borderBottom: "1px solid var(--fab-border-md)" }}
       >
         <SidebarTrigger className="text-(--fab-text-dim) hover:text-(--fab-text-primary) transition-colors" />
-        <div className="flex-1 flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2">
           <span
             className="text-[12px] font-black uppercase tracking-[0.15em]"
             style={{
@@ -100,282 +162,136 @@ export function ChatSidebar({
         </div>
       </div>
 
-      {/* ── Room list ────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto py-1">
-        {filteredRooms && filteredRooms.length > 0 ? (
-          filteredRooms.map((room: RoomWithLastMessage) => {
+        {isLoading ? (
+          <ChatSidebarRoomsLoading />
+        ) : roomList.length > 0 ? (
+          roomList.map((room) => {
+            const roomId = room._id;
+
+            if (!roomId) return null;
+
+            const activeThreads =
+              room.threads?.filter(
+                (thread) => thread.archived !== "Archived",
+              ) ?? [];
+            const archivedThreads =
+              room.threads?.filter(
+                (thread) => thread.archived === "Archived",
+              ) ?? [];
+
             return (
-              <div key={room._id} className="flex flex-col">
-                {/* Room header row */}
+              <div key={roomId} className="flex flex-col">
                 <div
-                  onClick={(e) => toggleRoom(e, room._id!)}
-                  className="relative flex flex-col gap-0.5 px-3 py-2 mx-1 rounded-md transition-colors cursor-pointer group"
+                  onClick={(e) => toggleRoom(e, roomId)}
+                  className="relative mx-1 flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 transition-colors group"
                   style={{ fontFamily: "var(--font-body)" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background =
-                      "var(--fab-chat-thread-hover)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background =
+                      "var(--fab-chat-thread-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }}
                 >
-                  <div className="flex w-full items-center gap-2 min-w-0">
+                  <div className="flex w-full min-w-0 items-center gap-2">
                     <div
-                      className="p-0.5 rounded -ml-1 shrink-0 transition-colors"
+                      className="rounded p-0.5 -ml-1 shrink-0 transition-colors"
                       style={{ color: "var(--fab-text-dim)" }}
                     >
-                      {collapsedRooms[room._id!] ? (
+                      {collapsedRooms[roomId] ? (
                         <ChevronRight className="h-5 w-5" />
                       ) : (
                         <ChevronDown className="h-5 w-5" />
                       )}
                     </div>
                     <span
-                      className="text-[15px] font-medium font-body truncate flex-1 leading-tight"
+                      className="flex-1 truncate font-body text-[15px] font-medium leading-tight"
                       style={{ color: "var(--fab-text-primary)" }}
                     >
                       {room.name}
                     </span>
-                    {room.unreadCount !== undefined && room.unreadCount > 0 && (
+                    {room.unreadCount !== undefined && room.unreadCount > 0 ? (
                       <div
-                        className="h-2 w-2 rounded-full shrink-0 mr-1"
+                        className="mr-1 h-2 w-2 shrink-0 rounded-full"
                         style={{ background: "var(--fab-magenta)" }}
                       />
-                    )}
-                    {room._id && room.name && (
+                    ) : null}
+                    {room.name ? (
                       <RoomSettingsDialog
-                        roomId={room._id as Id<"rooms">}
+                        roomId={roomId as Id<"rooms">}
                         roomName={room.name}
                       />
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Nested Threads */}
                 {room.threads &&
                   room.threads.length > 0 &&
-                  !collapsedRooms[room._id!] &&
-                  (() => {
-                    const activeThreads = room.threads!.filter(
-                      (t) => t.archived !== "Archived",
-                    );
-                    const archivedThreads = room.threads!.filter(
-                      (t) => t.archived === "Archived",
-                    );
+                  !collapsedRooms[roomId] && (
+                    <div className="relative flex flex-col pb-2">
+                      {activeThreads.map((thread) => (
+                        <ChatThreadLink
+                          key={thread._id}
+                          roomId={roomId}
+                          roomName={room.name}
+                          thread={thread}
+                          isArchived={false}
+                        />
+                      ))}
 
-                    return (
-                      <div className="flex flex-col pb-2 relative">
-                        {/* ── Active threads ── */}
-                        {activeThreads.map((thread) => {
-                          const isThreadActive = activeThreadId === thread._id;
-                          const hasUnreads =
-                            thread.unreadCount && thread.unreadCount > 0;
-
-                          return (
-                            <Link
-                              href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
-                              key={thread._id}
-                              className="relative flex items-center gap-2 pl-7 pr-3 py-2 transition-colors duration-150 group"
-                              onClick={() =>
-                                posthog.capture("chat_thread_opened", {
-                                  room_id: room._id,
-                                  room_name: room.name,
-                                  thread_id: thread._id,
-                                  thread_title: thread.title,
-                                  is_archived: false,
-                                })
-                              }
-                              style={
-                                isThreadActive
-                                  ? {
-                                      background: "var(--fab-amber-light)",
-                                      borderLeft: "4px solid var(--fab-amber)",
-                                      paddingLeft: "calc(1.75rem - 4px)",
-                                    }
-                                  : undefined
-                              }
-                              onMouseEnter={(e) => {
-                                if (!isThreadActive)
-                                  e.currentTarget.style.background =
-                                    "var(--fab-chat-thread-hover)";
-                              }}
-                              onMouseLeave={(e) => {
-                                if (!isThreadActive)
-                                  e.currentTarget.style.background =
-                                    "transparent";
-                              }}
-                            >
-                              <Hash
-                                className="h-4 w-4 shrink-0"
-                                style={{
-                                  color: isThreadActive
-                                    ? "var(--foreground)"
-                                    : hasUnreads
-                                      ? "var(--fab-magenta)"
-                                      : "var(--fab-text-dim)",
-                                }}
-                              />
-                              <span
-                                className={cn(
-                                  "text-[14px] truncate flex-1",
-                                  isThreadActive && "font-bold text-foreground",
-                                  hasUnreads &&
-                                    !isThreadActive &&
-                                    "font-extrabold",
-                                  !hasUnreads &&
-                                    !isThreadActive &&
-                                    "font-medium",
-                                )}
-                                style={{
-                                  fontFamily: "var(--font-body)",
-                                  color: isThreadActive
-                                    ? "var(--foreground)"
-                                    : hasUnreads
-                                      ? "var(--fab-text-primary)"
-                                      : "var(--fab-text-muted)",
-                                }}
-                              >
-                                {thread.title}
-                              </span>
-
-                              {hasUnreads && thread._id !== activeThreadId ? (
-                                <div
-                                  className="h-4 px-1.5 min-w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
-                                  style={{ background: "var(--fab-magenta)" }}
-                                >
-                                  {thread.unreadCount}
-                                </div>
-                              ) : null}
-                            </Link>
-                          );
-                        })}
-
-                        {/* ── Archived section ── */}
-                        {archivedThreads.length > 0 && (
-                          <div className="flex flex-col mt-1">
-                            <button
-                              onClick={(e) => toggleArchived(e, room._id!)}
-                              className="flex items-center gap-2 pl-7 pr-3 py-1.5 mx-1 rounded-md transition-colors"
-                              style={{
-                                color: "var(--fab-text-dim)",
-                                fontFamily: "var(--font-body)",
-                              }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.background =
-                                  "rgba(80,60,160,0.06)")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.background =
-                                  "transparent")
-                              }
-                            >
-                              {!expandedArchived[room._id!] ? (
-                                <ChevronRight className="h-4 w-4 shrink-0" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 shrink-0" />
-                              )}
-                              <span
-                                className="text-[10px] font-bold tracking-[0.12em] uppercase"
-                                style={{ color: "var(--fab-text-dim)" }}
-                              >
-                                Archived
-                              </span>
-                            </button>
-
-                            {expandedArchived[room._id!] && (
-                              <div className="flex flex-col mt-0.5">
-                                {archivedThreads.map((thread) => {
-                                  const isThreadActive =
-                                    activeThreadId === thread._id;
-                                  return (
-                                    <Link
-                                      href={`/dashboard/chat/${room._id}?thread=${thread._id}`}
-                                      key={thread._id}
-                                      className="relative flex items-center gap-2 pl-11 pr-3 py-2 transition-colors duration-150 group"
-                                      onClick={() =>
-                                        posthog.capture("chat_thread_opened", {
-                                          room_id: room._id,
-                                          room_name: room.name,
-                                          thread_id: thread._id,
-                                          thread_title: thread.title,
-                                          is_archived: true,
-                                        })
-                                      }
-                                      style={
-                                        isThreadActive
-                                          ? {
-                                              background:
-                                                "var(--fab-amber-light)",
-                                              borderLeft:
-                                                "4px solid var(--fab-amber)",
-                                              paddingLeft:
-                                                "calc(2.75rem - 4px)",
-                                            }
-                                          : undefined
-                                      }
-                                      onMouseEnter={(e) => {
-                                        if (!isThreadActive)
-                                          e.currentTarget.style.background =
-                                            "var(--fab-chat-thread-hover)";
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        if (!isThreadActive)
-                                          e.currentTarget.style.background =
-                                            "transparent";
-                                      }}
-                                    >
-                                      <Hash
-                                        className="h-4 w-4 shrink-0"
-                                        style={{
-                                          color: isThreadActive
-                                            ? "var(--fab-text-primary)"
-                                            : "var(--fab-text-dim)",
-                                        }}
-                                      />
-                                      <span
-                                        className={cn(
-                                          "text-[13px] truncate flex-1 opacity-70",
-                                          isThreadActive &&
-                                            "font-bold opacity-100",
-                                          !isThreadActive && "font-medium",
-                                        )}
-                                        style={{
-                                          fontFamily: "var(--font-body)",
-                                          color: isThreadActive
-                                            ? "var(--fab-text-primary)"
-                                            : "var(--fab-text-muted)",
-                                          opacity: isThreadActive ? 1 : 0.7,
-                                        }}
-                                      >
-                                        {thread.title}
-                                      </span>
-
-                                      {thread.unreadCount &&
-                                      thread._id !== activeThreadId ? (
-                                        <div
-                                          className="h-4 px-1.5 min-w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
-                                          style={{
-                                            background: "var(--fab-magenta)",
-                                          }}
-                                        >
-                                          {thread.unreadCount}
-                                        </div>
-                                      ) : null}
-                                    </Link>
-                                  );
-                                })}
-                              </div>
+                      {archivedThreads.length > 0 ? (
+                        <div className="mt-1 flex flex-col">
+                          <button
+                            onClick={(e) => toggleArchived(e, roomId)}
+                            className="mx-1 flex items-center gap-2 rounded-md py-1.5 pl-7 pr-3 transition-colors"
+                            style={{
+                              color: "var(--fab-text-dim)",
+                              fontFamily: "var(--font-body)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(80,60,160,0.06)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = "transparent";
+                            }}
+                          >
+                            {expandedArchived[roomId] ? (
+                              <ChevronDown className="h-4 w-4 shrink-0" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 shrink-0" />
                             )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                            <span
+                              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                              style={{ color: "var(--fab-text-dim)" }}
+                            >
+                              Archived
+                            </span>
+                          </button>
+
+                          {expandedArchived[roomId] ? (
+                            <div className="mt-0.5 flex flex-col">
+                              {archivedThreads.map((thread) => (
+                                <ChatThreadLink
+                                  key={thread._id}
+                                  roomId={roomId}
+                                  roomName={room.name}
+                                  thread={thread}
+                                  isArchived={true}
+                                />
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
               </div>
             );
           })
         ) : (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-2">
+          <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
             <p
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{
@@ -383,7 +299,7 @@ export function ChatSidebar({
                 fontFamily: "var(--font-body)",
               }}
             >
-              {rooms === undefined ? "Loading…" : "No conversations found"}
+              No conversations found
             </p>
           </div>
         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -145,12 +145,11 @@ export function PresenceIndicator({
  */
 export function ChatPresenceWidget() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const profile = useQuery(api.users.getUserProfile);
 
-  const chatMatch = pathname.match(/^\/dashboard\/chat\/([^/]+)/);
+  const chatMatch = pathname.match(/^\/dashboard\/chat\/([^/]+)\/([^/]+)/);
   const roomId = chatMatch?.[1] as Id<"rooms"> | undefined;
-  const threadId = searchParams.get("thread");
+  const threadId = chatMatch?.[2];
 
   if (!roomId || !threadId || !profile?.name) return null;
 
