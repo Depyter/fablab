@@ -7,7 +7,6 @@ import { Hash, ChevronDown, ChevronRight } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
 import { RoomSettingsDialog } from "./room-settings-dialog";
 import { ChatThreadSummary, useChatRooms } from "./chat-rooms-context";
-import { ChatSidebarRoomsLoading } from "./chat-loading";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
@@ -114,7 +113,7 @@ function ChatThreadLink({
 }
 
 export function ChatSidebarContent() {
-  const { roomList, isLoading } = useChatRooms();
+  const { roomList } = useChatRooms();
 
   const [collapsedRooms, setCollapsedRooms] = React.useState<
     Record<string, boolean>
@@ -134,10 +133,6 @@ export function ChatSidebarContent() {
     event.stopPropagation();
     setExpandedArchived((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
   };
-
-  if (isLoading) {
-    return <ChatSidebarRoomsLoading />;
-  }
 
   if (roomList.length === 0) {
     return (

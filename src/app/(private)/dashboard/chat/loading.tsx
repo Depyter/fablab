@@ -2,7 +2,7 @@ import {
   ChatContentPane,
   ChatSidebarPane,
 } from "@/components/chat/chat-layout-panels";
-import { ChatThreadLoading } from "@/components/chat/chat-loading";
+import { ChatSelectThreadState } from "@/components/chat/chat-select-thread-state";
 import { ChatSidebarLoading } from "@/components/chat/chat-sidebar";
 
 export default function ChatLoading() {
@@ -12,7 +12,7 @@ export default function ChatLoading() {
         <ChatSidebarLoading />
       </ChatSidebarPane>
       <ChatContentPane>
-        <ChatThreadLoading />
+        <ChatSelectThreadState />
       </ChatContentPane>
     </div>
   );
