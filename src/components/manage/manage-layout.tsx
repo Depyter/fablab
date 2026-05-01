@@ -5,44 +5,6 @@ import { SlidersHorizontal, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-
-// ---------------------------------------------------------------------------
-// Header
-// ---------------------------------------------------------------------------
-
-interface ManageHeaderProps {
-  title: string;
-  subtitle?: string | ReactNode;
-  children?: ReactNode; // For actions like Add buttons, view toggles
-}
-
-export function ManageHeader({ title, subtitle, children }: ManageHeaderProps) {
-  return (
-    <header className="flex h-14 shrink-0 items-center gap-2 bg-background/80 backdrop-blur-md border-b border-sidebar-border/50 sticky top-0 z-30 px-4">
-      <SidebarTrigger className="-ml-1 text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" />
-      <Separator
-        orientation="vertical"
-        className="mx-2 h-4 bg-sidebar-border/60 shrink-0"
-      />
-
-      <div className="flex flex-1 items-center gap-2 min-w-0">
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-base leading-tight truncate">
-            {title}
-          </h1>
-          {subtitle && (
-            <div className="text-[11px] text-muted-foreground hidden sm:block">
-              {subtitle}
-            </div>
-          )}
-        </div>
-        {children}
-      </div>
-    </header>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Filter Bar

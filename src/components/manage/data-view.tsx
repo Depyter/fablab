@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, LayoutGrid, List, PackageOpen, Search } from "lucide-react";
+import { PackageOpen, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  ManageHeader,
-  ManageFilterBar,
   ManageFilterSearch,
   ManageFilterClear,
   ManageGrid,
   ManageEmptyState,
 } from "@/components/manage/manage-layout";
+
+import { DataViewLoadingState } from "@/components/manage/data-view-loading";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,157 +19,8 @@ import {
 
 export type ViewMode = "gallery" | "list" | "calendar";
 
-export interface DataViewContextValue {
-  view: ViewMode;
-  setView: (v: ViewMode) => void;
-}
-
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
-const DataViewContext = React.createContext<DataViewContextValue | null>(null);
-
-export function useDataView(): DataViewContextValue {
-  const ctx = React.useContext(DataViewContext);
-  if (!ctx) throw new Error("useDataView must be used inside <DataViewRoot>");
-  return ctx;
-}
-
-// ---------------------------------------------------------------------------
-// Root
-// Provides view-mode state to all child components via context.
-// ---------------------------------------------------------------------------
-
-interface DataViewRootProps {
-  children: React.ReactNode;
-  defaultView?: ViewMode;
-}
-
-export function DataViewRoot({
-  children,
-  defaultView = "gallery",
-}: DataViewRootProps) {
-  const [view, setView] = React.useState<ViewMode>(defaultView);
-
-  return (
-    <DataViewContext.Provider value={{ view, setView }}>
-      {children}
-    </DataViewContext.Provider>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Toolbar
-// Wraps ManageHeader and provides an optional built-in view-mode toggle.
-// `views` controls which toggle buttons appear. Omit the prop to hide the
-// toggle entirely (e.g. inventory / services only have gallery view).
-// ---------------------------------------------------------------------------
-
-interface DataViewToolbarProps {
-  title: string;
-  subtitle?: string;
-  /** Which view-mode buttons to show, in order. Omit to hide the toggle. */
-  views?: ViewMode[];
-  /** Slot for action buttons (Add, dropdowns, etc.) rendered after the toggle */
-  actions?: React.ReactNode;
-}
-
-const VIEW_ICONS: Record<ViewMode, React.ReactNode> = {
-  gallery: <LayoutGrid className="h-4 w-4" />,
-  list: <List className="h-4 w-4" />,
-  calendar: <Calendar className="h-4 w-4" />,
-};
-
-const VIEW_LABELS: Record<ViewMode, string> = {
-  gallery: "Gallery View",
-  list: "List View",
-  calendar: "Calendar View",
-};
-
-export function DataViewToolbar({
-  title,
-  subtitle,
-  views,
-  actions,
-}: DataViewToolbarProps) {
-  const { view, setView } = useDataView();
-
-  return (
-    <ManageHeader title={title} subtitle={subtitle}>
-      {views && views.length > 0 && (
-        <div className="flex items-center border rounded-md h-8 shrink-0">
-          {views.map((v, i) => (
-            <Button
-              key={v}
-              variant="ghost"
-              size="sm"
-              title={VIEW_LABELS[v]}
-              onClick={() => setView(v)}
-              className={cn(
-                "h-8 w-8 rounded-none px-0",
-                i < views.length - 1 && "border-r",
-                view === v && "bg-muted text-foreground",
-              )}
-            >
-              {VIEW_ICONS[v]}
-            </Button>
-          ))}
-        </div>
-      )}
-      {actions}
-    </ManageHeader>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Filters
-// Wraps ManageFilterBar with a built-in search input.
-// Pass extra filter widgets (Selects, etc.) as children.
-// Optionally hide when in a specific view (e.g. calendar).
-// ---------------------------------------------------------------------------
-
-interface DataViewFiltersProps {
-  search: string;
-  onSearchChange: (v: string) => void;
-  searchPlaceholder?: string;
-  activeFilterCount?: number;
-  onClearFilters?: () => void;
-  /** Hide the whole filter bar in these view modes */
-  hideInViews?: ViewMode[];
-  children?: React.ReactNode;
-}
-
-export function DataViewFilters({
-  search,
-  onSearchChange,
-  searchPlaceholder = "Search…",
-  activeFilterCount = 0,
-  onClearFilters,
-  hideInViews,
-  children,
-}: DataViewFiltersProps) {
-  const { view } = useDataView();
-
-  if (hideInViews?.includes(view)) return null;
-
-  return (
-    <ManageFilterBar>
-      <ManageFilterSearch
-        value={search}
-        onChange={onSearchChange}
-        placeholder={searchPlaceholder}
-        onClear={() => onSearchChange("")}
-      />
-      {children}
-      {onClearFilters && (
-        <ManageFilterClear
-          activeCount={activeFilterCount}
-          onClear={onClearFilters}
-        />
-      )}
-    </ManageFilterBar>
-  );
+function useResolvedView(explicitView?: ViewMode): ViewMode {
+  return explicitView ?? "gallery";
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +33,7 @@ interface DataViewContentProps<T> {
   items: T[];
   totalItems: number;
   isLoading?: boolean;
+  view?: ViewMode;
   /** Hide content in these view modes; use `viewSlots` for those views instead */
   hideInViews?: ViewMode[];
   /** Render slots for specific view modes, keyed by ViewMode */
@@ -211,6 +63,7 @@ export function DataViewContent<T extends { _id: string }>({
   items,
   totalItems,
   isLoading = false,
+  view: explicitView,
   hideInViews,
   viewSlots,
   renderItem,
@@ -220,22 +73,18 @@ export function DataViewContent<T extends { _id: string }>({
   gridClassName,
   listClassName,
 }: DataViewContentProps<T>) {
-  const { view } = useDataView();
+  const view = useResolvedView(explicitView);
 
-  // View-specific slot override (e.g. calendar)
-  if (viewSlots?.[view]) {
-    return <>{viewSlots[view]}</>;
+  if (isLoading) {
+    return <DataViewLoadingState view={view} />;
   }
 
   // Hide in view (but no slot provided — caller handles it externally)
   if (hideInViews?.includes(view)) return null;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 flex-1 text-muted-foreground text-sm">
-        Loading…
-      </div>
-    );
+  // View-specific slot override (e.g. calendar)
+  if (viewSlots?.[view]) {
+    return <>{viewSlots[view]}</>;
   }
 
   // No data at all
@@ -295,6 +144,7 @@ interface DataViewLoadMoreProps {
   canLoadMore: boolean;
   onLoadMore: () => void;
   label?: string;
+  view?: ViewMode;
   hideInViews?: ViewMode[];
 }
 
@@ -302,9 +152,10 @@ export function DataViewLoadMore({
   canLoadMore,
   onLoadMore,
   label = "Load More",
+  view: explicitView,
   hideInViews,
 }: DataViewLoadMoreProps) {
-  const { view } = useDataView();
+  const view = useResolvedView(explicitView);
 
   if (!canLoadMore) return null;
   if (hideInViews?.includes(view)) return null;
