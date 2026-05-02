@@ -275,7 +275,7 @@ export function ChatInterface({
 
                     <div
                       className={cn(
-                        "group message-enter flex items-start gap-3 rounded-sm px-4 transition-colors",
+                        "group flex items-start gap-3 rounded-sm px-4 transition-colors",
                         isFirstInGroup ? "mt-2" : "mt-0.5",
                       )}
                       style={{
@@ -407,7 +407,7 @@ export function ChatInterface({
                   {/* Full-width Slack-style row */}
                   <div
                     className={cn(
-                      "group message-enter flex items-start gap-3 px-4 rounded-sm transition-colors",
+                      "group flex items-start gap-3 px-4 rounded-sm transition-colors",
                       isFirstInGroup ? "mt-2" : "mt-0.5",
                     )}
                     style={{
