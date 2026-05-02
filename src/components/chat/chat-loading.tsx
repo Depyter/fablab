@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Hash, Paperclip, Send } from "lucide-react";
+import { PresenceIndicatorSkeleton } from "./presence-indicator";
 
 const messageSkeletonKeys = Array.from(
   { length: 21 },
@@ -147,13 +148,7 @@ export function ChatHeaderSkeleton() {
         <Skeleton className="h-5 w-36 max-w-[60%] rounded-md" />
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex -space-x-1.5">
-          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
-          <Skeleton className="h-6 w-6 rounded-full border-2 border-background shadow-sm" />
-        </div>
-        <Skeleton className="h-3.5 w-16 rounded-full" />
-      </div>
+      <PresenceIndicatorSkeleton />
     </div>
   );
 }

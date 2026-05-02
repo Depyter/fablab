@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import usePresence from "@convex-dev/presence/react";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 if (typeof window !== "undefined") {
@@ -38,6 +39,25 @@ interface PresenceIndicatorProps {
   roomId: Id<"rooms">;
 }
 
+export function PresenceIndicatorSkeleton() {
+  return (
+    <div className="flex items-center gap-3 shrink-0">
+      {/* Stacked avatars */}
+      <div className="flex items-center">
+        <Skeleton className="h-8 w-8 rounded-full border-2 border-background shadow-sm shrink-0" />
+        <Skeleton className="h-8 w-8 rounded-full border-2 border-background shadow-sm shrink-0 -ml-2.5" />
+        <Skeleton className="h-8 w-8 rounded-full border-2 border-background shadow-sm shrink-0 -ml-2.5" />
+      </div>
+
+      {/* Online label */}
+      <div className="hidden sm:flex items-center gap-2 ml-1">
+        <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+        <Skeleton className="h-3.5 w-16 rounded-full opacity-50" />
+      </div>
+    </div>
+  );
+}
+
 export function PresenceIndicator({
   threadId,
   userId,
@@ -46,7 +66,7 @@ export function PresenceIndicator({
   const presenceState = usePresence(api.presence, threadId, userId);
   const members = useQuery(api.chat.query.getRoomMembers, { roomId });
 
-  if (!presenceState || !members) return null;
+  if (!presenceState || !members) return <PresenceIndicatorSkeleton />;
 
   const online = presenceState.filter((p) => p.online);
   if (online.length === 0) return null;
