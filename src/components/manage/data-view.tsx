@@ -9,7 +9,7 @@ import {
   ManageFilterClear,
   ManageGrid,
   ManageEmptyState,
-} from "@/components/manage/manage-layout";
+} from "@/components/manage/manage-primitives";
 
 import { DataViewLoadingState } from "@/components/manage/data-view-loading";
 

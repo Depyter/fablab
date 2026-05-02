@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { DataViewShell } from "@/components/manage/data-view-shell";
 
-export default function DashboardDataViewShellLayout({
+export default function StaffDataViewShellLayout({
   children,
 }: {
   children: ReactNode;
