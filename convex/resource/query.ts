@@ -45,11 +45,12 @@ export const getBookings = authQuery({
         : [];
     const myProjectIdsSet = new Set(myProjectIds);
 
-    // No standalone by_startTime index on resourceUsage — filter in memory
-    const allUsages = await ctx.db.query("resourceUsage").collect();
-    const dayUsages = allUsages.filter(
-      (u) => u.startTime >= args.date && u.startTime < nextDay,
-    );
+    const dayUsages = await ctx.db
+      .query("resourceUsage")
+      .withIndex("by_startTime", (q) =>
+        q.gte("startTime", args.date).lt("startTime", nextDay),
+      )
+      .collect();
 
     return await Promise.all(
       dayUsages.map(async (usage) => {
