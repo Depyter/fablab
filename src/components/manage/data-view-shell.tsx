@@ -23,7 +23,7 @@ import {
   ManageFilterBar,
   ManageFilterClear,
   ManageFilterSearch,
-} from "@/components/manage/manage-layout";
+} from "@/components/manage/manage-primitives";
 import type { ViewMode } from "@/components/manage/data-view";
 import {
   DATA_VIEW_SECTION_CONFIG,
@@ -426,10 +426,10 @@ function DataViewSearchField({
 }
 
 // ---------------------------------------------------------------------------
-// Layout Component
+// Shell Component
 // ---------------------------------------------------------------------------
 
-export function DataViewLayout({ children }: { children: React.ReactNode }) {
+export function DataViewShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col h-full bg-background w-full min-w-0">
       <header className="flex h-14 shrink-0 items-center gap-2 bg-background/80 backdrop-blur-md border-b border-sidebar-border/50 sticky top-0 z-30 px-4">

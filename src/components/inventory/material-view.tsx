@@ -5,7 +5,7 @@ import {
 import {
   ManageGrid,
   ManageEmptyState,
-} from "@/components/manage/manage-layout";
+} from "@/components/manage/manage-primitives";
 import { Search } from "lucide-react";
 
 interface MaterialListViewProps {
