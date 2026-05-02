@@ -109,6 +109,8 @@ export const createProject = authMutation({
       userId: userProfile._id,
       assignedMaker: args.assignedMaker,
       service: args.service,
+      bookingStartTime: args.booking.startTime,
+      bookingEndTime: args.booking.endTime,
       totalInvoice: buildTotalInvoice(provisional.total),
       pricingSnapshot: buildPricingSnapshot({
         setupFee: provisional.setupFee,

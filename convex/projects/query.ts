@@ -123,12 +123,14 @@ async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
         ctx.db.get(project.userId as Id<"userProfile">),
         ctx.db.get(project.service as Id<"services">),
       ]);
-
-      // Fetch usage directly by project
-      const usage = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_project", (q) => q.eq("projectId", project._id))
-        .first();
+      const usage =
+        project.bookingStartTime === undefined &&
+        project.bookingEndTime === undefined
+          ? await ctx.db
+              .query("resourceUsage")
+              .withIndex("by_project", (q) => q.eq("projectId", project._id))
+              .first()
+          : null;
 
       const coverUrl =
         service?.images && service.images.length > 0
@@ -153,9 +155,8 @@ async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
               pfpUrl: makerPfpUrl,
             }
           : null,
-        // Booking window from resourceUsage
-        bookingStartTime: usage?.startTime ?? null,
-        bookingEndTime: usage?.endTime ?? null,
+        bookingStartTime: project.bookingStartTime ?? usage?.startTime ?? null,
+        bookingEndTime: project.bookingEndTime ?? usage?.endTime ?? null,
         // Audit dates
         requestedDate: project._creationTime,
         estimatedPrice: project.totalInvoice?.total ?? 0,
@@ -363,9 +364,8 @@ export const getProject = authQuery({
       ...project,
       // Audit / tracking dates
       requestedDate: project._creationTime,
-      // Booking window derived from resourceUsage
-      bookingStartTime: primaryUsage?.startTime ?? null,
-      bookingEndTime: primaryUsage?.endTime ?? null,
+      bookingStartTime: project.bookingStartTime ?? primaryUsage?.startTime ?? null,
+      bookingEndTime: project.bookingEndTime ?? primaryUsage?.endTime ?? null,
       // Relations
       client: {
         _id: clientProfile?._id ?? null,

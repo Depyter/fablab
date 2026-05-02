@@ -175,6 +175,7 @@ export default defineSchema({
   })
     .index("by_project", ["projectId"])
     .index("by_service", ["service"])
+    .index("by_startTime", ["startTime"])
     .index("by_resource_startTime", ["resource", "startTime"]),
 
   // --------------------------------------------------------
@@ -203,6 +204,8 @@ export default defineSchema({
     userId: v.id("userProfile"),
     assignedMaker: v.optional(v.id("userProfile")),
     service: v.id("services"),
+    bookingStartTime: v.optional(v.number()),
+    bookingEndTime: v.optional(v.number()),
 
     // Aggregate invoice derived from resourceUsage sessions
     totalInvoice: v.optional(
@@ -241,6 +244,7 @@ export default defineSchema({
   })
     .index("by_userProfile", ["userId"])
     .index("by_status", ["status"])
+    .index("by_bookingStartTime", ["bookingStartTime"])
     .searchIndex("search_body", {
       searchField: "searchText",
       filterFields: ["status"],
