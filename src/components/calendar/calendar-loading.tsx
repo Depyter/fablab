@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   HEADER_SLOTS,
   RESOURCES_COL_WIDTH,
+  SLOT_WIDTH,
 } from "@/components/calendar/usage-table";
 
 const loadingRows = [
@@ -49,6 +50,9 @@ const mobileLoadingRows = [
     ],
   },
 ] as const;
+
+const LOADING_TABLE_WIDTH =
+  RESOURCES_COL_WIDTH + HEADER_SLOTS.length * SLOT_WIDTH;
 
 function formatLoadingTime(decimalHour: number) {
   const hours = Math.floor(decimalHour);
@@ -100,12 +104,18 @@ export function CalendarLoadingState() {
         <div className="relative flex-1 overflow-auto">
           <table
             style={{
-              width: "100%",
+              width: LOADING_TABLE_WIDTH,
               tableLayout: "fixed",
               borderCollapse: "collapse",
               fontSize: 12,
             }}
           >
+            <colgroup>
+              <col style={{ width: RESOURCES_COL_WIDTH }} />
+              {HEADER_SLOTS.map((slot) => (
+                <col key={`calendar-loading-col-${slot}`} style={{ width: SLOT_WIDTH }} />
+              ))}
+            </colgroup>
             <thead>
               <tr
                 style={{

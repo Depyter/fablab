@@ -3,50 +3,57 @@
 import * as React from "react";
 import { ResourceStatus } from "@convex/constants";
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
-import { Plus, HardDrive, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  type Column,
+  type ColumnDef,
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
-// ─── Shared layout constants ─────────────────────────────────────────────────
-export const ROW_HEIGHT = 40; // px — every machine row
-export const SECTION_HEIGHT = 26; // px — section divider rows
-export const DAY_START = 9; // 9:00 AM
-export const DAY_END = 18; // 6:00 PM
-export const TOTAL_SLOTS = (DAY_END - DAY_START) * 2; // 18 bookable half-hour slots
-export const RESOURCES_COL_WIDTH = 160; // px — sticky left column
+export const ROW_HEIGHT = 40;
+export const SECTION_HEIGHT = 26;
+export const HEADER_HEIGHT = 44;
+export const DAY_START = 9;
+export const DAY_END = 18;
+export const TOTAL_SLOTS = (DAY_END - DAY_START) * 2;
+export const RESOURCES_COL_WIDTH = 160;
+export const SLOT_WIDTH = 52;
 
-/** Header slots: 9:00, 9:30, …, 17:30, 18:00 — includes 6 PM boundary label */
 export const HEADER_SLOTS = Array.from(
   { length: TOTAL_SLOTS + 1 },
-  (_, i) => DAY_START + i * 0.5,
+  (_, index) => DAY_START + index * 0.5,
 );
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type MachineStatus = "active" | "maintenance" | "free";
 
-/** Interface representing a Machine (Resource) in the system. */
 export interface Machine {
   id: string;
   name: string;
   status: typeof ResourceStatus.AVAILABLE | typeof ResourceStatus.UNAVAILABLE;
   description: string;
-  /** Optional group label for section dividers */
   group?: string;
 }
 
-/** Interface representing a Machine Usage (Booking). */
 export interface MachineUsage {
   id: string;
   machineId: string;
@@ -60,57 +67,69 @@ export interface MachineUsage {
     | "paid"
     | "cancelled";
   makerName: string;
-  date: number; // Unix timestamp (seconds)
-  startTime: number; // Decimal hours (e.g., 7.5 for 07:30)
+  date: number;
+  startTime: number;
   endTime: number;
   color?: string;
-}
-
-interface MachineSection {
-  label: string;
-  machines: Machine[];
 }
 
 interface UsageTableProps {
   machines: Machine[];
   usages: MachineUsage[];
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  leadingColumnLabel?: string;
+  itemLabelSingular?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+type ScheduleRow =
+  | {
+      id: string;
+      kind: "section";
+      label: string;
+    }
+  | {
+      id: string;
+      kind: "track";
+      machine: Machine;
+      machineStatus: MachineStatus;
+      track: MachineUsage[];
+      isFirstTrack: boolean;
+    };
+
+const columnHelper = createColumnHelper<ScheduleRow>();
 
 function getMachineStatus(
   machine: Machine,
-  usages: MachineUsage[],
+  machineUsages: MachineUsage[],
   nowDecimal: number,
 ): MachineStatus {
   if (machine.status === ResourceStatus.UNAVAILABLE) return "maintenance";
-  const active = usages.find(
-    (u) =>
-      u.machineId === machine.id &&
-      u.startTime <= nowDecimal &&
-      u.endTime > nowDecimal,
+
+  const active = machineUsages.find(
+    (usage) =>
+      usage.startTime <= nowDecimal && usage.endTime > nowDecimal,
   );
+
   return active ? "active" : "free";
 }
-
-const formatDecimalTime = (decimalHour: number) => {
-  const hours = Math.floor(decimalHour);
-  const minutes = (decimalHour % 1) * 60;
-  return format(
-    setMinutes(setHours(startOfDay(new Date()), hours), minutes),
-    "hh:mm a",
-  );
-};
 
 const formatShortTime = (decimalHour: number) => {
   const hours = Math.floor(decimalHour);
   const minutes = (decimalHour % 1) * 60;
+
   return format(
     setMinutes(setHours(startOfDay(new Date()), hours), minutes),
     minutes === 0 ? "ha" : "h:mm",
   );
 };
+
+function getSlotColumnId(decimalHour: number) {
+  return `slot-${Math.round(decimalHour * 2)}`;
+}
+
+function getSlotIndex(decimalHour: number) {
+  return Math.round((decimalHour - DAY_START) * 2);
+}
 
 function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
   const sorted = [...usages].sort((a, b) => a.startTime - b.startTime);
@@ -118,28 +137,44 @@ function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
 
   for (const usage of sorted) {
     let placed = false;
+
     for (const track of tracks) {
       const lastUsage = track[track.length - 1];
+
       if (usage.startTime >= lastUsage.endTime) {
         track.push(usage);
         placed = true;
         break;
       }
     }
+
     if (!placed) {
       tracks.push([usage]);
     }
   }
+
   return tracks.length > 0 ? tracks : [[]];
 }
 
-// ─── Main UsageTable component ────────────────────────────────────────────────
-export function UsageTable({
+function getPinnedStyle<TData>(
+  column?: Column<TData>,
+): React.CSSProperties | undefined {
+  if (column?.getIsPinned() !== "left") return undefined;
+
+  return {
+    position: "sticky",
+    left: column.getStart("left"),
+  };
+}
+
+export const UsageTable = React.memo(function UsageTable({
   machines,
   usages,
   onOpenProjectDetails,
+  leadingColumnLabel = "RESOURCES",
+  itemLabelSingular = "Resource",
 }: UsageTableProps) {
-  // Live time — updates every 60 s
+  const scrollViewportRef = React.useRef<HTMLDivElement>(null);
   const [nowDate, setNowDate] = React.useState<Date>(() => new Date());
   const nowDecimal = nowDate.getHours() + nowDate.getMinutes() / 60;
 
@@ -148,408 +183,517 @@ export function UsageTable({
     return () => clearInterval(tick);
   }, []);
 
-  // Total unique projects scheduled today
   const totalProjects = React.useMemo(
     () =>
-      new Set(usages.flatMap((u) => (u.projectId ? [u.projectId] : []))).size,
+      new Set(usages.flatMap((usage) => (usage.projectId ? [usage.projectId] : [])))
+        .size,
     [usages],
   );
 
-  // Group machines by optional `group` field
-  const sections: MachineSection[] = React.useMemo(() => {
-    const grouped = new Map<string, Machine[]>();
-    for (const m of machines) {
-      const key = m.group ?? "";
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(m);
+  const usagesByMachine = React.useMemo(() => {
+    const grouped = new Map<string, MachineUsage[]>();
+
+    for (const usage of usages) {
+      const machineUsages = grouped.get(usage.machineId);
+
+      if (machineUsages) {
+        machineUsages.push(usage);
+      } else {
+        grouped.set(usage.machineId, [usage]);
+      }
     }
-    return Array.from(grouped.entries()).map(([label, ms]) => ({
+
+    for (const machineUsages of grouped.values()) {
+      machineUsages.sort((a, b) => a.startTime - b.startTime);
+    }
+
+    return grouped;
+  }, [usages]);
+
+  const sections = React.useMemo(() => {
+    const grouped = new Map<string, Machine[]>();
+
+    for (const machine of machines) {
+      const key = machine.group ?? "";
+
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+
+      grouped.get(key)?.push(machine);
+    }
+
+    return Array.from(grouped.entries()).map(([label, sectionMachines]) => ({
       label,
-      machines: ms,
+      machines: sectionMachines,
     }));
   }, [machines]);
 
-  // Live indicator values
+  const scheduleRows = React.useMemo<ScheduleRow[]>(() => {
+    const rows: ScheduleRow[] = [];
+
+    for (const section of sections) {
+      if (section.label) {
+        rows.push({
+          id: `section-${section.label}`,
+          kind: "section",
+          label: section.label,
+        });
+      }
+
+      for (const machine of section.machines) {
+        const machineUsages = usagesByMachine.get(machine.id) ?? [];
+        const tracks = computeTracks(machineUsages);
+        const machineStatus = getMachineStatus(machine, machineUsages, nowDecimal);
+
+        tracks.forEach((track, trackIndex) => {
+          rows.push({
+            id: `${machine.id}-track-${trackIndex}`,
+            kind: "track",
+            machine,
+            machineStatus,
+            track,
+            isFirstTrack: trackIndex === 0,
+          });
+        });
+      }
+    }
+
+    return rows;
+  }, [nowDecimal, sections, usagesByMachine]);
+
+  const columns = React.useMemo<ColumnDef<ScheduleRow>[]>(
+    () => [
+      columnHelper.display({
+        id: "resource",
+        header: leadingColumnLabel,
+        size: RESOURCES_COL_WIDTH,
+      }),
+      ...HEADER_SLOTS.map((slot) =>
+        columnHelper.display({
+          id: getSlotColumnId(slot),
+          header: slot % 1 === 0 ? formatShortTime(slot) : "",
+          size: SLOT_WIDTH,
+        }),
+      ),
+    ],
+    [leadingColumnLabel],
+  );
+
+  // TanStack Table is intentionally isolated to this client leaf.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    data: scheduleRows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    initialState: {
+      columnPinning: { left: ["resource"] },
+    },
+    columnResizeMode: "onChange",
+    defaultColumn: {
+      size: SLOT_WIDTH,
+      minSize: SLOT_WIDTH,
+    },
+  });
+
+  const rowVirtualizer = useVirtualizer({
+    count: scheduleRows.length,
+    getScrollElement: () => scrollViewportRef.current,
+    estimateSize: (index) =>
+      scheduleRows[index]?.kind === "section" ? SECTION_HEIGHT : ROW_HEIGHT,
+    overscan: 6,
+  });
+
+  const resourceColumn = table.getColumn("resource");
+  const totalHeight = rowVirtualizer.getTotalSize();
+  const virtualRows = rowVirtualizer.getVirtualItems();
   const nowInRange = nowDecimal >= DAY_START && nowDecimal < DAY_END;
-  const currentSlotIdx = Math.floor((nowDecimal - DAY_START) * 2);
-  // Fraction across the slot grid for the now-line
-  const nowFraction = nowInRange
-    ? (nowDecimal - DAY_START) / (DAY_END - DAY_START)
+  const currentSlotIdx = nowInRange
+    ? Math.floor((nowDecimal - DAY_START) * 2)
     : null;
 
-  return (
-    <div className="flex-1 overflow-hidden flex flex-col">
-      {/* ── Desktop view ──────────────────────────────────────────────────── */}
-      <div className="hidden md:flex flex-col flex-1 overflow-hidden">
-        {/* Scrollable table — fills remaining space */}
-        <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
-          {/* Now-line — spans full scrollable height, positioned via calc */}
-          {nowFraction !== null && (
-            <div
-              aria-label="Now indicator"
-              style={{
-                position: "absolute",
-                left: `calc(${RESOURCES_COL_WIDTH}px + (100% - ${RESOURCES_COL_WIDTH}px) * ${nowFraction})`,
-                top: 0,
-                bottom: 0,
-                width: 2,
-                background: "var(--fab-magenta)",
-                zIndex: 6,
-                pointerEvents: "none",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: -1,
-                  left: -4,
-                  width: 0,
-                  height: 0,
-                  borderLeft: "5px solid transparent",
-                  borderRight: "5px solid transparent",
-                  borderTop: "7px solid var(--fab-magenta)",
-                }}
-              />
-            </div>
-          )}
+  const getSlotMetrics = React.useCallback(
+    (slot: number) => {
+      const column = table.getColumn(getSlotColumnId(slot));
 
-          {/* Table: table-fixed + w-full fills the container width */}
-          <table
+      return {
+        left: column?.getStart() ?? 0,
+        width: column?.getSize() ?? SLOT_WIDTH,
+      };
+    },
+    [table],
+  );
+
+  const nowIndicatorLeft = React.useMemo(() => {
+    if (currentSlotIdx === null) return null;
+
+    const slot = HEADER_SLOTS[currentSlotIdx];
+    const { left, width } = getSlotMetrics(slot);
+    const progressWithinSlot = (nowDecimal - slot) / 0.5;
+
+    return left + width * progressWithinSlot;
+  }, [currentSlotIdx, getSlotMetrics, nowDecimal]);
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="hidden min-h-0 flex-1 md:flex">
+        <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
+          <div
+            className="relative min-w-fit"
             style={{
-              width: "100%",
-              tableLayout: "fixed",
-              borderCollapse: "collapse",
-              fontSize: 12,
+              width: table.getTotalSize(),
+              minHeight: HEADER_HEIGHT + totalHeight,
             }}
           >
-            {/* Sticky time header */}
-            <thead>
-              <tr
+            {nowIndicatorLeft !== null && (
+              <div
+                aria-label="Now indicator"
                 style={{
-                  height: 44,
-                  background: "var(--fab-bg-sidebar)",
-                  position: "sticky",
+                  position: "absolute",
+                  left: nowIndicatorLeft,
                   top: 0,
-                  zIndex: 10,
+                  bottom: 0,
+                  width: 2,
+                  background: "var(--fab-magenta)",
+                  zIndex: 6,
+                  pointerEvents: "none",
                 }}
               >
-                {/* Resources column header */}
-                <th
+                <div
                   style={{
-                    width: RESOURCES_COL_WIDTH,
-                    position: "sticky",
-                    left: 0,
-                    zIndex: 20,
-                    background: "var(--fab-bg-sidebar)",
-                    borderBottom: "1px solid var(--fab-border-md)",
-                    borderRight: "1px solid var(--fab-border-md)",
-                    textAlign: "left",
-                    paddingLeft: 12,
-                    fontWeight: 700,
-                    fontSize: 10,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "var(--fab-text-muted)",
+                    position: "absolute",
+                    top: -1,
+                    left: -4,
+                    width: 0,
+                    height: 0,
+                    borderLeft: "5px solid transparent",
+                    borderRight: "5px solid transparent",
+                    borderTop: "7px solid var(--fab-magenta)",
                   }}
-                >
-                  RESOURCES
-                </th>
+                />
+              </div>
+            )}
 
-                {/* Slot header cells */}
-                {HEADER_SLOTS.map((slot, i) => {
-                  const isHighlighted = nowInRange && i === currentSlotIdx;
-                  const isHour = slot % 1 === 0;
+            <table
+              style={{
+                width: table.getTotalSize(),
+                tableLayout: "fixed",
+                borderCollapse: "collapse",
+                fontSize: 12,
+              }}
+            >
+              <TableHeader
+                className="sticky top-0 z-20"
+                style={{ background: "var(--fab-bg-sidebar)" }}
+              >
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="border-0 hover:bg-transparent"
+                    style={{ height: HEADER_HEIGHT }}
+                  >
+                    {headerGroup.headers.map((header) => {
+                      const isCurrentHeader =
+                        currentSlotIdx !== null &&
+                        header.column.id ===
+                          getSlotColumnId(HEADER_SLOTS[currentSlotIdx]);
+
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className="px-1 text-left text-[10px] font-medium whitespace-nowrap"
+                          style={{
+                            width: header.getSize(),
+                            minWidth: header.getSize(),
+                            maxWidth: header.getSize(),
+                            zIndex: header.column.getIsPinned() ? 30 : 20,
+                            background: isCurrentHeader
+                              ? "rgba(157,26,88,0.06)"
+                              : "var(--fab-bg-sidebar)",
+                            borderBottom: "1px solid var(--fab-border-md)",
+                            borderLeft:
+                              header.column.id === "resource"
+                                ? undefined
+                                : "1px solid var(--fab-border)",
+                            borderRight:
+                              header.column.id === "resource"
+                                ? "1px solid var(--fab-border-md)"
+                                : undefined,
+                            color:
+                              header.column.id === "resource"
+                                ? "var(--fab-text-muted)"
+                                : isCurrentHeader
+                                  ? "var(--fab-magenta)"
+                                  : "var(--fab-text-muted)",
+                            fontWeight:
+                              header.column.id === "resource"
+                                ? 700
+                                : isCurrentHeader
+                                  ? 700
+                                  : 500,
+                            letterSpacing:
+                              header.column.id === "resource"
+                                ? "0.1em"
+                                : undefined,
+                            textTransform:
+                              header.column.id === "resource"
+                                ? "uppercase"
+                                : undefined,
+                            paddingLeft: header.column.id === "resource" ? 12 : 4,
+                            ...getPinnedStyle(header.column),
+                          }}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+            </table>
+
+            <div className="relative" style={{ height: totalHeight }}>
+              {virtualRows.map((virtualRow) => {
+                const row = scheduleRows[virtualRow.index];
+
+                if (!row) return null;
+
+                if (row.kind === "section") {
                   return (
-                    <th
-                      key={slot}
+                    <div
+                      key={row.id}
+                      className="absolute left-0 flex items-center"
                       style={{
-                        background: isHighlighted
-                          ? "rgba(157,26,88,0.06)"
-                          : "var(--fab-bg-sidebar)",
+                        top: virtualRow.start,
+                        height: SECTION_HEIGHT,
+                        width: table.getTotalSize(),
+                        background: "rgba(220,215,245,0.55)",
+                        borderTop: "1px solid var(--fab-border-md)",
                         borderBottom: "1px solid var(--fab-border-md)",
-                        borderLeft: "1px solid var(--fab-border)",
-                        textAlign: "left",
-                        paddingLeft: 4,
-                        overflow: "hidden",
-                        fontSize: 10,
-                        fontWeight: isHighlighted ? 700 : 500,
-                        color: isHighlighted
-                          ? "var(--fab-magenta)"
-                          : "var(--fab-text-muted)",
-                        whiteSpace: "nowrap",
                       }}
                     >
-                      {isHour ? formatShortTime(slot) : ""}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-
-            <tbody>
-              {sections.map((section) => (
-                <React.Fragment key={section.label || "__default"}>
-                  {/* Section divider — spans all columns */}
-                  {section.label && (
-                    <tr style={{ height: SECTION_HEIGHT }}>
-                      <td
-                        colSpan={TOTAL_SLOTS + 2}
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-[0.1em]"
                         style={{
-                          background: "rgba(220,215,245,0.55)",
-                          borderTop: "1px solid var(--fab-border-md)",
-                          borderBottom: "1px solid var(--fab-border-md)",
                           paddingLeft: 12,
-                          fontWeight: 700,
-                          fontSize: 9,
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
                           color: "var(--fab-text-dim)",
                         }}
                       >
-                        {section.label}
-                      </td>
-                    </tr>
-                  )}
+                        {row.label}
+                      </span>
+                    </div>
+                  );
+                }
 
-                  {/* Machine rows */}
-                  {section.machines.map((machine) => {
-                    const machineUsages = usages.filter(
-                      (u) => u.machineId === machine.id,
-                    );
-                    const tracks = computeTracks(machineUsages);
-                    const status = getMachineStatus(
-                      machine,
-                      usages,
-                      nowDecimal,
-                    );
+                const stickyStyle = getPinnedStyle(resourceColumn);
 
-                    return tracks.map((track, trackIdx) => (
-                      <tr
-                        key={`${machine.id}-${trackIdx}`}
-                        style={{ height: ROW_HEIGHT }}
-                      >
-                        {/* Resources cell — only on first track, rowSpan covers all tracks */}
-                        {trackIdx === 0 && (
-                          <td
-                            rowSpan={tracks.length}
+                return (
+                  <div
+                    key={row.id}
+                    className="absolute left-0"
+                    style={{
+                      top: virtualRow.start,
+                      width: table.getTotalSize(),
+                      height: ROW_HEIGHT,
+                    }}
+                  >
+                    {HEADER_SLOTS.map((slot, slotIndex) => {
+                      const { left, width } = getSlotMetrics(slot);
+                      const isBoundary = slot >= DAY_END;
+                      const isHighlightedSlot =
+                        currentSlotIdx !== null && slotIndex === currentSlotIdx;
+
+                      return (
+                        <div
+                          key={`${row.id}-${slot}`}
+                          aria-hidden
+                          style={{
+                            position: "absolute",
+                            left,
+                            top: 0,
+                            width,
+                            height: ROW_HEIGHT,
+                            borderBottom: "1px solid var(--fab-border-soft)",
+                            borderLeft: "1px solid var(--fab-border)",
+                            background: isBoundary
+                              ? "var(--fab-bg-sidebar)"
+                              : isHighlightedSlot
+                                ? "rgba(181,32,79,0.03)"
+                                : "transparent",
+                            pointerEvents: "none",
+                          }}
+                        />
+                      );
+                    })}
+
+                    <div
+                      style={{
+                        position: "sticky",
+                        left: stickyStyle?.left,
+                        top: 0,
+                        zIndex: 8,
+                        width: resourceColumn?.getSize() ?? RESOURCES_COL_WIDTH,
+                        height: ROW_HEIGHT,
+                        background: "var(--fab-bg-main)",
+                        borderBottom: "1px solid var(--fab-border-md)",
+                        borderRight: "1px solid var(--fab-border-md)",
+                      }}
+                    >
+                      {row.isFirstTrack && (
+                        <div className="flex h-full items-center gap-2 px-3">
+                          <div
+                            aria-hidden
                             style={{
-                              position: "sticky",
-                              left: 0,
-                              zIndex: 4,
-                              background: "var(--fab-bg-main)",
-                              borderBottom: "1px solid var(--fab-border-md)",
-                              borderRight: "1px solid var(--fab-border-md)",
-                              verticalAlign: "middle",
-                              padding: 0,
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              flexShrink: 0,
+                              background:
+                                row.machineStatus === "active"
+                                  ? "var(--fab-teal)"
+                                  : row.machineStatus === "maintenance"
+                                    ? "var(--fab-amber)"
+                                    : "var(--fab-text-dim)",
+                              animation:
+                                row.machineStatus === "active"
+                                  ? "dotPulse 2.2s ease infinite"
+                                  : "none",
                             }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 7,
-                                paddingLeft: 12,
-                                paddingRight: 8,
-                                height: "100%",
-                              }}
+                          />
+
+                          <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--fab-text-primary)]">
+                            {row.machine.name}
+                          </span>
+
+                          {row.machineStatus !== "free" && (
+                            <Badge
+                              variant={
+                                row.machineStatus === "active"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              className="rounded-[3px] px-1.5 text-[9px] font-bold uppercase tracking-[0.04em]"
                             >
-                              {/* Status dot */}
-                              <div
-                                style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: "50%",
-                                  flexShrink: 0,
-                                  background:
-                                    status === "active"
-                                      ? "var(--fab-teal)"
-                                      : status === "maintenance"
-                                        ? "var(--fab-amber)"
-                                        : "var(--fab-text-dim)",
-                                  animation:
-                                    status === "active"
-                                      ? "dotPulse 2.2s ease infinite"
-                                      : "none",
-                                }}
-                              />
-                              {/* Machine name */}
-                              <span
-                                style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  fontSize: 11.5,
-                                  color: "var(--fab-text-primary)",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {machine.name}
-                              </span>
-                              {/* Status badge */}
-                              {status !== "free" && (
-                                <span
-                                  style={{
-                                    fontWeight: 700,
-                                    fontSize: 9,
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.04em",
-                                    padding: "1px 5px",
-                                    borderRadius: 3,
-                                    flexShrink: 0,
-                                    background:
-                                      status === "active"
-                                        ? "var(--fab-teal-light)"
-                                        : "var(--fab-amber-light)",
-                                    color:
-                                      status === "active"
-                                        ? "var(--fab-teal)"
-                                        : "var(--fab-amber)",
-                                  }}
-                                >
-                                  {status === "active" ? "On" : "Maint"}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        )}
+                              {row.machineStatus === "active" ? "On" : "Maint"}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                        {/* Slot cells */}
-                        {HEADER_SLOTS.map((slot, i) => {
-                          const usage = track.find((u) => u.startTime === slot);
+                    {row.track.map((usage) => {
+                      const startIndex = getSlotIndex(usage.startTime);
+                      const clampedDurationSlots = Math.max(
+                        1,
+                        Math.min(
+                          (usage.endTime - usage.startTime) / 0.5,
+                          TOTAL_SLOTS - startIndex,
+                        ),
+                      );
+                      const startMetrics = getSlotMetrics(usage.startTime);
+                      const usageWidth = Array.from(
+                        { length: clampedDurationSlots },
+                        (_, offset) =>
+                          getSlotMetrics(HEADER_SLOTS[startIndex + offset]).width,
+                      ).reduce((sum, width) => sum + width, 0);
+                      const isPending = usage.projectStatus === "pending";
+                      const canOpenProjectDetails =
+                        usage.projectId !== null &&
+                        onOpenProjectDetails !== undefined;
 
-                          if (usage) {
-                            const durationSlots =
-                              (usage.endTime - usage.startTime) / 0.5;
-                            const clampedColSpan = Math.min(
-                              durationSlots,
-                              TOTAL_SLOTS - i,
-                            );
-                            const isPending = usage.projectStatus === "pending";
-                            const canOpenProjectDetails =
-                              usage.projectId !== null &&
-                              onOpenProjectDetails !== undefined;
-
-                            return (
-                              <td
-                                key={slot}
-                                colSpan={clampedColSpan}
-                                style={{
-                                  padding: "3px 2px",
-                                  borderBottom:
-                                    "1px solid var(--fab-border-soft)",
-                                  borderLeft: "1px solid var(--fab-border)",
-                                  height: ROW_HEIGHT,
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  disabled={!canOpenProjectDetails}
-                                  onClick={() =>
-                                    usage.projectId &&
-                                    onOpenProjectDetails?.(usage.projectId)
-                                  }
-                                  className="block h-full w-full text-left disabled:cursor-default"
-                                >
-                                  <Card
-                                    className={cn(
-                                      "h-full border rounded-md px-2 py-1 flex items-center justify-center overflow-hidden shadow-sm transition-all",
-                                      usage.color ||
-                                        "bg-blue-500/10 border-blue-500 text-blue-700",
-                                      isPending &&
-                                        "border-dashed border-2 opacity-80",
-                                      canOpenProjectDetails && "cursor-pointer hover:ring-2 hover:ring-primary/20",
-                                    )}
-                                  >
-                                    <span className="font-semibold text-xs leading-tight truncate w-full text-center">
-                                      {usage.projectAlias}
-                                    </span>
-                                  </Card>
-                                </button>
-                              </td>
-                            );
+                      return (
+                        <button
+                          key={usage.id}
+                          type="button"
+                          disabled={!canOpenProjectDetails}
+                          onClick={() =>
+                            usage.projectId &&
+                            onOpenProjectDetails?.(usage.projectId)
                           }
+                          className={cn(
+                            "absolute top-[3px] z-[5] h-[calc(100%-6px)] text-left disabled:cursor-default",
+                            canOpenProjectDetails &&
+                              "cursor-pointer transition-shadow hover:shadow-sm",
+                          )}
+                          style={{
+                            left: startMetrics.left + 2,
+                            width: Math.max(0, usageWidth - 4),
+                          }}
+                        >
+                          <div
+                            className={cn(
+                              "flex h-full items-center justify-center overflow-hidden rounded-md border px-2 py-1 shadow-sm",
+                              usage.color ||
+                                "bg-blue-500/10 border-blue-500 text-blue-700",
+                              isPending && "border-2 border-dashed opacity-80",
+                              canOpenProjectDetails && "hover:ring-2 hover:ring-primary/20",
+                            )}
+                          >
+                            <span className="w-full truncate text-center text-xs font-semibold leading-tight">
+                              {usage.projectAlias}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-                          const isCovered = track.some(
-                            (u) => slot > u.startTime && slot < u.endTime,
-                          );
-                          if (isCovered) return null;
-
-                          const isHighlightedSlot =
-                            nowInRange && i === currentSlotIdx;
-                          // 6 PM boundary cell — label only, no content
-                          const isBoundary = slot >= DAY_END;
-
-                          return (
-                            <td
-                              key={slot}
-                              style={{
-                                borderBottom:
-                                  "1px solid var(--fab-border-soft)",
-                                borderLeft: "1px solid var(--fab-border)",
-                                background: isBoundary
-                                  ? "var(--fab-bg-sidebar)"
-                                  : isHighlightedSlot
-                                    ? "rgba(181,32,79,0.03)"
-                                    : "transparent",
-                              }}
-                            />
-                          );
-                        })}
-                      </tr>
-                    ));
-                  })}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
 
-      {/* Mobile View (Visible below md) */}
       <div className="md:hidden flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-none hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/50 [scrollbar-width:thick]">
         {machines.map((machine) => {
-          const machineUsages = usages
-            .filter((u) => u.machineId === machine.id)
-            .sort((a, b) => a.startTime - b.startTime);
+          const machineUsages = usagesByMachine.get(machine.id) ?? [];
 
           return (
             <div key={machine.id}>
-              {/* Compact sticky machine header */}
-              <div className="flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-4 py-2 border-b">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur-sm">
                 <Dialog>
                   <DialogTrigger asChild>
                     <button
-                      className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity"
-                      title="View Resource Details"
+                      type="button"
+                      className="flex min-w-0 items-center gap-2 text-left transition-opacity hover:opacity-80"
+                      title={`View ${itemLabelSingular} Details`}
                     >
                       <div
                         className={cn(
-                          "h-2 w-2 rounded-full shrink-0",
+                          "h-2 w-2 shrink-0 rounded-full",
                           machine.status === ResourceStatus.AVAILABLE
                             ? "bg-emerald-500"
                             : "bg-red-500",
                         )}
                       />
-                      <span className="font-semibold text-sm truncate">
+                      <span className="truncate text-sm font-semibold">
                         {machine.name}
                       </span>
                     </button>
                   </DialogTrigger>
-                  <MachineDetailsDialog machine={machine} />
+                  <ScheduleItemDetailsDialog
+                    machine={machine}
+                    itemLabelSingular={itemLabelSingular}
+                  />
                 </Dialog>
-                <div className="flex items-center gap-2 shrink-0">
+
+                <div className="flex shrink-0 items-center gap-2">
                   <span className="text-[11px] text-muted-foreground">
                     {format(nowDate, "hh:mm a")}
                   </span>
-                  <span className="text-[10px] font-semibold text-muted-foreground/60 border rounded px-1.5 py-0.5">
-                    {totalProjects}{" "}
-                    {totalProjects === 1 ? "project" : "projects"}
-                  </span>
+                  <Badge variant="outline" className="text-[10px] font-semibold">
+                    {totalProjects} {totalProjects === 1 ? "project" : "projects"}
+                  </Badge>
                 </div>
               </div>
 
-              {/* Usage rows */}
               {machineUsages.length > 0 ? (
                 <div className="divide-y">
                   {machineUsages.map((usage) => {
@@ -567,7 +711,7 @@ export function UsageTable({
                           onOpenProjectDetails?.(usage.projectId)
                         }
                         className={cn(
-                          "w-full flex items-center gap-3 px-4 py-2.5 text-left",
+                          "flex w-full items-center gap-3 px-4 py-2.5 text-left",
                           canOpenProjectDetails &&
                             "transition-colors hover:bg-muted/40 active:bg-muted/60",
                           !canOpenProjectDetails && "cursor-default",
@@ -575,16 +719,16 @@ export function UsageTable({
                       >
                         <div
                           className={cn(
-                            "h-8 w-1 rounded-full shrink-0",
+                            "h-8 w-1 shrink-0 rounded-full",
                             usage.color || "bg-blue-500",
                             usage.projectStatus === "pending" && "opacity-50",
                           )}
                         />
-                        <span className="flex-1 text-sm font-medium truncate">
+                        <span className="flex-1 truncate text-sm font-medium">
                           {usage.projectAlias}
                         </span>
-                        <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap shrink-0">
-                          {formatShortTime(usage.startTime)}–
+                        <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-muted-foreground">
+                          {formatShortTime(usage.startTime)}-
                           {formatShortTime(usage.endTime)}
                         </span>
                       </button>
@@ -592,7 +736,7 @@ export function UsageTable({
                   })}
                 </div>
               ) : (
-                <p className="px-4 py-3 text-xs text-muted-foreground/60 italic">
+                <p className="px-4 py-3 text-xs italic text-muted-foreground/60">
                   No bookings for today
                 </p>
               )}
@@ -602,12 +746,17 @@ export function UsageTable({
       </div>
     </div>
   );
-}
+});
 
-/**
- * Dialog Content for viewing machine resource details
- */
-function MachineDetailsDialog({ machine }: { machine: Machine }) {
+UsageTable.displayName = "UsageTable";
+
+function ScheduleItemDetailsDialog({
+  machine,
+  itemLabelSingular,
+}: {
+  machine: Machine;
+  itemLabelSingular: string;
+}) {
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
@@ -616,40 +765,44 @@ function MachineDetailsDialog({ machine }: { machine: Machine }) {
           {machine.name} Details
         </DialogTitle>
         <DialogDescription>
-          Information regarding this resource.
+          Information regarding this {itemLabelSingular.toLowerCase()}.
         </DialogDescription>
       </DialogHeader>
+
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
           <span className="text-sm font-bold text-muted-foreground">Name:</span>
           <span className="col-span-3 text-sm font-medium">{machine.name}</span>
         </div>
+
         <div className="grid grid-cols-4 items-center gap-4">
           <span className="text-sm font-bold text-muted-foreground">
             Status:
           </span>
-          <span className="col-span-3">
+          <div className="col-span-3">
             <Badge
-              className={cn(
-                "capitalize",
+              variant={
                 machine.status === ResourceStatus.AVAILABLE
-                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                  : "bg-red-100 text-red-700 hover:bg-red-200",
-              )}
+                  ? "secondary"
+                  : "destructive"
+              }
+              className="capitalize"
             >
               {machine.status}
             </Badge>
-          </span>
+          </div>
         </div>
+
         <div className="grid grid-cols-4 items-start gap-4">
           <span className="text-sm font-bold text-muted-foreground">
             Description:
           </span>
-          <span className="col-span-3 text-sm whitespace-pre-wrap leading-relaxed">
+          <span className="col-span-3 whitespace-pre-wrap text-sm leading-relaxed">
             {machine.description || "No description provided."}
           </span>
         </div>
       </div>
+
       <DialogFooter>
         <DialogTrigger asChild>
           <Button variant="outline" type="button" className="w-full sm:w-auto">
@@ -658,70 +811,5 @@ function MachineDetailsDialog({ machine }: { machine: Machine }) {
         </DialogTrigger>
       </DialogFooter>
     </DialogContent>
-  );
-}
-
-/**
- * Placeholder Dialog Content for adding new usage
- */
-function AddUsageDialog({
-  machine,
-  slot,
-}: {
-  machine: Machine;
-  slot?: number;
-}) {
-  return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <Plus className="h-5 w-5 text-primary" />
-          Add Machine Usage
-        </DialogTitle>
-        <DialogDescription>
-          Schedule new time on {machine.name}.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-        <p className="text-sm text-muted-foreground">
-          {slot !== undefined
-            ? `Starting at ${formatDecimalTime(slot)}`
-            : "Select a time range to book this machine."}
-        </p>
-        <div className="p-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground bg-muted/10">
-          <HardDrive className="h-8 w-8 opacity-20" />
-          <span className="text-xs font-medium">Booking Form Placeholder</span>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button type="submit" className="w-full sm:w-auto">
-          Create Booking
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-// Minimal Badge replacement if not imported
-function Badge({
-  children,
-  variant = "default",
-  className,
-}: {
-  children: React.ReactNode;
-  variant?: "default" | "secondary";
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-        variant === "default" && "bg-primary text-primary-foreground",
-        variant === "secondary" && "bg-secondary text-secondary-foreground",
-        className,
-      )}
-    >
-      {children}
-    </span>
   );
 }
