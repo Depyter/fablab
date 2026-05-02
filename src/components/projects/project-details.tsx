@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload";
+import { Skeleton } from "@/components/ui/skeleton";
 import posthog from "posthog-js";
 
 import {
@@ -47,6 +48,166 @@ interface ProjectDetailsProps {
   trigger?: ReactNode;
   triggerClassName?: string;
   buttonLabel?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+}
+
+const PROJECT_DETAILS_TIMELINE_LOADING_STEPS = Array.from(
+  { length: 5 },
+  () => ({
+    titleWidth: "w-20",
+  }),
+);
+
+function ProjectTimelineLoadingDot() {
+  return (
+    <div className="flex h-9 w-9 shrink-0 animate-pulse items-center justify-center rounded-full border-2 border-[var(--fab-border-md)] bg-[var(--fab-bg-sidebar)] shadow-sm sm:h-10 sm:w-10">
+      <div className="h-3.5 w-3.5 rounded-full bg-[var(--fab-text-dim)]/35 sm:h-4 sm:w-4" />
+    </div>
+  );
+}
+
+function ProjectTimelineLoading() {
+  return (
+    <div className="w-full" aria-hidden="true">
+      <div className="flex flex-col md:hidden">
+        {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step, index) => {
+          const isLast =
+            index === PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length - 1;
+
+          return (
+            <div
+              key={`project-timeline-mobile-loading-${index}`}
+              className="flex gap-3"
+            >
+              <div className="flex flex-col items-center">
+                <ProjectTimelineLoadingDot />
+                {!isLast && (
+                  <div className="w-px min-h-8 flex-1 rounded-full bg-[var(--fab-border-md)]" />
+                )}
+              </div>
+              <div className={cn("min-w-0 flex-1", !isLast && "pb-6")}>
+                <div className="flex h-9 items-center">
+                  <Skeleton
+                    className={cn("h-4 rounded-full", step.titleWidth)}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <div className="flex min-w-180 pb-2 lg:min-w-0">
+          {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step, index) => {
+            const isFirst = index === 0;
+            const isLast =
+              index === PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length - 1;
+
+            return (
+              <div
+                key={`project-timeline-desktop-loading-${index}`}
+                className="flex min-w-0 flex-1 flex-col items-center"
+              >
+                <div className="flex w-full items-center">
+                  <div
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]",
+                      isFirst && "invisible",
+                    )}
+                  />
+                  <ProjectTimelineLoadingDot />
+                  <div
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]",
+                      isLast && "invisible",
+                    )}
+                  />
+                </div>
+
+                <div className="mt-3 px-1 text-center">
+                  <Skeleton
+                    className={cn("mx-auto h-4 rounded-full", step.titleWidth)}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectDetailsLoadingSkeleton() {
+  return (
+    <div className="min-w-0 space-y-0">
+      <div className="space-y-5 pt-5">
+        <DialogHeader className="space-y-0 mb-0">
+          <DialogTitle className="sr-only">Loading project details</DialogTitle>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <Skeleton className="h-8 w-56 max-w-full rounded-md" />
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Skeleton className="h-6 w-24 rounded-[5px]" />
+                <Skeleton className="h-6 w-28 rounded-[5px]" />
+                <Skeleton className="h-6 w-24 rounded-[5px]" />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Skeleton className="h-8 w-32 rounded-md" />
+              <Skeleton className="h-8 w-36 rounded-md" />
+              <Skeleton className="h-8 w-32 rounded-md" />
+            </div>
+          </div>
+        </DialogHeader>
+
+        <Skeleton className="h-px w-full rounded-none" />
+
+        <ProjectTimelineLoading />
+
+        <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
+          <div className="min-w-0 space-y-4 lg:col-span-7">
+            <div className="space-y-4 rounded-xl border p-5">
+              <Skeleton className="h-5 w-40 rounded-md" />
+              <Skeleton className="h-4 w-32 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full rounded-full" />
+                <Skeleton className="h-4 w-[92%] rounded-full" />
+                <Skeleton className="h-4 w-[76%] rounded-full" />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Skeleton className="h-16 w-full rounded-xl" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+              </div>
+            </div>
+
+            <div className="rounded-xl border p-5">
+              <Skeleton className="h-5 w-36 rounded-md" />
+              <div className="mt-4 space-y-2">
+                <Skeleton className="h-4 w-full rounded-full" />
+                <Skeleton className="h-4 w-[70%] rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 space-y-4 lg:col-span-5">
+            <div className="rounded-xl border p-5">
+              <Skeleton className="h-5 w-44 rounded-md" />
+              <div className="mt-4 space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ProjectDetails({
@@ -54,8 +215,11 @@ export function ProjectDetails({
   trigger,
   triggerClassName,
   buttonLabel = "View Details",
+  open,
+  onOpenChange,
+  hideTrigger = false,
 }: ProjectDetailsProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [dialogView, setDialogView] = useState<"details" | "assign-maker">(
     "details",
   );
@@ -69,10 +233,12 @@ export function ProjectDetails({
   const [proofFiles, setProofFiles] = useState<UploadedFile[]>([]);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const isDialogOpen = open ?? uncontrolledOpen;
+  const shouldLoadDialogData = Boolean(projectId) && isDialogOpen;
 
   const project = useQuery(
     api.projects.query.getProject,
-    projectId ? { projectId } : "skip",
+    shouldLoadDialogData && projectId ? { projectId } : "skip",
   );
 
   const updateProject = useMutation(api.projects.mutate.updateProject);
@@ -81,12 +247,21 @@ export function ProjectDetails({
   const updateOwnProjectDetails = useMutation(
     api.projects.mutate.updateOwnProjectDetails,
   );
-  const role = useQuery(api.users.getRole, {}) as UserRoleType | undefined;
+  const role = useQuery(
+    api.users.getRole,
+    shouldLoadDialogData ? {} : "skip",
+  ) as UserRoleType | undefined;
   const isClient = role === "client";
   const isAdminOrMaker = role === "admin" || role === "maker";
-  const makers = useQuery(api.users.getMakers, isAdminOrMaker ? {} : "skip");
+  const makers = useQuery(
+    api.users.getMakers,
+    shouldLoadDialogData && isAdminOrMaker ? {} : "skip",
+  );
 
   if (!projectId) {
+    if (hideTrigger) {
+      return null;
+    }
     if (React.isValidElement<{ className?: string }>(trigger)) {
       return React.cloneElement(trigger, {
         className: cn(trigger.props.className, "cursor-default hover:ring-0"),
@@ -292,7 +467,11 @@ export function ProjectDetails({
     : [];
 
   const handleOpenChange = (open: boolean) => {
-    setIsDialogOpen(open);
+    if (onOpenChange) {
+      onOpenChange(open);
+    } else {
+      setUncontrolledOpen(open);
+    }
     if (open) {
       posthog.capture("project_details_opened", {
         project_id: projectId,
@@ -358,21 +537,24 @@ export function ProjectDetails({
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-      {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button variant="outline" className={cn("w-full", triggerClassName)}>
-            {buttonLabel}
-          </Button>
-        </DialogTrigger>
-      )}
+      {!hideTrigger ? (
+        trigger ? (
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+        ) : (
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn("w-full", triggerClassName)}
+            >
+              {buttonLabel}
+            </Button>
+          </DialogTrigger>
+        )
+      ) : null}
 
       <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
         {!project || role === undefined ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            Loading project details...
-          </div>
+          <ProjectDetailsLoadingSkeleton />
         ) : dialogView === "assign-maker" ? (
           <AssignMakerContent
             projectName={project.name}

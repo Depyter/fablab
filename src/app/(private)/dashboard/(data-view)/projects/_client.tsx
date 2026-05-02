@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { PackageOpen, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,13 +9,13 @@ import {
   DataViewContent,
   DataViewLoadMore,
 } from "@/components/manage/data-view";
+import { DataViewLoadingState } from "@/components/manage/data-view-loading";
 import {
   getProjectsView,
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
 import { ProjectCard } from "@/components/projects/project-card";
-import { ProjectCalendarView } from "@/components/projects/project-calendar-view";
 import { ProjectDetails } from "@/components/projects/project-details";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -82,81 +83,92 @@ const SORT_OPTIONS: SortOption[] = [
   "name-az",
 ];
 
-function ProjectListRow({ project }: { project: EnrichedProject }) {
+const LazyProjectCalendarView = dynamic(
+  () =>
+    import("@/components/projects/project-calendar-view").then((module) => ({
+      default: module.ProjectCalendarView,
+    })),
+  {
+    loading: () => <DataViewLoadingState view="calendar" />,
+  },
+);
+
+function ProjectListRow({
+  project,
+  onOpenDetails,
+}: {
+  project: EnrichedProject;
+  onOpenDetails: () => void;
+}) {
   return (
-    <ProjectDetails
-      key={project._id}
-      projectId={project._id}
-      trigger={
-        <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
-          <div className="h-10 w-14 rounded-md overflow-hidden shrink-0 bg-muted">
-            {project.coverUrl ? (
-              <img
-                src={project.coverUrl}
-                alt={project.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div
-                className={cn(
-                  "h-full w-full",
-                  project.status === "pending" && "bg-amber-500/20",
-                  project.status === "approved" && "bg-blue-500/20",
-                  project.status === "completed" && "bg-emerald-500/20",
-                  project.status === "paid" && "bg-teal-500/20",
-                  project.status === "rejected" && "bg-red-500/20",
-                  project.status === "cancelled" && "bg-red-500/20",
-                )}
-              />
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+    >
+      <div className="h-10 w-14 rounded-md overflow-hidden shrink-0 bg-muted">
+        {project.coverUrl ? (
+          <img
+            src={project.coverUrl}
+            alt={project.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className={cn(
+              "h-full w-full",
+              project.status === "pending" && "bg-amber-500/20",
+              project.status === "approved" && "bg-blue-500/20",
+              project.status === "completed" && "bg-emerald-500/20",
+              project.status === "paid" && "bg-teal-500/20",
+              project.status === "rejected" && "bg-red-500/20",
+              project.status === "cancelled" && "bg-red-500/20",
             )}
-          </div>
+          />
+        )}
+      </div>
 
-          <div className="flex flex-1 items-center justify-between min-w-0 gap-3">
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="font-semibold text-sm truncate">
-                {project.name}
-              </span>
-              <span className="text-xs text-muted-foreground truncate">
-                {project.serviceName} · {project.clientName}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-xs text-muted-foreground hidden md:block whitespace-nowrap">
-                {project.bookingStartTime
-                  ? new Date(project.bookingStartTime).toLocaleDateString([], {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  : "—"}
-              </span>
-              <span className="text-sm font-semibold whitespace-nowrap hidden sm:block">
-                ₱{project.estimatedPrice.toFixed(2)}
-              </span>
-
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap",
-                  STATUS_STYLES[project.status] ??
-                    "bg-muted text-muted-foreground",
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full shrink-0",
-                    STATUS_DOT[project.status] ?? "bg-muted-foreground",
-                  )}
-                />
-                {PROJECT_STATUS_LABELS[
-                  project.status as keyof typeof PROJECT_STATUS_LABELS
-                ] ?? project.status}
-              </span>
-            </div>
-          </div>
+      <div className="flex flex-1 items-center justify-between min-w-0 gap-3">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className="font-semibold text-sm truncate">{project.name}</span>
+          <span className="text-xs text-muted-foreground truncate">
+            {project.serviceName} · {project.clientName}
+          </span>
         </div>
-      }
-    />
+
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-muted-foreground hidden md:block whitespace-nowrap">
+            {project.bookingStartTime
+              ? new Date(project.bookingStartTime).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "—"}
+          </span>
+          <span className="text-sm font-semibold whitespace-nowrap hidden sm:block">
+            ₱{project.estimatedPrice.toFixed(2)}
+          </span>
+
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap",
+              STATUS_STYLES[project.status] ?? "bg-muted text-muted-foreground",
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full shrink-0",
+                STATUS_DOT[project.status] ?? "bg-muted-foreground",
+              )}
+            />
+            {PROJECT_STATUS_LABELS[
+              project.status as keyof typeof PROJECT_STATUS_LABELS
+            ] ?? project.status}
+          </span>
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -167,6 +179,27 @@ export function ProjectsListClient() {
   const dateRaw = getSearchParam(searchParams, "date", "all");
   const sortRaw = getSearchParam(searchParams, "sort", "newest");
   const view = getProjectsView(searchParams);
+  const [selectedProjectId, setSelectedProjectId] =
+    React.useState<Id<"projects"> | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
+
+  const handleOpenProjectDetails = React.useCallback(
+    (projectId: Id<"projects">) => {
+      setSelectedProjectId(projectId);
+      setIsDetailsOpen(true);
+    },
+    [],
+  );
+
+  const handleDetailsOpenChange = React.useCallback((open: boolean) => {
+    setIsDetailsOpen(open);
+    if (!open) {
+      setSelectedProjectId(null);
+    }
+  }, []);
+
+  const calendarViewSlot =
+    view === "calendar" ? <LazyProjectCalendarView /> : undefined;
 
   const statusFilter: StatusFilter = STATUS_FILTERS.includes(
     statusRaw as StatusFilter,
@@ -214,11 +247,12 @@ export function ProjectsListClient() {
         items={projects}
         totalItems={projects.length}
         isLoading={isLoading}
-        viewSlots={{ calendar: <ProjectCalendarView /> }}
+        viewSlots={
+          calendarViewSlot ? { calendar: calendarViewSlot } : undefined
+        }
         renderItem={(project) => (
           <ProjectCard
             key={project._id}
-            projectId={project._id}
             title={project.name}
             description={project.description}
             clientName={project.clientName}
@@ -229,10 +263,15 @@ export function ProjectsListClient() {
             estimatedPrice={project.estimatedPrice}
             status={project.status}
             coverUrl={project.coverUrl ?? null}
+            onOpenDetails={() => handleOpenProjectDetails(project._id)}
           />
         )}
         renderListItem={(project) => (
-          <ProjectListRow key={project._id} project={project} />
+          <ProjectListRow
+            key={project._id}
+            project={project}
+            onOpenDetails={() => handleOpenProjectDetails(project._id)}
+          />
         )}
         emptyState={{
           icon: <PackageOpen className="size-12" />,
@@ -261,6 +300,13 @@ export function ProjectsListClient() {
             </Button>
           ),
         }}
+      />
+
+      <ProjectDetails
+        projectId={selectedProjectId}
+        open={isDetailsOpen}
+        onOpenChange={handleDetailsOpenChange}
+        hideTrigger
       />
 
       <DataViewLoadMore
