@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
 import { PackageOpen, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,7 +8,6 @@ import {
   DataViewContent,
   DataViewLoadMore,
 } from "@/components/manage/data-view";
-import { DataViewLoadingState } from "@/components/manage/data-view-loading";
 import {
   getProjectsView,
   getSearchParam,
@@ -82,16 +80,6 @@ const SORT_OPTIONS: SortOption[] = [
   "price-low",
   "name-az",
 ];
-
-const LazyProjectCalendarView = dynamic(
-  () =>
-    import("@/components/projects/project-calendar-view").then((module) => ({
-      default: module.ProjectCalendarView,
-    })),
-  {
-    loading: () => <DataViewLoadingState view="calendar" />,
-  },
-);
 
 function ProjectListRow({
   project,
@@ -198,9 +186,6 @@ export function ProjectsListClient() {
     }
   }, []);
 
-  const calendarViewSlot =
-    view === "calendar" ? <LazyProjectCalendarView /> : undefined;
-
   const statusFilter: StatusFilter = STATUS_FILTERS.includes(
     statusRaw as StatusFilter,
   )
@@ -247,9 +232,6 @@ export function ProjectsListClient() {
         items={projects}
         totalItems={projects.length}
         isLoading={isLoading}
-        viewSlots={
-          calendarViewSlot ? { calendar: calendarViewSlot } : undefined
-        }
         renderItem={(project) => (
           <ProjectCard
             key={project._id}
@@ -313,7 +295,6 @@ export function ProjectsListClient() {
         view={view}
         canLoadMore={queryStatus === "CanLoadMore"}
         onLoadMore={() => loadMore(12)}
-        hideInViews={["calendar"]}
       />
     </>
   );

@@ -110,6 +110,10 @@ export function DataViewLoadingClient() {
   const searchParams = useSearchParams();
   const section = getDataViewSection(pathname);
 
+  if (section === "calendar") {
+    return <DataViewLoadingState view="calendar" />;
+  }
+
   if (section === "inventory") {
     return <InventoryDataViewLoadingState />;
   }

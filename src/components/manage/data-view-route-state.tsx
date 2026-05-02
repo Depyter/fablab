@@ -9,7 +9,12 @@ import {
 } from "next/navigation";
 import type { ViewMode } from "@/components/manage/data-view";
 
-export type DataViewSection = "projects" | "services" | "inventory" | "users";
+export type DataViewSection =
+  | "projects"
+  | "calendar"
+  | "services"
+  | "inventory"
+  | "users";
 
 type SearchParamsLike = URLSearchParams | ReadonlyURLSearchParams;
 
@@ -20,6 +25,10 @@ export const DATA_VIEW_SECTION_CONFIG: Record<
   projects: {
     title: "Your Projects",
     subtitle: "Track fabrication requests, schedules, and progress.",
+  },
+  calendar: {
+    title: "Calendar",
+    subtitle: "Browse service bookings and resource schedules in one place.",
   },
   services: {
     title: "Services",
@@ -37,6 +46,7 @@ export const DATA_VIEW_SECTION_CONFIG: Record<
 
 export function getDataViewSection(pathname: string): DataViewSection | null {
   if (pathname.startsWith("/dashboard/projects")) return "projects";
+  if (pathname.startsWith("/dashboard/calendar")) return "calendar";
   if (pathname.startsWith("/dashboard/services")) return "services";
   if (pathname.startsWith("/dashboard/inventory")) return "inventory";
   if (pathname.startsWith("/dashboard/users")) return "users";
@@ -45,7 +55,7 @@ export function getDataViewSection(pathname: string): DataViewSection | null {
 
 export function getProjectsView(searchParams: SearchParamsLike): ViewMode {
   const view = searchParams.get("view");
-  return view === "calendar" || view === "list" ? view : "gallery";
+  return view === "list" ? "list" : "gallery";
 }
 
 export function getSearchParam(
