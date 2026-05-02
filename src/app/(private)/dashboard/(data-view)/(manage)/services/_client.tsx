@@ -21,10 +21,10 @@ const SORT_OPTIONS: ServicesSort[] = ["name-az", "price-high", "price-low"];
 export function ServicesListClient() {
   const { searchParams, replaceParams } = useDataViewRouteState();
   const services = useQuery(api.services.query.getServices);
-  
+
   const search = getSearchParam(searchParams, "search");
   const sortRaw = getSearchParam(searchParams, "sort", "name-az");
-  
+
   const sortBy: ServicesSort = SORT_OPTIONS.includes(sortRaw as ServicesSort)
     ? (sortRaw as ServicesSort)
     : "name-az";

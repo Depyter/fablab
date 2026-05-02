@@ -10,10 +10,5 @@ export default async function ChatThreadPage({
   const roomId = slug as Id<"rooms">;
   const activeThreadId = threadId as Id<"threads">;
 
-  return (
-    <ChatThreadClient
-      roomId={roomId}
-      threadId={activeThreadId}
-    />
-  );
+  return <ChatThreadClient roomId={roomId} threadId={activeThreadId} />;
 }

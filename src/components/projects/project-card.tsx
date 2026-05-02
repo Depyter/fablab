@@ -1,7 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Id } from "@convex/_generated/dataModel";
 import { PROJECT_STATUS_LABELS } from "@convex/constants";
-import { ProjectDetails } from "./project-details";
 import { ManageCard } from "@/components/manage/manage-card";
 
 export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
@@ -32,7 +30,6 @@ export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
 };
 
 interface ProjectCardProps {
-  projectId: Id<"projects">;
   title: string;
   description: string;
   clientName: string;
@@ -44,10 +41,10 @@ interface ProjectCardProps {
   status: string;
   coverUrl?: string | null;
   className?: string;
+  onOpenDetails: () => void;
 }
 
 export function ProjectCard({
-  projectId,
   title,
   description,
   clientName,
@@ -59,6 +56,7 @@ export function ProjectCard({
   status,
   coverUrl,
   className,
+  onOpenDetails,
 }: ProjectCardProps) {
   const styles = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
 
@@ -111,15 +109,13 @@ export function ProjectCard({
             </div>
 
             <div className="w-full mt-1">
-              <ProjectDetails
-                projectId={projectId}
-                serviceName={serviceName}
-                trigger={
-                  <div className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer">
-                    View Details
-                  </div>
-                }
-              />
+              <button
+                type="button"
+                onClick={onOpenDetails}
+                className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer"
+              >
+                View Details
+              </button>
             </div>
           </div>
         </>
