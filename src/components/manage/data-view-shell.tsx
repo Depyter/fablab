@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Calendar, LayoutGrid, List, Plus } from "lucide-react";
+import { LayoutGrid, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -24,7 +24,6 @@ import {
   ManageFilterClear,
   ManageFilterSearch,
 } from "@/components/manage/manage-primitives";
-import type { ViewMode } from "@/components/manage/data-view";
 import {
   DATA_VIEW_SECTION_CONFIG,
   getProjectsView,
@@ -37,18 +36,17 @@ import { cn } from "@/lib/utils";
 // Constants & Icons
 // ---------------------------------------------------------------------------
 
-const PROJECT_VIEWS: ViewMode[] = ["calendar", "gallery", "list"];
+const PROJECT_VIEWS = ["gallery", "list"] as const;
+type ProjectViewMode = (typeof PROJECT_VIEWS)[number];
 
-const VIEW_ICONS: Record<ViewMode, React.ReactNode> = {
+const VIEW_ICONS: Record<ProjectViewMode, React.ReactNode> = {
   gallery: <LayoutGrid className="h-4 w-4" />,
   list: <List className="h-4 w-4" />,
-  calendar: <Calendar className="h-4 w-4" />,
 };
 
-const VIEW_LABELS: Record<ViewMode, string> = {
+const VIEW_LABELS: Record<ProjectViewMode, string> = {
   gallery: "Gallery View",
   list: "List View",
-  calendar: "Calendar View",
 };
 
 // ---------------------------------------------------------------------------
@@ -136,7 +134,7 @@ export function DataViewToolbarActions() {
     );
   }
 
-  if (section === "users") return null;
+  if (section === "calendar" || section === "users") return null;
 
   return (
     <DropdownMenu>
@@ -180,7 +178,7 @@ export function DataViewPageFilters() {
 
   if (!section) return null;
 
-  if (section === "projects" && getProjectsView(searchParams) === "calendar") {
+  if (section === "calendar") {
     return null;
   }
 

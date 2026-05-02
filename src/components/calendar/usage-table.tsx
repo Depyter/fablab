@@ -5,7 +5,6 @@ import { ResourceStatus } from "@convex/constants";
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import { Plus, HardDrive, Info } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
-import { ProjectDetails } from "./project-details";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -51,7 +50,7 @@ export interface Machine {
 export interface MachineUsage {
   id: string;
   machineId: string;
-  projectId: string;
+  projectId: Id<"projects"> | null;
   projectAlias: string;
   projectStatus:
     | "pending"
@@ -75,6 +74,7 @@ interface MachineSection {
 interface UsageTableProps {
   machines: Machine[];
   usages: MachineUsage[];
+  onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -134,7 +134,11 @@ function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
 }
 
 // ─── Main UsageTable component ────────────────────────────────────────────────
-export function UsageTable({ machines, usages }: UsageTableProps) {
+export function UsageTable({
+  machines,
+  usages,
+  onOpenProjectDetails,
+}: UsageTableProps) {
   // Live time — updates every 60 s
   const [nowDate, setNowDate] = React.useState<Date>(() => new Date());
   const nowDecimal = nowDate.getHours() + nowDate.getMinutes() / 60;
@@ -422,6 +426,9 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                               TOTAL_SLOTS - i,
                             );
                             const isPending = usage.projectStatus === "pending";
+                            const canOpenProjectDetails =
+                              usage.projectId !== null &&
+                              onOpenProjectDetails !== undefined;
 
                             return (
                               <td
@@ -435,24 +442,30 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
                                   height: ROW_HEIGHT,
                                 }}
                               >
-                                <ProjectDetails
-                                  projectId={usage.projectId as Id<"projects">}
-                                  trigger={
-                                    <Card
-                                      className={cn(
-                                        "h-full border shadow-sm rounded-md px-2 py-1 flex items-center justify-center overflow-hidden transition-all cursor-pointer hover:ring-2 hover:ring-primary/20",
-                                        usage.color ||
-                                          "bg-blue-500/10 border-blue-500 text-blue-700",
-                                        isPending &&
-                                          "border-dashed border-2 opacity-80",
-                                      )}
-                                    >
-                                      <span className="font-semibold text-xs leading-tight truncate w-full text-center">
-                                        {usage.projectAlias}
-                                      </span>
-                                    </Card>
+                                <button
+                                  type="button"
+                                  disabled={!canOpenProjectDetails}
+                                  onClick={() =>
+                                    usage.projectId &&
+                                    onOpenProjectDetails?.(usage.projectId)
                                   }
-                                />
+                                  className="block h-full w-full text-left disabled:cursor-default"
+                                >
+                                  <Card
+                                    className={cn(
+                                      "h-full border rounded-md px-2 py-1 flex items-center justify-center overflow-hidden shadow-sm transition-all",
+                                      usage.color ||
+                                        "bg-blue-500/10 border-blue-500 text-blue-700",
+                                      isPending &&
+                                        "border-dashed border-2 opacity-80",
+                                      canOpenProjectDetails && "cursor-pointer hover:ring-2 hover:ring-primary/20",
+                                    )}
+                                  >
+                                    <span className="font-semibold text-xs leading-tight truncate w-full text-center">
+                                      {usage.projectAlias}
+                                    </span>
+                                  </Card>
+                                </button>
                               </td>
                             );
                           }
@@ -539,35 +552,44 @@ export function UsageTable({ machines, usages }: UsageTableProps) {
               {/* Usage rows */}
               {machineUsages.length > 0 ? (
                 <div className="divide-y">
-                  {machineUsages.map((usage) => (
-                    <ProjectDetails
-                      key={usage.id || `${usage.machineId}-${usage.startTime}`}
-                      projectId={usage.projectId as Id<"projects">}
-                      trigger={
-                        <button
+                  {machineUsages.map((usage) => {
+                    const canOpenProjectDetails =
+                      usage.projectId !== null &&
+                      onOpenProjectDetails !== undefined;
+
+                    return (
+                      <button
+                        key={usage.id || `${usage.machineId}-${usage.startTime}`}
+                        type="button"
+                        disabled={!canOpenProjectDetails}
+                        onClick={() =>
+                          usage.projectId &&
+                          onOpenProjectDetails?.(usage.projectId)
+                        }
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-2.5 text-left",
+                          canOpenProjectDetails &&
+                            "transition-colors hover:bg-muted/40 active:bg-muted/60",
+                          !canOpenProjectDetails && "cursor-default",
+                        )}
+                      >
+                        <div
                           className={cn(
-                            "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/40 active:bg-muted/60",
+                            "h-8 w-1 rounded-full shrink-0",
+                            usage.color || "bg-blue-500",
+                            usage.projectStatus === "pending" && "opacity-50",
                           )}
-                        >
-                          {/* Color strip */}
-                          <div
-                            className={cn(
-                              "h-8 w-1 rounded-full shrink-0",
-                              usage.color || "bg-blue-500",
-                              usage.projectStatus === "pending" && "opacity-50",
-                            )}
-                          />
-                          <span className="flex-1 text-sm font-medium truncate">
-                            {usage.projectAlias}
-                          </span>
-                          <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap shrink-0">
-                            {formatShortTime(usage.startTime)}–
-                            {formatShortTime(usage.endTime)}
-                          </span>
-                        </button>
-                      }
-                    />
-                  ))}
+                        />
+                        <span className="flex-1 text-sm font-medium truncate">
+                          {usage.projectAlias}
+                        </span>
+                        <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap shrink-0">
+                          {formatShortTime(usage.startTime)}–
+                          {formatShortTime(usage.endTime)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="px-4 py-3 text-xs text-muted-foreground/60 italic">
