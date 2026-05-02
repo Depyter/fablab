@@ -20,15 +20,15 @@ import {
 } from "@/components/ui/dialog";
 
 // ─── Shared layout constants ─────────────────────────────────────────────────
-const ROW_HEIGHT = 40; // px — every machine row
-const SECTION_HEIGHT = 26; // px — section divider rows
-const DAY_START = 9; // 9:00 AM
-const DAY_END = 18; // 6:00 PM
-const TOTAL_SLOTS = (DAY_END - DAY_START) * 2; // 18 bookable half-hour slots
-const RESOURCES_COL_WIDTH = 160; // px — sticky left column
+export const ROW_HEIGHT = 40; // px — every machine row
+export const SECTION_HEIGHT = 26; // px — section divider rows
+export const DAY_START = 9; // 9:00 AM
+export const DAY_END = 18; // 6:00 PM
+export const TOTAL_SLOTS = (DAY_END - DAY_START) * 2; // 18 bookable half-hour slots
+export const RESOURCES_COL_WIDTH = 160; // px — sticky left column
 
 /** Header slots: 9:00, 9:30, …, 17:30, 18:00 — includes 6 PM boundary label */
-const HEADER_SLOTS = Array.from(
+export const HEADER_SLOTS = Array.from(
   { length: TOTAL_SLOTS + 1 },
   (_, i) => DAY_START + i * 0.5,
 );

@@ -47,7 +47,7 @@ export function BookingCalendarView() {
 
   const [selectedTab, setSelectedTab] = React.useState<
     "resources" | "services"
-  >("resources");
+  >("services");
   const activeTab = isClient ? "services" : selectedTab;
 
   const services = useQuery(api.services.query.getServices);
@@ -239,14 +239,14 @@ export function BookingCalendarView() {
             <div className="h-4 w-px bg-border" />
 
             <TabsList className="h-8">
+              <TabsTrigger value="services" className="text-xs h-7 px-3">
+                Service Bookings
+              </TabsTrigger>
               {isAdminOrMaker && (
                 <TabsTrigger value="resources" className="text-xs h-7 px-3">
                   Machine Schedule
                 </TabsTrigger>
               )}
-              <TabsTrigger value="services" className="text-xs h-7 px-3">
-                Service Bookings
-              </TabsTrigger>
             </TabsList>
 
             <div className="flex-1" />
@@ -263,6 +263,17 @@ export function BookingCalendarView() {
             </div>
           </div>
 
+          <TabsContent
+            value="services"
+            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0"
+          >
+            <UsageTable
+              machines={serviceMachines}
+              usages={serviceUsages}
+              onOpenProjectDetails={handleOpenProjectDetails}
+            />
+          </TabsContent>
+
           {isAdminOrMaker && (
             <TabsContent
               value="resources"
@@ -275,17 +286,6 @@ export function BookingCalendarView() {
               />
             </TabsContent>
           )}
-
-          <TabsContent
-            value="services"
-            className="flex-1 flex-col min-h-0 data-[state=active]:flex m-0 p-0"
-          >
-            <UsageTable
-              machines={serviceMachines}
-              usages={serviceUsages}
-              onOpenProjectDetails={handleOpenProjectDetails}
-            />
-          </TabsContent>
         </Tabs>
       </div>
 
