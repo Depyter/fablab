@@ -271,6 +271,8 @@ export function BookingCalendarView() {
               machines={serviceMachines}
               usages={serviceUsages}
               onOpenProjectDetails={handleOpenProjectDetails}
+              leadingColumnLabel="SERVICES"
+              itemLabelSingular="Service"
             />
           </TabsContent>
 
@@ -283,6 +285,8 @@ export function BookingCalendarView() {
                 machines={resourceMachines}
                 usages={resourceUsages}
                 onOpenProjectDetails={handleOpenProjectDetails}
+                leadingColumnLabel="RESOURCES"
+                itemLabelSingular="Resource"
               />
             </TabsContent>
           )}
