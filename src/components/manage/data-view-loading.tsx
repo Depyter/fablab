@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CalendarLoadingState } from "@/components/calendar/calendar-loading";
 import { getDataViewSection, getProjectsView } from "./data-view-route-state";
 import type { ViewMode } from "@/components/manage/data-view";
 
@@ -95,13 +96,7 @@ export function DataViewLoadingState({
   view?: ViewMode;
 }) {
   if (view === "list") return <DataViewListLoadingState />;
-  if (view === "calendar") {
-    return (
-      <div className="flex-1 p-4 sm:p-6">
-        <Skeleton className="h-full w-full rounded-xl" />
-      </div>
-    );
-  }
+  if (view === "calendar") return <CalendarLoadingState />;
   return <DataViewGridLoadingState />;
 }
 
