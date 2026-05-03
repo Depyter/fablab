@@ -13,8 +13,7 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-
-export type CalendarViewMode = "day" | "week" | "month";
+import type { CalendarViewMode } from "@/lib/calendar";
 
 export const WEEK_STARTS_ON = 1 as const;
 
@@ -67,7 +66,9 @@ export function getVisibleRange(
     };
   }
 
-  const start = startOfWeek(startOfMonth(date), { weekStartsOn: WEEK_STARTS_ON });
+  const start = startOfWeek(startOfMonth(date), {
+    weekStartsOn: WEEK_STARTS_ON,
+  });
   const end = endOfWeek(endOfMonth(date), { weekStartsOn: WEEK_STARTS_ON });
 
   return {

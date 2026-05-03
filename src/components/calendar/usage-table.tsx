@@ -2,28 +2,27 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ResourceStatus } from "@convex/constants";
+import { ResourceStatus, type ProjectStatusType } from "@convex/constants";
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import type { Id } from "@convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  DAY_END,
+  DAY_START,
+  getCalendarSlotIndex,
+  HEADER_SLOTS,
+  TOTAL_SLOTS,
+} from "@/lib/calendar";
 import { getLabDecimalHour } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 
 export const ROW_HEIGHT = 40;
 export const SECTION_HEIGHT = 26;
 export const HEADER_HEIGHT = 44;
-export const DAY_START = 9;
-export const DAY_END = 18;
-export const TOTAL_SLOTS = (DAY_END - DAY_START) * 2;
 export const RESOURCES_COL_WIDTH = 160;
 export const SLOT_WIDTH = 52;
-
-export const HEADER_SLOTS = Array.from(
-  { length: TOTAL_SLOTS + 1 },
-  (_, index) => DAY_START + index * 0.5,
-);
 
 const DAY_TIMELINE_MIN_WIDTH = HEADER_SLOTS.length * SLOT_WIDTH;
 const DAY_MIN_WIDTH = RESOURCES_COL_WIDTH + DAY_TIMELINE_MIN_WIDTH;
@@ -48,13 +47,7 @@ export interface MachineUsage {
   machineId: string;
   projectId: Id<"projects"> | null;
   projectAlias: string;
-  projectStatus:
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "completed"
-    | "paid"
-    | "cancelled";
+  projectStatus: ProjectStatusType;
   makerName: string;
   date: number;
   startTime: number;
@@ -109,7 +102,7 @@ function formatShortTime(decimalHour: number) {
 }
 
 function getSlotIndex(decimalHour: number) {
-  return Math.round((decimalHour - DAY_START) * 2);
+  return getCalendarSlotIndex(decimalHour);
 }
 
 function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
