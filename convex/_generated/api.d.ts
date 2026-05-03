@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as calendar_query from "../calendar/query.js";
 import type * as chat_helper from "../chat/helper.js";
 import type * as chat_mutate from "../chat/mutate.js";
 import type * as chat_query from "../chat/query.js";
@@ -42,6 +43,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  "calendar/query": typeof calendar_query;
   "chat/helper": typeof chat_helper;
   "chat/mutate": typeof chat_mutate;
   "chat/query": typeof chat_query;
