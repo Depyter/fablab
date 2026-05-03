@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ResourceStatus, type ProjectStatusType } from "@convex/constants";
-import { format, setHours, setMinutes, startOfDay } from "date-fns";
+import { ResourceStatus } from "@convex/constants";
 import type { Id } from "@convex/_generated/dataModel";
+import { format, setHours, setMinutes, startOfDay } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
+  type CalendarMachine as Machine,
+  type CalendarMachineUsage as MachineUsage,
   DAY_END,
   DAY_START,
   getCalendarSlotIndex,
@@ -32,28 +34,6 @@ const SECTION_BG = "rgba(220,215,245,0.55)";
 const SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
 
 type MachineStatus = "active" | "maintenance" | "free";
-
-export interface Machine {
-  id: string;
-  name: string;
-  status: typeof ResourceStatus.AVAILABLE | typeof ResourceStatus.UNAVAILABLE;
-  description: string;
-  group?: string;
-  href?: string;
-}
-
-export interface MachineUsage {
-  id: string;
-  machineId: string;
-  projectId: Id<"projects"> | null;
-  projectAlias: string;
-  projectStatus: ProjectStatusType;
-  makerName: string;
-  date: number;
-  startTime: number;
-  endTime: number;
-  color?: string;
-}
 
 interface UsageTableProps {
   machines: Machine[];
@@ -130,6 +110,86 @@ function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
   return tracks.length > 0 ? tracks : [[]];
 }
 
+function buildUsagesByMachine(usages: MachineUsage[]) {
+  const grouped = new Map<string, MachineUsage[]>();
+
+  for (const usage of usages) {
+    const machineUsages = grouped.get(usage.machineId);
+
+    if (machineUsages) {
+      machineUsages.push(usage);
+    } else {
+      grouped.set(usage.machineId, [usage]);
+    }
+  }
+
+  for (const machineUsages of grouped.values()) {
+    machineUsages.sort((a, b) => a.startTime - b.startTime);
+  }
+
+  return grouped;
+}
+
+function buildSections(machines: Machine[]) {
+  const grouped = new Map<string, Machine[]>();
+
+  for (const machine of machines) {
+    const key = machine.group ?? "";
+
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+
+    grouped.get(key)?.push(machine);
+  }
+
+  return Array.from(grouped.entries()).map(([label, sectionMachines]) => ({
+    label,
+    machines: sectionMachines,
+  }));
+}
+
+function buildScheduleRows(args: {
+  sections: Array<{ label: string; machines: Machine[] }>;
+  usagesByMachine: Map<string, MachineUsage[]>;
+  nowDecimal: number;
+}) {
+  const rows: ScheduleRow[] = [];
+
+  for (const section of args.sections) {
+    if (section.label) {
+      rows.push({
+        id: `section-${section.label}`,
+        kind: "section",
+        label: section.label,
+      });
+    }
+
+    for (const machine of section.machines) {
+      const machineUsages = args.usagesByMachine.get(machine.id) ?? [];
+      const tracks = computeTracks(machineUsages);
+      const machineStatus = getMachineStatus(
+        machine,
+        machineUsages,
+        args.nowDecimal,
+      );
+
+      tracks.forEach((track, trackIndex) => {
+        rows.push({
+          id: `${machine.id}-track-${trackIndex}`,
+          kind: "track",
+          machine,
+          machineStatus,
+          track,
+          isFirstTrack: trackIndex === 0,
+        });
+      });
+    }
+  }
+
+  return rows;
+}
+
 function getUsagePosition(startTime: number, endTime: number) {
   const startIndex = Math.max(getSlotIndex(startTime), 0);
   const slotSpan = Math.max(
@@ -186,7 +246,7 @@ function DayNowIndicator({
   );
 }
 
-export const UsageTable = React.memo(function UsageTable({
+export function UsageTable({
   machines,
   usages,
   onOpenProjectDetails,
@@ -200,91 +260,13 @@ export const UsageTable = React.memo(function UsageTable({
     return () => clearInterval(tick);
   }, []);
 
-  const usagesByMachine = React.useMemo(() => {
-    const grouped = new Map<string, MachineUsage[]>();
-
-    for (const usage of usages) {
-      const machineUsages = grouped.get(usage.machineId);
-
-      if (machineUsages) {
-        machineUsages.push(usage);
-      } else {
-        grouped.set(usage.machineId, [usage]);
-      }
-    }
-
-    for (const machineUsages of grouped.values()) {
-      machineUsages.sort((a, b) => a.startTime - b.startTime);
-    }
-
-    return grouped;
-  }, [usages]);
-
-  const sections = React.useMemo(() => {
-    const grouped = new Map<string, Machine[]>();
-
-    for (const machine of machines) {
-      const key = machine.group ?? "";
-
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
-      }
-
-      grouped.get(key)?.push(machine);
-    }
-
-    return Array.from(grouped.entries()).map(([label, sectionMachines]) => ({
-      label,
-      machines: sectionMachines,
-    }));
-  }, [machines]);
-
-  const scheduleRows = React.useMemo<ScheduleRow[]>(() => {
-    const rows: ScheduleRow[] = [];
-
-    for (const section of sections) {
-      if (section.label) {
-        rows.push({
-          id: `section-${section.label}`,
-          kind: "section",
-          label: section.label,
-        });
-      }
-
-      for (const machine of section.machines) {
-        const machineUsages = usagesByMachine.get(machine.id) ?? [];
-        const tracks = computeTracks(machineUsages);
-        const machineStatus = getMachineStatus(
-          machine,
-          machineUsages,
-          nowDecimal,
-        );
-
-        tracks.forEach((track, trackIndex) => {
-          rows.push({
-            id: `${machine.id}-track-${trackIndex}`,
-            kind: "track",
-            machine,
-            machineStatus,
-            track,
-            isFirstTrack: trackIndex === 0,
-          });
-        });
-      }
-    }
-
-    return rows;
-  }, [nowDecimal, sections, usagesByMachine]);
-
-  const minBodyHeight = React.useMemo(
-    () =>
-      scheduleRows.reduce(
-        (total, row) =>
-          total + (row.kind === "section" ? SECTION_HEIGHT : ROW_HEIGHT),
-        0,
-      ),
-    [scheduleRows],
-  );
+  const usagesByMachine = buildUsagesByMachine(usages);
+  const sections = buildSections(machines);
+  const scheduleRows = buildScheduleRows({
+    sections,
+    usagesByMachine,
+    nowDecimal,
+  });
   const bodyGridTemplateRows =
     scheduleRows.length > 0
       ? scheduleRows.map(() => "1fr").join(" ")
@@ -294,10 +276,7 @@ export const UsageTable = React.memo(function UsageTable({
   const currentSlotIdx = nowInRange
     ? Math.floor((nowDecimal - DAY_START) * 2)
     : null;
-  const nowIndicatorLeft = React.useMemo(
-    () => (nowInRange ? getNowIndicatorLeft(nowDecimal) : null),
-    [nowDecimal, nowInRange],
-  );
+  const nowIndicatorLeft = nowInRange ? getNowIndicatorLeft(nowDecimal) : null;
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -566,7 +545,6 @@ export const UsageTable = React.memo(function UsageTable({
                           usage.startTime,
                           usage.endTime,
                         );
-                        const isPending = usage.projectStatus === "pending";
                         const canOpenProjectDetails =
                           usage.projectId !== null &&
                           onOpenProjectDetails !== undefined;
@@ -595,9 +573,8 @@ export const UsageTable = React.memo(function UsageTable({
                             <div
                               className={cn(
                                 "flex h-full items-center justify-center overflow-hidden rounded-md border px-2 py-1 shadow-sm",
-                                usage.color ||
-                                  "bg-blue-500/10 border-blue-500 text-blue-700",
-                                isPending &&
+                                usage.slotClassName,
+                                usage.isPendingReview &&
                                   "border-2 border-dashed opacity-80",
                                 canOpenProjectDetails &&
                                   "hover:ring-2 hover:ring-primary/20",
@@ -625,6 +602,4 @@ export const UsageTable = React.memo(function UsageTable({
       </div>
     </div>
   );
-});
-
-UsageTable.displayName = "UsageTable";
+}

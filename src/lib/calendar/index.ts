@@ -20,4 +20,5 @@ export * from "./constants";
 export * from "./labels";
 export * from "./status";
 export * from "./types";
+export * from "./view-models";
 export * from "./windows";

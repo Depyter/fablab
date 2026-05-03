@@ -59,69 +59,52 @@ export function BookingCalendarShell({
   const frame = usePreloadedAuthQuery(preloadedFrame);
   const isAdminOrMaker = frame?.role === "admin" || frame?.role === "maker";
 
-  const visibleRange = React.useMemo(
-    () => getVisibleRange(date, viewMode),
-    [date, viewMode],
-  );
-  const queryRange = React.useMemo(() => {
-    const firstDay = visibleRange.days[0];
-    const lastDay = visibleRange.days[visibleRange.days.length - 1];
-
-    const { start } = getLabDayBounds(firstDay);
-    const { endExclusive } = getLabDayBounds(lastDay);
-
-    return {
-      startTime: start.getTime(),
-      endTime: endExclusive.getTime(),
-    };
-  }, [visibleRange.days]);
+  const visibleRange = getVisibleRange(date, viewMode);
+  const firstDay = visibleRange.days[0];
+  const lastDay = visibleRange.days[visibleRange.days.length - 1];
+  const { start: queryStart } = getLabDayBounds(firstDay);
+  const { endExclusive: queryEnd } = getLabDayBounds(lastDay);
+  const queryRange = {
+    startTime: queryStart.getTime(),
+    endTime: queryEnd.getTime(),
+  };
 
   const bookings = useQuery(api.calendar.query.getCalendarBookings, {
     startTime: queryRange.startTime,
     endTime: queryRange.endTime,
   });
   const bookingsLoading = bookings === undefined;
-  const bookingItems = React.useMemo<CalendarBookingItem[]>(
-    () => bookings ?? [],
-    [bookings],
-  );
+  const bookingItems: CalendarBookingItem[] = bookings ?? [];
 
-  const handlePrevPeriod = React.useCallback(() => {
+  function handlePrevPeriod() {
     setDate((prev) => shiftDate(prev, viewMode, -1));
-  }, [viewMode]);
+  }
 
-  const handleNextPeriod = React.useCallback(() => {
+  function handleNextPeriod() {
     setDate((prev) => shiftDate(prev, viewMode, 1));
-  }, [viewMode]);
+  }
 
-  const handleReset = React.useCallback(() => {
+  function handleReset() {
     setDate(startOfToday());
-  }, []);
+  }
 
-  const handleOpenProjectDetails = React.useCallback(
-    (projectId: Id<"projects">) => {
-      setSelectedProjectId(projectId);
-      setIsDetailsOpen(true);
-    },
-    [],
-  );
+  function handleOpenProjectDetails(projectId: Id<"projects">) {
+    setSelectedProjectId(projectId);
+    setIsDetailsOpen(true);
+  }
 
-  const handleDetailsOpenChange = React.useCallback((open: boolean) => {
+  function handleDetailsOpenChange(open: boolean) {
     setIsDetailsOpen(open);
     if (!open) {
       setSelectedProjectId(null);
     }
-  }, []);
+  }
 
-  const totalProjects = React.useMemo(
-    () =>
-      new Set(
-        bookingItems.flatMap((booking) =>
-          booking.projectId ? [booking.projectId] : [],
-        ),
-      ).size,
-    [bookingItems],
-  );
+  const totalProjects = new Set(
+    bookingItems.flatMap((booking) =>
+      booking.projectId ? [booking.projectId] : [],
+    ),
+  ).size;
   const staffTabs = [
     { id: "services", label: "Services", icon: LayoutGrid },
     { id: "resources", label: "Machines", icon: Users },
