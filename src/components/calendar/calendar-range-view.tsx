@@ -11,12 +11,7 @@ import {
   startOfDay,
 } from "date-fns";
 import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
-import {
-  clampToCalendarDay,
-  DAY_HOURS,
-  DAY_START,
-  getCalendarStatusAccentClass,
-} from "@/lib/calendar";
+import { clampToCalendarDay, DAY_HOURS, DAY_START } from "@/lib/calendar";
 
 import { cn } from "@/lib/utils";
 import {
@@ -156,6 +151,38 @@ function buildWeekEventLayouts(events: CalendarRangeEvent[], day: Date) {
   );
 }
 
+function buildEventsByDay(days: Date[], events: CalendarRangeEvent[]) {
+  const grouped = new Map<string, CalendarRangeEvent[]>();
+
+  for (const day of days) {
+    const { start, endExclusive } = getLabDayBounds(day);
+    const dayStart = start.getTime();
+    const dayEnd = endExclusive.getTime();
+    const dayEvents = events.filter((event) =>
+      overlapsTimeRange(event.startTime, event.endTime, dayStart, dayEnd),
+    );
+
+    dayEvents.sort((left, right) => left.startTime - right.startTime);
+    grouped.set(toDayKey(day), dayEvents);
+  }
+
+  return grouped;
+}
+
+function buildWeekLayoutsByDay(
+  days: Date[],
+  eventsByDay: Map<string, CalendarRangeEvent[]>,
+) {
+  const layouts = new Map<string, WeekEventLayout[]>();
+
+  for (const day of days) {
+    const dayKey = toDayKey(day);
+    layouts.set(dayKey, buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day));
+  }
+
+  return layouts;
+}
+
 function EventCard({
   event,
   compact = false,
@@ -177,23 +204,15 @@ function EventCard({
       onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
       title={showDetails ? undefined : event.projectAlias}
       className={cn(
-        "relative w-full overflow-hidden rounded-xl border border-border/70 bg-card text-left transition-colors",
-        event.projectStatus === "pending" && "border-dashed",
+        "relative w-full overflow-hidden rounded-xl border text-left shadow-sm transition-colors",
+        event.slotClassName,
+        event.isPendingReview && "border-2 border-dashed",
         canOpenProjectDetails
-          ? "cursor-pointer hover:bg-muted/25"
+          ? "cursor-pointer hover:opacity-90"
           : "cursor-default",
         compact ? "min-h-8 px-2.5 py-1.5" : "px-3 py-2.5",
       )}
     >
-      <span
-        className={cn(
-          compact
-            ? "absolute bottom-1.5 left-1.5 top-1.5 w-1 rounded-full"
-            : "absolute bottom-2 left-2 top-2 w-1 rounded-full",
-          getCalendarStatusAccentClass(event.projectStatus),
-        )}
-      />
-
       <div className={cn(compact ? "pl-2.5" : "pl-3")}>
         <div
           className={cn(
@@ -234,10 +253,11 @@ function WeekEventBlock({
       disabled={!canOpenProjectDetails}
       onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
       className={cn(
-        "absolute z-10 overflow-hidden rounded-lg border border-border/70 bg-card px-2 py-1 text-left transition-colors",
-        event.projectStatus === "pending" && "border-dashed",
+        "absolute z-10 overflow-hidden rounded-lg border px-2 py-1 text-left shadow-sm transition-colors",
+        event.slotClassName,
+        event.isPendingReview && "border-2 border-dashed",
         canOpenProjectDetails
-          ? "cursor-pointer hover:bg-muted/25"
+          ? "cursor-pointer hover:opacity-90"
           : "cursor-default",
       )}
       style={{
@@ -247,22 +267,12 @@ function WeekEventBlock({
         width: `calc(${100 / event.trackCount}% - 4px)`,
       }}
     >
-      <span
-        className={cn(
-          "absolute bottom-1.5 left-1.5 top-1.5 w-1 rounded-full",
-          getCalendarStatusAccentClass(event.projectStatus),
-        )}
-      />
-
       <div className="pl-2.5">
-        <div className="truncate text-[11px] font-semibold text-foreground">
+        <div className="truncate text-md font-semibold text-foreground">
           {event.projectAlias}
         </div>
         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
           {event.secondaryLabel}
-        </div>
-        <div className="mt-1 truncate text-[10px] text-muted-foreground">
-          {formatEventTime(event.startTime, event.endTime)}
         </div>
       </div>
     </button>
@@ -277,38 +287,9 @@ export function CalendarRangeView({
   isLoading = false,
   onOpenProjectDetails,
 }: CalendarRangeViewProps) {
-  const eventsByDay = React.useMemo(() => {
-    const grouped = new Map<string, CalendarRangeEvent[]>();
-
-    for (const day of days) {
-      const { start, endExclusive } = getLabDayBounds(day);
-      const dayStart = start.getTime();
-      const dayEnd = endExclusive.getTime();
-      const dayEvents = events.filter((event) =>
-        overlapsTimeRange(event.startTime, event.endTime, dayStart, dayEnd),
-      );
-
-      dayEvents.sort((left, right) => left.startTime - right.startTime);
-      grouped.set(toDayKey(day), dayEvents);
-    }
-
-    return grouped;
-  }, [days, events]);
-
+  const eventsByDay = buildEventsByDay(days, events);
   const weekMinWidth = WEEK_TIME_COL_WIDTH + days.length * WEEK_DAY_MIN_WIDTH;
-  const weekLayoutsByDay = React.useMemo(() => {
-    const layouts = new Map<string, WeekEventLayout[]>();
-
-    for (const day of days) {
-      const dayKey = toDayKey(day);
-      layouts.set(
-        dayKey,
-        buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day),
-      );
-    }
-
-    return layouts;
-  }, [days, eventsByDay]);
+  const weekLayoutsByDay = buildWeekLayoutsByDay(days, eventsByDay);
   const monthMinWidth = 7 * MONTH_DAY_MIN_WIDTH;
   const monthRowCount = Math.max(days.length / 7, 1);
   const monthWeekdays = days.slice(0, 7);

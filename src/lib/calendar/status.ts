@@ -3,16 +3,10 @@ import {
   type ProjectStatusType,
 } from "../../../convex/constants";
 
-import { STATUS_STYLES } from "../project-status-styles";
-
-const CALENDAR_STATUS_ACCENT_CLASS: Record<ProjectStatusType, string> = {
-  approved: "bg-[var(--fab-teal)]",
-  paid: "bg-[var(--fab-teal)]",
-  pending: "bg-[var(--fab-amber)]",
-  rejected: "bg-[var(--fab-magenta)]",
-  cancelled: "bg-[var(--fab-magenta)]",
-  completed: "bg-[var(--fab-purple)]",
-};
+import type {
+  CalendarServiceCategoryType,
+  CalendarSlotPresentation,
+} from "./types";
 
 export function getCalendarProjectStatus(
   status: string | null | undefined,
@@ -27,21 +21,39 @@ export function getCalendarProjectStatus(
   return "pending";
 }
 
-export function getCalendarBookingColor(
-  status: string | null | undefined,
-  fallback = STATUS_STYLES.pending.badge,
-) {
-  const normalizedStatus = getCalendarProjectStatus(status);
+export function getCalendarSlotPresentation(args: {
+  projectStatus: string | null | undefined;
+  serviceCategoryType: CalendarServiceCategoryType;
+}): CalendarSlotPresentation {
+  const projectStatus = getCalendarProjectStatus(args.projectStatus);
 
-  return STATUS_STYLES[normalizedStatus]?.badge ?? fallback;
-}
+  if (projectStatus === "rejected" || projectStatus === "cancelled") {
+    return {
+      slotClassName: "bg-red-100 border-red-300 text-red-800",
+      accentClassName: "bg-red-500",
+      isPendingReview: false,
+    };
+  }
 
-export function getCalendarStatusAccentClass(
-  status: string | null | undefined,
-) {
-  const normalizedStatus = getCalendarProjectStatus(status);
+  if (projectStatus === "pending") {
+    return {
+      slotClassName: "bg-amber-100 border-amber-300 text-amber-900",
+      accentClassName: "bg-amber-500",
+      isPendingReview: true,
+    };
+  }
 
-  return (
-    CALENDAR_STATUS_ACCENT_CLASS[normalizedStatus] ?? "bg-muted-foreground"
-  );
+  if (args.serviceCategoryType === "WORKSHOP") {
+    return {
+      slotClassName: "bg-blue-100 border-blue-300 text-blue-800",
+      accentClassName: "bg-blue-500",
+      isPendingReview: false,
+    };
+  }
+
+  return {
+    slotClassName: "bg-emerald-100 border-emerald-300 text-emerald-800",
+    accentClassName: "bg-emerald-500",
+    isPendingReview: false,
+  };
 }
