@@ -1,5 +1,9 @@
-import { BookingCalendarView } from "@/components/calendar/booking-calendar-view";
+import { preloadAuthQuery } from "@/lib/auth-server";
+import { api } from "@convex/_generated/api";
+import { BookingCalendarShell } from "@/components/calendar/booking-calendar-shell";
 
-export default function CalendarPage() {
-  return <BookingCalendarView />;
+export default async function CalendarPage() {
+  const preloadedFrame = await preloadAuthQuery(api.calendar.query.getCalendarFrame, {});
+
+  return <BookingCalendarShell preloadedFrame={preloadedFrame} />;
 }

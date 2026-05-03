@@ -66,6 +66,7 @@ export async function setupProject() {
 
     return service!._id;
   });
+  const now = Date.now();
 
   const { projectId, roomId, threadId } = await tHarley.mutation(
     api.projects.mutate.createProject,
@@ -79,9 +80,9 @@ export async function setupProject() {
       service: serviceId,
       notes: "pls na",
       booking: {
-        startTime: Date.now() + 1000 * 60 * 60,
-        endTime: Date.now() + 1000 * 60 * 60 * 2,
-        date: Date.now() + 1000 * 60 * 60 * 24,
+        startTime: now + 1000 * 60 * 60,
+        endTime: now + 1000 * 60 * 60 * 2,
+        date: now + 1000 * 60 * 60 * 24,
       },
     },
   );

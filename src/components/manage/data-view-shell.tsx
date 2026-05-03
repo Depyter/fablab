@@ -429,7 +429,7 @@ function DataViewSearchField({
 
 export function DataViewShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col h-full bg-background w-full min-w-0">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-background">
       <header className="flex h-14 shrink-0 items-center gap-2 bg-background/80 backdrop-blur-md border-b border-sidebar-border/50 sticky top-0 z-30 px-4">
         <SidebarTrigger className="-ml-1 text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" />
         <div className="mx-2 h-4 w-px bg-sidebar-border/60 shrink-0" />
@@ -443,7 +443,7 @@ export function DataViewShell({ children }: { children: React.ReactNode }) {
 
       <DataViewPageFilters />
 
-      <div className="min-h-0 flex-1 flex flex-col">{children}</div>
+      <div className="flex h-full min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }

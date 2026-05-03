@@ -3,7 +3,11 @@
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import type { CalendarViewMode } from "@/components/calendar/calendar-range-view";
+import { MONTH_CELL_MIN_HEIGHT } from "@/components/calendar/month-layout";
 import {
+  DAY_END,
+  DAY_START,
   HEADER_SLOTS,
   RESOURCES_COL_WIDTH,
   SLOT_WIDTH,
@@ -51,6 +55,12 @@ const mobileLoadingRows = [
   },
 ] as const;
 
+const weekSkeletonDays = Array.from({ length: 7 }, (_, index) => index);
+const monthSkeletonCells = Array.from({ length: 35 }, (_, index) => index);
+const weekHourSkeletons = Array.from(
+  { length: DAY_END - DAY_START },
+  (_, index) => DAY_START + index,
+);
 const LOADING_TABLE_WIDTH =
   RESOURCES_COL_WIDTH + HEADER_SLOTS.length * SLOT_WIDTH;
 
@@ -64,42 +74,72 @@ function formatLoadingTime(decimalHour: number) {
   );
 }
 
-export function CalendarLoadingState() {
+function CalendarToolbarSkeleton({ viewMode }: { viewMode: CalendarViewMode }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="flex items-center gap-2 border-b bg-muted/20 px-4 py-2 shrink-0 flex-wrap">
-        <div className="flex items-center gap-1">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-8 w-8 rounded-md" />
-        </div>
-
-        <Skeleton className="h-8 w-16 rounded-md" />
-
+    <div className="flex shrink-0 items-center gap-2 border-b bg-muted/20 px-4 py-2 flex-wrap">
+      <div className="flex items-center gap-1 rounded-md border bg-background p-0.5">
+        <Skeleton className="h-8 w-8 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-md" />
         <div className="h-4 w-px bg-border" />
-
-        <Skeleton className="h-8 w-40 rounded-md" />
-
+        <Skeleton className="h-8 w-14 rounded-md" />
         <div className="h-4 w-px bg-border" />
+        <Skeleton className="h-8 w-32 rounded-md" />
+      </div>
 
-        <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
-          <div className="flex h-7 items-center rounded-sm bg-muted px-3 text-xs font-medium text-foreground">
-            Service Bookings
+      <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
+        {(["day", "week", "month"] as const).map((mode) => (
+          <div
+            key={mode}
+            className={cn(
+              "flex h-7 items-center rounded-sm px-3 text-xs",
+              viewMode === mode
+                ? "bg-muted font-medium text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            {mode === "day" ? "Day" : mode === "week" ? "Week" : "Month"}
           </div>
-          <div className="flex h-7 items-center rounded-sm px-3 text-xs text-muted-foreground">
-            Machine Schedule
-          </div>
+        ))}
+      </div>
+
+      <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
+        <Skeleton className="h-7 w-[4.5rem] rounded-sm" />
+        <Skeleton className="ml-1 h-7 w-[4.5rem] rounded-sm" />
+      </div>
+    </div>
+  );
+}
+
+function CalendarContentHeaderSkeleton() {
+  return (
+    <div className="flex shrink-0 items-center gap-2 border-b bg-muted/20 px-4 py-2 flex-wrap">
+      <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
+        <div className="flex h-7 items-center rounded-sm bg-muted px-3 text-xs font-medium text-foreground">
+          Service Bookings
         </div>
-
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2 text-sm">
-          <Skeleton className="h-4 w-16" />
-          <div className="h-3 w-px bg-border" />
-          <Skeleton className="h-4 w-5" />
-          <Skeleton className="h-4 w-20" />
+        <div className="flex h-7 items-center rounded-sm px-3 text-xs text-muted-foreground">
+          Machine Schedule
         </div>
       </div>
 
+      <div className="flex-1" />
+
+      <div className="flex items-center gap-2 text-sm">
+        <Skeleton className="h-4 w-16" />
+        <div className="h-3 w-px bg-border" />
+        <Skeleton className="h-4 w-5" />
+        <Skeleton className="h-4 w-20" />
+        <div className="h-3 w-px bg-border" />
+        <Skeleton className="h-4 w-5" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+    </div>
+  );
+}
+
+function DayLoadingState() {
+  return (
+    <>
       <div className="hidden min-h-0 flex-1 md:flex">
         <div className="relative flex-1 overflow-auto">
           <table
@@ -113,7 +153,10 @@ export function CalendarLoadingState() {
             <colgroup>
               <col style={{ width: RESOURCES_COL_WIDTH }} />
               {HEADER_SLOTS.map((slot) => (
-                <col key={`calendar-loading-col-${slot}`} style={{ width: SLOT_WIDTH }} />
+                <col
+                  key={`calendar-loading-col-${slot}`}
+                  style={{ width: SLOT_WIDTH }}
+                />
               ))}
             </colgroup>
             <thead>
@@ -175,10 +218,7 @@ export function CalendarLoadingState() {
 
             <tbody>
               {loadingRows.map((row, rowIndex) => (
-                <tr
-                  key={`calendar-loading-row-${rowIndex}`}
-                  style={{ height: 40 }}
-                >
+                <tr key={`calendar-loading-row-${rowIndex}`} style={{ height: 40 }}>
                   <td
                     style={{
                       position: "sticky",
@@ -192,8 +232,10 @@ export function CalendarLoadingState() {
                     }}
                   >
                     <div className="flex h-full items-center gap-3 px-3">
-                      <div className="h-2 w-2 rounded-full bg-[var(--fab-text-dim)]/35 shrink-0" />
-                      <Skeleton className={cn("h-4 rounded-full", row.labelWidth)} />
+                      <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
+                      <Skeleton
+                        className={cn("h-4 rounded-full", row.labelWidth)}
+                      />
                     </div>
                   </td>
 
@@ -250,11 +292,11 @@ export function CalendarLoadingState() {
         {mobileLoadingRows.map((row, rowIndex) => (
           <div key={`calendar-mobile-loading-${rowIndex}`}>
             <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="h-2 w-2 rounded-full bg-[var(--fab-text-dim)]/35 shrink-0" />
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
                 <Skeleton className={cn("h-4 rounded-full", row.headerWidth)} />
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <Skeleton className="h-4 w-12" />
                 <Skeleton className="h-5 w-20 rounded-full" />
               </div>
@@ -266,9 +308,12 @@ export function CalendarLoadingState() {
                   key={`calendar-mobile-entry-${rowIndex}-${entryIndex}`}
                   className="flex items-center gap-3 px-4 py-2.5"
                 >
-                  <Skeleton className="h-8 w-1 rounded-full shrink-0" />
+                  <Skeleton className="h-8 w-1 shrink-0 rounded-full" />
                   <Skeleton
-                    className={cn("h-4 flex-1 max-w-full rounded-full", entry.titleWidth)}
+                    className={cn(
+                      "h-4 max-w-full flex-1 rounded-full",
+                      entry.titleWidth,
+                    )}
                   />
                   <Skeleton
                     className={cn("h-4 shrink-0 rounded-full", entry.timeWidth)}
@@ -279,6 +324,143 @@ export function CalendarLoadingState() {
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
+  if (viewMode === "week") {
+    return (
+      <div className="flex min-h-0 flex-1 overflow-auto">
+        <div className="min-w-[1108px]">
+          <div className="grid grid-cols-[72px_repeat(7,minmax(148px,1fr))] border-b bg-background">
+            <div className="border-r bg-muted/10 px-3 py-2">
+              <Skeleton className="h-3 w-8" />
+            </div>
+
+            {weekSkeletonDays.map((day) => (
+              <div
+                key={`calendar-week-loading-header-${day}`}
+                className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
+              >
+                <Skeleton className="h-3 w-10" />
+                <div className="mt-2 flex items-center gap-2">
+                  <Skeleton className="h-7 w-7 rounded-full" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-[72px_repeat(7,minmax(148px,1fr))]">
+            <div className="border-r bg-background">
+              {weekHourSkeletons.map((hour) => (
+                <div
+                  key={`calendar-week-loading-time-${hour}`}
+                  className="h-[52px] border-b border-border/60 px-3"
+                >
+                  <Skeleton className="h-3 w-10 -translate-y-1.5" />
+                </div>
+              ))}
+            </div>
+
+            {weekSkeletonDays.map((day) => (
+              <div
+                key={`calendar-week-loading-column-${day}`}
+                className="relative h-[468px] border-r last:border-r-0"
+              >
+                {weekHourSkeletons.map((hour, index) => (
+                  <div
+                    key={`calendar-week-loading-line-${day}-${hour}`}
+                    className="absolute left-0 right-0 border-t border-border/60"
+                    style={{ top: `${index * 52}px` }}
+                  />
+                ))}
+
+                <Skeleton className="absolute left-1 top-8 h-20 w-[calc(50%-6px)] rounded-lg" />
+                <Skeleton className="absolute right-1 top-[136px] h-16 w-[calc(50%-6px)] rounded-lg" />
+                <Skeleton className="absolute left-1 top-[240px] h-24 w-[calc(100%-8px)] rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 overflow-auto">
+      <div className="grid min-h-0 min-w-[1008px] flex-1 grid-rows-[auto_1fr]">
+        <div className="grid grid-cols-7 border-b bg-muted/10">
+          {weekSkeletonDays.map((day) => (
+            <div
+              key={`calendar-month-loading-header-${day}`}
+              className={cn(
+                "px-3 py-2",
+                day === 0 ? "" : "border-l",
+              )}
+            >
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+
+        <div
+          className="grid min-h-0 grid-cols-7 border-b border-r bg-background"
+          style={{ gridTemplateRows: `repeat(5, minmax(${MONTH_CELL_MIN_HEIGHT}px, 1fr))` }}
+        >
+          {monthSkeletonCells.map((cell) => (
+            <div
+              key={`calendar-month-loading-${cell}`}
+              className="flex min-h-0 flex-col border-l border-t bg-background"
+            >
+              <div className="flex items-center justify-between gap-2 border-b bg-muted/10 px-3 py-2">
+                <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                <div className="flex min-w-0 items-center justify-end gap-2">
+                  <Skeleton className="h-3 w-14" />
+                </div>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden p-2">
+                <Skeleton className="h-7 w-full rounded-md" />
+                <Skeleton className="h-7 w-full rounded-md" />
+                <div className="px-2">
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CalendarContentLoadingState({
+  viewMode = "day",
+}: {
+  viewMode?: CalendarViewMode;
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+      <CalendarContentHeaderSkeleton />
+      {viewMode === "day" ? (
+        <DayLoadingState />
+      ) : (
+        <RangeLoadingState viewMode={viewMode} />
+      )}
+    </div>
+  );
+}
+
+export function CalendarLoadingState({
+  viewMode = "day",
+}: {
+  viewMode?: CalendarViewMode;
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+      <CalendarToolbarSkeleton viewMode={viewMode} />
+      <CalendarContentLoadingState viewMode={viewMode} />
     </div>
   );
 }
