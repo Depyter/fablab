@@ -25,16 +25,14 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { getLabDayBounds } from "@/lib/lab-time";
+import type {
+  CalendarBookingItem,
+  CalendarTab,
+  CalendarViewMode,
+} from "@/lib/calendar";
 import { ProjectDetails } from "@/components/projects/project-details";
-import {
-  CalendarContentLoadingState,
-} from "./calendar-loading";
-import {
-  getVisibleRange,
-  shiftDate,
-  type CalendarViewMode,
-} from "./calendar-state";
-import type { CalendarBookingItem } from "./booking-calendar-view";
+import { CalendarContentLoadingState } from "./calendar-loading";
+import { getVisibleRange, shiftDate } from "./calendar-state";
 
 const BookingCalendarClient = dynamic(
   () =>
@@ -53,7 +51,7 @@ export function BookingCalendarShell({
 }) {
   const [date, setDate] = React.useState<Date>(() => startOfToday());
   const [viewMode, setViewMode] = React.useState<CalendarViewMode>("day");
-  const [activeTab, setActiveTab] = React.useState<"resources" | "services">("services");
+  const [activeTab, setActiveTab] = React.useState<CalendarTab>("services");
   const [selectedProjectId, setSelectedProjectId] =
     React.useState<Id<"projects"> | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
@@ -241,7 +239,9 @@ export function BookingCalendarShell({
             <div className="hidden items-center gap-3 px-2 text-xs font-medium text-muted-foreground lg:flex">
               <div className="flex items-center gap-1.5">
                 <span className="text-foreground">{bookingItems.length}</span>
-                <span>{bookingItems.length === 1 ? "booking" : "bookings"}</span>
+                <span>
+                  {bookingItems.length === 1 ? "booking" : "bookings"}
+                </span>
               </div>
               <div className="h-3 w-px bg-border" />
               <div className="flex items-center gap-1.5">
@@ -252,7 +252,9 @@ export function BookingCalendarShell({
           )}
         </div>
 
-        <React.Suspense fallback={<CalendarContentLoadingState viewMode={viewMode} />}>
+        <React.Suspense
+          fallback={<CalendarContentLoadingState viewMode={viewMode} />}
+        >
           <BookingCalendarClient
             preloadedFrame={preloadedFrame}
             date={date}

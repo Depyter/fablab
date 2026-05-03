@@ -6,55 +6,22 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { Preloaded } from "convex/react";
 
+import { UsageTable, type Machine, type MachineUsage } from "./usage-table";
+import type { CalendarVisibleRange } from "./calendar-state";
+import { CalendarRangeView } from "./calendar-range-view";
+import { ResourceStatus, ServiceStatus } from "@convex/constants";
 import {
-  DAY_END,
-  DAY_START,
-  UsageTable,
-  type Machine,
-  type MachineUsage,
-} from "./usage-table";
-import type { CalendarViewMode, CalendarVisibleRange } from "./calendar-state";
-import {
-  CalendarRangeView,
+  getCalendarBookingColor,
+  getCalendarProjectStatus,
+  getCalendarResourceGroupLabel,
+  getCalendarServiceGroupLabel,
+  normalizeCalendarBookingToDayWindow,
+  type CalendarBookingItem,
   type CalendarRangeEvent,
-} from "./calendar-range-view";
-import {
-  ResourceStatus,
-  ServiceStatus,
-  ProjectStatusType,
-} from "@convex/constants";
-import { STATUS_STYLES } from "@/components/projects/project-card";
-import { getLabDayBounds, getSnappedLabDecimalHour } from "@/lib/lab-time";
-import { clipTimeRange } from "@/lib/time-range";
-
-export interface CalendarBookingItem {
-  _id: Id<"resourceUsage">;
-  startTime: number;
-  endTime: number;
-  projectId: Id<"projects"> | null;
-  projectAlias: string;
-  projectStatus: string;
-  makerName: string;
-  serviceId: Id<"services">;
-  resourceId: Id<"resources"> | null;
-}
-
-function getResourceGroup(category: string | null) {
-  if (!category) return undefined;
-
-  return category.charAt(0) + category.slice(1).toLowerCase();
-}
-
-function getServiceGroup(type: string) {
-  return type === "WORKSHOP" ? "Workshops" : "Fabrication";
-}
-
-function getBookingColor(status: ProjectStatusType) {
-  return (
-    STATUS_STYLES[status]?.badge ||
-    "bg-blue-500/10 border-blue-500 text-blue-700"
-  );
-}
+  type CalendarTab,
+  type CalendarViewMode,
+} from "@/lib/calendar";
+import { getLabDayBounds } from "@/lib/lab-time";
 
 export const BookingCalendarView = React.memo(function BookingCalendarView({
   preloadedFrame,
@@ -71,7 +38,7 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
   viewMode: CalendarViewMode;
   visibleRange: CalendarVisibleRange;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
-  activeTab: "resources" | "services";
+  activeTab: CalendarTab;
   bookings: CalendarBookingItem[];
   bookingsLoading: boolean;
 }) {
@@ -90,7 +57,7 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
         description:
           resource.description ||
           `${resource.category?.toLowerCase()} resource`,
-        group: getResourceGroup(resource.category),
+        group: getCalendarResourceGroupLabel(resource.category),
       })),
     [frame?.resources],
   );
@@ -106,7 +73,7 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
             ? ResourceStatus.UNAVAILABLE
             : ResourceStatus.AVAILABLE,
         description: "Service Booking Queue",
-        group: getServiceGroup(service.serviceCategoryType),
+        group: getCalendarServiceGroupLabel(service.serviceCategoryType),
       })),
     [frame?.services],
   );
@@ -117,6 +84,13 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
     [frame?.services],
   );
   const dayBounds = React.useMemo(() => getLabDayBounds(date), [date]);
+  const dayRange = React.useMemo(
+    () => ({
+      startTime: dayBounds.start.getTime(),
+      endTime: dayBounds.endExclusive.getTime(),
+    }),
+    [dayBounds.endExclusive, dayBounds.start],
+  );
 
   const resourcesById = React.useMemo(
     () =>
@@ -127,33 +101,9 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
   );
 
   const normalizeDayUsageWindow = React.useCallback(
-    (booking: CalendarBookingItem) => {
-      const clippedRange = clipTimeRange(
-        booking.startTime,
-        booking.endTime,
-        dayBounds.start.getTime(),
-        dayBounds.endExclusive.getTime(),
-      );
-
-      if (!clippedRange) return null;
-
-      const startTime = Math.max(
-        getSnappedLabDecimalHour(clippedRange.startTime, false),
-        DAY_START,
-      );
-      const endTime = Math.min(
-        getSnappedLabDecimalHour(clippedRange.endTime, true),
-        DAY_END,
-      );
-
-      if (endTime <= startTime) return null;
-
-      return {
-        startTime,
-        endTime,
-      };
-    },
-    [dayBounds.endExclusive, dayBounds.start],
+    (booking: CalendarBookingItem) =>
+      normalizeCalendarBookingToDayWindow(booking, dayRange),
+    [dayRange],
   );
 
   const resourceUsages = React.useMemo<MachineUsage[]>(
@@ -166,6 +116,9 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
               const window = normalizeDayUsageWindow(booking);
 
               if (!window) return [];
+              const projectStatus = getCalendarProjectStatus(
+                booking.projectStatus,
+              );
 
               return [
                 {
@@ -173,14 +126,12 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
                   machineId: booking.resourceId!,
                   projectId: booking.projectId,
                   projectAlias: booking.projectAlias,
-                  projectStatus: booking.projectStatus as ProjectStatusType,
+                  projectStatus,
                   makerName: booking.makerName,
                   date: booking.startTime,
                   startTime: window.startTime,
                   endTime: window.endTime,
-                  color: getBookingColor(
-                    booking.projectStatus as ProjectStatusType,
-                  ),
+                  color: getCalendarBookingColor(projectStatus),
                 },
               ];
             }),
@@ -195,6 +146,9 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
             const window = normalizeDayUsageWindow(booking);
 
             if (!window) return [];
+            const projectStatus = getCalendarProjectStatus(
+              booking.projectStatus,
+            );
 
             return [
               {
@@ -202,15 +156,15 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
                 machineId: booking.serviceId,
                 projectId: booking.projectId,
                 projectAlias: booking.projectAlias,
-                projectStatus: booking.projectStatus as ProjectStatusType,
+                projectStatus,
                 makerName: booking.makerName,
                 date: booking.startTime,
                 startTime: window.startTime,
                 endTime: window.endTime,
-                color:
-                  STATUS_STYLES[booking.projectStatus as ProjectStatusType]
-                    ?.badge ||
+                color: getCalendarBookingColor(
+                  projectStatus,
                   "bg-purple-500/10 border-purple-500 text-purple-700",
+                ),
               },
             ];
           }),
@@ -225,21 +179,25 @@ export const BookingCalendarView = React.memo(function BookingCalendarView({
         ? bookingItems.filter((booking) => booking.resourceId !== null)
         : bookingItems;
 
-    return bookings.map((booking) => ({
-      id: booking._id,
-      projectId: booking.projectId,
-      projectAlias: booking.projectAlias,
-      projectStatus: booking.projectStatus as ProjectStatusType,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      color: getBookingColor(booking.projectStatus as ProjectStatusType),
-      secondaryLabel:
-        activeTab === "resources"
-          ? (booking.resourceId
-              ? resourcesById.get(booking.resourceId)?.name
-              : null) || "Machine"
-          : servicesById.get(booking.serviceId)?.name || "Service",
-    }));
+    return bookings.map((booking) => {
+      const projectStatus = getCalendarProjectStatus(booking.projectStatus);
+
+      return {
+        id: booking._id,
+        projectId: booking.projectId,
+        projectAlias: booking.projectAlias,
+        projectStatus,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        color: getCalendarBookingColor(projectStatus),
+        secondaryLabel:
+          activeTab === "resources"
+            ? (booking.resourceId
+                ? resourcesById.get(booking.resourceId)?.name
+                : null) || "Machine"
+            : servicesById.get(booking.serviceId)?.name || "Service",
+      };
+    });
   }, [activeTab, bookingItems, resourcesById, servicesById, viewMode]);
 
   return (

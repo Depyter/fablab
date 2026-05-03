@@ -2,13 +2,11 @@
 
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { CalendarViewMode } from "@/lib/calendar";
+import { DAY_END, DAY_START, HEADER_SLOTS } from "@/lib/calendar";
 import { cn } from "@/lib/utils";
-import type { CalendarViewMode } from "@/components/calendar/calendar-range-view";
 import { MONTH_CELL_MIN_HEIGHT } from "@/components/calendar/month-layout";
 import {
-  DAY_END,
-  DAY_START,
-  HEADER_SLOTS,
   RESOURCES_COL_WIDTH,
   SLOT_WIDTH,
 } from "@/components/calendar/usage-table";
@@ -218,7 +216,10 @@ function DayLoadingState() {
 
             <tbody>
               {loadingRows.map((row, rowIndex) => (
-                <tr key={`calendar-loading-row-${rowIndex}`} style={{ height: 40 }}>
+                <tr
+                  key={`calendar-loading-row-${rowIndex}`}
+                  style={{ height: 40 }}
+                >
                   <td
                     style={{
                       position: "sticky",
@@ -240,7 +241,9 @@ function DayLoadingState() {
                   </td>
 
                   {HEADER_SLOTS.map((slot, slotIndex) => {
-                    const usage = row.slots.find((item) => item.start === slotIndex);
+                    const usage = row.slots.find(
+                      (item) => item.start === slotIndex,
+                    );
 
                     if (usage) {
                       return (
@@ -261,12 +264,14 @@ function DayLoadingState() {
 
                     const isCovered = row.slots.some(
                       (item) =>
-                        slotIndex > item.start && slotIndex < item.start + item.span,
+                        slotIndex > item.start &&
+                        slotIndex < item.start + item.span,
                     );
 
                     if (isCovered) return null;
 
-                    const isBoundary = slot >= HEADER_SLOTS[HEADER_SLOTS.length - 1];
+                    const isBoundary =
+                      slot >= HEADER_SLOTS[HEADER_SLOTS.length - 1];
 
                     return (
                       <td
@@ -395,10 +400,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
           {weekSkeletonDays.map((day) => (
             <div
               key={`calendar-month-loading-header-${day}`}
-              className={cn(
-                "px-3 py-2",
-                day === 0 ? "" : "border-l",
-              )}
+              className={cn("px-3 py-2", day === 0 ? "" : "border-l")}
             >
               <Skeleton className="h-3 w-16" />
             </div>
@@ -407,7 +409,9 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
 
         <div
           className="grid min-h-0 grid-cols-7 border-b border-r bg-background"
-          style={{ gridTemplateRows: `repeat(5, minmax(${MONTH_CELL_MIN_HEIGHT}px, 1fr))` }}
+          style={{
+            gridTemplateRows: `repeat(5, minmax(${MONTH_CELL_MIN_HEIGHT}px, 1fr))`,
+          }}
         >
           {monthSkeletonCells.map((cell) => (
             <div

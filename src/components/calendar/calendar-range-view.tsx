@@ -2,7 +2,21 @@
 
 import * as React from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import { format, isSameMonth, isToday, setHours, setMinutes, startOfDay } from "date-fns";
+import {
+  format,
+  isSameMonth,
+  isToday,
+  setHours,
+  setMinutes,
+  startOfDay,
+} from "date-fns";
+import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
+import {
+  clampToCalendarDay,
+  DAY_HOURS,
+  DAY_START,
+  getCalendarStatusAccentClass,
+} from "@/lib/calendar";
 
 import { cn } from "@/lib/utils";
 import {
@@ -18,32 +32,12 @@ import {
   MONTH_CELL_MIN_HEIGHT,
   MONTH_DAY_MIN_WIDTH,
 } from "./month-layout";
-import { DAY_END, DAY_START } from "./usage-table";
-
-export type CalendarViewMode = "day" | "week" | "month";
-
-export interface CalendarRangeEvent {
-  id: string;
-  projectId: Id<"projects"> | null;
-  projectAlias: string;
-  projectStatus:
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "completed"
-    | "paid"
-    | "cancelled";
-  startTime: number;
-  endTime: number;
-  color?: string;
-  secondaryLabel: string;
-}
 
 interface CalendarRangeViewProps {
   anchorDate: Date;
   days: Date[];
   events: CalendarRangeEvent[];
-  viewMode: "week" | "month";
+  viewMode: Exclude<CalendarViewMode, "day">;
   isLoading?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }
@@ -58,7 +52,7 @@ interface WeekEventLayout extends CalendarRangeEvent {
 const WEEK_TIME_COL_WIDTH = 72;
 const WEEK_DAY_MIN_WIDTH = 148;
 const WEEK_HOUR_ROW_MIN_HEIGHT = 52;
-const WEEK_TOTAL_HOURS = DAY_END - DAY_START;
+const WEEK_TOTAL_HOURS = DAY_HOURS;
 const WEEK_HEADER_HEIGHT = 61;
 const WEEK_MIN_GRID_HEIGHT = WEEK_TOTAL_HOURS * WEEK_HOUR_ROW_MIN_HEIGHT;
 const WEEK_MIN_TOTAL_HEIGHT = WEEK_HEADER_HEIGHT + WEEK_MIN_GRID_HEIGHT;
@@ -97,32 +91,9 @@ function getDecimalHour(time: number) {
   return getLabDecimalHour(time);
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function getStatusAccentClass(status: CalendarRangeEvent["projectStatus"]) {
-  switch (status) {
-    case "approved":
-    case "paid":
-      return "bg-[var(--fab-teal)]";
-    case "pending":
-      return "bg-[var(--fab-amber)]";
-    case "rejected":
-    case "cancelled":
-      return "bg-[var(--fab-magenta)]";
-    case "completed":
-      return "bg-[var(--fab-purple)]";
-    default:
-      return "bg-muted-foreground";
-  }
-}
-
-function buildWeekEventLayouts(
-  events: CalendarRangeEvent[],
-  day: Date,
-) {
-  const { start: dayStartDate, endExclusive: dayEndDate } = getLabDayBounds(day);
+function buildWeekEventLayouts(events: CalendarRangeEvent[], day: Date) {
+  const { start: dayStartDate, endExclusive: dayEndDate } =
+    getLabDayBounds(day);
   const dayStart = dayStartDate.getTime();
   const dayEnd = dayEndDate.getTime();
   const clipped = events
@@ -136,12 +107,8 @@ function buildWeekEventLayouts(
 
       if (!clippedRange) return null;
 
-      const start = clamp(
-        getDecimalHour(clippedRange.startTime),
-        DAY_START,
-        DAY_END,
-      );
-      const end = clamp(getDecimalHour(clippedRange.endTime), DAY_START, DAY_END);
+      const start = clampToCalendarDay(getDecimalHour(clippedRange.startTime));
+      const end = clampToCalendarDay(getDecimalHour(clippedRange.endTime));
 
       return {
         ...event,
@@ -153,7 +120,7 @@ function buildWeekEventLayouts(
     .filter((event) => event.end > event.start)
     .sort((left, right) => left.start - right.start || left.end - right.end);
 
-  const tracks: Array<Array<typeof clipped[number]>> = [];
+  const tracks: Array<Array<(typeof clipped)[number]>> = [];
 
   for (const event of clipped) {
     let placed = false;
@@ -207,9 +174,7 @@ function EventCard({
     <button
       type="button"
       disabled={!canOpenProjectDetails}
-      onClick={() =>
-        event.projectId && onOpenProjectDetails?.(event.projectId)
-      }
+      onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
       title={showDetails ? undefined : event.projectAlias}
       className={cn(
         "relative w-full overflow-hidden rounded-xl border border-border/70 bg-card text-left transition-colors",
@@ -225,7 +190,7 @@ function EventCard({
           compact
             ? "absolute bottom-1.5 left-1.5 top-1.5 w-1 rounded-full"
             : "absolute bottom-2 left-2 top-2 w-1 rounded-full",
-          getStatusAccentClass(event.projectStatus),
+          getCalendarStatusAccentClass(event.projectStatus),
         )}
       />
 
@@ -240,7 +205,9 @@ function EventCard({
         </div>
         {showDetails ? (
           <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span className="min-w-0 flex-1 truncate">{event.secondaryLabel}</span>
+            <span className="min-w-0 flex-1 truncate">
+              {event.secondaryLabel}
+            </span>
             <span className="shrink-0">
               {formatEventTime(event.startTime, event.endTime)}
             </span>
@@ -265,9 +232,7 @@ function WeekEventBlock({
     <button
       type="button"
       disabled={!canOpenProjectDetails}
-      onClick={() =>
-        event.projectId && onOpenProjectDetails?.(event.projectId)
-      }
+      onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
       className={cn(
         "absolute z-10 overflow-hidden rounded-lg border border-border/70 bg-card px-2 py-1 text-left transition-colors",
         event.projectStatus === "pending" && "border-dashed",
@@ -285,7 +250,7 @@ function WeekEventBlock({
       <span
         className={cn(
           "absolute bottom-1.5 left-1.5 top-1.5 w-1 rounded-full",
-          getStatusAccentClass(event.projectStatus),
+          getCalendarStatusAccentClass(event.projectStatus),
         )}
       />
 
@@ -336,7 +301,10 @@ export function CalendarRangeView({
 
     for (const day of days) {
       const dayKey = toDayKey(day);
-      layouts.set(dayKey, buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day));
+      layouts.set(
+        dayKey,
+        buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day),
+      );
     }
 
     return layouts;
@@ -345,7 +313,9 @@ export function CalendarRangeView({
   const monthRowCount = Math.max(days.length / 7, 1);
   const monthWeekdays = days.slice(0, 7);
   const monthBodyRef = React.useRef<HTMLDivElement | null>(null);
-  const [monthRowHeight, setMonthRowHeight] = React.useState(MONTH_CELL_MIN_HEIGHT);
+  const [monthRowHeight, setMonthRowHeight] = React.useState(
+    MONTH_CELL_MIN_HEIGHT,
+  );
 
   React.useEffect(() => {
     const grid = monthBodyRef.current;
@@ -442,7 +412,8 @@ export function CalendarRangeView({
                   key={`week-time-${hour}`}
                   className="border-b border-border/60 px-3"
                   style={{
-                    display: index === WEEK_HOURS.length - 1 ? "none" : undefined,
+                    display:
+                      index === WEEK_HOURS.length - 1 ? "none" : undefined,
                   }}
                 >
                   <span className="-translate-y-2.5 inline-block bg-background pr-2 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -546,7 +517,10 @@ export function CalendarRangeView({
             );
             const showOverflowLabel =
               hiddenEventCount > 0 &&
-              canShowMonthOverflowLabel(monthRowHeight, visibleDayEvents.length);
+              canShowMonthOverflowLabel(
+                monthRowHeight,
+                visibleDayEvents.length,
+              );
 
             return (
               <div
