@@ -2,27 +2,49 @@
 
 import Link from "next/link";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { PublicNavItemContent } from "@/components/public-nav-item-content";
 
-export function PublicNavAuth() {
+type PublicNavAuthProps = {
+  dashboardClassName: string;
+  loginClassName: string;
+  loadingClassName: string;
+  onNavigate?: () => void;
+  compact?: boolean;
+};
+
+export function PublicNavAuth({
+  dashboardClassName,
+  loginClassName,
+  loadingClassName,
+  onNavigate,
+  compact = false,
+}: PublicNavAuthProps) {
+  const renderLabel = (label: string) =>
+    compact ? (
+      <span className="block text-center text-base font-black uppercase leading-none tracking-tighter">
+        {label}
+      </span>
+    ) : (
+      <PublicNavItemContent label={label} />
+    );
+
   return (
     <>
       <AuthLoading>
-        <div className="h-10 w-24 animate-pulse bg-gray-200" />
+        <div className={`${loadingClassName} animate-pulse`} />
       </AuthLoading>
       <Authenticated>
         <Link
           href="/dashboard"
-          className="bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
+          className={dashboardClassName}
+          onClick={onNavigate}
         >
-          Dashboard
+          {renderLabel("Dashboard")}
         </Link>
       </Authenticated>
       <Unauthenticated>
-        <Link
-          href="/login"
-          className="bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
-        >
-          Login
+        <Link href="/login" className={loginClassName} onClick={onNavigate}>
+          {renderLabel("Login")}
         </Link>
       </Unauthenticated>
     </>
