@@ -22,7 +22,7 @@ export interface CalendarBookingItem {
   projectId: Id<"projects"> | null;
   projectAlias: string;
   projectStatus: string;
-  makerName: string;
+  clientName: string;
   serviceId: Id<"services">;
   resourceId: Id<"resources"> | null;
 }
@@ -34,6 +34,7 @@ export interface CalendarMachine {
   description: string;
   group?: string;
   href?: string;
+  serviceCategoryType?: CalendarServiceCategoryType;
 }
 
 export interface CalendarSlotPresentation {
@@ -48,7 +49,7 @@ export interface CalendarMachineUsage extends CalendarSlotPresentation {
   projectId: Id<"projects"> | null;
   projectAlias: string;
   projectStatus: ProjectStatusType;
-  makerName: string;
+  clientName: string;
   date: number;
   startTime: number;
   endTime: number;
@@ -60,8 +61,10 @@ export interface CalendarRangeEvent {
   projectId: Id<"projects"> | null;
   projectAlias: string;
   projectStatus: ProjectStatusType;
+  clientName: string;
   startTime: number;
   endTime: number;
+  serviceId: Id<"services">;
   secondaryLabel: string;
   serviceCategoryType: CalendarServiceCategoryType;
   slotClassName: string;

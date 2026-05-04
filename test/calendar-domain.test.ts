@@ -5,6 +5,7 @@ import {
   DAY_END,
   DAY_START,
   buildBookingCalendarViewModels,
+  buildCalendarDayScheduleRows,
   getCalendarProjectStatus,
   getCalendarSlotIndex,
   getCalendarSlotPresentation,
@@ -117,7 +118,7 @@ describe("calendar shared domain", () => {
           projectId: "project-fab" as Id<"projects">,
           projectAlias: "Fabrication Job",
           projectStatus: "approved",
-          makerName: "Aera",
+          clientName: "Aera",
           serviceId: fabricationServiceId,
           resourceId,
         },
@@ -128,7 +129,7 @@ describe("calendar shared domain", () => {
           projectId: "project-workshop" as Id<"projects">,
           projectAlias: "Workshop Slot",
           projectStatus: "approved",
-          makerName: "Aera",
+          clientName: "Aera",
           serviceId: workshopServiceId,
           resourceId: null,
         },
@@ -175,7 +176,7 @@ describe("calendar shared domain", () => {
           projectId: "project-pending" as Id<"projects">,
           projectAlias: "Pending Review",
           projectStatus: "pending",
-          makerName: "Aera",
+          clientName: "Aera",
           serviceId: fabricationServiceId,
           resourceId,
         },
@@ -193,6 +194,69 @@ describe("calendar shared domain", () => {
       isPendingReview: true,
       startTime: 9,
       endTime: 10,
+    });
+  });
+
+  test("clusters workshop day bookings into one rich slot", () => {
+    const rows = buildCalendarDayScheduleRows({
+      machines: [
+        {
+          id: "service-workshop",
+          name: "Intro Workshop",
+          status: "Available",
+          description: "Service Booking Queue",
+          group: "Workshops",
+          serviceCategoryType: "WORKSHOP",
+        },
+      ],
+      usages: [
+        {
+          id: "usage-1",
+          machineId: "service-workshop",
+          projectId: "project-1" as Id<"projects">,
+          projectAlias: "Workshop Slot",
+          projectStatus: "approved",
+          clientName: "Aera",
+          date: Date.parse("2026-05-06T03:00:00.000Z"),
+          startTime: 12,
+          endTime: 13,
+          serviceCategoryType: "WORKSHOP",
+          slotClassName: "bg-blue-100 border-blue-300 text-blue-800",
+          accentClassName: "bg-blue-500",
+          isPendingReview: false,
+        },
+        {
+          id: "usage-2",
+          machineId: "service-workshop",
+          projectId: "project-2" as Id<"projects">,
+          projectAlias: "Workshop Slot",
+          projectStatus: "pending",
+          clientName: "Bea",
+          date: Date.parse("2026-05-06T03:00:00.000Z"),
+          startTime: 12,
+          endTime: 13,
+          serviceCategoryType: "WORKSHOP",
+          slotClassName: "bg-amber-100 border-amber-300 text-amber-900",
+          accentClassName: "bg-amber-500",
+          isPendingReview: true,
+        },
+      ],
+      nowDecimal: 12.5,
+    });
+
+    const workshopRow = rows.find(
+      (row): row is Extract<(typeof rows)[number], { kind: "track" }> =>
+        row.kind === "track" && row.machine.id === "service-workshop",
+    );
+
+    expect(workshopRow).toBeTruthy();
+    expect(workshopRow?.entries).toHaveLength(1);
+    expect(workshopRow?.entries[0]).toMatchObject({
+      kind: "workshop",
+      bookingCount: 2,
+      pendingCount: 1,
+      startTime: 12,
+      endTime: 13,
     });
   });
 });

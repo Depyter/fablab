@@ -3,13 +3,16 @@
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CalendarViewMode } from "@/lib/calendar";
-import { DAY_END, DAY_START, HEADER_SLOTS } from "@/lib/calendar";
-import { cn } from "@/lib/utils";
-import { MONTH_CELL_MIN_HEIGHT } from "@/components/calendar/month-layout";
 import {
-  RESOURCES_COL_WIDTH,
-  SLOT_WIDTH,
-} from "@/components/calendar/usage-table";
+  CALENDAR_DAY_HEADER_HEIGHT,
+  CALENDAR_DAY_LEADING_COL_WIDTH,
+  CALENDAR_DAY_SLOT_WIDTH,
+  CALENDAR_MONTH_CELL_MIN_HEIGHT,
+  DAY_END,
+  DAY_START,
+  HEADER_SLOTS,
+} from "@/lib/calendar";
+import { cn } from "@/lib/utils";
 
 const loadingRows = [
   {
@@ -60,7 +63,8 @@ const weekHourSkeletons = Array.from(
   (_, index) => DAY_START + index,
 );
 const LOADING_TABLE_WIDTH =
-  RESOURCES_COL_WIDTH + HEADER_SLOTS.length * SLOT_WIDTH;
+  CALENDAR_DAY_LEADING_COL_WIDTH +
+  HEADER_SLOTS.length * CALENDAR_DAY_SLOT_WIDTH;
 
 function formatLoadingTime(decimalHour: number) {
   const hours = Math.floor(decimalHour);
@@ -149,18 +153,18 @@ function DayLoadingState() {
             }}
           >
             <colgroup>
-              <col style={{ width: RESOURCES_COL_WIDTH }} />
+              <col style={{ width: CALENDAR_DAY_LEADING_COL_WIDTH }} />
               {HEADER_SLOTS.map((slot) => (
                 <col
                   key={`calendar-loading-col-${slot}`}
-                  style={{ width: SLOT_WIDTH }}
+                  style={{ width: CALENDAR_DAY_SLOT_WIDTH }}
                 />
               ))}
             </colgroup>
             <thead>
               <tr
                 style={{
-                  height: 44,
+                  height: CALENDAR_DAY_HEADER_HEIGHT,
                   background: "var(--fab-bg-sidebar)",
                   position: "sticky",
                   top: 0,
@@ -169,7 +173,7 @@ function DayLoadingState() {
               >
                 <th
                   style={{
-                    width: RESOURCES_COL_WIDTH,
+                    width: CALENDAR_DAY_LEADING_COL_WIDTH,
                     position: "sticky",
                     left: 0,
                     zIndex: 20,
@@ -410,7 +414,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
         <div
           className="grid min-h-0 grid-cols-7 border-b border-r bg-background"
           style={{
-            gridTemplateRows: `repeat(5, minmax(${MONTH_CELL_MIN_HEIGHT}px, 1fr))`,
+            gridTemplateRows: `repeat(5, minmax(${CALENDAR_MONTH_CELL_MIN_HEIGHT}px, 1fr))`,
           }}
         >
           {monthSkeletonCells.map((cell) => (

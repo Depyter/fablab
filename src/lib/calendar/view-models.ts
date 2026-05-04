@@ -58,6 +58,7 @@ function buildServiceMachines(
         : ResourceStatus.AVAILABLE,
     description: "Service Booking Queue",
     group: getCalendarServiceGroupLabel(service.serviceCategoryType),
+    serviceCategoryType: service.serviceCategoryType,
   }));
 }
 
@@ -83,7 +84,7 @@ function buildCalendarUsage(
     projectId: booking.projectId,
     projectAlias: booking.projectAlias,
     projectStatus,
-    makerName: booking.makerName,
+    clientName: booking.clientName,
     date: booking.startTime,
     startTime: window.startTime,
     endTime: window.endTime,
@@ -109,8 +110,10 @@ function buildCalendarRangeEvent(args: {
     projectId: booking.projectId,
     projectAlias: booking.projectAlias,
     projectStatus,
+    clientName: booking.clientName,
     startTime: booking.startTime,
     endTime: booking.endTime,
+    serviceId: booking.serviceId,
     secondaryLabel,
     serviceCategoryType,
     ...slotPresentation,

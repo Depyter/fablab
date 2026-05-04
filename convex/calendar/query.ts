@@ -82,28 +82,24 @@ export const getCalendarBookings = authQuery({
         .map((project) => [project._id, project]),
     );
 
-    const makerIds = new Set(
-      projectDocs.flatMap((project) =>
-        project?.assignedMaker ? [project.assignedMaker] : [],
-      ),
+    const clientIds = new Set(
+      projectDocs.flatMap((project) => (project ? [project.userId] : [])),
     );
-    const makerDocs = await Promise.all(
-      Array.from(makerIds).map((makerId) => ctx.db.get(makerId)),
+    const clientDocs = await Promise.all(
+      Array.from(clientIds).map((clientId) => ctx.db.get(clientId)),
     );
-    const makerById = new Map(
-      makerDocs
-        .filter((maker): maker is NonNullable<typeof maker> => maker !== null)
-        .map((maker) => [maker._id, maker]),
+    const clientById = new Map(
+      clientDocs
+        .filter((client): client is NonNullable<typeof client> => client !== null)
+        .map((client) => [client._id, client]),
     );
 
     return usages.map((usage) => {
       const isOwned = myProjectIds.has(usage.projectId);
       const canSeeDetails = role !== "client" || isOwned;
       const project = canSeeDetails ? projectById.get(usage.projectId) : null;
-      const maker =
-        canSeeDetails && project?.assignedMaker
-          ? makerById.get(project.assignedMaker)
-          : null;
+      const client =
+        canSeeDetails && project ? clientById.get(project.userId) : null;
 
       return {
         _id: usage._id,
@@ -114,7 +110,9 @@ export const getCalendarBookings = authQuery({
           ? project?.name || "Unknown Project"
           : "Reserved Slot",
         projectStatus: project?.status || "pending",
-        makerName: canSeeDetails ? maker?.name || "FabLab Staff" : "FabLab Staff",
+        clientName: canSeeDetails
+          ? client?.name || "Unknown Client"
+          : "Reserved Slot",
         serviceId: usage.service,
         resourceId: usage.resource || null,
       };
