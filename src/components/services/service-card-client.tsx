@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import posthog from "posthog-js";
-import Image from "next/image";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {
@@ -16,7 +16,6 @@ export function ServiceCardClient({
   slug,
   title,
   serviceType,
-  imageUrl,
 }: ServiceCardProps) {
   const isWorkshop = serviceType === "WORKSHOP";
 
@@ -24,11 +23,9 @@ export function ServiceCardClient({
     <Link
       href={`/services/${slug}`}
       className={cn(
-        "group block h-full border-3 border-black rounded-none transition-all duration-200",
-        "hover:-translate-y-1 hover:shadow-[8px_8px_0_0_#000000]",
-        isWorkshop
-          ? "bg-fab-teal/95 text-white hover:bg-fab-teal"
-          : "bg-fab-magenta/95 text-white hover:bg-fab-magenta",
+        "group relative block h-full overflow-hidden rounded-[2rem] border-4 border-black transition-all duration-200",
+        "hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#000000] md:hover:shadow-[10px_10px_0_0_#000000] focus-visible:-translate-y-1 focus-visible:shadow-[5px_5px_0_0_#000000] md:focus-visible:shadow-[10px_10px_0_0_#000000] focus-visible:outline-none",
+        isWorkshop ? "bg-fab-teal text-white" : "bg-fab-magenta text-white",
       )}
       onClick={() =>
         posthog.capture("service_card_clicked", {
@@ -38,31 +35,33 @@ export function ServiceCardClient({
         })
       }
     >
-      <div className="flex h-full min-h-60 flex-col rounded-none p-6 sm:p-7">
-        {isWorkshop && imageUrl ? (
-          <div className="relative mb-5 aspect-16/10 w-full overflow-hidden border-2 border-black rounded-none bg-black/10">
-            <Image
-              src={imageUrl}
-              alt={title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
-            />
-          </div>
-        ) : null}
-
-        <div className="mt-auto">
+      <div className="relative flex h-full min-h-20 items-center justify-center p-3 sm:min-h-40 sm:p-6">
+        <div className="flex items-center justify-center gap-1 sm:gap-3">
           <h3
             className={cn(
-              "font-black uppercase leading-none tracking-tight",
-              isWorkshop ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl",
+              "max-w-[10ch] font-black uppercase leading-[0.9] tracking-[-0.06em]",
+              isWorkshop
+                ? "text-xl sm:text-5xl lg:text-[3.5rem]"
+                : "text-2xl sm:text-6xl lg:text-[4rem]",
             )}
           >
             {title}
           </h3>
-          <p className="mt-3 text-xs font-bold uppercase tracking-[0.18em] opacity-90">
-            View Service
-          </p>
+
+          <div className="flex shrink-0 items-center">
+            <ChevronRight
+              className="size-5 transition-transform duration-150 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-2 group-focus-visible:translate-x-2 sm:size-10"
+              strokeWidth={5}
+              strokeLinecap="square"
+              strokeLinejoin="miter"
+            />
+            <ChevronRight
+              className="-ml-3 size-5 opacity-60 transition-transform duration-150 delay-75 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-2 group-focus-visible:translate-x-2 sm:size-10"
+              strokeWidth={5}
+              strokeLinecap="square"
+              strokeLinejoin="miter"
+            />
+          </div>
         </div>
       </div>
     </Link>
