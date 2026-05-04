@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { Menu, X } from "lucide-react";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
 import { cn } from "@/lib/utils";
@@ -19,10 +21,14 @@ type PublicMobileNavCardProps = {
 const mobileNavLinkClass =
   "group flex items-center justify-between rounded-[1.4rem] border-4 border-black bg-white px-5 py-4 text-black shadow-[5px_5px_0_0_#000] transition-all duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_#000] active:translate-x-0 active:translate-y-0 active:shadow-[3px_3px_0_0_#000]";
 
+gsap.registerPlugin(useGSAP);
+
 export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const primaryItems = [
     ...items,
     {
@@ -34,35 +40,56 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
   ] as const;
 
   const openMenu = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-
-    setMounted(true);
     setOpen(true);
   };
 
   const closeMenu = () => {
     setOpen(false);
-
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = setTimeout(() => {
-      setMounted(false);
-      closeTimerRef.current = null;
-    }, 220);
   };
 
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, []);
+  useGSAP(
+    () => {
+      const overlay = overlayRef.current;
+      const card = cardRef.current;
+      const root = rootRef.current;
+      if (!overlay || !card || !root) return;
+
+      gsap.set(overlay, { opacity: 0 });
+      gsap.set(card, {
+        opacity: 0,
+        x: 28,
+        y: -16,
+        rotation: 12,
+        scale: 0.95,
+      });
+
+      timelineRef.current = gsap
+        .timeline({ paused: true })
+        .to(
+          overlay,
+          {
+            opacity: 1,
+            duration: 0.18,
+            ease: "power1.out",
+          },
+          0,
+        )
+        .to(
+          card,
+          {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            rotation: -2,
+            scale: 1,
+            duration: 0.26,
+            ease: "power2.out",
+          },
+          0,
+        );
+    },
+    { scope: rootRef },
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -83,8 +110,20 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
     };
   }, [open]);
 
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+
+    if (open) {
+      timeline.play();
+      return;
+    }
+
+    timeline.reverse();
+  }, [open]);
+
   return (
-    <div className="pointer-events-auto sm:hidden">
+    <div ref={rootRef} className="pointer-events-auto sm:hidden">
       <div className="relative z-[210] flex items-center justify-end">
         <button
           type="button"
@@ -122,74 +161,54 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
         </button>
       </div>
 
-      {mounted ? (
-        <div
-          className={cn(
-            "fixed inset-0 z-[190] sm:hidden",
-            open ? "pointer-events-auto" : "pointer-events-none",
-          )}
-          aria-hidden={!open}
-        >
-          <button
-            type="button"
-            aria-label="Close navigation menu"
-            onClick={closeMenu}
+      <div
+        className={cn(
+          "fixed inset-0 z-[190] sm:hidden",
+          open ? "pointer-events-auto" : "pointer-events-none",
+        )}
+        aria-hidden={!open}
+      >
+        <button
+          ref={overlayRef}
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={closeMenu}
+          tabIndex={open ? 0 : -1}
+          className="absolute inset-0 bg-fab-teal/55 opacity-0 backdrop-blur-[2px]"
+        />
+
+        <div className="pointer-events-none absolute top-20 right-4 w-[calc(100vw-2rem)]">
+          <div
+            ref={cardRef}
+            id="public-mobile-nav-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="public-mobile-nav-title"
             className={cn(
-              "absolute inset-0 bg-fab-teal/55 backdrop-blur-[2px] transition-opacity duration-200",
-              open ? "opacity-100" : "opacity-0",
+              "relative flex max-h-[calc(100svh-5rem)] origin-top-right flex-col overflow-hidden rounded-[2.35rem] border-4 border-black bg-background p-4 shadow-[12px_12px_0_0_#000]",
+              open ? "pointer-events-auto" : "pointer-events-none",
             )}
-          />
+          >
+            <div className="relative flex flex-col gap-4 -mt-5">
+              <div className="max-w-[15rem]"></div>
 
-          <div className="pointer-events-none absolute top-20 right-4 w-[calc(100vw-2rem)]">
-            <div
-              id="public-mobile-nav-card"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="public-mobile-nav-title"
-              className={cn(
-                "pointer-events-auto relative flex max-h-[calc(100svh-5rem)] origin-top-right flex-col overflow-hidden rounded-[2.35rem] border-4 border-black bg-background p-4 shadow-[12px_12px_0_0_#000] transition-all duration-200 ease-out",
-                open
-                  ? "translate-x-0 translate-y-0 rotate-[-2deg] scale-100 opacity-100"
-                  : "translate-x-7 -translate-y-4 rotate-[12deg] scale-95 opacity-0",
-              )}
-            >
-              <div className="relative flex flex-col gap-4 -mt-5">
-                <div
-                  className={cn(
-                    "max-w-[15rem] transition-all duration-200",
-                    open
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-3 opacity-0",
-                  )}
-                ></div>
-
-                <nav className="relative flex flex-col gap-3">
-                  {primaryItems.map((item, index) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={closeMenu}
-                      style={{
-                        transitionDelay: open ? `${80 + index * 45}ms` : "0ms",
-                      }}
-                      className={cn(
-                        mobileNavLinkClass,
-                        "transition-all duration-200",
-                        open
-                          ? "translate-y-0 opacity-100"
-                          : "translate-y-3 opacity-0",
-                        item.mobileClassName,
-                      )}
-                    >
-                      <PublicNavItemContent label={item.label} />
-                    </Link>
-                  ))}
-                </nav>
-              </div>
+              <nav className="relative flex flex-col gap-3">
+                {primaryItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMenu}
+                    tabIndex={open ? 0 : -1}
+                    className={cn(mobileNavLinkClass, item.mobileClassName)}
+                  >
+                    <PublicNavItemContent label={item.label} />
+                  </Link>
+                ))}
+              </nav>
             </div>
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

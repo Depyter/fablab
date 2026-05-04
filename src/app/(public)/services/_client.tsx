@@ -11,24 +11,21 @@ import { cn } from "@/lib/utils";
 
 function ServiceCardSkeleton({ isWorkshop }: { isWorkshop: boolean }) {
   return (
-    <div
-      className={cn(
-        "h-full min-h-60 border-3 border-black p-6 sm:p-7",
+      <div
+        className={cn(
+        "h-full min-h-20 rounded-[2rem] border-4 border-black p-3 shadow-[8px_8px_0_0_#000] sm:min-h-40 sm:p-6",
         isWorkshop ? "bg-fab-teal/20" : "bg-fab-magenta/20",
       )}
     >
-      <div className="flex h-full flex-col">
-        {isWorkshop && (
-          <Skeleton className="mb-5 aspect-16/10 w-full rounded-none bg-black/10" />
-        )}
-        <div className="mt-auto space-y-3">
+      <div className="flex h-full items-center justify-center">
+        <div className="flex items-center justify-center gap-2">
           <Skeleton
             className={cn(
-              "h-10 w-3/4 rounded-none bg-black/10",
-              isWorkshop ? "sm:h-12" : "sm:h-14",
+              "h-7 w-24 rounded-none bg-black/10 sm:h-16",
+              isWorkshop ? "sm:w-52" : "sm:w-60",
             )}
           />
-          <Skeleton className="h-4 w-24 rounded-none bg-black/10" />
+          <Skeleton className="h-5 w-7 rounded-full bg-black/10 sm:h-8 sm:w-10" />
         </div>
       </div>
     </div>
@@ -83,8 +80,8 @@ export function ServicesListClient() {
     <div className="relative min-h-screen overflow-hidden bg-background">
       <div className="relative z-10">
         {/* Hero Header */}
-        <header className="bg-fab-teal py-28 text-center text-white lg:py-52">
-          <h1 className="text-6xl font-black uppercase tracking-tighter sm:text-8xl lg:text-[10rem]">
+        <header className="bg-fab-teal py-20 text-center text-white sm:py-24 lg:py-32">
+          <h1 className="text-5xl font-black uppercase tracking-tighter sm:text-7xl lg:text-[8rem]">
             SERVICES
           </h1>
         </header>
@@ -92,14 +89,14 @@ export function ServicesListClient() {
         {/* Digital Fabrication Section */}
         {(isLoading || fabricationServices.length > 0) && (
           <section className="border-t-8 border-black bg-background">
-            <div className="bg-fab-magenta p-8 text-white border-b-8 border-black sm:p-14 lg:p-20">
-              <h2 className="text-4xl font-black uppercase tracking-tighter sm:text-5xl lg:text-6xl">
+            <div className="border-b-8 border-black bg-fab-magenta px-6 py-6 text-white sm:px-10 sm:py-8 lg:px-14 lg:py-10">
+              <h2 className="text-3xl font-black uppercase tracking-tighter sm:text-4xl lg:text-5xl">
                 Digital Fabrication
               </h2>
             </div>
             <div className="relative overflow-hidden">
               <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
-              <div className="relative z-10 mx-auto grid max-w-6xl gap-5 p-5 sm:p-8 md:grid-cols-2 lg:gap-7 lg:p-10">
+              <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-2 gap-2 p-2 sm:p-6 lg:gap-5 lg:p-8">
                 {isLoading
                   ? Array.from({ length: 4 }).map((_, i) => (
                       <ServiceCardSkeleton key={i} isWorkshop={false} />
@@ -120,14 +117,14 @@ export function ServicesListClient() {
         {/* Workshop Section */}
         {(isLoading || workshopServices.length > 0) && (
           <section className="bg-background">
-            <div className="bg-fab-amber p-8 text-black border-y-8 border-black sm:p-14 lg:p-20">
-              <h2 className="text-4xl font-black uppercase tracking-tighter sm:text-5xl lg:text-6xl">
+            <div className="border-y-8 border-black bg-fab-amber px-6 py-6 text-black sm:px-10 sm:py-8 lg:px-14 lg:py-10">
+              <h2 className="text-3xl font-black uppercase tracking-tighter sm:text-4xl lg:text-5xl">
                 Workshops
               </h2>
             </div>
             <div className="relative overflow-hidden">
               <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
-              <div className="relative z-10 mx-auto grid max-w-6xl gap-5 p-5 sm:p-8 md:grid-cols-2 lg:gap-7 lg:p-10">
+              <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-2 gap-2 p-2 sm:p-6 lg:gap-5 lg:p-8">
                 {isLoading
                   ? Array.from({ length: 2 }).map((_, i) => (
                       <ServiceCardSkeleton key={i} isWorkshop={true} />
