@@ -11,7 +11,17 @@ import {
   startOfDay,
 } from "date-fns";
 import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
-import { clampToCalendarDay, DAY_HOURS, DAY_START } from "@/lib/calendar";
+import {
+  CALENDAR_WEEK_DAY_MIN_WIDTH,
+  CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT,
+  CALENDAR_WEEK_MIN_GRID_HEIGHT,
+  CALENDAR_WEEK_MIN_TOTAL_HEIGHT,
+  CALENDAR_WEEK_TIME_COL_WIDTH,
+  CALENDAR_WEEK_TOTAL_HOURS,
+  clampToCalendarDay,
+  DAY_START,
+  packCalendarTracks,
+} from "@/lib/calendar";
 
 import { cn } from "@/lib/utils";
 import {
@@ -44,13 +54,12 @@ interface WeekEventLayout extends CalendarRangeEvent {
   trackCount: number;
 }
 
-const WEEK_TIME_COL_WIDTH = 72;
-const WEEK_DAY_MIN_WIDTH = 148;
-const WEEK_HOUR_ROW_MIN_HEIGHT = 52;
-const WEEK_TOTAL_HOURS = DAY_HOURS;
-const WEEK_HEADER_HEIGHT = 61;
-const WEEK_MIN_GRID_HEIGHT = WEEK_TOTAL_HOURS * WEEK_HOUR_ROW_MIN_HEIGHT;
-const WEEK_MIN_TOTAL_HEIGHT = WEEK_HEADER_HEIGHT + WEEK_MIN_GRID_HEIGHT;
+const WEEK_TIME_COL_WIDTH = CALENDAR_WEEK_TIME_COL_WIDTH;
+const WEEK_DAY_MIN_WIDTH = CALENDAR_WEEK_DAY_MIN_WIDTH;
+const WEEK_HOUR_ROW_MIN_HEIGHT = CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT;
+const WEEK_TOTAL_HOURS = CALENDAR_WEEK_TOTAL_HOURS;
+const WEEK_MIN_GRID_HEIGHT = CALENDAR_WEEK_MIN_GRID_HEIGHT;
+const WEEK_MIN_TOTAL_HEIGHT = CALENDAR_WEEK_MIN_TOTAL_HEIGHT;
 const WEEK_HOURS = Array.from(
   { length: WEEK_TOTAL_HOURS + 1 },
   (_, index) => DAY_START + index,
@@ -115,40 +124,19 @@ function buildWeekEventLayouts(events: CalendarRangeEvent[], day: Date) {
     .filter((event) => event.end > event.start)
     .sort((left, right) => left.start - right.start || left.end - right.end);
 
-  const tracks: Array<Array<(typeof clipped)[number]>> = [];
-
-  for (const event of clipped) {
-    let placed = false;
-
-    for (const track of tracks) {
-      const lastEvent = track[track.length - 1];
-
-      if (event.start >= lastEvent.end) {
-        track.push(event);
-        placed = true;
-        break;
-      }
-    }
-
-    if (!placed) {
-      tracks.push([event]);
-    }
-  }
-
-  const trackCount = Math.max(tracks.length, 1);
-
-  return tracks.flatMap((track, trackIndex) =>
-    track.map((event) => ({
-      ...event,
-      trackIndex,
-      trackCount,
-      topPercent: ((event.start - DAY_START) / WEEK_TOTAL_HOURS) * 100,
-      heightPercent: Math.max(
-        ((event.end - event.start) / WEEK_TOTAL_HOURS) * 100,
-        (26 / WEEK_MIN_GRID_HEIGHT) * 100,
-      ),
-    })),
-  );
+  return packCalendarTracks(clipped, (event) => ({
+    startTime: event.start,
+    endTime: event.end,
+  })).map(({ item, trackIndex, trackCount }) => ({
+    ...item,
+    trackIndex,
+    trackCount,
+    topPercent: ((item.start - DAY_START) / WEEK_TOTAL_HOURS) * 100,
+    heightPercent: Math.max(
+      ((item.end - item.start) / WEEK_TOTAL_HOURS) * 100,
+      (26 / WEEK_MIN_GRID_HEIGHT) * 100,
+    ),
+  }));
 }
 
 function buildEventsByDay(days: Date[], events: CalendarRangeEvent[]) {

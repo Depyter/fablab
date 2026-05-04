@@ -2,73 +2,39 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ResourceStatus } from "@convex/constants";
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import type { Id } from "@convex/_generated/dataModel";
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
+  buildCalendarDayScheduleRows,
+  CALENDAR_DAY_HEADER_HEIGHT,
+  CALENDAR_DAY_LAYOUT_TEMPLATE,
+  CALENDAR_DAY_MIN_WIDTH,
+  CALENDAR_DAY_TIMELINE_TEMPLATE,
+  getCalendarDayNowIndicatorLeft,
+  getCalendarDayUsagePosition,
+  isWorkshopTrackEntry,
+  type CalendarDayTrackEntry,
   type CalendarMachine as Machine,
-  type CalendarMachineUsage as MachineUsage,
   DAY_END,
   DAY_START,
-  getCalendarSlotIndex,
   HEADER_SLOTS,
-  TOTAL_SLOTS,
+  type CalendarMachineUsage as MachineUsage,
 } from "@/lib/calendar";
 import { getLabDecimalHour } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 
-export const ROW_HEIGHT = 40;
-export const SECTION_HEIGHT = 26;
-export const HEADER_HEIGHT = 44;
-export const RESOURCES_COL_WIDTH = 160;
-export const SLOT_WIDTH = 52;
-
-const DAY_TIMELINE_MIN_WIDTH = HEADER_SLOTS.length * SLOT_WIDTH;
-const DAY_MIN_WIDTH = RESOURCES_COL_WIDTH + DAY_TIMELINE_MIN_WIDTH;
-const DAY_LAYOUT_TEMPLATE = `minmax(${RESOURCES_COL_WIDTH}px, 3fr) minmax(${DAY_TIMELINE_MIN_WIDTH}px, ${HEADER_SLOTS.length}fr)`;
-const DAY_TIMELINE_TEMPLATE = `repeat(${HEADER_SLOTS.length}, minmax(${SLOT_WIDTH}px, 1fr))`;
 const SECTION_BG = "rgba(220,215,245,0.55)";
 const SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
-
-type MachineStatus = "active" | "maintenance" | "free";
 
 interface UsageTableProps {
   machines: Machine[];
   usages: MachineUsage[];
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
   leadingColumnLabel?: string;
-}
-
-type ScheduleRow =
-  | {
-      id: string;
-      kind: "section";
-      label: string;
-    }
-  | {
-      id: string;
-      kind: "track";
-      machine: Machine;
-      machineStatus: MachineStatus;
-      track: MachineUsage[];
-      isFirstTrack: boolean;
-    };
-
-function getMachineStatus(
-  machine: Machine,
-  machineUsages: MachineUsage[],
-  nowDecimal: number,
-): MachineStatus {
-  if (machine.status === ResourceStatus.UNAVAILABLE) return "maintenance";
-
-  const active = machineUsages.find(
-    (usage) => usage.startTime <= nowDecimal && usage.endTime > nowDecimal,
-  );
-
-  return active ? "active" : "free";
 }
 
 function formatShortTime(decimalHour: number) {
@@ -81,130 +47,150 @@ function formatShortTime(decimalHour: number) {
   );
 }
 
-function getSlotIndex(decimalHour: number) {
-  return getCalendarSlotIndex(decimalHour);
+function renderMachineStatusColor(status: "active" | "maintenance" | "free") {
+  if (status === "active") return "var(--fab-teal)";
+  if (status === "maintenance") return "var(--fab-amber)";
+  return "var(--fab-text-dim)";
 }
 
-function computeTracks(usages: MachineUsage[]): MachineUsage[][] {
-  const sorted = [...usages].sort((a, b) => a.startTime - b.startTime);
-  const tracks: MachineUsage[][] = [];
-
-  for (const usage of sorted) {
-    let placed = false;
-
-    for (const track of tracks) {
-      const lastUsage = track[track.length - 1];
-
-      if (usage.startTime >= lastUsage.endTime) {
-        track.push(usage);
-        placed = true;
-        break;
-      }
-    }
-
-    if (!placed) {
-      tracks.push([usage]);
-    }
-  }
-
-  return tracks.length > 0 ? tracks : [[]];
-}
-
-function buildUsagesByMachine(usages: MachineUsage[]) {
-  const grouped = new Map<string, MachineUsage[]>();
-
-  for (const usage of usages) {
-    const machineUsages = grouped.get(usage.machineId);
-
-    if (machineUsages) {
-      machineUsages.push(usage);
-    } else {
-      grouped.set(usage.machineId, [usage]);
-    }
-  }
-
-  for (const machineUsages of grouped.values()) {
-    machineUsages.sort((a, b) => a.startTime - b.startTime);
-  }
-
-  return grouped;
-}
-
-function buildSections(machines: Machine[]) {
-  const grouped = new Map<string, Machine[]>();
-
-  for (const machine of machines) {
-    const key = machine.group ?? "";
-
-    if (!grouped.has(key)) {
-      grouped.set(key, []);
-    }
-
-    grouped.get(key)?.push(machine);
-  }
-
-  return Array.from(grouped.entries()).map(([label, sectionMachines]) => ({
-    label,
-    machines: sectionMachines,
-  }));
-}
-
-function buildScheduleRows(args: {
-  sections: Array<{ label: string; machines: Machine[] }>;
-  usagesByMachine: Map<string, MachineUsage[]>;
-  nowDecimal: number;
+function WorkshopMemberChip({
+  usage,
+  onOpenProjectDetails,
+}: {
+  usage: MachineUsage;
+  onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }) {
-  const rows: ScheduleRow[] = [];
+  const canOpenProjectDetails =
+    usage.projectId !== null && onOpenProjectDetails !== undefined;
 
-  for (const section of args.sections) {
-    if (section.label) {
-      rows.push({
-        id: `section-${section.label}`,
-        kind: "section",
-        label: section.label,
-      });
-    }
-
-    for (const machine of section.machines) {
-      const machineUsages = args.usagesByMachine.get(machine.id) ?? [];
-      const tracks = computeTracks(machineUsages);
-      const machineStatus = getMachineStatus(
-        machine,
-        machineUsages,
-        args.nowDecimal,
-      );
-
-      tracks.forEach((track, trackIndex) => {
-        rows.push({
-          id: `${machine.id}-track-${trackIndex}`,
-          kind: "track",
-          machine,
-          machineStatus,
-          track,
-          isFirstTrack: trackIndex === 0,
-        });
-      });
-    }
-  }
-
-  return rows;
-}
-
-function getUsagePosition(startTime: number, endTime: number) {
-  const startIndex = Math.max(getSlotIndex(startTime), 0);
-  const slotSpan = Math.max(
-    1,
-    Math.min(Math.round((endTime - startTime) * 2), TOTAL_SLOTS - startIndex),
+  return (
+    <button
+      type="button"
+      disabled={!canOpenProjectDetails}
+      onClick={() => usage.projectId && onOpenProjectDetails?.(usage.projectId)}
+      className={cn(
+        "flex w-full items-center gap-2 overflow-hidden rounded-md border px-2 py-1 text-left shadow-sm transition-colors disabled:cursor-default",
+        usage.slotClassName,
+        usage.isPendingReview && "border-2 border-dashed",
+        canOpenProjectDetails && "cursor-pointer hover:ring-2 hover:ring-primary/20",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn("h-2 w-2 shrink-0 rounded-full", usage.accentClassName)}
+      />
+      <span className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
+        {usage.clientName}
+      </span>
+      <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+        {PROJECT_STATUS_LABELS[usage.projectStatus]}
+      </span>
+    </button>
   );
-
-  return {
-    left: `${(startIndex / HEADER_SLOTS.length) * 100}%`,
-    width: `${(slotSpan / HEADER_SLOTS.length) * 100}%`,
-  };
 }
 
-function getNowIndicatorLeft(nowDecimal: number) {
-  return `${(((nowDecimal - DAY_START) * 2) / HEADER_SLOTS.length) * 100}%`;
+function WorkshopSlotCard({
+  entry,
+  position,
+  onOpenProjectDetails,
+}: {
+  entry: Extract<CalendarDayTrackEntry, { kind: "workshop" }>;
+  position: { left: string; width: string };
+  onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+}) {
+  const visibleMembers = entry.members.slice(0, 4);
+  const hiddenMemberCount = entry.members.length - visibleMembers.length;
+
+  return (
+    <div
+      className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200 bg-blue-50/95 text-left shadow-sm"
+      style={{
+        top: 4,
+        bottom: 4,
+        left: `calc(${position.left} + 2px)`,
+        width: `max(0px, calc(${position.width} - 4px))`,
+      }}
+    >
+      <div className="flex h-full flex-col gap-1.5 overflow-hidden px-2.5 py-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-[11px] font-bold uppercase tracking-[0.08em] text-blue-900">
+              Workshop Slot
+            </div>
+            <div className="truncate text-[10px] text-blue-800/80">
+              {entry.bookingCount} booked
+              {entry.pendingCount > 0 ? ` · ${entry.pendingCount} pending` : ""}
+            </div>
+          </div>
+          <div className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-900 shadow-sm">
+            {formatShortTime(entry.startTime)}-{formatShortTime(entry.endTime)}
+          </div>
+        </div>
+
+        <div className="grid min-h-0 gap-1 overflow-hidden">
+          {visibleMembers.map((member) => (
+            <WorkshopMemberChip
+              key={member.id}
+              usage={member}
+              onOpenProjectDetails={onOpenProjectDetails}
+            />
+          ))}
+          {hiddenMemberCount > 0 ? (
+            <div className="px-1 text-[10px] font-medium text-blue-900/75">
+              +{hiddenMemberCount} more booked
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StandardUsageCard({
+  usage,
+  position,
+  onOpenProjectDetails,
+}: {
+  usage: MachineUsage;
+  position: { left: string; width: string };
+  onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+}) {
+  const canOpenProjectDetails =
+    usage.projectId !== null && onOpenProjectDetails !== undefined;
+
+  return (
+    <button
+      type="button"
+      disabled={!canOpenProjectDetails}
+      onClick={() => usage.projectId && onOpenProjectDetails?.(usage.projectId)}
+      className={cn(
+        "absolute z-[5] text-left disabled:cursor-default",
+        canOpenProjectDetails && "cursor-pointer transition-shadow hover:shadow-sm",
+      )}
+      style={{
+        top: 3,
+        bottom: 3,
+        left: `calc(${position.left} + 2px)`,
+        width: `max(0px, calc(${position.width} - 4px))`,
+      }}
+    >
+      <div
+        className={cn(
+          "flex h-full items-center justify-center overflow-hidden rounded-md border px-2 py-1 shadow-sm",
+          usage.slotClassName,
+          usage.isPendingReview && "border-2 border-dashed opacity-80",
+          canOpenProjectDetails && "hover:ring-2 hover:ring-primary/20",
+        )}
+      >
+        <span
+          className="w-full truncate text-center font-semibold leading-tight"
+          style={{ fontSize: 12 }}
+        >
+          {usage.projectAlias}
+        </span>
+      </div>
+    </button>
+  );
 }
 
 function DayNowIndicator({
@@ -260,23 +246,23 @@ export function UsageTable({
     return () => clearInterval(tick);
   }, []);
 
-  const usagesByMachine = buildUsagesByMachine(usages);
-  const sections = buildSections(machines);
-  const scheduleRows = buildScheduleRows({
-    sections,
-    usagesByMachine,
+  const scheduleRows = buildCalendarDayScheduleRows({
+    machines,
+    usages,
     nowDecimal,
   });
   const bodyGridTemplateRows =
     scheduleRows.length > 0
-      ? scheduleRows.map(() => "1fr").join(" ")
+      ? scheduleRows.map((row) => `${row.rowHeight}px`).join(" ")
       : undefined;
 
   const nowInRange = nowDecimal >= DAY_START && nowDecimal < DAY_END;
   const currentSlotIdx = nowInRange
     ? Math.floor((nowDecimal - DAY_START) * 2)
     : null;
-  const nowIndicatorLeft = nowInRange ? getNowIndicatorLeft(nowDecimal) : null;
+  const nowIndicatorLeft = nowInRange
+    ? getCalendarDayNowIndicatorLeft(nowDecimal)
+    : null;
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -285,7 +271,7 @@ export function UsageTable({
           <div
             className="grid h-full min-h-full min-w-0 bg-background"
             style={{
-              width: `max(100%, ${DAY_MIN_WIDTH}px)`,
+              width: `max(100%, ${CALENDAR_DAY_MIN_WIDTH}px)`,
               gridTemplateRows: `auto 1fr`,
               height: "100%",
             }}
@@ -293,7 +279,7 @@ export function UsageTable({
             <div
               className="sticky top-0 z-20 grid"
               style={{
-                gridTemplateColumns: DAY_LAYOUT_TEMPLATE,
+                gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
                 background: "var(--fab-bg-sidebar)",
               }}
             >
@@ -303,7 +289,7 @@ export function UsageTable({
                   position: "sticky",
                   left: 0,
                   zIndex: 30,
-                  height: HEADER_HEIGHT,
+                  height: CALENDAR_DAY_HEADER_HEIGHT,
                   background: "var(--fab-bg-sidebar)",
                   borderBottom: "1px solid var(--fab-border-md)",
                   borderRight: "1px solid var(--fab-border-md)",
@@ -321,8 +307,8 @@ export function UsageTable({
               <div
                 className="relative grid"
                 style={{
-                  gridTemplateColumns: DAY_TIMELINE_TEMPLATE,
-                  height: HEADER_HEIGHT,
+                  gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                  height: CALENDAR_DAY_HEADER_HEIGHT,
                   background: "var(--fab-bg-sidebar)",
                 }}
               >
@@ -364,16 +350,13 @@ export function UsageTable({
               style={{ gridTemplateRows: bodyGridTemplateRows }}
             >
               {scheduleRows.map((row) => {
-                const baseHeight =
-                  row.kind === "section" ? SECTION_HEIGHT : ROW_HEIGHT;
-
                 if (row.kind === "section") {
                   return (
                     <div
                       key={row.id}
                       className="grid"
                       style={{
-                        gridTemplateColumns: DAY_LAYOUT_TEMPLATE,
+                        gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
                         height: "100%",
                       }}
                     >
@@ -405,7 +388,7 @@ export function UsageTable({
                       <div
                         className="relative grid"
                         style={{
-                          gridTemplateColumns: DAY_TIMELINE_TEMPLATE,
+                          gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
                           background: SECTION_BG,
                         }}
                       >
@@ -431,15 +414,15 @@ export function UsageTable({
                 }
 
                 return (
-                  <div
-                    key={row.id}
-                    className="grid"
-                    style={{
-                      gridTemplateColumns: DAY_LAYOUT_TEMPLATE,
-                      minHeight: ROW_HEIGHT,
-                      height: "100%",
-                    }}
-                  >
+                    <div
+                      key={row.id}
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
+                        minHeight: row.rowHeight,
+                        height: "100%",
+                      }}
+                    >
                     <div
                       style={{
                         position: "sticky",
@@ -459,12 +442,9 @@ export function UsageTable({
                               height: 6,
                               borderRadius: "50%",
                               flexShrink: 0,
-                              background:
-                                row.machineStatus === "active"
-                                  ? "var(--fab-teal)"
-                                  : row.machineStatus === "maintenance"
-                                    ? "var(--fab-amber)"
-                                    : "var(--fab-text-dim)",
+                              background: renderMachineStatusColor(
+                                row.machineStatus,
+                              ),
                               animation:
                                 row.machineStatus === "active"
                                   ? "dotPulse 2.2s ease infinite"
@@ -507,8 +487,8 @@ export function UsageTable({
                     <div
                       className="relative grid"
                       style={{
-                        gridTemplateColumns: DAY_TIMELINE_TEMPLATE,
-                        minHeight: baseHeight,
+                        gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                        minHeight: row.rowHeight,
                       }}
                     >
                       {HEADER_SLOTS.map((slot, slotIndex) => {
@@ -540,54 +520,26 @@ export function UsageTable({
                         <DayNowIndicator left={nowIndicatorLeft} />
                       ) : null}
 
-                      {row.track.map((usage) => {
-                        const { left, width } = getUsagePosition(
-                          usage.startTime,
-                          usage.endTime,
+                      {row.entries.map((entry) => {
+                        const position = getCalendarDayUsagePosition(
+                          entry.startTime,
+                          entry.endTime,
                         );
-                        const canOpenProjectDetails =
-                          usage.projectId !== null &&
-                          onOpenProjectDetails !== undefined;
 
-                        return (
-                          <button
-                            key={usage.id}
-                            type="button"
-                            disabled={!canOpenProjectDetails}
-                            onClick={() =>
-                              usage.projectId &&
-                              onOpenProjectDetails?.(usage.projectId)
-                            }
-                            className={cn(
-                              "absolute z-[5] text-left disabled:cursor-default",
-                              canOpenProjectDetails &&
-                                "cursor-pointer transition-shadow hover:shadow-sm",
-                            )}
-                            style={{
-                              top: 3,
-                              bottom: 3,
-                              left: `calc(${left} + 2px)`,
-                              width: `max(0px, calc(${width} - 4px))`,
-                            }}
-                          >
-                            <div
-                              className={cn(
-                                "flex h-full items-center justify-center overflow-hidden rounded-md border px-2 py-1 shadow-sm",
-                                usage.slotClassName,
-                                usage.isPendingReview &&
-                                  "border-2 border-dashed opacity-80",
-                                canOpenProjectDetails &&
-                                  "hover:ring-2 hover:ring-primary/20",
-                              )}
-                            >
-                              <span
-                                className="w-full truncate text-center font-semibold leading-tight"
-                                style={{ fontSize: 12 }}
-                              >
-                                {usage.projectAlias}
-                              </span>
-                            </div>
-                          </button>
+                        return isWorkshopTrackEntry(entry) ? (
+                          <WorkshopSlotCard
+                            key={entry.id}
+                            entry={entry}
+                            position={position}
+                            onOpenProjectDetails={onOpenProjectDetails}
+                          />
+                        ) : (
+                          <StandardUsageCard
+                            key={entry.id}
+                            usage={entry.usage}
+                            position={position}
+                            onOpenProjectDetails={onOpenProjectDetails}
+                          />
                         );
                       })}
                     </div>
