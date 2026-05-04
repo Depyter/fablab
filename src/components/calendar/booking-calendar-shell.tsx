@@ -60,6 +60,7 @@ export function BookingCalendarShell({
             date={controller.date}
             viewMode={controller.viewMode}
             visibleRange={controller.visibleRange}
+            onSelectDay={controller.handleOpenDay}
             onOpenProjectDetails={controller.handleOpenProjectDetails}
             activeTab={controller.activeTab}
             isAdminOrMaker={controller.isAdminOrMaker}

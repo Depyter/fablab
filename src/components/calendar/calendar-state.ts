@@ -1,19 +1,17 @@
+import type { CalendarViewMode } from "../../lib/calendar";
 import {
-  addDays,
-  addMonths,
-  addWeeks,
-  eachDayOfInterval,
-  endOfMonth,
-  endOfWeek,
-  format,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-  subDays,
-  subMonths,
-  subWeeks,
-} from "date-fns";
-import type { CalendarViewMode } from "@/lib/calendar";
+  addLabDays,
+  addLabMonths,
+  addLabWeeks,
+  eachLabDayOfInterval,
+  endOfLabMonth,
+  endOfLabWeek,
+  formatLabDate,
+  getLabDayBounds,
+  getLabDayStart,
+  startOfLabMonth,
+  startOfLabWeek,
+} from "../../lib/lab-time";
 
 export const WEEK_STARTS_ON = 1 as const;
 
@@ -34,13 +32,17 @@ export function getVisibleRange(
   viewMode: CalendarViewMode,
 ): CalendarVisibleRange {
   if (viewMode === "day") {
-    const start = startOfDay(date);
+    const start = getLabDayStart(date);
 
     return {
       start,
-      endExclusive: addDays(start, 1),
+      endExclusive: getLabDayBounds(start).endExclusive,
       days: [start],
-      label: format(start, "EEE, MMM dd"),
+      label: formatLabDate(start, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }),
       scopeLabel: "today",
       controlEyebrow: "Selected day",
       resetLabel: "Today",
@@ -50,14 +52,15 @@ export function getVisibleRange(
   }
 
   if (viewMode === "week") {
-    const start = startOfDay(date);
-    const end = addDays(start, 6);
+    const start = startOfLabWeek(date, WEEK_STARTS_ON);
+    const end = endOfLabWeek(date, WEEK_STARTS_ON);
+    const days = eachLabDayOfInterval({ start, end });
 
     return {
       start,
-      endExclusive: addDays(end, 1),
-      days: eachDayOfInterval({ start, end }),
-      label: `${format(start, "MMM d")} - ${format(end, "MMM d")}`,
+      endExclusive: getLabDayBounds(end).endExclusive,
+      days,
+      label: `${formatLabDate(start, { month: "short", day: "numeric" })} - ${formatLabDate(end, { month: "short", day: "numeric" })}`,
       scopeLabel: "week",
       controlEyebrow: "Week of",
       resetLabel: "Today",
@@ -66,16 +69,17 @@ export function getVisibleRange(
     };
   }
 
-  const start = startOfWeek(startOfMonth(date), {
-    weekStartsOn: WEEK_STARTS_ON,
-  });
-  const end = endOfWeek(endOfMonth(date), { weekStartsOn: WEEK_STARTS_ON });
+  const monthStart = startOfLabMonth(date);
+  const monthEnd = endOfLabMonth(date);
+  const start = startOfLabWeek(monthStart, WEEK_STARTS_ON);
+  const end = endOfLabWeek(monthEnd, WEEK_STARTS_ON);
+  const days = eachLabDayOfInterval({ start, end });
 
   return {
     start,
-    endExclusive: addDays(end, 1),
-    days: eachDayOfInterval({ start, end }),
-    label: format(date, "MMMM yyyy"),
+    endExclusive: getLabDayBounds(end).endExclusive,
+    days,
+    label: formatLabDate(date, { month: "long", year: "numeric" }),
     scopeLabel: "month",
     controlEyebrow: "Month of",
     resetLabel: "Today",
@@ -90,12 +94,12 @@ export function shiftDate(
   direction: -1 | 1,
 ) {
   if (viewMode === "day") {
-    return direction === 1 ? addDays(date, 1) : subDays(date, 1);
+    return addLabDays(date, direction);
   }
 
   if (viewMode === "week") {
-    return direction === 1 ? addWeeks(date, 1) : subWeeks(date, 1);
+    return addLabWeeks(date, direction);
   }
 
-  return direction === 1 ? addMonths(date, 1) : subMonths(date, 1);
+  return addLabMonths(date, direction);
 }

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   formatLabTime,
   getLabDayBounds,
+  getLabDayDate,
   getLabDayKey,
   getLabDecimalHour,
   getSnappedLabDecimalHour,
@@ -25,10 +26,14 @@ describe("lab time helpers", () => {
     expect(getSnappedLabDecimalHour(instant, true)).toBe(10);
   });
 
-  test("creates lab day bounds from a calendar date", () => {
-    const day = new Date(2026, 4, 6, 12, 0);
+  test("creates lab day bounds from the lab day instead of the viewer local day", () => {
+    const instant = Date.parse("2026-05-05T20:30:00.000Z");
+    const day = getLabDayDate(instant);
     const { start, endExclusive } = getLabDayBounds(day);
 
+    expect(day.getFullYear()).toBe(2026);
+    expect(day.getMonth()).toBe(4);
+    expect(day.getDate()).toBe(6);
     expect(start.toISOString()).toBe("2026-05-05T16:00:00.000Z");
     expect(endExclusive.toISOString()).toBe("2026-05-06T16:00:00.000Z");
   });

@@ -176,6 +176,7 @@ export default defineSchema({
     .index("by_project", ["projectId"])
     .index("by_service", ["service"])
     .index("by_startTime", ["startTime"])
+    .index("by_endTime", ["endTime"])
     .index("by_resource_startTime", ["resource", "startTime"]),
 
   // --------------------------------------------------------
