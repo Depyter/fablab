@@ -17,6 +17,7 @@ import {
   getPricingVariantKey,
   type ServicePricing,
 } from "@/lib/project-pricing";
+import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
 
 export type BookingFormValues = {
   serviceType: "self-service" | "full-service";
@@ -97,13 +98,6 @@ export function EstimateProjectDetails({
   const isTimeBased = pricingType === "FABRICATION";
   const isBuyFromLab = data.material === "buy-from-lab";
 
-  const formatTime12Hour = (time24: string) => {
-    const [hour, minute] = time24.split(":").map(Number);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`;
-  };
-
   return (
     <div className="flex flex-col h-full min-h-0">
       <DialogHeader className="shrink-0 pb-4">
@@ -147,15 +141,15 @@ export function EstimateProjectDetails({
                   <p className="text-gray-600">Date</p>
                   <p className="font-medium">
                     {data.dateTime.date
-                      ? data.dateTime.date.toLocaleDateString()
+                      ? formatLabDateNumeric(data.dateTime.date)
                       : "Not specified"}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-600">Time</p>
                   <p className="font-medium">
-                    {formatTime12Hour(data.dateTime.startTime)} -{" "}
-                    {formatTime12Hour(data.dateTime.endTime)}
+                    {formatLabClockTime(data.dateTime.startTime)} -{" "}
+                    {formatLabClockTime(data.dateTime.endTime)}
                   </p>
                 </div>
               </div>

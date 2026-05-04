@@ -4,6 +4,12 @@ import { MutationCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
+  formatLabDate,
+  formatLabTime,
+  getCurrentTimestamp,
+  getLabWeekday,
+} from "../../src/lib/lab-time";
+import {
   FILE_CATEGORIES,
   MaterialStatus,
   PROJECT_STATUS_LABELS,
@@ -108,7 +114,7 @@ export async function validateFileTypes(
 // ============================================================================
 
 export function validateBookingTiming(booking: BookingWindow): void {
-  const now = Date.now();
+  const now = getCurrentTimestamp();
   if (booking.startTime < now) {
     throw new ConvexError("Cannot book a date or time in the past.");
   }
@@ -127,10 +133,7 @@ export async function validateFabricationAvailability(
 
   // Day-of-week check
   if (service.serviceCategory.availableDays?.length) {
-    const localDateString = new Date(booking.date).toLocaleString("en-US", {
-      timeZone: "Asia/Manila",
-    });
-    const dayOfWeek = new Date(localDateString).getDay();
+    const dayOfWeek = getLabWeekday(booking.date);
     if (!service.serviceCategory.availableDays.includes(dayOfWeek)) {
       throw new ConvexError(
         "Selected date falls on an unavailable day for this service.",
@@ -495,7 +498,7 @@ export async function ensureProjectRoom(
     createdBy: userProfile._id,
     archived: "Active",
     lastMessageText: welcomeContent,
-    lastMessageAt: Date.now(),
+    lastMessageAt: getCurrentTimestamp(),
     messageCount: 1,
   });
 
@@ -528,23 +531,14 @@ export async function createProjectThread(
   booking: BookingWindow,
   now: number,
 ): Promise<Id<"threads">> {
-  const bookingDateStr = new Date(booking.date).toLocaleDateString("en-US", {
-    timeZone: "Asia/Manila",
+  const bookingDateStr = formatLabDate(booking.date, {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
   });
-  const startTimeStr = new Date(booking.startTime).toLocaleTimeString("en-US", {
-    timeZone: "Asia/Manila",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const endTimeStr = new Date(booking.endTime).toLocaleTimeString("en-US", {
-    timeZone: "Asia/Manila",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const startTimeStr = formatLabTime(booking.startTime);
+  const endTimeStr = formatLabTime(booking.endTime);
 
   const messageContent = [
     `New project created: ${args.name}`,
@@ -804,8 +798,8 @@ export async function syncProjectTotalInvoice(
       : deriveProjectPricingSnapshot(project, service, normalizedUsages);
   const primaryUsageSource = getPrimaryProjectUsage(usageDocs);
   const primaryUsage = primaryUsageSource
-    ? normalizedUsages.find((usage) => usage._id === primaryUsageSource._id) ??
-      primaryUsageSource
+    ? (normalizedUsages.find((usage) => usage._id === primaryUsageSource._id) ??
+      primaryUsageSource)
     : undefined;
 
   await ctx.db.patch(projectId, {
@@ -834,7 +828,7 @@ export async function sendProjectSystemMessage(
     .first();
   if (!thread) return;
   const content = lines.join("\n");
-  const now = Date.now();
+  const now = getCurrentTimestamp();
   await ctx.db.insert("messages", {
     room: thread.roomId,
     threadId: thread._id,
@@ -1096,8 +1090,7 @@ export async function scheduleProjectUpdateEmail(
   const usage = await findProjectUsage(ctx, project);
 
   const scheduledDate = usage
-    ? new Date(usage.startTime).toLocaleDateString("en-US", {
-        timeZone: "Asia/Manila",
+    ? formatLabDate(usage.startTime, {
         weekday: "short",
         month: "short",
         day: "numeric",

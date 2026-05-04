@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_WEEK_DAY_MIN_WIDTH,
@@ -19,10 +18,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   formatLabDate,
+  formatLabDecimalHour,
   formatLabTime,
+  getCurrentTimestamp,
   getLabDayBounds,
   getLabDayKey,
   getLabDecimalHour,
+  isSameLabDay,
   isSameLabMonth,
 } from "@/lib/lab-time";
 import { clipTimeRange, overlapsTimeRange } from "@/lib/time-range";
@@ -70,7 +72,7 @@ function toDayKey(value: Date | number) {
 }
 
 function isCurrentLabDay(value: Date | number) {
-  return toDayKey(value) === toDayKey(Date.now());
+  return isSameLabDay(value, getCurrentTimestamp());
 }
 
 function formatEventTime(startTime: number, endTime: number) {
@@ -82,13 +84,7 @@ function formatBookingCount(count: number) {
 }
 
 function formatWeekAxisLabel(decimalHour: number) {
-  const hours = Math.floor(decimalHour);
-  const minutes = (decimalHour % 1) * 60;
-
-  return format(
-    setMinutes(setHours(startOfDay(new Date()), hours), minutes),
-    minutes === 0 ? "ha" : "h:mm",
-  );
+  return formatLabDecimalHour(decimalHour);
 }
 
 function getDecimalHour(time: number) {
@@ -338,11 +334,12 @@ export function CalendarRangeView({
             </div>
 
             {days.map((day) => {
+              const dayKey = toDayKey(day);
               const dayEvents = eventsByDay.get(toDayKey(day)) ?? [];
 
               return (
                 <div
-                  key={day.toISOString()}
+                  key={dayKey}
                   className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
                 >
                   <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -457,7 +454,7 @@ export function CalendarRangeView({
         >
           {monthWeekdays.map((day, index) => (
             <div
-              key={`month-weekday-${day.toISOString()}`}
+              key={`month-weekday-${toDayKey(day)}`}
               className={cn(
                 "truncate whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                 index === 0 ? "" : "border-l",
@@ -497,7 +494,7 @@ export function CalendarRangeView({
 
             return (
               <div
-                key={day.toISOString()}
+                key={toDayKey(day)}
                 className={cn(
                   "flex min-h-0 flex-col border-l border-t",
                   isCurrentMonth ? "bg-background" : "bg-muted/10",

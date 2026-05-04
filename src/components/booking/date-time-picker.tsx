@@ -8,8 +8,6 @@ import {
 } from "@/components/ui/popover";
 
 import { CalendarIcon, Clock2Icon } from "lucide-react";
-
-import * as React from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -19,7 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
+import {
+  formatLabClockTime,
+  formatLabDateNumeric,
+  getCurrentTimestamp,
+  getLabDayKey,
+  getLabDayStart,
+  getLabWeekday,
+  isLabDateBeforeToday,
+  isLabTimeInPast,
+  LAB_TIME_ZONE,
+} from "@/lib/lab-time";
 
 const TIME_SLOTS: string[] = [];
 for (let h = 9; h <= 18; h++) {
@@ -31,12 +39,7 @@ for (let h = 9; h <= 18; h++) {
 }
 
 const formatTimeLabel = (time: string) => {
-  const [h, m] = time.split(":");
-  let hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  if (hour === 0) hour = 12;
-  else if (hour > 12) hour -= 12;
-  return `${hour}:${m} ${ampm}`;
+  return formatLabClockTime(time);
 };
 
 export interface DateTimePickerValue {
@@ -71,23 +74,20 @@ export function DateTimePicker({
   // 3. Highlight available dates using `modifiers`.
   const bookedDates: Date[] = []; // Replace with actual booked dates array
 
-  const isDateDisabled = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Disable any date before today
-    if (date < today) return true;
+  const isDateDisabled = (nextDate: Date) => {
+    if (isLabDateBeforeToday(nextDate)) return true;
 
     // If availableDays are specified, disable dates that don't fall on those days
-    if (availableDays.length > 0 && !availableDays.includes(date.getDay())) {
+    if (
+      availableDays.length > 0 &&
+      !availableDays.includes(getLabWeekday(nextDate))
+    ) {
       return true;
     }
 
     // Disable explicitly booked dates
     return bookedDates.some(
-      (booked) =>
-        booked.getFullYear() === date.getFullYear() &&
-        booked.getMonth() === date.getMonth() &&
-        booked.getDate() === date.getDate(),
+      (booked) => getLabDayKey(booked) === getLabDayKey(nextDate),
     );
   };
 
@@ -95,19 +95,11 @@ export function DateTimePicker({
     if (!date) return true; // Require date selection first
 
     // Disable times that have already passed today
-    const now = new Date();
     if (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate()
+      isLabDateBeforeToday(date, getCurrentTimestamp()) ||
+      isLabTimeInPast(date, timeSlot, getCurrentTimestamp())
     ) {
-      const [h, m] = timeSlot.split(":").map(Number);
-      if (
-        h < now.getHours() ||
-        (h === now.getHours() && m < now.getMinutes())
-      ) {
-        return true;
-      }
+      return true;
     }
 
     return bookedTimeBlocks.some(
@@ -116,7 +108,10 @@ export function DateTimePicker({
   };
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    onChange({ ...value, date: selectedDate });
+    onChange({
+      ...value,
+      date: selectedDate ? getLabDayStart(selectedDate) : undefined,
+    });
   };
 
   return (
@@ -131,14 +126,14 @@ export function DateTimePicker({
                 variant={"outline"}
                 className={`w-full justify-start text-left font-normal rounded-lg ${!date && "text-muted-foreground"}`}
               >
-                {date ? format(date, "MM/dd/yyyy") : <span>MM/DD/YYYY</span>}
+                {date ? formatLabDateNumeric(date) : <span>MM/DD/YYYY</span>}
                 <CalendarIcon className="ml-auto h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <input
               type="text"
               required
-              value={date ? date.toISOString() : ""}
+              value={date ? getLabDayKey(date) : ""}
               className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
               tabIndex={-1}
               onChange={() => {}}
@@ -147,6 +142,7 @@ export function DateTimePicker({
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
+              timeZone={LAB_TIME_ZONE}
               selected={date}
               onSelect={handleDateSelect}
               disabled={isDateDisabled}

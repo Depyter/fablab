@@ -13,7 +13,11 @@ import {
   type CalendarTab,
   type CalendarViewMode,
 } from "@/lib/calendar";
-import { getLabDayBounds, getLabDayStart } from "@/lib/lab-time";
+import {
+  getCurrentTimestamp,
+  getLabDayBounds,
+  getLabDayStart,
+} from "@/lib/lab-time";
 import { getVisibleRange, shiftDate } from "./calendar-state";
 
 export function useBookingCalendarController({
@@ -22,7 +26,7 @@ export function useBookingCalendarController({
   preloadedFrame: Preloaded<typeof api.calendar.query.getCalendarFrame>;
 }) {
   const [date, setDate] = React.useState<Date>(() =>
-    getLabDayStart(new Date()),
+    getLabDayStart(getCurrentTimestamp()),
   );
   const [viewMode, setViewMode] = React.useState<CalendarViewMode>("day");
   const [activeTab, setActiveTab] = React.useState<CalendarTab>("services");
@@ -77,7 +81,7 @@ export function useBookingCalendarController({
   }
 
   function handleReset() {
-    setDate(getLabDayStart(new Date()));
+    setDate(getLabDayStart(getCurrentTimestamp()));
   }
 
   function handleSelectDate(nextDate: Date | undefined) {

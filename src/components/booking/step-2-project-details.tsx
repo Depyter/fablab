@@ -22,6 +22,7 @@ import { FileUpload } from "../file-upload";
 import { DateTimePicker } from "./date-time-picker";
 import { toast } from "sonner";
 import { WorkshopSchedule } from "./workshop-time-slot-picker";
+import { getCurrentTimestamp, getLabTimeRangeTimestamps } from "@/lib/lab-time";
 import posthog from "posthog-js";
 import { type UploadedFile } from "../file-upload/types";
 
@@ -95,21 +96,16 @@ export function Step2ProjectDetails({
       startDateTs = dateTime.originalStartTime;
       endDateTs = dateTime.originalEndTime;
     } else {
-      const year = dateTime.date.getFullYear();
-      const month = dateTime.date.getMonth() + 1;
-      const day = dateTime.date.getDate();
-      const dateString = `${month}/${day}/${year}`;
-
-      const startDate = new Date(
-        `${dateString} ${startH}:${startM}:00 GMT+0800`,
-      );
-      startDateTs = startDate.getTime();
-
-      const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
-      endDateTs = endDate.getTime();
+      const labRange = getLabTimeRangeTimestamps({
+        date: dateTime.date,
+        startTime: `${startH}:${startM}`,
+        endTime: `${endH}:${endM}`,
+      });
+      startDateTs = labRange.startTime;
+      endDateTs = labRange.endTime;
     }
 
-    if (serviceCategory !== "WORKSHOP" && startDateTs < Date.now()) {
+    if (serviceCategory !== "WORKSHOP" && startDateTs < getCurrentTimestamp()) {
       toast.error("Cannot book a date or time in the past.");
       return;
     }
@@ -118,33 +114,6 @@ export function Step2ProjectDetails({
       toast.error("End time must be after start time.");
       return;
     }
-
-    console.log("=== DEBUG: Step 2 Form Submission ===");
-    console.log("Raw form.state.values.dateTime:", dateTime);
-    console.log(
-      "Parsed Time Strings - Start:",
-      startH,
-      startM,
-      "End:",
-      endH,
-      endM,
-    );
-    console.log(
-      "Computed startDateTs:",
-      startDateTs,
-      new Date(startDateTs).toString(),
-    );
-    console.log(
-      "Computed endDateTs:",
-      endDateTs,
-      new Date(endDateTs).toString(),
-    );
-    console.log("Date.now() reference:", Date.now(), new Date().toString());
-    console.log(
-      "Comparison (startDateTs < Date.now()):",
-      startDateTs < Date.now(),
-    );
-    console.log("=====================================");
 
     posthog.capture("booking_details_completed", {
       service_name: serviceName,
