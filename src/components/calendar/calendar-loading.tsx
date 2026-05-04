@@ -2,7 +2,7 @@
 
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CalendarViewMode } from "@/lib/calendar";
+import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_DAY_HEADER_HEIGHT,
   CALENDAR_DAY_LEADING_COL_WIDTH,
@@ -13,6 +13,7 @@ import {
   HEADER_SLOTS,
 } from "@/lib/calendar";
 import { cn } from "@/lib/utils";
+import { BookingCalendarToolbarSkeleton } from "./booking-calendar-toolbar";
 
 const loadingRows = [
   {
@@ -76,70 +77,11 @@ function formatLoadingTime(decimalHour: number) {
   );
 }
 
-function CalendarToolbarSkeleton({ viewMode }: { viewMode: CalendarViewMode }) {
-  return (
-    <div className="flex shrink-0 items-center gap-2 border-b bg-muted/20 px-4 py-2 flex-wrap">
-      <div className="flex items-center gap-1 rounded-md border bg-background p-0.5">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <div className="h-4 w-px bg-border" />
-        <Skeleton className="h-8 w-14 rounded-md" />
-        <div className="h-4 w-px bg-border" />
-        <Skeleton className="h-8 w-32 rounded-md" />
-      </div>
-
-      <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
-        {(["day", "week", "month"] as const).map((mode) => (
-          <div
-            key={mode}
-            className={cn(
-              "flex h-7 items-center rounded-sm px-3 text-xs",
-              viewMode === mode
-                ? "bg-muted font-medium text-foreground"
-                : "text-muted-foreground",
-            )}
-          >
-            {mode === "day" ? "Day" : mode === "week" ? "Week" : "Month"}
-          </div>
-        ))}
-      </div>
-
-      <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
-        <Skeleton className="h-7 w-[4.5rem] rounded-sm" />
-        <Skeleton className="ml-1 h-7 w-[4.5rem] rounded-sm" />
-      </div>
-    </div>
-  );
-}
-
-function CalendarContentHeaderSkeleton() {
-  return (
-    <div className="flex shrink-0 items-center gap-2 border-b bg-muted/20 px-4 py-2 flex-wrap">
-      <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
-        <div className="flex h-7 items-center rounded-sm bg-muted px-3 text-xs font-medium text-foreground">
-          Service Bookings
-        </div>
-        <div className="flex h-7 items-center rounded-sm px-3 text-xs text-muted-foreground">
-          Machine Schedule
-        </div>
-      </div>
-
-      <div className="flex-1" />
-
-      <div className="flex items-center gap-2 text-sm">
-        <Skeleton className="h-4 w-16" />
-        <div className="h-3 w-px bg-border" />
-        <Skeleton className="h-4 w-5" />
-        <Skeleton className="h-4 w-20" />
-        <div className="h-3 w-px bg-border" />
-        <Skeleton className="h-4 w-5" />
-        <Skeleton className="h-4 w-24" />
-      </div>
-    </div>
-  );
-}
-
-function DayLoadingState() {
+function DayLoadingState({
+  activeTab,
+}: {
+  activeTab: CalendarTab;
+}) {
   return (
     <>
       <div className="hidden min-h-0 flex-1 md:flex">
@@ -189,7 +131,7 @@ function DayLoadingState() {
                     color: "var(--fab-text-muted)",
                   }}
                 >
-                  SERVICES
+                  {activeTab === "resources" ? "RESOURCES" : "SERVICES"}
                 </th>
 
                 {HEADER_SLOTS.map((slot) => {
@@ -445,14 +387,15 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
 
 export function CalendarContentLoadingState({
   viewMode = "day",
+  activeTab = "services",
 }: {
   viewMode?: CalendarViewMode;
+  activeTab?: CalendarTab;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <CalendarContentHeaderSkeleton />
       {viewMode === "day" ? (
-        <DayLoadingState />
+        <DayLoadingState activeTab={activeTab} />
       ) : (
         <RangeLoadingState viewMode={viewMode} />
       )}
@@ -462,13 +405,21 @@ export function CalendarContentLoadingState({
 
 export function CalendarLoadingState({
   viewMode = "day",
+  activeTab = "services",
+  showStaffTabs = true,
 }: {
   viewMode?: CalendarViewMode;
+  activeTab?: CalendarTab;
+  showStaffTabs?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <CalendarToolbarSkeleton viewMode={viewMode} />
-      <CalendarContentLoadingState viewMode={viewMode} />
+      <BookingCalendarToolbarSkeleton
+        viewMode={viewMode}
+        activeTab={activeTab}
+        showStaffTabs={showStaffTabs}
+      />
+      <CalendarContentLoadingState viewMode={viewMode} activeTab={activeTab} />
     </div>
   );
 }
