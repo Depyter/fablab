@@ -364,7 +364,8 @@ export const getProject = authQuery({
       ...project,
       // Audit / tracking dates
       requestedDate: project._creationTime,
-      bookingStartTime: project.bookingStartTime ?? primaryUsage?.startTime ?? null,
+      bookingStartTime:
+        project.bookingStartTime ?? primaryUsage?.startTime ?? null,
       bookingEndTime: project.bookingEndTime ?? primaryUsage?.endTime ?? null,
       // Relations
       client: {

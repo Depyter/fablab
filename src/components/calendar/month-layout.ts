@@ -19,7 +19,10 @@ function getMonthContentHeight(rowHeight: number) {
   );
 }
 
-export function getMonthVisibleEventLimit(rowHeight: number, totalEvents: number) {
+export function getMonthVisibleEventLimit(
+  rowHeight: number,
+  totalEvents: number,
+) {
   if (totalEvents === 0) return 0;
 
   const availableHeight = getMonthContentHeight(rowHeight);
@@ -48,7 +51,10 @@ export function getMonthVisibleEventLimit(rowHeight: number, totalEvents: number
   return visibleCount;
 }
 
-export function canShowMonthOverflowLabel(rowHeight: number, visibleCount: number) {
+export function canShowMonthOverflowLabel(
+  rowHeight: number,
+  visibleCount: number,
+) {
   if (visibleCount === 0) return false;
 
   const availableHeight = getMonthContentHeight(rowHeight);
