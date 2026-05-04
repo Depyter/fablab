@@ -1,6 +1,12 @@
 "use client";
 
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutGrid, Users } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Users,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LAB_TIME_ZONE } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
 import type { CalendarVisibleRange } from "./calendar-state";
@@ -110,6 +117,7 @@ export function BookingCalendarToolbar({
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
+              timeZone={LAB_TIME_ZONE}
               selected={date}
               onSelect={onSelectDate}
               initialFocus

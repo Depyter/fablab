@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { startOfToday } from "date-fns";
 import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -14,7 +13,7 @@ import {
   type CalendarTab,
   type CalendarViewMode,
 } from "@/lib/calendar";
-import { getLabDayBounds } from "@/lib/lab-time";
+import { getLabDayBounds, getLabDayStart } from "@/lib/lab-time";
 import { getVisibleRange, shiftDate } from "./calendar-state";
 
 export function useBookingCalendarController({
@@ -22,7 +21,9 @@ export function useBookingCalendarController({
 }: {
   preloadedFrame: Preloaded<typeof api.calendar.query.getCalendarFrame>;
 }) {
-  const [date, setDate] = React.useState<Date>(() => startOfToday());
+  const [date, setDate] = React.useState<Date>(() =>
+    getLabDayStart(new Date()),
+  );
   const [viewMode, setViewMode] = React.useState<CalendarViewMode>("day");
   const [activeTab, setActiveTab] = React.useState<CalendarTab>("services");
   const [selectedProjectId, setSelectedProjectId] =
@@ -76,13 +77,18 @@ export function useBookingCalendarController({
   }
 
   function handleReset() {
-    setDate(startOfToday());
+    setDate(getLabDayStart(new Date()));
   }
 
   function handleSelectDate(nextDate: Date | undefined) {
     if (nextDate) {
-      setDate(nextDate);
+      setDate(getLabDayStart(nextDate));
     }
+  }
+
+  function handleOpenDay(nextDate: Date) {
+    setDate(getLabDayStart(nextDate));
+    setViewMode("day");
   }
 
   function handleOpenProjectDetails(projectId: Id<"projects">) {
@@ -117,6 +123,7 @@ export function useBookingCalendarController({
     handlePrevPeriod,
     handleNextPeriod,
     handleReset,
+    handleOpenDay,
     handleOpenProjectDetails,
     handleDetailsOpenChange,
     ...viewModels,

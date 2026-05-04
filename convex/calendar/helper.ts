@@ -71,7 +71,7 @@ async function loadCandidateUsages(
 ) {
   const candidateUsages = await ctx.db
     .query("resourceUsage")
-    .withIndex("by_startTime", (q) => q.lt("startTime", range.endTime))
+    .withIndex("by_endTime", (q) => q.gt("endTime", range.startTime))
     .collect();
 
   return candidateUsages.filter((usage) =>
@@ -125,7 +125,9 @@ async function loadProjectsById(
 
   return new Map(
     projectDocs
-      .filter((project): project is NonNullable<typeof project> => project !== null)
+      .filter(
+        (project): project is NonNullable<typeof project> => project !== null,
+      )
       .map((project) => [project._id, project]),
   );
 }
@@ -170,7 +172,9 @@ function mapCalendarBookingItem(args: {
     ownedProjectIds: args.ownedProjectIds,
     projectId: args.usage.projectId,
   });
-  const project = canSeeDetails ? args.projectById.get(args.usage.projectId) : null;
+  const project = canSeeDetails
+    ? args.projectById.get(args.usage.projectId)
+    : null;
   const client =
     canSeeDetails && project ? args.clientById.get(project.userId) : null;
 
@@ -183,7 +187,9 @@ function mapCalendarBookingItem(args: {
       ? project?.name || "Unknown Project"
       : "Reserved Slot",
     projectStatus: project?.status || "pending",
-    clientName: canSeeDetails ? client?.name || "Unknown Client" : "Reserved Slot",
+    clientName: canSeeDetails
+      ? client?.name || "Unknown Client"
+      : "Reserved Slot",
     serviceId: args.usage.service,
     resourceId: args.usage.resource || null,
   };

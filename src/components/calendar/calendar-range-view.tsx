@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  format,
-  isSameMonth,
-  isToday,
-  setHours,
-  setMinutes,
-  startOfDay,
-} from "date-fns";
+import { format, setHours, setMinutes, startOfDay } from "date-fns";
 import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_WEEK_DAY_MIN_WIDTH,
@@ -25,10 +18,12 @@ import {
 
 import { cn } from "@/lib/utils";
 import {
+  formatLabDate,
   formatLabTime,
   getLabDayBounds,
   getLabDayKey,
   getLabDecimalHour,
+  isSameLabMonth,
 } from "@/lib/lab-time";
 import { clipTimeRange, overlapsTimeRange } from "@/lib/time-range";
 import {
@@ -44,6 +39,7 @@ interface CalendarRangeViewProps {
   events: CalendarRangeEvent[];
   viewMode: Exclude<CalendarViewMode, "day">;
   isLoading?: boolean;
+  onSelectDay?: (date: Date) => void;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }
 
@@ -71,6 +67,10 @@ const WEEK_HALF_HOUR_MARKS = Array.from(
 
 function toDayKey(value: Date | number) {
   return getLabDayKey(value);
+}
+
+function isCurrentLabDay(value: Date | number) {
+  return toDayKey(value) === toDayKey(Date.now());
 }
 
 function formatEventTime(startTime: number, endTime: number) {
@@ -165,7 +165,10 @@ function buildWeekLayoutsByDay(
 
   for (const day of days) {
     const dayKey = toDayKey(day);
-    layouts.set(dayKey, buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day));
+    layouts.set(
+      dayKey,
+      buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day),
+    );
   }
 
   return layouts;
@@ -273,6 +276,7 @@ export function CalendarRangeView({
   events,
   viewMode,
   isLoading = false,
+  onSelectDay,
   onOpenProjectDetails,
 }: CalendarRangeViewProps) {
   const eventsByDay = buildEventsByDay(days, events);
@@ -342,18 +346,18 @@ export function CalendarRangeView({
                   className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
                 >
                   <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {format(day, "EEE")}
+                    {formatLabDate(day, { weekday: "short" })}
                   </div>
                   <div className="mt-1 flex items-center gap-2">
                     <span
                       className={cn(
                         "inline-flex size-7 items-center justify-center rounded-full text-sm font-semibold",
-                        isToday(day)
+                        isCurrentLabDay(day)
                           ? "bg-card text-foreground ring-1 ring-border"
                           : "text-foreground",
                       )}
                     >
-                      {format(day, "d")}
+                      {formatLabDate(day, { day: "numeric" })}
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {formatBookingCount(dayEvents.length)}
@@ -459,7 +463,7 @@ export function CalendarRangeView({
                 index === 0 ? "" : "border-l",
               )}
             >
-              {format(day, "EEEE")}
+              {formatLabDate(day, { weekday: "long" })}
             </div>
           ))}
         </div>
@@ -474,7 +478,7 @@ export function CalendarRangeView({
         >
           {days.map((day) => {
             const dayEvents = eventsByDay.get(toDayKey(day)) ?? [];
-            const isCurrentMonth = isSameMonth(day, anchorDate);
+            const isCurrentMonth = isSameLabMonth(day, anchorDate);
             const visibleEventLimit = getMonthVisibleEventLimit(
               monthRowHeight,
               dayEvents.length,
@@ -499,24 +503,35 @@ export function CalendarRangeView({
                   isCurrentMonth ? "bg-background" : "bg-muted/10",
                 )}
               >
-                <div className="flex items-center justify-between gap-2 border-b bg-muted/10 px-3 py-2">
+                <button
+                  type="button"
+                  disabled={onSelectDay === undefined}
+                  title={`Open ${formatLabDate(day, { month: "long", day: "numeric" })} in day view`}
+                  className={cn(
+                    "flex items-center justify-between gap-2 border-b bg-muted/10 px-3 py-2 text-left",
+                    onSelectDay === undefined
+                      ? "cursor-default"
+                      : "transition-colors hover:bg-muted/20",
+                  )}
+                  onClick={() => onSelectDay?.(day)}
+                >
                   <span
                     className={cn(
                       "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
                       isCurrentMonth
                         ? "text-foreground"
                         : "text-muted-foreground",
-                      isToday(day) && "bg-card ring-1 ring-border",
+                      isCurrentLabDay(day) && "bg-card ring-1 ring-border",
                     )}
                   >
-                    {format(day, "d")}
+                    {formatLabDate(day, { day: "numeric" })}
                   </span>
                   {dayEvents.length > 0 ? (
                     <span className="truncate text-[10px] font-medium text-muted-foreground">
                       {formatBookingCount(dayEvents.length)}
                     </span>
                   ) : null}
-                </div>
+                </button>
 
                 <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden p-2">
                   {visibleDayEvents.map((event) => (

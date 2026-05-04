@@ -4,19 +4,25 @@ import {
   getVisibleRange,
   shiftDate,
 } from "../src/components/calendar/calendar-state";
+import { getLabDayKey } from "../src/lib/lab-time";
 
 describe("calendar state", () => {
-  test("week view starts from the selected day", () => {
+  test("week view starts from the calendar week boundary", () => {
     const selectedDate = new Date(2026, 4, 6, 15, 30);
     const range = getVisibleRange(selectedDate, "week");
 
-    expect(range.start.getFullYear()).toBe(2026);
-    expect(range.start.getMonth()).toBe(4);
-    expect(range.start.getDate()).toBe(6);
-    expect(range.start.getHours()).toBe(0);
+    expect(getLabDayKey(range.start)).toBe("2026-05-04");
     expect(range.days).toHaveLength(7);
-    expect(range.days.map((day) => day.getDate())).toEqual([6, 7, 8, 9, 10, 11, 12]);
-    expect(range.label).toBe("May 6 - May 12");
+    expect(range.days.map((day) => getLabDayKey(day))).toEqual([
+      "2026-05-04",
+      "2026-05-05",
+      "2026-05-06",
+      "2026-05-07",
+      "2026-05-08",
+      "2026-05-09",
+      "2026-05-10",
+    ]);
+    expect(range.label).toBe("May 4 - May 10");
   });
 
   test("week navigation still advances in seven-day increments", () => {
@@ -25,8 +31,9 @@ describe("calendar state", () => {
     const nextWeek = shiftDate(selectedDate, "week", 1);
     const previousWeek = shiftDate(selectedDate, "week", -1);
 
-    expect(nextWeek.getDate()).toBe(13);
-    expect(previousWeek.getDate()).toBe(29);
-    expect(previousWeek.getMonth()).toBe(3);
+    expect(getLabDayKey(nextWeek)).toBe("2026-05-13");
+    expect(getLabDayKey(previousWeek)).toBe("2026-04-29");
+    expect(getVisibleRange(nextWeek, "week").label).toBe("May 11 - May 17");
+    expect(getVisibleRange(previousWeek, "week").label).toBe("Apr 27 - May 3");
   });
 });

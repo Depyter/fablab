@@ -16,6 +16,7 @@ export function BookingCalendarView({
   date,
   viewMode,
   visibleRange,
+  onSelectDay,
   onOpenProjectDetails,
   activeTab,
   isAdminOrMaker,
@@ -29,6 +30,7 @@ export function BookingCalendarView({
   date: Date;
   viewMode: CalendarViewMode;
   visibleRange: CalendarVisibleRange;
+  onSelectDay?: (date: Date) => void;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
   activeTab: CalendarTab;
   isAdminOrMaker: boolean;
@@ -57,6 +59,7 @@ export function BookingCalendarView({
               events={rangeEvents}
               viewMode={viewMode}
               isLoading={bookingsLoading}
+              onSelectDay={onSelectDay}
               onOpenProjectDetails={onOpenProjectDetails}
             />
           )
@@ -75,6 +78,7 @@ export function BookingCalendarView({
               events={rangeEvents}
               viewMode={viewMode}
               isLoading={bookingsLoading}
+              onSelectDay={onSelectDay}
               onOpenProjectDetails={onOpenProjectDetails}
             />
           )
