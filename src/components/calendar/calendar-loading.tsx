@@ -1,13 +1,25 @@
 "use client";
 
 import { format, setHours, setMinutes, startOfDay } from "date-fns";
+
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_DAY_HEADER_HEIGHT,
-  CALENDAR_DAY_LEADING_COL_WIDTH,
-  CALENDAR_DAY_SLOT_WIDTH,
+  CALENDAR_DAY_LAYOUT_TEMPLATE,
+  CALENDAR_DAY_MIN_WIDTH,
+  CALENDAR_DAY_ROW_HEIGHT,
+  CALENDAR_DAY_SECTION_HEIGHT,
+  CALENDAR_DAY_TIMELINE_TEMPLATE,
+  CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
   CALENDAR_MONTH_CELL_MIN_HEIGHT,
+  CALENDAR_MONTH_DAY_MIN_WIDTH,
+  CALENDAR_WEEK_DAY_MIN_WIDTH,
+  CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT,
+  CALENDAR_WEEK_MIN_GRID_HEIGHT,
+  CALENDAR_WEEK_MIN_TOTAL_HEIGHT,
+  CALENDAR_WEEK_TIME_COL_WIDTH,
   DAY_END,
   DAY_START,
   HEADER_SLOTS,
@@ -15,47 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 import { BookingCalendarToolbarSkeleton } from "./booking-calendar-toolbar";
 
-const loadingRows = [
-  {
-    labelWidth: "w-28",
-    slots: [
-      { start: 1, span: 4 },
-      { start: 9, span: 3 },
-    ],
-  },
-  {
-    labelWidth: "w-24",
-    slots: [{ start: 5, span: 5 }],
-  },
-  {
-    labelWidth: "w-32",
-    slots: [
-      { start: 0, span: 3 },
-      { start: 12, span: 4 },
-    ],
-  },
-  {
-    labelWidth: "w-20",
-    slots: [{ start: 7, span: 6 }],
-  },
-] as const;
-
-const mobileLoadingRows = [
-  {
-    headerWidth: "w-32",
-    entries: [
-      { titleWidth: "w-28", timeWidth: "w-20" },
-      { titleWidth: "w-24", timeWidth: "w-16" },
-    ],
-  },
-  {
-    headerWidth: "w-24",
-    entries: [
-      { titleWidth: "w-32", timeWidth: "w-20" },
-      { titleWidth: "w-20", timeWidth: "w-16" },
-    ],
-  },
-] as const;
+const DAY_SECTION_BG = "rgba(220,215,245,0.55)";
+const DAY_SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
 
 const weekSkeletonDays = Array.from({ length: 7 }, (_, index) => index);
 const monthSkeletonCells = Array.from({ length: 35 }, (_, index) => index);
@@ -63,9 +36,118 @@ const weekHourSkeletons = Array.from(
   { length: DAY_END - DAY_START },
   (_, index) => DAY_START + index,
 );
-const LOADING_TABLE_WIDTH =
-  CALENDAR_DAY_LEADING_COL_WIDTH +
-  HEADER_SLOTS.length * CALENDAR_DAY_SLOT_WIDTH;
+const weekHalfHourMarks = Array.from(
+  { length: (DAY_END - DAY_START) * 2 + 1 },
+  (_, index) => index,
+);
+
+type DayLoadingRow =
+  | {
+      id: string;
+      kind: "section";
+      label: string;
+      rowHeight: number;
+    }
+  | {
+      id: string;
+      kind: "track";
+      labelWidth: string;
+      rowHeight: number;
+      showStatus?: boolean;
+      slots: Array<
+        | {
+            start: number;
+            span: number;
+            kind: "standard";
+          }
+        | {
+            start: number;
+            span: number;
+            kind: "workshop";
+          }
+      >;
+    };
+
+const SERVICE_DAY_LOADING_ROWS: DayLoadingRow[] = [
+  {
+    id: "fabrication-section",
+    kind: "section",
+    label: "Fabrication",
+    rowHeight: CALENDAR_DAY_SECTION_HEIGHT,
+  },
+  {
+    id: "fabrication-track-1",
+    kind: "track",
+    labelWidth: "w-28",
+    rowHeight: CALENDAR_DAY_ROW_HEIGHT,
+    showStatus: true,
+    slots: [{ start: 1, span: 4, kind: "standard" }],
+  },
+  {
+    id: "fabrication-track-2",
+    kind: "track",
+    labelWidth: "w-24",
+    rowHeight: CALENDAR_DAY_ROW_HEIGHT,
+    slots: [
+      { start: 5, span: 3, kind: "standard" },
+      { start: 10, span: 2, kind: "standard" },
+    ],
+  },
+  {
+    id: "workshop-section",
+    kind: "section",
+    label: "Workshops",
+    rowHeight: CALENDAR_DAY_SECTION_HEIGHT,
+  },
+  {
+    id: "workshop-track",
+    kind: "track",
+    labelWidth: "w-32",
+    rowHeight: CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
+    showStatus: true,
+    slots: [{ start: 8, span: 5, kind: "workshop" }],
+  },
+];
+
+const RESOURCE_DAY_LOADING_ROWS: DayLoadingRow[] = [
+  {
+    id: "machine-section",
+    kind: "section",
+    label: "Machines",
+    rowHeight: CALENDAR_DAY_SECTION_HEIGHT,
+  },
+  {
+    id: "machine-track-1",
+    kind: "track",
+    labelWidth: "w-28",
+    rowHeight: CALENDAR_DAY_ROW_HEIGHT,
+    showStatus: true,
+    slots: [{ start: 1, span: 4, kind: "standard" }],
+  },
+  {
+    id: "machine-track-2",
+    kind: "track",
+    labelWidth: "w-24",
+    rowHeight: CALENDAR_DAY_ROW_HEIGHT,
+    slots: [{ start: 8, span: 3, kind: "standard" }],
+  },
+  {
+    id: "tool-section",
+    kind: "section",
+    label: "Tools",
+    rowHeight: CALENDAR_DAY_SECTION_HEIGHT,
+  },
+  {
+    id: "tool-track",
+    kind: "track",
+    labelWidth: "w-20",
+    rowHeight: CALENDAR_DAY_ROW_HEIGHT,
+    slots: [
+      { start: 5, span: 2, kind: "standard" },
+      { start: 12, span: 4, kind: "standard" },
+    ],
+  },
+];
 
 function formatLoadingTime(decimalHour: number) {
   const hours = Math.floor(decimalHour);
@@ -77,214 +159,366 @@ function formatLoadingTime(decimalHour: number) {
   );
 }
 
-function DayLoadingState({
-  activeTab,
+function getDayLoadingRows(activeTab: CalendarTab) {
+  return activeTab === "resources"
+    ? RESOURCE_DAY_LOADING_ROWS
+    : SERVICE_DAY_LOADING_ROWS;
+}
+
+function getLoadingUsagePosition(start: number, span: number) {
+  return {
+    left: `${(start / HEADER_SLOTS.length) * 100}%`,
+    width: `${(span / HEADER_SLOTS.length) * 100}%`,
+  };
+}
+
+function StandardDayLoadingSlot({
+  start,
+  span,
 }: {
-  activeTab: CalendarTab;
+  start: number;
+  span: number;
 }) {
+  const position = getLoadingUsagePosition(start, span);
+
+  return (
+    <div
+      className="absolute z-[5]"
+      style={{
+        top: 3,
+        bottom: 3,
+        left: `calc(${position.left} + 2px)`,
+        width: `max(0px, calc(${position.width} - 4px))`,
+      }}
+    >
+      <Skeleton className="h-full w-full rounded-md" />
+    </div>
+  );
+}
+
+function WorkshopDayLoadingSlot({
+  start,
+  span,
+}: {
+  start: number;
+  span: number;
+}) {
+  const position = getLoadingUsagePosition(start, span);
+
+  return (
+    <div
+      className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200/60 bg-blue-50/80 px-2.5 py-2 shadow-sm"
+      style={{
+        top: 4,
+        bottom: 4,
+        left: `calc(${position.left} + 2px)`,
+        width: `max(0px, calc(${position.width} - 4px))`,
+      }}
+    >
+      <div className="flex h-full flex-col gap-1.5 overflow-hidden">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="mt-1 h-3 w-24" />
+          </div>
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+
+        <div className="grid min-h-0 gap-1 overflow-hidden">
+          <Skeleton className="h-7 w-full rounded-md" />
+          <Skeleton className="h-7 w-full rounded-md" />
+          <Skeleton className="h-7 w-full rounded-md" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
+  const rows = getDayLoadingRows(activeTab);
+  const bodyGridTemplateRows = rows
+    .map((row) => `${row.rowHeight}px`)
+    .join(" ");
+
   return (
     <>
       <div className="hidden min-h-0 flex-1 md:flex">
-        <div className="relative flex-1 overflow-auto">
-          <table
+        <ScrollArea className="min-h-0 min-w-0 flex-1">
+          <div
+            className="grid h-full min-h-full min-w-0 bg-background"
             style={{
-              width: LOADING_TABLE_WIDTH,
-              tableLayout: "fixed",
-              borderCollapse: "collapse",
-              fontSize: 12,
+              width: `max(100%, ${CALENDAR_DAY_MIN_WIDTH}px)`,
+              gridTemplateRows: "auto 1fr",
+              height: "100%",
             }}
           >
-            <colgroup>
-              <col style={{ width: CALENDAR_DAY_LEADING_COL_WIDTH }} />
-              {HEADER_SLOTS.map((slot) => (
-                <col
-                  key={`calendar-loading-col-${slot}`}
-                  style={{ width: CALENDAR_DAY_SLOT_WIDTH }}
-                />
-              ))}
-            </colgroup>
-            <thead>
-              <tr
+            <div
+              className="sticky top-0 z-20 grid"
+              style={{
+                gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
+                background: "var(--fab-bg-sidebar)",
+              }}
+            >
+              <div
+                className="flex items-center"
                 style={{
+                  position: "sticky",
+                  left: 0,
+                  zIndex: 30,
                   height: CALENDAR_DAY_HEADER_HEIGHT,
                   background: "var(--fab-bg-sidebar)",
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 10,
+                  borderBottom: "1px solid var(--fab-border-md)",
+                  borderRight: "1px solid var(--fab-border-md)",
+                  paddingLeft: 12,
+                  color: "var(--fab-text-muted)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
                 }}
               >
-                <th
-                  style={{
-                    width: CALENDAR_DAY_LEADING_COL_WIDTH,
-                    position: "sticky",
-                    left: 0,
-                    zIndex: 20,
-                    background: "var(--fab-bg-sidebar)",
-                    borderBottom: "1px solid var(--fab-border-md)",
-                    borderRight: "1px solid var(--fab-border-md)",
-                    textAlign: "left",
-                    paddingLeft: 12,
-                    fontWeight: 700,
-                    fontSize: 10,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "var(--fab-text-muted)",
-                  }}
-                >
-                  {activeTab === "resources" ? "RESOURCES" : "SERVICES"}
-                </th>
+                {activeTab === "resources" ? "RESOURCES" : "SERVICES"}
+              </div>
 
-                {HEADER_SLOTS.map((slot) => {
-                  const isHour = slot % 1 === 0;
-
-                  return (
-                    <th
-                      key={`calendar-loading-header-${slot}`}
-                      style={{
-                        background: "var(--fab-bg-sidebar)",
-                        borderBottom: "1px solid var(--fab-border-md)",
-                        borderLeft: "1px solid var(--fab-border)",
-                        textAlign: "left",
-                        paddingLeft: 4,
-                        overflow: "hidden",
-                        fontSize: 10,
-                        fontWeight: 500,
-                        color: "var(--fab-text-muted)",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {isHour ? formatLoadingTime(slot) : ""}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-
-            <tbody>
-              {loadingRows.map((row, rowIndex) => (
-                <tr
-                  key={`calendar-loading-row-${rowIndex}`}
-                  style={{ height: 40 }}
-                >
-                  <td
+              <div
+                className="relative grid"
+                style={{
+                  gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                  height: CALENDAR_DAY_HEADER_HEIGHT,
+                  background: "var(--fab-bg-sidebar)",
+                }}
+              >
+                {HEADER_SLOTS.map((slot) => (
+                  <div
+                    key={`calendar-loading-header-${slot}`}
+                    className="flex items-center whitespace-nowrap px-1"
                     style={{
-                      position: "sticky",
-                      left: 0,
-                      zIndex: 4,
-                      background: "var(--fab-bg-main)",
+                      height: "100%",
                       borderBottom: "1px solid var(--fab-border-md)",
-                      borderRight: "1px solid var(--fab-border-md)",
-                      verticalAlign: "middle",
-                      padding: 0,
+                      borderLeft: "1px solid var(--fab-border)",
+                      color: "var(--fab-text-muted)",
+                      fontSize: 10,
+                      fontWeight: 500,
+                      paddingLeft: 4,
                     }}
                   >
-                    <div className="flex h-full items-center gap-3 px-3">
-                      <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
-                      <Skeleton
-                        className={cn("h-4 rounded-full", row.labelWidth)}
-                      />
-                    </div>
-                  </td>
+                    {slot % 1 === 0 ? formatLoadingTime(slot) : ""}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                  {HEADER_SLOTS.map((slot, slotIndex) => {
-                    const usage = row.slots.find(
-                      (item) => item.start === slotIndex,
-                    );
-
-                    if (usage) {
-                      return (
-                        <td
-                          key={`calendar-loading-slot-${rowIndex}-${slotIndex}`}
-                          colSpan={usage.span}
-                          style={{
-                            padding: "3px 2px",
-                            borderBottom: "1px solid var(--fab-border-soft)",
-                            borderLeft: "1px solid var(--fab-border)",
-                            height: 40,
-                          }}
-                        >
-                          <Skeleton className="h-8 w-full rounded-md" />
-                        </td>
-                      );
-                    }
-
-                    const isCovered = row.slots.some(
-                      (item) =>
-                        slotIndex > item.start &&
-                        slotIndex < item.start + item.span,
-                    );
-
-                    if (isCovered) return null;
-
-                    const isBoundary =
-                      slot >= HEADER_SLOTS[HEADER_SLOTS.length - 1];
-
-                    return (
-                      <td
-                        key={`calendar-loading-empty-${rowIndex}-${slotIndex}`}
+            <div
+              className="grid min-h-0"
+              style={{ gridTemplateRows: bodyGridTemplateRows }}
+            >
+              {rows.map((row) =>
+                row.kind === "section" ? (
+                  <div
+                    key={row.id}
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
+                      height: "100%",
+                    }}
+                  >
+                    <div
+                      className="flex items-center px-3"
+                      style={{
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 12,
+                        background: DAY_SECTION_BG_STICKY,
+                        borderTop: "1px solid var(--fab-border-md)",
+                        borderBottom: "1px solid var(--fab-border-md)",
+                        borderRight: "1px solid var(--fab-border-md)",
+                      }}
+                    >
+                      <span
+                        className="font-bold uppercase tracking-[0.1em]"
                         style={{
-                          borderBottom: "1px solid var(--fab-border-soft)",
-                          borderLeft: "1px solid var(--fab-border)",
-                          background: isBoundary
-                            ? "var(--fab-bg-sidebar)"
-                            : "transparent",
+                          color: "var(--fab-text-dim)",
+                          fontSize: 9,
                         }}
-                      />
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      >
+                        {row.label}
+                      </span>
+                    </div>
+
+                    <div
+                      className="relative grid"
+                      style={{
+                        gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                        background: DAY_SECTION_BG,
+                      }}
+                    >
+                      {HEADER_SLOTS.map((slot) => (
+                        <div
+                          key={`${row.id}-${slot}`}
+                          aria-hidden
+                          style={{
+                            height: "100%",
+                            borderTop: "1px solid var(--fab-border-md)",
+                            borderBottom: "1px solid var(--fab-border-md)",
+                            borderLeft: "1px solid var(--fab-border)",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={row.id}
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
+                      minHeight: row.rowHeight,
+                      height: "100%",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 8,
+                        background: "var(--fab-bg-main)",
+                        borderBottom: "1px solid var(--fab-border-md)",
+                        borderRight: "1px solid var(--fab-border-md)",
+                      }}
+                    >
+                      <div className="flex h-full items-center gap-2 px-3">
+                        <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
+                        <Skeleton
+                          className={cn(
+                            "h-4 flex-1 rounded-full",
+                            row.labelWidth,
+                          )}
+                        />
+                        {row.showStatus ? (
+                          <Skeleton className="h-5 w-12 shrink-0 rounded-[3px]" />
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div
+                      className="relative grid"
+                      style={{
+                        gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                        minHeight: row.rowHeight,
+                      }}
+                    >
+                      {HEADER_SLOTS.map((slot) => {
+                        const isBoundary = slot >= DAY_END;
+
+                        return (
+                          <div
+                            key={`${row.id}-${slot}`}
+                            aria-hidden
+                            style={{
+                              height: "100%",
+                              borderBottom: "1px solid var(--fab-border-soft)",
+                              borderLeft: "1px solid var(--fab-border)",
+                              background: isBoundary
+                                ? "var(--fab-bg-sidebar)"
+                                : "transparent",
+                              pointerEvents: "none",
+                            }}
+                          />
+                        );
+                      })}
+
+                      {row.slots.map((slot) =>
+                        slot.kind === "workshop" ? (
+                          <WorkshopDayLoadingSlot
+                            key={`${row.id}-${slot.start}`}
+                            start={slot.start}
+                            span={slot.span}
+                          />
+                        ) : (
+                          <StandardDayLoadingSlot
+                            key={`${row.id}-${slot.start}`}
+                            start={slot.start}
+                            span={slot.span}
+                          />
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
 
       <div className="flex flex-1 flex-col overflow-y-auto md:hidden">
-        {mobileLoadingRows.map((row, rowIndex) => (
-          <div key={`calendar-mobile-loading-${rowIndex}`}>
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur-sm">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
-                <Skeleton className={cn("h-4 rounded-full", row.headerWidth)} />
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-              </div>
-            </div>
-
-            <div className="divide-y">
-              {row.entries.map((entry, entryIndex) => (
-                <div
-                  key={`calendar-mobile-entry-${rowIndex}-${entryIndex}`}
-                  className="flex items-center gap-3 px-4 py-2.5"
-                >
-                  <Skeleton className="h-8 w-1 shrink-0 rounded-full" />
+        {rows
+          .filter(
+            (row): row is Extract<DayLoadingRow, { kind: "track" }> =>
+              row.kind === "track",
+          )
+          .map((row, rowIndex) => (
+            <div key={`calendar-mobile-loading-${row.id}-${rowIndex}`}>
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur-sm">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
                   <Skeleton
-                    className={cn(
-                      "h-4 max-w-full flex-1 rounded-full",
-                      entry.titleWidth,
-                    )}
-                  />
-                  <Skeleton
-                    className={cn("h-4 shrink-0 rounded-full", entry.timeWidth)}
+                    className={cn("h-4 rounded-full", row.labelWidth)}
                   />
                 </div>
-              ))}
+                <div className="flex shrink-0 items-center gap-2">
+                  <Skeleton className="h-4 w-12" />
+                  {row.showStatus ? (
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="divide-y">
+                {row.slots.map((slot, slotIndex) => (
+                  <div
+                    key={`calendar-mobile-entry-${row.id}-${slot.start}-${slotIndex}`}
+                    className="flex items-center gap-3 px-4 py-2.5"
+                  >
+                    <Skeleton className="h-8 w-1 shrink-0 rounded-full" />
+                    <Skeleton className="h-4 max-w-full flex-1 rounded-full" />
+                    <Skeleton className="h-4 w-20 shrink-0 rounded-full" />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </>
   );
 }
 
 function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
+  const weekMinWidth =
+    CALENDAR_WEEK_TIME_COL_WIDTH +
+    weekSkeletonDays.length * CALENDAR_WEEK_DAY_MIN_WIDTH;
+  const monthMinWidth = weekSkeletonDays.length * CALENDAR_MONTH_DAY_MIN_WIDTH;
+
   if (viewMode === "week") {
     return (
       <div className="flex min-h-0 flex-1 overflow-auto">
-        <div className="min-w-[1108px]">
-          <div className="grid grid-cols-[72px_repeat(7,minmax(148px,1fr))] border-b bg-background">
+        <div
+          className="grid h-full min-h-full min-w-0 flex-1"
+          style={{
+            width: `max(100%, ${weekMinWidth}px)`,
+            minHeight: CALENDAR_WEEK_MIN_TOTAL_HEIGHT,
+            gridTemplateRows: `auto minmax(${CALENDAR_WEEK_MIN_GRID_HEIGHT}px, 1fr)`,
+          }}
+        >
+          <div
+            className="sticky top-0 z-20 grid border-b bg-background"
+            style={{
+              gridTemplateColumns: `${CALENDAR_WEEK_TIME_COL_WIDTH}px repeat(${weekSkeletonDays.length}, minmax(${CALENDAR_WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+            }}
+          >
             <div className="border-r bg-muted/10 px-3 py-2">
               <Skeleton className="h-3 w-8" />
             </div>
@@ -303,12 +537,22 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
             ))}
           </div>
 
-          <div className="grid grid-cols-[72px_repeat(7,minmax(148px,1fr))]">
-            <div className="border-r bg-background">
+          <div
+            className="grid h-full min-h-0"
+            style={{
+              gridTemplateColumns: `${CALENDAR_WEEK_TIME_COL_WIDTH}px repeat(${weekSkeletonDays.length}, minmax(${CALENDAR_WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+            }}
+          >
+            <div
+              className="grid border-r bg-background"
+              style={{
+                gridTemplateRows: `repeat(${weekHourSkeletons.length}, minmax(${CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT}px, 1fr))`,
+              }}
+            >
               {weekHourSkeletons.map((hour) => (
                 <div
                   key={`calendar-week-loading-time-${hour}`}
-                  className="h-[52px] border-b border-border/60 px-3"
+                  className="border-b border-border/60 px-3"
                 >
                   <Skeleton className="h-3 w-10 -translate-y-1.5" />
                 </div>
@@ -318,19 +562,27 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
             {weekSkeletonDays.map((day) => (
               <div
                 key={`calendar-week-loading-column-${day}`}
-                className="relative h-[468px] border-r last:border-r-0"
+                className="relative border-r last:border-r-0"
+                style={{ minHeight: CALENDAR_WEEK_MIN_GRID_HEIGHT }}
               >
-                {weekHourSkeletons.map((hour, index) => (
+                {weekHalfHourMarks.map((mark, index) => (
                   <div
-                    key={`calendar-week-loading-line-${day}-${hour}`}
-                    className="absolute left-0 right-0 border-t border-border/60"
-                    style={{ top: `${index * 52}px` }}
+                    key={`calendar-week-loading-line-${day}-${mark}`}
+                    className={cn(
+                      "absolute left-0 right-0",
+                      index % 2 === 0
+                        ? "border-t border-border/60"
+                        : "border-t border-dashed border-border/40",
+                    )}
+                    style={{
+                      top: `${(mark / Math.max(weekHalfHourMarks.length - 1, 1)) * 100}%`,
+                    }}
                   />
                 ))}
 
-                <Skeleton className="absolute left-1 top-8 h-20 w-[calc(50%-6px)] rounded-lg" />
-                <Skeleton className="absolute right-1 top-[136px] h-16 w-[calc(50%-6px)] rounded-lg" />
-                <Skeleton className="absolute left-1 top-[240px] h-24 w-[calc(100%-8px)] rounded-lg" />
+                <Skeleton className="absolute left-1 top-[8%] h-20 w-[calc(50%-6px)] rounded-lg" />
+                <Skeleton className="absolute right-1 top-[28%] h-16 w-[calc(50%-6px)] rounded-lg" />
+                <Skeleton className="absolute left-1 top-[50%] h-24 w-[calc(100%-8px)] rounded-lg" />
               </div>
             ))}
           </div>
@@ -341,8 +593,19 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
 
   return (
     <div className="flex min-h-0 flex-1 overflow-auto">
-      <div className="grid min-h-0 min-w-[1008px] flex-1 grid-rows-[auto_1fr]">
-        <div className="grid grid-cols-7 border-b bg-muted/10">
+      <div
+        className="grid h-full min-h-0 min-w-0 flex-1"
+        style={{
+          width: `max(100%, ${monthMinWidth}px)`,
+          gridTemplateRows: "auto minmax(0, 1fr)",
+        }}
+      >
+        <div
+          className="grid border-b bg-muted/10"
+          style={{
+            gridTemplateColumns: `repeat(7, minmax(${CALENDAR_MONTH_DAY_MIN_WIDTH}px, 1fr))`,
+          }}
+        >
           {weekSkeletonDays.map((day) => (
             <div
               key={`calendar-month-loading-header-${day}`}
@@ -354,8 +617,9 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
         </div>
 
         <div
-          className="grid min-h-0 grid-cols-7 border-b border-r bg-background"
+          className="grid min-h-0 border-b border-r bg-background"
           style={{
+            gridTemplateColumns: `repeat(7, minmax(${CALENDAR_MONTH_DAY_MIN_WIDTH}px, 1fr))`,
             gridTemplateRows: `repeat(5, minmax(${CALENDAR_MONTH_CELL_MIN_HEIGHT}px, 1fr))`,
           }}
         >
