@@ -216,9 +216,9 @@ export default function HomePage() {
       <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-[size:120px_120px] opacity-35" />
 
       {/* Hero Section */}
-      <section className="relative z-10 flex min-h-[75vh] flex-col items-center justify-center px-4 pt-10 pb-10 text-center sm:px-6 lg:px-8">
+      <section className="relative z-10 flex min-h-[60vh] md:min-h-[75vh] flex-col items-center justify-center px-4 py-5 md:py-10 text-center sm:px-6 lg:px-8">
         <div className="z-10 space-y-8">
-          <h1 className="max-w-7xl text-6xl leading-[0.85] font-black tracking-tighter text-black sm:text-9xl lg:text-[14rem]">
+          <h1 className="max-w-7xl text-8xl leading-[0.85] font-black tracking-tighter text-black sm:text-9xl lg:text-[14rem]">
             <span data-line className="block">
               <SplitWord word="MAKE" />
             </span>

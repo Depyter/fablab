@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 
 function ServiceCardSkeleton({ isWorkshop }: { isWorkshop: boolean }) {
   return (
-      <div
-        className={cn(
+    <div
+      className={cn(
         "h-full min-h-20 rounded-[2rem] border-4 border-black p-3 shadow-[8px_8px_0_0_#000] sm:min-h-40 sm:p-6",
         isWorkshop ? "bg-fab-teal/20" : "bg-fab-magenta/20",
       )}
