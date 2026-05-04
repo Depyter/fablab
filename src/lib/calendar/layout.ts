@@ -1,4 +1,4 @@
-import { ResourceStatus } from "@convex/constants";
+import { ResourceStatus } from "../../../convex/constants";
 
 import { DAY_HOURS, DAY_START, HEADER_SLOTS, TOTAL_SLOTS } from "./constants";
 import type {
