@@ -257,7 +257,10 @@ export default function HomePage() {
       </div>
 
       {/* Goals Section */}
-      <section className="relative z-10 grid border-b-8 border-black md:grid-cols-2">
+      <section
+        id="about"
+        className="relative z-10 grid scroll-mt-24 border-b-8 border-black md:grid-cols-2"
+      >
         <div className="border-b-8 border-black bg-fab-amber p-12 md:border-r-8 lg:p-20">
           <h2 className="text-5xl font-black leading-none tracking-tighter uppercase sm:text-7xl lg:text-8xl">
             Open
