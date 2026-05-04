@@ -1,7 +1,13 @@
 "use client";
 
-import * as React from "react";
 import { Label } from "@/components/ui/label";
+import {
+  formatLabDate,
+  formatLabTime,
+  formatLabTime24,
+  getLabDayStart,
+  isSameLabDay,
+} from "@/lib/lab-time";
 
 export interface WorkshopTimeSlotValue {
   date: Date | undefined;
@@ -37,16 +43,6 @@ export function WorkshopTimeSlotPicker({
   onChange,
   schedules = EMPTY_WORKSHOP_SCHEDULES,
 }: WorkshopTimeSlotPickerProps) {
-  const getLocalTimeString = (dateNum: number) => {
-    const d = new Date(dateNum);
-    return d.toLocaleTimeString("en-US", {
-      timeZone: "Asia/Manila",
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <>
       <div className="flex flex-col gap-1 mb-2">
@@ -62,8 +58,7 @@ export function WorkshopTimeSlotPicker({
         {schedules.map((schedule) => (
           <div key={schedule.date} className="space-y-3">
             <h4 className="font-semibold text-gray-900">
-              {new Date(schedule.date).toLocaleDateString("en-US", {
-                timeZone: "Asia/Manila",
+              {formatLabDate(schedule.date, {
                 weekday: "long",
                 month: "long",
                 day: "numeric",
@@ -71,12 +66,13 @@ export function WorkshopTimeSlotPicker({
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(schedule.timeSlots || []).map((slot) => {
-                const startFormatted = getLocalTimeString(slot.startTime);
-                const endFormatted = getLocalTimeString(slot.endTime);
+                const startFormatted = formatLabTime24(slot.startTime);
+                const endFormatted = formatLabTime24(slot.endTime);
 
                 const isSelected =
-                  value?.date?.getTime() ===
-                    new Date(schedule.date).getTime() &&
+                  (value?.date
+                    ? isSameLabDay(value.date, schedule.date)
+                    : false) &&
                   value?.startTime === startFormatted &&
                   value?.endTime === endFormatted;
 
@@ -89,7 +85,7 @@ export function WorkshopTimeSlotPicker({
                     onClick={() => {
                       if (isFull) return;
                       onChange({
-                        date: new Date(schedule.date),
+                        date: getLabDayStart(schedule.date),
                         startTime: startFormatted,
                         endTime: endFormatted,
                         originalDate: schedule.date,
@@ -106,18 +102,8 @@ export function WorkshopTimeSlotPicker({
                     }`}
                   >
                     <p className="font-medium text-sm text-gray-900">
-                      {new Date(slot.startTime).toLocaleTimeString("en-US", {
-                        timeZone: "Asia/Manila",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      -{" "}
-                      {new Date(slot.endTime).toLocaleTimeString("en-US", {
-                        timeZone: "Asia/Manila",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      (PST)
+                      {formatLabTime(slot.startTime)} -{" "}
+                      {formatLabTime(slot.endTime)} (PST)
                     </p>
                     <p className="text-xs mt-1 text-gray-500">
                       {isFull ? (

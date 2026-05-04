@@ -5,6 +5,7 @@ import {
   claimFiles,
   deleteFiles,
 } from "../helper";
+import { formatLabDate, formatLabTime } from "../../src/lib/lab-time";
 import {
   scheduleProjectUpdateEmail,
   sendProjectSystemMessage,
@@ -191,23 +192,14 @@ export const updateUsage = authMutation({
     if (updates.startTime !== undefined || updates.endTime !== undefined) {
       const nextStartTime = updates.startTime ?? usage.startTime;
       const nextEndTime = updates.endTime ?? usage.endTime;
-      const bookingDate = new Date(nextStartTime).toLocaleDateString("en-US", {
-        timeZone: "Asia/Manila",
+      const bookingDate = formatLabDate(nextStartTime, {
         weekday: "short",
         month: "short",
         day: "numeric",
         year: "numeric",
       });
-      const startTime = new Date(nextStartTime).toLocaleTimeString("en-US", {
-        timeZone: "Asia/Manila",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const endTime = new Date(nextEndTime).toLocaleTimeString("en-US", {
-        timeZone: "Asia/Manila",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      const startTime = formatLabTime(nextStartTime);
+      const endTime = formatLabTime(nextEndTime);
 
       if (lines.length === 0) {
         lines.push(`Booking updated:`);

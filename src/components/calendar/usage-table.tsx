@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import type { Id } from "@convex/_generated/dataModel";
-import { format, setHours, setMinutes, startOfDay } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -24,7 +23,11 @@ import {
   HEADER_SLOTS,
   type CalendarMachineUsage as MachineUsage,
 } from "@/lib/calendar";
-import { getLabDecimalHour } from "@/lib/lab-time";
+import {
+  formatLabDecimalHour,
+  getCurrentTimestamp,
+  getLabDecimalHour,
+} from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 
 const SECTION_BG = "rgba(220,215,245,0.55)";
@@ -38,13 +41,7 @@ interface UsageTableProps {
 }
 
 function formatShortTime(decimalHour: number) {
-  const hours = Math.floor(decimalHour);
-  const minutes = (decimalHour % 1) * 60;
-
-  return format(
-    setMinutes(setHours(startOfDay(new Date()), hours), minutes),
-    minutes === 0 ? "ha" : "h:mm",
-  );
+  return formatLabDecimalHour(decimalHour);
 }
 
 function renderMachineStatusColor(status: "active" | "maintenance" | "free") {
@@ -72,7 +69,8 @@ function WorkshopMemberChip({
         "flex w-full items-center gap-2 overflow-hidden rounded-md border px-2 py-1 text-left shadow-sm transition-colors disabled:cursor-default",
         usage.slotClassName,
         usage.isPendingReview && "border-2 border-dashed",
-        canOpenProjectDetails && "cursor-pointer hover:ring-2 hover:ring-primary/20",
+        canOpenProjectDetails &&
+          "cursor-pointer hover:ring-2 hover:ring-primary/20",
       )}
     >
       <span
@@ -165,7 +163,8 @@ function StandardUsageCard({
       onClick={() => usage.projectId && onOpenProjectDetails?.(usage.projectId)}
       className={cn(
         "absolute z-[5] text-left disabled:cursor-default",
-        canOpenProjectDetails && "cursor-pointer transition-shadow hover:shadow-sm",
+        canOpenProjectDetails &&
+          "cursor-pointer transition-shadow hover:shadow-sm",
       )}
       style={{
         top: 3,
@@ -238,11 +237,13 @@ export function UsageTable({
   onOpenProjectDetails,
   leadingColumnLabel = "RESOURCES",
 }: UsageTableProps) {
-  const [nowDate, setNowDate] = React.useState<Date>(() => new Date());
-  const nowDecimal = getLabDecimalHour(nowDate);
+  const [nowTime, setNowTime] = React.useState<number>(() =>
+    getCurrentTimestamp(),
+  );
+  const nowDecimal = getLabDecimalHour(nowTime);
 
   React.useEffect(() => {
-    const tick = setInterval(() => setNowDate(new Date()), 60_000);
+    const tick = setInterval(() => setNowTime(getCurrentTimestamp()), 60_000);
     return () => clearInterval(tick);
   }, []);
 
@@ -414,15 +415,15 @@ export function UsageTable({
                 }
 
                 return (
-                    <div
-                      key={row.id}
-                      className="grid"
-                      style={{
-                        gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
-                        minHeight: row.rowHeight,
-                        height: "100%",
-                      }}
-                    >
+                  <div
+                    key={row.id}
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
+                      minHeight: row.rowHeight,
+                      height: "100%",
+                    }}
+                  >
                     <div
                       style={{
                         position: "sticky",

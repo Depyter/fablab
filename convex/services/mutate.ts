@@ -7,6 +7,7 @@ import {
   deleteFiles,
   slugify,
 } from "../helper";
+import { formatLabDateNumeric } from "../../src/lib/lab-time";
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -261,9 +262,9 @@ export const updateService = authMutation({
                   const usedUp = existingSlot.usedUpSlots || 0;
                   if (incomingSlot.maxSlots < usedUp) {
                     throw new ConvexError(
-                      `Cannot reduce max slots below used up slots (${usedUp}) for schedule on ${new Date(
+                      `Cannot reduce max slots below used up slots (${usedUp}) for schedule on ${formatLabDateNumeric(
                         incomingSchedule.date,
-                      ).toLocaleDateString()}`,
+                      )}`,
                     );
                   }
                   incomingSlot.usedUpSlots = usedUp;

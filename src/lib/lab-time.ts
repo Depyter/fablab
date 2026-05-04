@@ -43,6 +43,25 @@ function padLabDatePart(value: number) {
   return `${value}`.padStart(2, "0");
 }
 
+function parseLabClockTime(value: string) {
+  const [hourText, minuteText] = value.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    throw new Error(`Invalid lab time string: ${value}`);
+  }
+
+  return { hour, minute };
+}
+
 export function getLabDayDate(date: Date | number) {
   const { year, month, day } = getParts(date);
 
@@ -59,6 +78,14 @@ export function getLabDayStart(date: Date | number) {
   const { year, month, day } = getParts(date);
 
   return createLabDayStart(year, month, day);
+}
+
+export function getCurrentTimestamp() {
+  return Date.now();
+}
+
+export function getLabDayStartTimestamp(date: Date | number) {
+  return getLabDayStart(date).getTime();
 }
 
 export function addLabDays(date: Date | number, amount: number) {
@@ -136,6 +163,15 @@ export function getLabDayBounds(date: Date | number) {
   };
 }
 
+export function getLabDayBoundsMs(date: Date | number) {
+  const { start, endExclusive } = getLabDayBounds(date);
+
+  return {
+    startTime: start.getTime(),
+    endTime: endExclusive.getTime(),
+  };
+}
+
 export function formatLabDate(
   date: Date | number,
   options: Intl.DateTimeFormatOptions,
@@ -143,10 +179,50 @@ export function formatLabDate(
   return getFormatter(options).format(new Date(date));
 }
 
+export function formatLabDateNumeric(date: Date | number) {
+  return formatLabDate(date, {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+export function formatLabTime24(date: Date | number) {
+  return formatLabDate(date, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+export function formatLabClockTime(value: string) {
+  const { hour, minute } = parseLabClockTime(value);
+  const period = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+
+  return `${hour12}:${padLabDatePart(minute)} ${period}`;
+}
+
+export function formatLabDecimalHour(decimalHour: number) {
+  const baseHour = Math.floor(decimalHour);
+  const normalizedHour = ((baseHour % 24) + 24) % 24;
+  const minutes = Math.round((decimalHour - baseHour) * 60);
+  const hour12 = normalizedHour % 12 || 12;
+  const period = normalizedHour >= 12 ? "PM" : "AM";
+
+  return minutes === 0
+    ? `${hour12}${period}`
+    : `${hour12}:${padLabDatePart(minutes)}`;
+}
+
 export function getLabDayKey(date: Date | number) {
   const { year, month, day } = getParts(date);
 
   return `${year}-${`${month}`.padStart(2, "0")}-${`${day}`.padStart(2, "0")}`;
+}
+
+export function isSameLabDay(left: Date | number, right: Date | number) {
+  return getLabDayKey(left) === getLabDayKey(right);
 }
 
 export function getLabDecimalHour(date: Date | number) {
@@ -167,6 +243,49 @@ export function formatLabTime(date: Date | number) {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+export function getLabTimeTimestamp(date: Date | number, time: string) {
+  const { year, month, day } = getParts(date);
+  const { hour, minute } = parseLabClockTime(time);
+
+  return new Date(
+    `${year}-${padLabDatePart(month)}-${padLabDatePart(day)}T${padLabDatePart(hour)}:${padLabDatePart(minute)}:00+08:00`,
+  ).getTime();
+}
+
+export function getLabTimeRangeTimestamps(args: {
+  date: Date | number;
+  startTime: string;
+  endTime: string;
+}) {
+  return {
+    date: getLabDayStartTimestamp(args.date),
+    startTime: getLabTimeTimestamp(args.date, args.startTime),
+    endTime: getLabTimeTimestamp(args.date, args.endTime),
+  };
+}
+
+export function isLabDateBeforeToday(
+  date: Date | number,
+  referenceTime = Date.now(),
+) {
+  return getLabDayStartTimestamp(date) < getLabDayStartTimestamp(referenceTime);
+}
+
+export function isLabTimeInPast(
+  date: Date | number,
+  time: string,
+  referenceTime = Date.now(),
+) {
+  return getLabTimeTimestamp(date, time) < referenceTime;
+}
+
+export function getLabTimeBlock(args: { startTime: number; endTime: number }) {
+  return {
+    start: formatLabTime24(args.startTime),
+    end: formatLabTime24(args.endTime),
+  };
 }
 
 export function isSameLabMonth(left: Date | number, right: Date | number) {

@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
 import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
 import { Step2ProjectDetails } from "./step-2-project-details";
@@ -20,6 +19,12 @@ import {
 } from "@convex/constants";
 import { WorkshopSchedule } from "./workshop-time-slot-picker";
 import { type ServicePricing } from "@/lib/project-pricing";
+import {
+  getCurrentTimestamp,
+  getLabDayStartTimestamp,
+  getLabTimeBlock,
+  getLabTimeRangeTimestamps,
+} from "@/lib/lab-time";
 import posthog from "posthog-js";
 
 type BookingServiceMaterial = {
@@ -116,24 +121,17 @@ export function BookingDialog({
 
       setIsSubmitting(true);
       try {
-        const year = value.dateTime.date.getFullYear();
-        const month = value.dateTime.date.getMonth() + 1;
-        const day = value.dateTime.date.getDate();
-        const dateString = `${month}/${day}/${year}`;
-        const baseDate = new Date(`${dateString} 00:00:00 GMT+0800`);
-        const bookingDateTs = value.dateTime.originalDate ?? baseDate.getTime();
+        const labRange = getLabTimeRangeTimestamps({
+          date: value.dateTime.date,
+          startTime: value.dateTime.startTime,
+          endTime: value.dateTime.endTime,
+        });
+        const bookingDateTs = value.dateTime.originalDate ?? labRange.date;
+        const startTimeTs =
+          value.dateTime.originalStartTime ?? labRange.startTime;
+        const endTimeTs = value.dateTime.originalEndTime ?? labRange.endTime;
 
-        const [startH, startM] = value.dateTime.startTime.split(":");
-        const startDate = new Date(
-          `${dateString} ${startH}:${startM}:00 GMT+0800`,
-        );
-        const startTimeTs = startDate.getTime();
-
-        const [endH, endM] = value.dateTime.endTime.split(":");
-        const endDate = new Date(`${dateString} ${endH}:${endM}:00 GMT+0800`);
-        const endTimeTs = endDate.getTime();
-
-        if (startTimeTs < Date.now()) {
+        if (startTimeTs < getCurrentTimestamp()) {
           toast.error("Cannot book a date or time in the past.");
           setIsSubmitting(false);
           return;
@@ -225,12 +223,7 @@ export function BookingDialog({
   );
   let queryDateTs: number | undefined;
   if (selectedDateRaw) {
-    const year = selectedDateRaw.getFullYear();
-    const month = selectedDateRaw.getMonth() + 1;
-    const day = selectedDateRaw.getDate();
-    queryDateTs = new Date(
-      `${month}/${day}/${year} 00:00:00 GMT+0800`,
-    ).getTime();
+    queryDateTs = getLabDayStartTimestamp(selectedDateRaw);
   }
 
   const bookedTimeSlotsRaw = useQuery(
@@ -240,18 +233,7 @@ export function BookingDialog({
 
   const bookedTimeBlocks = (bookedTimeSlotsRaw || []).map(
     (slot: { startTime: number; endTime: number }) => ({
-      start: new Date(slot.startTime).toLocaleTimeString("en-US", {
-        timeZone: "Asia/Manila",
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      end: new Date(slot.endTime).toLocaleTimeString("en-US", {
-        timeZone: "Asia/Manila",
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      ...getLabTimeBlock(slot),
     }),
   );
 

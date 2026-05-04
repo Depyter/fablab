@@ -1,7 +1,5 @@
 "use client";
 
-import { format, setHours, setMinutes, startOfDay } from "date-fns";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
@@ -24,6 +22,7 @@ import {
   DAY_START,
   HEADER_SLOTS,
 } from "@/lib/calendar";
+import { formatLabDecimalHour } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 import { BookingCalendarToolbarSkeleton } from "./booking-calendar-toolbar";
 
@@ -150,13 +149,7 @@ const RESOURCE_DAY_LOADING_ROWS: DayLoadingRow[] = [
 ];
 
 function formatLoadingTime(decimalHour: number) {
-  const hours = Math.floor(decimalHour);
-  const minutes = (decimalHour % 1) * 60;
-
-  return format(
-    setMinutes(setHours(startOfDay(new Date()), hours), minutes),
-    minutes === 0 ? "ha" : "h:mm",
-  );
+  return formatLabDecimalHour(decimalHour);
 }
 
 function getDayLoadingRows(activeTab: CalendarTab) {

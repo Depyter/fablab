@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { publicQuery } from "../helper";
 import type { Id } from "../_generated/dataModel";
+import { getLabDayBoundsMs } from "../../src/lib/lab-time";
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -141,13 +142,14 @@ export const getBookedTimeSlots = publicQuery({
     date: v.number(),
   },
   handler: async (ctx, args) => {
+    const dayBounds = getLabDayBoundsMs(args.date);
     const usages = await ctx.db
       .query("resourceUsage")
       .withIndex("by_service", (q) => q.eq("service", args.serviceId))
       .filter((q) =>
         q.and(
-          q.gte(q.field("startTime"), args.date),
-          q.lt(q.field("startTime"), args.date + 24 * 60 * 60 * 1000),
+          q.gte(q.field("startTime"), dayBounds.startTime),
+          q.lt(q.field("startTime"), dayBounds.endTime),
         ),
       )
       .collect();

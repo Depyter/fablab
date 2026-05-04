@@ -36,4 +36,16 @@ describe("calendar state", () => {
     expect(getVisibleRange(nextWeek, "week").label).toBe("May 11 - May 17");
     expect(getVisibleRange(previousWeek, "week").label).toBe("Apr 27 - May 3");
   });
+
+  test("month view expands to full lab weeks around the selected month", () => {
+    const selectedDate = new Date(2026, 4, 6, 15, 30);
+    const range = getVisibleRange(selectedDate, "month");
+
+    expect(range.label).toBe("May 2026");
+    expect(getLabDayKey(range.start)).toBe("2026-04-27");
+    expect(getLabDayKey(range.endExclusive)).toBe("2026-06-01");
+    expect(range.days).toHaveLength(35);
+    expect(getLabDayKey(range.days[0])).toBe("2026-04-27");
+    expect(getLabDayKey(range.days[34])).toBe("2026-05-31");
+  });
 });
