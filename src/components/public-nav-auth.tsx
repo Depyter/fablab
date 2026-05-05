@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
+import { buildCurrentPath, buildLoginHref } from "@/lib/auth-redirect";
 
 type PublicNavAuthProps = {
   dashboardClassName: string;
@@ -19,6 +21,10 @@ export function PublicNavAuth({
   onNavigate,
   compact = false,
 }: PublicNavAuthProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
+
   const renderLabel = (label: string) =>
     compact ? (
       <span className="block text-center text-base font-black uppercase leading-none tracking-tighter">
@@ -43,7 +49,7 @@ export function PublicNavAuth({
         </Link>
       </Authenticated>
       <Unauthenticated>
-        <Link href="/login" className={loginClassName} onClick={onNavigate}>
+        <Link href={loginHref} className={loginClassName} onClick={onNavigate}>
           {renderLabel("Login")}
         </Link>
       </Unauthenticated>
