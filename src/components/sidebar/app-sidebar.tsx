@@ -37,7 +37,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-              <Link href="/dashboard" aria-label="IskoLab home">
+              <Link href="/dashboard/chat" aria-label="IskoLab home">
                 <div
                   className="flex aspect-square size-8 items-center justify-center rounded-lg shrink-0"
                   style={{ background: "var(--fab-magenta)" }}

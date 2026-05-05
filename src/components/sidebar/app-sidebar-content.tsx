@@ -8,7 +8,8 @@ import {
   FolderIcon,
   WrenchIcon,
   PackageIcon,
-  BarChart2Icon,
+  // BarChart2Icon,
+  UsersIcon,
 } from "lucide-react";
 import {
   SidebarContent,
@@ -81,14 +82,23 @@ const allNavItems: NavItem[] = [
     group: "manage",
   },
   {
-    title: "Reports",
-    url: "#",
-    icon: <BarChart2Icon />,
-    iconBackground: "var(--fab-bg-deep)",
-    iconColor: "var(--fab-text-muted)",
-    roles: ["admin", "maker"],
-    group: "reports",
+    title: "Users",
+    url: "/dashboard/users",
+    icon: <UsersIcon />,
+    iconBackground: "var(--fab-bg-main)",
+    iconColor: "var(--fab-magenta)",
+    roles: ["admin"],
+    group: "manage",
   },
+  // {
+  //   title: "Reports",
+  //   url: "#",
+  //   icon: <BarChart2Icon />,
+  //   iconBackground: "var(--fab-bg-deep)",
+  //   iconColor: "var(--fab-text-muted)",
+  //   roles: ["admin", "maker"],
+  //   group: "reports",
+  // },
 ];
 
 function filterNavItems(items: NavItem[], role: Role): NavItem[] {

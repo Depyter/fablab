@@ -1139,7 +1139,7 @@ export async function scheduleProjectUpdateEmail(
     scheduledDate,
     estimatedTime,
     notes: project.notes,
-    dashboardUrl: "https://fablab.harleyvan.com/dashboard",
+    dashboardUrl: "https://fablab.harleyvan.com/dashboard/chat",
     pricing: {
       setupFee: pricingResult.setupFee,
       materialCost: pricingResult.materialCost,

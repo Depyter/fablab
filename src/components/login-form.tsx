@@ -34,7 +34,7 @@ export function LoginForm({
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: `${window.location.origin}/dashboard`,
+        callbackURL: `${window.location.origin}/dashboard/chat`,
       });
     } catch (error) {
       console.error("Google sign in error:", error);
@@ -47,7 +47,7 @@ export function LoginForm({
   //   try {
   //     await authClient.signIn.social({
   //       provider: "github",
-  //       callbackURL: "/dashboard", // Redirect after successful login
+  //       callbackURL: "/dashboard/chat", // Redirect after successful login
   //     });
   //   } catch (error) {
   //     console.error("GitHub sign in error:", error);

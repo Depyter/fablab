@@ -392,7 +392,6 @@ export function FabLabEmail({
   machine = "Laser Cutter (CO₂ 60W)",
   scheduledDate = "May 2, 2026",
   estimatedTime = "2 hrs 30 min",
-  dashboardUrl = "https://fablab.harleyvan.com/dashboard/projects",
   status = ProjectStatus.PENDING,
   notes,
   pricing = {
