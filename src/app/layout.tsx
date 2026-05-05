@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,10 +9,6 @@ const robotoMono = Roboto_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
-
-export const viewport: Viewport = {
-  viewportFit: "cover",
-};
 
 export const metadata: Metadata = {
   title: "IskoLab | Fablab UP Cebu",
