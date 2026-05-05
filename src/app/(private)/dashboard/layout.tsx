@@ -15,7 +15,7 @@ export default async function DashBoardLayout({
       <SidebarProvider className="flex h-screen">
         <AppSidebar preloadedProfile={preloadedProfile} />
         <SidebarInset className="flex flex-col h-full overflow-hidden">
-          <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto pb-safe">
+          <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
             {children}
           </div>
         </SidebarInset>
