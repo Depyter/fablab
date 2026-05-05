@@ -214,8 +214,8 @@ export function ChatInputSkeleton() {
 export function ChatThreadLoading() {
   return (
     <div
-      className="relative flex min-h-0 flex-col overflow-hidden"
-      style={{ background: "var(--fab-bg-main)", height: "100dvh" }}
+      className="relative flex h-full min-h-0 flex-col overflow-hidden"
+      style={{ background: "var(--fab-bg-main)" }}
     >
       <ChatHeaderSkeleton />
 

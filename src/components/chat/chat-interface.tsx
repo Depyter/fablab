@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Send, User, Hash, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -27,18 +27,6 @@ const AVATAR_COLORS = [
   "#534AB7",
   "#0FA896",
 ];
-
-function getVisualViewportBottomInset() {
-  if (typeof window === "undefined") return 0;
-
-  const viewport = window.visualViewport;
-  if (!viewport) return 0;
-
-  return Math.max(
-    0,
-    window.innerHeight - viewport.height - viewport.offsetTop,
-  );
-}
 
 function getAvatarColor(name: string): string {
   let hash = 0;
@@ -85,7 +73,6 @@ export function ChatInterface({
   showBackButton,
 }: ChatInterfaceProps) {
   const [showTimeId, setShowTimeId] = useState<string | null>(null);
-  const [composerViewportInset, setComposerViewportInset] = useState(0);
 
   const {
     input,
@@ -108,25 +95,6 @@ export function ChatInterface({
     handleUploadError,
     removeAttachment,
   } = useChat({ roomId, threadId });
-
-  useEffect(() => {
-    const syncComposerInset = () => {
-      setComposerViewportInset(getVisualViewportBottomInset());
-    };
-
-    syncComposerInset();
-
-    const viewport = window.visualViewport;
-    window.addEventListener("resize", syncComposerInset);
-    viewport?.addEventListener("resize", syncComposerInset);
-    viewport?.addEventListener("scroll", syncComposerInset);
-
-    return () => {
-      window.removeEventListener("resize", syncComposerInset);
-      viewport?.removeEventListener("resize", syncComposerInset);
-      viewport?.removeEventListener("scroll", syncComposerInset);
-    };
-  }, []);
 
   return (
     <div
@@ -603,7 +571,7 @@ export function ChatInterface({
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           borderTop: "1px solid var(--fab-border)",
-          paddingBottom: `calc(env(safe-area-inset-bottom) + 1rem + ${composerViewportInset}px)`,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)",
         }}
       >
         {/* ── Pending attachments ───────────────────────────────────────── */}
