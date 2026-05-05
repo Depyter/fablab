@@ -2,9 +2,7 @@
 
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { ChevronLeft, CirclePercent } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { CirclePercent } from "lucide-react";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
 import { BookingDialog } from "@/components/booking/dialog-form";
@@ -94,21 +92,6 @@ export function ServiceDetailClient({
       <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-25" />
       <div className="pointer-events-none absolute -left-24 top-12 h-72 w-72 rounded-full bg-fab-magenta/10 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-40 h-80 w-80 rounded-full bg-fab-teal/10 blur-3xl" />
-
-      <header className="relative z-10 border-b-8 border-black bg-background">
-        <div className="container mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5 sm:py-6">
-          <Link href="/services">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="group h-auto gap-2 border-0 bg-transparent px-0 py-0 text-[10px] font-black uppercase tracking-[0.35em] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-              Back to Services
-            </Button>
-          </Link>
-        </div>
-      </header>
 
       <section className="relative z-10 border-b-8 border-black bg-fab-amber/20">
         <div className="container mx-auto grid max-w-7xl lg:grid-cols-[1.15fr_0.85fr]">
@@ -358,12 +341,6 @@ export function ServiceDetailClient({
           </div>
         </div>
       </section>
-
-      <footer className="relative z-10 border-t-8 border-black bg-background py-16 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/30">
-          Built for Makers at Fablab
-        </p>
-      </footer>
     </main>
   );
 }
