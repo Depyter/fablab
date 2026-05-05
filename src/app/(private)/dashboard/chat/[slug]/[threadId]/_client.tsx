@@ -31,7 +31,10 @@ export function ChatThreadClient({
   }
 
   return (
-    <div className="flex h-full overflow-hidden min-h-0 relative">
+    <div
+      className="relative flex overflow-hidden"
+      style={{ height: "100dvh" }}
+    >
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
         <div className="flex-1 min-h-0 bg-background">
           <ChatInterface

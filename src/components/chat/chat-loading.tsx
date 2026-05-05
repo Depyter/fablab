@@ -156,12 +156,13 @@ export function ChatHeaderSkeleton() {
 export function ChatInputSkeleton() {
   return (
     <div
-      className="sticky bottom-0 z-10 px-4 pb-4 pt-2 shrink-0"
+      className="sticky bottom-0 z-10 px-4 pt-2 shrink-0"
       style={{
         background: "rgba(250,249,255,0.92)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
         borderTop: "1px solid var(--fab-border)",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)",
       }}
     >
       <div
@@ -213,8 +214,8 @@ export function ChatInputSkeleton() {
 export function ChatThreadLoading() {
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col overflow-hidden"
-      style={{ background: "var(--fab-bg-main)" }}
+      className="relative flex min-h-0 flex-col overflow-hidden"
+      style={{ background: "var(--fab-bg-main)", height: "100dvh" }}
     >
       <ChatHeaderSkeleton />
 
@@ -232,7 +233,13 @@ export function ChatThreadLoading() {
       />
 
       {/* Messages area */}
-      <div className="relative z-[1] flex-1 overflow-y-auto px-4 py-4">
+      <div
+        className="relative z-[1] flex-1 overflow-y-auto px-4 py-4"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+        }}
+      >
         <ChatMessagesSkeletonList />
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Send, User, Hash, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -27,6 +27,18 @@ const AVATAR_COLORS = [
   "#534AB7",
   "#0FA896",
 ];
+
+function getVisualViewportBottomInset() {
+  if (typeof window === "undefined") return 0;
+
+  const viewport = window.visualViewport;
+  if (!viewport) return 0;
+
+  return Math.max(
+    0,
+    window.innerHeight - viewport.height - viewport.offsetTop,
+  );
+}
 
 function getAvatarColor(name: string): string {
   let hash = 0;
@@ -73,6 +85,7 @@ export function ChatInterface({
   showBackButton,
 }: ChatInterfaceProps) {
   const [showTimeId, setShowTimeId] = useState<string | null>(null);
+  const [composerViewportInset, setComposerViewportInset] = useState(0);
 
   const {
     input,
@@ -96,9 +109,28 @@ export function ChatInterface({
     removeAttachment,
   } = useChat({ roomId, threadId });
 
+  useEffect(() => {
+    const syncComposerInset = () => {
+      setComposerViewportInset(getVisualViewportBottomInset());
+    };
+
+    syncComposerInset();
+
+    const viewport = window.visualViewport;
+    window.addEventListener("resize", syncComposerInset);
+    viewport?.addEventListener("resize", syncComposerInset);
+    viewport?.addEventListener("scroll", syncComposerInset);
+
+    return () => {
+      window.removeEventListener("resize", syncComposerInset);
+      viewport?.removeEventListener("resize", syncComposerInset);
+      viewport?.removeEventListener("scroll", syncComposerInset);
+    };
+  }, []);
+
   return (
     <div
-      className="flex flex-col h-full relative overflow-hidden"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden"
       style={{ background: "var(--fab-bg-main)" }}
     >
       {/* ── Sticky channel header ────────────────────────────────────────── */}
@@ -155,6 +187,10 @@ export function ChatInterface({
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 py-4 relative z-2"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+        }}
       >
         {isLoading ? (
           <ChatMessagesSkeletonList />
@@ -561,12 +597,13 @@ export function ChatInterface({
       {/* Input area — sticky bottom                                          */}
       {/* ------------------------------------------------------------------ */}
       <div
-        className="sticky bottom-0 z-10 px-4 pb-4 pt-2 shrink-0"
+        className="sticky bottom-0 z-10 px-4 pt-2 shrink-0"
         style={{
           background: "rgba(250,249,255,0.92)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           borderTop: "1px solid var(--fab-border)",
+          paddingBottom: `calc(env(safe-area-inset-bottom) + 1rem + ${composerViewportInset}px)`,
         }}
       >
         {/* ── Pending attachments ───────────────────────────────────────── */}
