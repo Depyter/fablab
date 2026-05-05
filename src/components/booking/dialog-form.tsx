@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
 import { Step2ProjectDetails } from "./step-2-project-details";
@@ -25,6 +25,7 @@ import {
   getLabTimeBlock,
   getLabTimeRangeTimestamps,
 } from "@/lib/lab-time";
+import { buildCurrentPath, buildLoginHref } from "@/lib/auth-redirect";
 import posthog from "posthog-js";
 
 type BookingServiceMaterial = {
@@ -85,7 +86,9 @@ export function BookingDialog({
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
   );
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated } = useConvexAuth();
   const [step, setStep] = useState<Step>(
     serviceCategory === "WORKSHOP" ? 2 : 1,
@@ -95,6 +98,7 @@ export function BookingDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
+  const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
 
   const isUnauthenticatedBookingError = (error: unknown) => {
     const message =
@@ -181,7 +185,7 @@ export function BookingDialog({
         if (isUnauthenticatedBookingError(error)) {
           toast.error("You must be logged in to create a booking.");
           setIsOpen(false);
-          router.push("/login");
+          router.push(loginHref);
           return;
         }
         toast.error(
@@ -189,7 +193,7 @@ export function BookingDialog({
         );
       }
     },
-    [serviceCategory, serviceId, serviceName, createProject, router],
+    [serviceCategory, serviceId, serviceName, createProject, loginHref, router],
   );
 
   const form = useAppForm({
@@ -267,7 +271,7 @@ export function BookingDialog({
   const handleCreateBookingClick = async () => {
     if (!isAuthenticated) {
       toast.error("You must be logged in to create a booking.");
-      router.push("/login");
+      router.push(loginHref);
       return;
     }
 

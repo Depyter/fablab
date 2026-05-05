@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { authClient } from "../lib/auth-client";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { getSafeReturnTo } from "@/lib/auth-redirect";
 
 export function LoginForm({
   className,
@@ -12,6 +14,8 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const redirectTo = getSafeReturnTo(searchParams.get("redirectTo"));
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +25,7 @@ export function LoginForm({
       await authClient.signIn.email({
         email,
         password,
+        callbackURL: redirectTo,
       });
       setIsLoading(false);
     } catch (error) {
@@ -34,7 +39,7 @@ export function LoginForm({
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: `${window.location.origin}/dashboard/chat`,
+        callbackURL: new URL(redirectTo, window.location.origin).toString(),
       });
     } catch (error) {
       console.error("Google sign in error:", error);
