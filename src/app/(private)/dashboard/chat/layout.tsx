@@ -12,7 +12,7 @@ export default function ChatLayout({
 }) {
   return (
     <ChatRoomsProvider>
-      <div className="flex h-full min-h-0">
+      <div className="flex h-full min-h-0 overflow-hidden">
         <ChatSidebarPane>
           <ChatSidebar className="h-full" />
         </ChatSidebarPane>
