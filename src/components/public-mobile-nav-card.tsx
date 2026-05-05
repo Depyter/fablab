@@ -124,7 +124,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
 
   return (
     <div ref={rootRef} className="pointer-events-auto sm:hidden">
-      <div className="relative z-[210] flex items-center justify-end">
+      <div className="relative z-20 flex items-center justify-end">
         <button
           type="button"
           aria-expanded={open}
@@ -163,7 +163,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
 
       <div
         className={cn(
-          "fixed inset-0 z-[190] sm:hidden",
+          "fixed inset-0 z-10 sm:hidden",
           open ? "pointer-events-auto" : "pointer-events-none",
         )}
         aria-hidden={!open}

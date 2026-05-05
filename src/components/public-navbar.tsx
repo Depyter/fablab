@@ -25,7 +25,7 @@ const desktopNavLinkClass =
 
 export function PublicNavbar() {
   return (
-    <header className="fixed top-0 left-0 z-[200] h-20 w-full sm:sticky sm:h-16 sm:border-b sm:border-black sm:bg-background sm:shadow-none sm:backdrop-blur-none">
+    <header className="fixed top-0 left-0 z-40 h-20 w-full sm:sticky sm:h-16 sm:border-b sm:border-black sm:bg-background sm:shadow-none sm:backdrop-blur-none">
       <div className="mx-auto flex h-full max-w-full items-center justify-between px-4 sm:px-10 lg:px-16">
         <div className="flex items-center gap-3">
           <Link
