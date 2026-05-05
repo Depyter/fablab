@@ -33,6 +33,8 @@ interface ProjectInfoCardProps {
   bookingDateStr: string;
   bookingTimeRange: string;
   resolvedFiles?: ResolvedFile[] | null;
+  submittedBy?: string | null;
+  submittedAt?: number | null;
 
   // Edit controls
   canEdit: boolean;
@@ -64,6 +66,8 @@ export function ProjectInfoCard({
   bookingDateStr,
   bookingTimeRange,
   resolvedFiles,
+  submittedBy,
+  submittedAt,
   canEdit,
   isEditing,
   isSaving,
@@ -275,6 +279,40 @@ export function ProjectInfoCard({
             {notes || "No notes provided"}
           </p>
         )}
+      </div>
+
+      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
+
+      {/* Submitted by / at */}
+      <div className="grid min-w-0 grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <p
+            className="text-[10px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: "var(--fab-text-dim)" }}
+          >
+            Submitted By
+          </p>
+          <p className="text-sm" style={{ color: "var(--fab-text-primary)" }}>
+            {submittedBy ?? "—"}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p
+            className="text-[10px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: "var(--fab-text-dim)" }}
+          >
+            Submitted On
+          </p>
+          <p className="text-sm" style={{ color: "var(--fab-text-primary)" }}>
+            {submittedAt
+              ? new Date(submittedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "—"}
+          </p>
+        </div>
       </div>
     </DetailCard>
   );

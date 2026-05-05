@@ -433,6 +433,8 @@ export function ProjectDetailsContent({
               bookingDateStr={bookingDateStr}
               bookingTimeRange={bookingTimeRange}
               resolvedFiles={project.resolvedFiles}
+              submittedBy={project.client?.name}
+              submittedAt={project.requestedDate}
               canEdit={canEdit}
               isEditing={isEditing}
               isSaving={isSaving}
