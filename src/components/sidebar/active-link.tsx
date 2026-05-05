@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 
 export function ActiveLink({
   href,
@@ -18,6 +18,7 @@ export function ActiveLink({
 }) {
   const pathname = usePathname();
   const isActive = href !== "#" && pathname.startsWith(href);
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <SidebarMenuButton
@@ -26,7 +27,11 @@ export function ActiveLink({
       isActive={isActive}
       className="px-2.5 md:px-2"
     >
-      <Link href={href} style={style}>
+      <Link
+        href={href}
+        style={style}
+        onClick={() => isMobile && setOpenMobile(false)}
+      >
         {children}
       </Link>
     </SidebarMenuButton>
