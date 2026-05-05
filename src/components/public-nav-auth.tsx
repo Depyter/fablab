@@ -35,7 +35,7 @@ export function PublicNavAuth({
       </AuthLoading>
       <Authenticated>
         <Link
-          href="/dashboard"
+          href="/dashboard/chat"
           className={dashboardClassName}
           onClick={onNavigate}
         >

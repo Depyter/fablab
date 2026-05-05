@@ -10,7 +10,7 @@ export default async function StaffLayout({
   const profile = await getUserProfile();
 
   if (!profile || profile.role === "client") {
-    redirect("/dashboard");
+    redirect("/dashboard/chat");
   }
 
   return (

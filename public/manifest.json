@@ -2,7 +2,7 @@
   "name": "IskoLab",
   "short_name": "IskoLab",
   "description": "FabLab management and collaboration platform for creators.",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard/chat",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

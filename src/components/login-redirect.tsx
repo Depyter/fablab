@@ -10,7 +10,7 @@ export function LoginRedirect() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/dashboard");
+      router.replace("/dashboard/chat");
     }
   }, [isAuthenticated, isLoading, router]);
 

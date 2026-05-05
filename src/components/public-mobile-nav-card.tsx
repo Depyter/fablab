@@ -32,7 +32,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
   const primaryItems = [
     ...items,
     {
-      href: "/dashboard",
+      href: "/dashboard/chat",
       label: "Dashboard",
       mobileClassName:
         "bg-fab-magenta text-white hover:bg-fab-amber hover:text-black",
