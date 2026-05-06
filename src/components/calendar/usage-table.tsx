@@ -6,14 +6,17 @@ import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import type { Id } from "@convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
 import {
   buildCalendarDayScheduleRows,
-  CALENDAR_DAY_LAYOUT_TEMPLATE,
+  CALENDAR_DAY_HEADER_HEIGHT,
+  CALENDAR_DAY_ROW_HEIGHT,
+  CALENDAR_DAY_SECTION_HEIGHT,
   CALENDAR_DAY_LEADING_COL_WIDTH,
-  CALENDAR_DAY_MIN_WIDTH,
-  CALENDAR_DAY_TIMELINE_TEMPLATE,
+  CALENDAR_DAY_SLOT_WIDTH,
+  CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
   getCalendarDayNowIndicatorLeft,
   getCalendarDayUsagePosition,
   isWorkshopTrackEntry,
@@ -53,9 +56,11 @@ function renderMachineStatusColor(status: "active" | "maintenance" | "free") {
 
 function WorkshopMemberChip({
   usage,
+  compact = false,
   onOpenProjectDetails,
 }: {
   usage: MachineUsage;
+  compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }) {
   const canOpenProjectDetails =
@@ -67,7 +72,8 @@ function WorkshopMemberChip({
       disabled={!canOpenProjectDetails}
       onClick={() => usage.projectId && onOpenProjectDetails?.(usage.projectId)}
       className={cn(
-        "flex w-full items-center gap-2 overflow-hidden rounded-md border px-2 py-1 text-left shadow-sm transition-colors disabled:cursor-default",
+        "flex w-full items-center gap-2 overflow-hidden rounded-md border text-left shadow-sm transition-colors disabled:cursor-default",
+        compact ? "px-1.5 py-0.5" : "px-2 py-1",
         usage.slotClassName,
         usage.isPendingReview && "border-2 border-dashed",
         canOpenProjectDetails &&
@@ -76,12 +82,26 @@ function WorkshopMemberChip({
     >
       <span
         aria-hidden
-        className={cn("h-2 w-2 shrink-0 rounded-full", usage.accentClassName)}
+        className={cn(
+          "shrink-0 rounded-full",
+          compact ? "h-1.5 w-1.5" : "h-2 w-2",
+          usage.accentClassName,
+        )}
       />
-      <span className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate font-semibold leading-tight",
+          compact ? "text-[10px]" : "text-[11px]",
+        )}
+      >
         {usage.clientName}
       </span>
-      <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+      <span
+        className={cn(
+          "shrink-0 font-bold uppercase tracking-[0.06em] text-muted-foreground",
+          compact ? "text-[8px]" : "text-[9px]",
+        )}
+      >
         {PROJECT_STATUS_LABELS[usage.projectStatus]}
       </span>
     </button>
@@ -91,37 +111,59 @@ function WorkshopMemberChip({
 function WorkshopSlotCard({
   entry,
   position,
+  compact = false,
   onOpenProjectDetails,
 }: {
   entry: Extract<CalendarDayTrackEntry, { kind: "workshop" }>;
   position: { left: string; width: string };
+  compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }) {
-  const visibleMembers = entry.members.slice(0, 4);
+  const visibleMembers = entry.members.slice(0, compact ? 2 : 4);
   const hiddenMemberCount = entry.members.length - visibleMembers.length;
 
   return (
     <div
       className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200 bg-blue-50/95 text-left shadow-sm"
       style={{
-        top: 4,
-        bottom: 4,
+        top: compact ? 2 : 4,
+        bottom: compact ? 2 : 4,
         left: `calc(${position.left} + 2px)`,
         width: `max(0px, calc(${position.width} - 4px))`,
       }}
     >
-      <div className="flex h-full flex-col gap-1.5 overflow-hidden px-2.5 py-2">
+      <div
+        className={cn(
+          "flex h-full flex-col overflow-hidden",
+          compact ? "gap-1 px-1.5 py-1" : "gap-1.5 px-2.5 py-2",
+        )}
+      >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-[11px] font-bold uppercase tracking-[0.08em] text-blue-900">
+            <div
+              className={cn(
+                "truncate font-bold uppercase tracking-[0.08em] text-blue-900",
+                compact ? "text-[10px]" : "text-[11px]",
+              )}
+            >
               Workshop Slot
             </div>
-            <div className="truncate text-[10px] text-blue-800/80">
+            <div
+              className={cn(
+                "truncate text-blue-800/80",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+            >
               {entry.bookingCount} booked
               {entry.pendingCount > 0 ? ` · ${entry.pendingCount} pending` : ""}
             </div>
           </div>
-          <div className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-900 shadow-sm">
+          <div
+            className={cn(
+              "shrink-0 rounded-full bg-white/80 font-semibold text-blue-900 shadow-sm",
+              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]",
+            )}
+          >
             {formatShortTime(entry.startTime)}-{formatShortTime(entry.endTime)}
           </div>
         </div>
@@ -131,11 +173,17 @@ function WorkshopSlotCard({
             <WorkshopMemberChip
               key={member.id}
               usage={member}
+              compact={compact}
               onOpenProjectDetails={onOpenProjectDetails}
             />
           ))}
           {hiddenMemberCount > 0 ? (
-            <div className="px-1 text-[10px] font-medium text-blue-900/75">
+            <div
+              className={cn(
+                "px-1 font-medium text-blue-900/75",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+            >
               +{hiddenMemberCount} more booked
             </div>
           ) : null}
@@ -148,10 +196,12 @@ function WorkshopSlotCard({
 function StandardUsageCard({
   usage,
   position,
+  compact = false,
   onOpenProjectDetails,
 }: {
   usage: MachineUsage;
   position: { left: string; width: string };
+  compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }) {
   const canOpenProjectDetails =
@@ -168,15 +218,16 @@ function StandardUsageCard({
           "cursor-pointer transition-shadow hover:shadow-sm",
       )}
       style={{
-        top: 3,
-        bottom: 3,
+        top: compact ? 2 : 3,
+        bottom: compact ? 2 : 3,
         left: `calc(${position.left} + 2px)`,
         width: `max(0px, calc(${position.width} - 4px))`,
       }}
     >
       <div
         className={cn(
-          "flex h-full items-center justify-center overflow-hidden rounded-md border px-2 py-1 shadow-sm",
+          "flex h-full items-center justify-center overflow-hidden rounded-md border shadow-sm",
+          compact ? "px-1 py-0.5" : "px-2 py-1",
           usage.slotClassName,
           usage.isPendingReview && "border-2 border-dashed opacity-80",
           canOpenProjectDetails && "hover:ring-2 hover:ring-primary/20",
@@ -184,7 +235,7 @@ function StandardUsageCard({
       >
         <span
           className="w-full truncate text-center font-semibold leading-tight"
-          style={{ fontSize: 12 }}
+          style={{ fontSize: compact ? 10 : 12 }}
         >
           {usage.projectAlias}
         </span>
@@ -196,9 +247,11 @@ function StandardUsageCard({
 function DayNowIndicator({
   left,
   showArrow = false,
+  compact = false,
 }: {
   left: string;
   showArrow?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div
@@ -208,7 +261,7 @@ function DayNowIndicator({
         left,
         top: 0,
         bottom: 0,
-        width: 2,
+        width: compact ? 1 : 2,
         background: "var(--fab-magenta)",
         zIndex: 6,
         pointerEvents: "none",
@@ -219,12 +272,12 @@ function DayNowIndicator({
           style={{
             position: "absolute",
             top: -1,
-            left: -4,
+            left: compact ? -3 : -4,
             width: 0,
             height: 0,
-            borderLeft: "5px solid transparent",
-            borderRight: "5px solid transparent",
-            borderTop: "7px solid var(--fab-magenta)",
+            borderLeft: `${compact ? 4 : 5}px solid transparent`,
+            borderRight: `${compact ? 4 : 5}px solid transparent`,
+            borderTop: `${compact ? 6 : 7}px solid var(--fab-magenta)`,
           }}
         />
       ) : null}
@@ -238,6 +291,7 @@ export function UsageTable({
   onOpenProjectDetails,
   leadingColumnLabel = "RESOURCES",
 }: UsageTableProps) {
+  const isMobile = useIsMobile();
   const [nowTime, setNowTime] = React.useState<number>(() =>
     getCurrentTimestamp(),
   );
@@ -253,9 +307,23 @@ export function UsageTable({
     usages,
     nowDecimal,
   });
+  const dayLeadingColWidth = isMobile ? 96 : CALENDAR_DAY_LEADING_COL_WIDTH;
+  const daySlotWidth = isMobile ? 24 : CALENDAR_DAY_SLOT_WIDTH;
+  const dayHeaderHeight = isMobile ? 34 : CALENDAR_DAY_HEADER_HEIGHT;
+  const dayTimelineMinWidth = HEADER_SLOTS.length * daySlotWidth;
+  const dayMinWidth = dayLeadingColWidth + dayTimelineMinWidth;
+  const dayTimelineTemplate = `repeat(${HEADER_SLOTS.length}, minmax(${daySlotWidth}px, 1fr))`;
+  const dayLayoutTemplate = `minmax(${dayLeadingColWidth}px, ${isMobile ? 2.2 : 3}fr) minmax(${dayTimelineMinWidth}px, ${HEADER_SLOTS.length}fr)`;
+  const getResponsiveRowHeight = (rowHeight: number) => {
+    if (!isMobile) return rowHeight;
+    if (rowHeight === CALENDAR_DAY_WORKSHOP_ROW_HEIGHT) return 80;
+    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 32;
+    if (rowHeight === CALENDAR_DAY_SECTION_HEIGHT) return 22;
+    return rowHeight;
+  };
   const bodyGridTemplateRows =
     scheduleRows.length > 0
-      ? scheduleRows.map((row) => `${row.rowHeight}px`).join(" ")
+      ? scheduleRows.map((row) => `${getResponsiveRowHeight(row.rowHeight)}px`).join(" ")
       : undefined;
 
   const nowInRange = nowDecimal >= DAY_START && nowDecimal < DAY_END;
@@ -273,7 +341,7 @@ export function UsageTable({
           <div
             className="grid h-full min-h-full min-w-0 bg-background"
             style={{
-              width: `max(100%, ${CALENDAR_DAY_MIN_WIDTH}px)`,
+              width: `max(100%, ${dayMinWidth}px)`,
               gridTemplateRows: `auto 1fr`,
               height: "100%",
             }}
@@ -281,11 +349,14 @@ export function UsageTable({
             <ViewHeader className="border-0 shadow-none">
               <div
                 className="grid"
-                style={{ gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE }}
+                style={{ gridTemplateColumns: dayLayoutTemplate }}
               >
                 <ViewHeaderLeading
-                  width={CALENDAR_DAY_LEADING_COL_WIDTH}
-                  className="h-11 border-b border-r px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+                  width={dayLeadingColWidth}
+                  className={cn(
+                    "border-b border-r font-bold uppercase tracking-[0.1em] text-muted-foreground",
+                    isMobile ? "h-[34px] px-2 text-[9px]" : "h-11 px-3 text-[10px]",
+                  )}
                 >
                   {leadingColumnLabel}
                 </ViewHeaderLeading>
@@ -293,8 +364,8 @@ export function UsageTable({
                 <div
                   className="relative grid"
                   style={{
-                    gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
-                    height: 44,
+                    gridTemplateColumns: dayTimelineTemplate,
+                    height: dayHeaderHeight,
                   }}
                 >
                   {HEADER_SLOTS.map((slot, slotIndex) => {
@@ -313,9 +384,9 @@ export function UsageTable({
                           color: isCurrentHeader
                             ? "var(--fab-magenta)"
                             : "var(--fab-text-muted)",
-                          fontSize: 10,
+                          fontSize: isMobile ? 9 : 10,
                           fontWeight: isCurrentHeader ? 700 : 500,
-                          paddingLeft: 4,
+                          paddingLeft: isMobile ? 2 : 4,
                         }}
                       >
                         {slot % 1 === 0 ? formatShortTime(slot) : ""}
@@ -323,7 +394,11 @@ export function UsageTable({
                     );
                   })}
                   {nowIndicatorLeft ? (
-                    <DayNowIndicator left={nowIndicatorLeft} showArrow />
+                    <DayNowIndicator
+                      left={nowIndicatorLeft}
+                      showArrow
+                      compact={isMobile}
+                    />
                   ) : null}
                 </div>
               </div>
@@ -337,16 +412,19 @@ export function UsageTable({
                 if (row.kind === "section") {
                   return (
                     <div
-                      key={row.id}
-                      className="grid"
-                      style={{
-                        gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
-                        height: "100%",
-                      }}
+                        key={row.id}
+                        className="grid"
+                        style={{
+                          gridTemplateColumns: dayLayoutTemplate,
+                          height: "100%",
+                        }}
                     >
                       {/* ✅ LEFT STICKY COLUMN (FIXED) */}
                       <div
-                        className="flex items-center px-3"
+                        className={cn(
+                          "flex items-center",
+                          isMobile ? "px-2" : "px-3",
+                        )}
                         style={{
                           position: "sticky",
                           left: 0,
@@ -361,7 +439,7 @@ export function UsageTable({
                           className="font-bold uppercase tracking-[0.1em]"
                           style={{
                             color: "var(--fab-text-dim)",
-                            fontSize: 9,
+                            fontSize: isMobile ? 8 : 9,
                           }}
                         >
                           {row.label}
@@ -372,7 +450,7 @@ export function UsageTable({
                       <div
                         className="relative grid"
                         style={{
-                          gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                          gridTemplateColumns: dayTimelineTemplate,
                           background: SECTION_BG,
                         }}
                       >
@@ -399,13 +477,13 @@ export function UsageTable({
 
                 return (
                   <div
-                    key={row.id}
-                    className="grid"
-                    style={{
-                      gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
-                      minHeight: row.rowHeight,
-                      height: "100%",
-                    }}
+                        key={row.id}
+                        className="grid"
+                        style={{
+                          gridTemplateColumns: dayLayoutTemplate,
+                          minHeight: getResponsiveRowHeight(row.rowHeight),
+                          height: "100%",
+                        }}
                   >
                     <div
                       style={{
@@ -418,14 +496,19 @@ export function UsageTable({
                       }}
                     >
                       {row.isFirstTrack ? (
-                        <div className="flex h-full items-center gap-2 px-3">
                           <div
-                            aria-hidden
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
-                              flexShrink: 0,
+                            className={cn(
+                              "flex h-full items-center gap-2",
+                              isMobile ? "px-2" : "px-3",
+                            )}
+                          >
+                            <div
+                              aria-hidden
+                              style={{
+                                width: isMobile ? 5 : 6,
+                                height: isMobile ? 5 : 6,
+                                borderRadius: "50%",
+                                flexShrink: 0,
                               background: renderMachineStatusColor(
                                 row.machineStatus,
                               ),
@@ -437,9 +520,9 @@ export function UsageTable({
                           />
 
                           <span
-                            className="min-w-0 flex-1 truncate text-[var(--fab-text-primary)]"
-                            style={{ fontSize: 11.5 }}
-                          >
+                              className="min-w-0 flex-1 truncate text-[var(--fab-text-primary)]"
+                              style={{ fontSize: isMobile ? 10.5 : 11.5 }}
+                            >
                             {row.machine.href ? (
                               <Link
                                 href={row.machine.href}
@@ -459,7 +542,10 @@ export function UsageTable({
                                   ? "secondary"
                                   : "outline"
                               }
-                              className="rounded-[3px] px-1.5 text-[9px] font-bold uppercase tracking-[0.04em]"
+                              className={cn(
+                                "rounded-[3px] px-1.5 font-bold uppercase tracking-[0.04em]",
+                                isMobile ? "text-[8px]" : "text-[9px]",
+                              )}
                             >
                               {row.machineStatus === "active" ? "On" : "Maint"}
                             </Badge>
@@ -471,8 +557,8 @@ export function UsageTable({
                     <div
                       className="relative grid"
                       style={{
-                        gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
-                        minHeight: row.rowHeight,
+                        gridTemplateColumns: dayTimelineTemplate,
+                        minHeight: getResponsiveRowHeight(row.rowHeight),
                       }}
                     >
                       {HEADER_SLOTS.map((slot, slotIndex) => {
@@ -501,7 +587,7 @@ export function UsageTable({
                       })}
 
                       {nowIndicatorLeft ? (
-                        <DayNowIndicator left={nowIndicatorLeft} />
+                        <DayNowIndicator left={nowIndicatorLeft} compact={isMobile} />
                       ) : null}
 
                       {row.entries.map((entry) => {
@@ -515,6 +601,7 @@ export function UsageTable({
                             key={entry.id}
                             entry={entry}
                             position={position}
+                            compact={isMobile}
                             onOpenProjectDetails={onOpenProjectDetails}
                           />
                         ) : (
@@ -522,6 +609,7 @@ export function UsageTable({
                             key={entry.id}
                             usage={entry.usage}
                             position={position}
+                            compact={isMobile}
                             onOpenProjectDetails={onOpenProjectDetails}
                           />
                         );

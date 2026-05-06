@@ -14,9 +14,8 @@ import {
   CALENDAR_MONTH_CELL_MIN_HEIGHT,
   CALENDAR_MONTH_DAY_MIN_WIDTH,
   CALENDAR_WEEK_DAY_MIN_WIDTH,
+  CALENDAR_WEEK_HEADER_HEIGHT,
   CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT,
-  CALENDAR_WEEK_MIN_GRID_HEIGHT,
-  CALENDAR_WEEK_MIN_TOTAL_HEIGHT,
   CALENDAR_WEEK_TIME_COL_WIDTH,
   DAY_END,
   DAY_START,
@@ -25,6 +24,7 @@ import {
 import { formatLabDecimalHour } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DAY_SECTION_BG = "rgba(220,215,245,0.55)";
 const DAY_SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
@@ -437,17 +437,17 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
           )
           .map((row, rowIndex) => (
             <div key={`calendar-mobile-loading-${row.id}-${rowIndex}`}>
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur-sm">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-3 py-1.5 backdrop-blur-sm">
                 <div className="flex min-w-0 items-center gap-2">
-                  <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
+                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
                   <Skeleton
-                    className={cn("h-4 rounded-full", row.labelWidth)}
+                    className={cn("h-3.5 rounded-full", row.labelWidth)}
                   />
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-3.5 w-10" />
                   {row.showStatus ? (
-                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-4 w-16 rounded-full" />
                   ) : null}
                 </div>
               </div>
@@ -456,11 +456,11 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                 {row.slots.map((slot, slotIndex) => (
                   <div
                     key={`calendar-mobile-entry-${row.id}-${slot.start}-${slotIndex}`}
-                    className="flex items-center gap-3 px-4 py-2.5"
+                    className="flex items-center gap-2.5 px-3 py-2"
                   >
-                    <Skeleton className="h-8 w-1 shrink-0 rounded-full" />
-                    <Skeleton className="h-4 max-w-full flex-1 rounded-full" />
-                    <Skeleton className="h-4 w-20 shrink-0 rounded-full" />
+                    <Skeleton className="h-7 w-1 shrink-0 rounded-full" />
+                    <Skeleton className="h-3.5 max-w-full flex-1 rounded-full" />
+                    <Skeleton className="h-3.5 w-16 shrink-0 rounded-full" />
                   </div>
                 ))}
               </div>
@@ -472,9 +472,18 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
 }
 
 function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
+  const isMobile = useIsMobile();
+  const weekTimeColWidth = isMobile ? 44 : CALENDAR_WEEK_TIME_COL_WIDTH;
+  const weekDayMinWidth = isMobile ? 0 : CALENDAR_WEEK_DAY_MIN_WIDTH;
+  const weekHourRowMinHeight = isMobile
+    ? 36
+    : CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT;
+  const weekMinGridHeight = weekHourSkeletons.length * weekHourRowMinHeight;
+  const weekMinTotalHeight = weekMinGridHeight + CALENDAR_WEEK_HEADER_HEIGHT;
   const weekMinWidth =
-    CALENDAR_WEEK_TIME_COL_WIDTH +
-    weekSkeletonDays.length * CALENDAR_WEEK_DAY_MIN_WIDTH;
+    weekTimeColWidth + weekSkeletonDays.length * CALENDAR_WEEK_DAY_MIN_WIDTH;
+  const monthDayMinWidth = isMobile ? 0 : CALENDAR_MONTH_DAY_MIN_WIDTH;
+  const monthCellMinHeight = isMobile ? 76 : CALENDAR_MONTH_CELL_MIN_HEIGHT;
   const monthMinWidth = weekSkeletonDays.length * CALENDAR_MONTH_DAY_MIN_WIDTH;
 
   if (viewMode === "week") {
@@ -483,21 +492,26 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
         <div
           className="grid h-full min-h-full min-w-0 flex-1"
           style={{
-            width: `max(100%, ${weekMinWidth}px)`,
-            minHeight: CALENDAR_WEEK_MIN_TOTAL_HEIGHT,
-            gridTemplateRows: `auto minmax(${CALENDAR_WEEK_MIN_GRID_HEIGHT}px, 1fr)`,
+            width: isMobile ? "100%" : `max(100%, ${weekMinWidth}px)`,
+            minHeight: weekMinTotalHeight,
+            gridTemplateRows: `auto minmax(${weekMinGridHeight}px, 1fr)`,
           }}
         >
           <ViewHeader className="border-0 shadow-none">
             <div
               className="grid border-b"
               style={{
-                gridTemplateColumns: `${CALENDAR_WEEK_TIME_COL_WIDTH}px repeat(${weekSkeletonDays.length}, minmax(${CALENDAR_WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+                gridTemplateColumns: `${weekTimeColWidth}px repeat(${weekSkeletonDays.length}, minmax(${weekDayMinWidth}px, 1fr))`,
               }}
             >
               <ViewHeaderLeading
-                width={CALENDAR_WEEK_TIME_COL_WIDTH}
-                className="border-r px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                width={weekTimeColWidth}
+                className={cn(
+                  "border-r font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  isMobile
+                    ? "px-1.5 py-1.5 text-[9px]"
+                    : "px-3 py-2 text-[10px]",
+                )}
               >
                 Time
               </ViewHeaderLeading>
@@ -505,12 +519,25 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
               {weekSkeletonDays.map((day) => (
                 <div
                   key={`calendar-week-loading-header-${day}`}
-                  className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
+                  className={cn(
+                    "border-r bg-muted/10 last:border-r-0",
+                    isMobile ? "px-1 py-1.5" : "px-3 py-2",
+                  )}
                 >
                   <Skeleton className="h-3 w-10" />
-                  <div className="mt-2 flex items-center gap-2">
-                    <Skeleton className="h-7 w-7 rounded-full" />
-                    <Skeleton className="h-3 w-16" />
+                  <div
+                    className={cn(
+                      "flex items-center",
+                      isMobile ? "mt-1 justify-center" : "mt-2 gap-2",
+                    )}
+                  >
+                    <Skeleton
+                      className={cn(
+                        "rounded-full",
+                        isMobile ? "h-5 w-5" : "h-7 w-7",
+                      )}
+                    />
+                    {isMobile ? null : <Skeleton className="h-3 w-16" />}
                   </div>
                 </div>
               ))}
@@ -520,19 +547,22 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
           <div
             className="grid h-full min-h-0"
             style={{
-              gridTemplateColumns: `${CALENDAR_WEEK_TIME_COL_WIDTH}px repeat(${weekSkeletonDays.length}, minmax(${CALENDAR_WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+              gridTemplateColumns: `${weekTimeColWidth}px repeat(${weekSkeletonDays.length}, minmax(${weekDayMinWidth}px, 1fr))`,
             }}
           >
             <div
               className="grid border-r bg-background"
               style={{
-                gridTemplateRows: `repeat(${weekHourSkeletons.length}, minmax(${CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT}px, 1fr))`,
+                gridTemplateRows: `repeat(${weekHourSkeletons.length}, minmax(${weekHourRowMinHeight}px, 1fr))`,
               }}
             >
               {weekHourSkeletons.map((hour) => (
                 <div
                   key={`calendar-week-loading-time-${hour}`}
-                  className="border-b border-border/60 px-3"
+                  className={cn(
+                    "border-b border-border/60",
+                    isMobile ? "px-1.5" : "px-3",
+                  )}
                 >
                   <Skeleton className="h-3 w-10 -translate-y-1.5" />
                 </div>
@@ -543,7 +573,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
               <div
                 key={`calendar-week-loading-column-${day}`}
                 className="relative border-r last:border-r-0"
-                style={{ minHeight: CALENDAR_WEEK_MIN_GRID_HEIGHT }}
+                style={{ minHeight: weekMinGridHeight }}
               >
                 {weekHalfHourMarks.map((mark, index) => (
                   <div
@@ -560,9 +590,30 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
                   />
                 ))}
 
-                <Skeleton className="absolute left-1 top-[8%] h-20 w-[calc(50%-6px)] rounded-lg" />
-                <Skeleton className="absolute right-1 top-[28%] h-16 w-[calc(50%-6px)] rounded-lg" />
-                <Skeleton className="absolute left-1 top-[50%] h-24 w-[calc(100%-8px)] rounded-lg" />
+                <Skeleton
+                  className={cn(
+                    "absolute left-1 top-[8%] rounded-lg",
+                    isMobile
+                      ? "h-14 w-[calc(50%-6px)]"
+                      : "h-20 w-[calc(50%-6px)]",
+                  )}
+                />
+                <Skeleton
+                  className={cn(
+                    "absolute right-1 top-[28%] rounded-lg",
+                    isMobile
+                      ? "h-12 w-[calc(50%-6px)]"
+                      : "h-16 w-[calc(50%-6px)]",
+                  )}
+                />
+                <Skeleton
+                  className={cn(
+                    "absolute left-1 top-[50%] rounded-lg",
+                    isMobile
+                      ? "h-16 w-[calc(100%-8px)]"
+                      : "h-24 w-[calc(100%-8px)]",
+                  )}
+                />
               </div>
             ))}
           </div>
@@ -576,7 +627,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
       <div
         className="grid h-full min-h-0 min-w-0 flex-1"
         style={{
-          width: `max(100%, ${monthMinWidth}px)`,
+          width: isMobile ? "100%" : `max(100%, ${monthMinWidth}px)`,
           gridTemplateRows: "auto minmax(0, 1fr)",
         }}
       >
@@ -584,18 +635,23 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
           <div
             className="grid border-b"
             style={{
-              gridTemplateColumns: `repeat(7, minmax(${CALENDAR_MONTH_DAY_MIN_WIDTH}px, 1fr))`,
+              gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
             }}
           >
             {weekSkeletonDays.map((day) => (
               <div
                 key={`calendar-month-loading-header-${day}`}
                 className={cn(
-                  "px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  "font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  isMobile
+                    ? "px-1 py-1.5 text-[9px] text-center"
+                    : "px-3 py-2 text-[10px]",
                   day === 0 ? "" : "border-l",
                 )}
               >
-                <Skeleton className="h-3 w-16" />
+                <Skeleton
+                  className={cn("h-3", isMobile ? "mx-auto w-4" : "w-16")}
+                />
               </div>
             ))}
           </div>
@@ -604,8 +660,8 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
         <div
           className="grid min-h-0 border-b border-r bg-background"
           style={{
-            gridTemplateColumns: `repeat(7, minmax(${CALENDAR_MONTH_DAY_MIN_WIDTH}px, 1fr))`,
-            gridTemplateRows: `repeat(5, minmax(${CALENDAR_MONTH_CELL_MIN_HEIGHT}px, 1fr))`,
+            gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
+            gridTemplateRows: `repeat(5, minmax(${monthCellMinHeight}px, 1fr))`,
           }}
         >
           {monthSkeletonCells.map((cell) => (
@@ -613,17 +669,38 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
               key={`calendar-month-loading-${cell}`}
               className="flex min-h-0 flex-col border-l border-t bg-background"
             >
-              <div className="flex items-center justify-between gap-2 border-b bg-muted/10 px-3 py-2">
-                <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-                <div className="flex min-w-0 items-center justify-end gap-2">
-                  <Skeleton className="h-3 w-14" />
-                </div>
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-2 border-b bg-muted/10",
+                  isMobile ? "px-1.5 py-1" : "px-3 py-2",
+                )}
+              >
+                <Skeleton
+                  className={cn(
+                    "shrink-0 rounded-full",
+                    isMobile ? "h-5 w-5" : "h-7 w-7",
+                  )}
+                />
+                {isMobile ? null : (
+                  <div className="flex min-w-0 items-center justify-end gap-2">
+                    <Skeleton className="h-3 w-14" />
+                  </div>
+                )}
               </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden p-2">
-                <Skeleton className="h-7 w-full rounded-md" />
-                <Skeleton className="h-7 w-full rounded-md" />
-                <div className="px-2">
-                  <Skeleton className="h-3 w-12" />
+              <div
+                className={cn(
+                  "flex min-h-0 flex-1 flex-col overflow-hidden",
+                  isMobile ? "gap-1 p-1" : "gap-1.5 p-2",
+                )}
+              >
+                <Skeleton
+                  className={cn("w-full rounded-md", isMobile ? "h-5" : "h-7")}
+                />
+                <Skeleton
+                  className={cn("w-full rounded-md", isMobile ? "h-5" : "h-7")}
+                />
+                <div className={cn(isMobile ? "px-1" : "px-2")}>
+                  <Skeleton className={cn("h-3", isMobile ? "w-8" : "w-12")} />
                 </div>
               </div>
             </div>

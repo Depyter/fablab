@@ -5,9 +5,8 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_WEEK_DAY_MIN_WIDTH,
+  CALENDAR_WEEK_HEADER_HEIGHT,
   CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT,
-  CALENDAR_WEEK_MIN_GRID_HEIGHT,
-  CALENDAR_WEEK_MIN_TOTAL_HEIGHT,
   CALENDAR_WEEK_TIME_COL_WIDTH,
   CALENDAR_WEEK_TOTAL_HOURS,
   clampToCalendarDay,
@@ -29,11 +28,13 @@ import {
 } from "@/lib/lab-time";
 import { clipTimeRange, overlapsTimeRange } from "@/lib/time-range";
 import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   canShowMonthOverflowLabel,
   getMonthVisibleEventLimit,
   MONTH_CELL_MIN_HEIGHT,
   MONTH_DAY_MIN_WIDTH,
+  type MonthLayoutDensity,
 } from "./month-layout";
 
 interface CalendarRangeViewProps {
@@ -57,8 +58,6 @@ const WEEK_TIME_COL_WIDTH = CALENDAR_WEEK_TIME_COL_WIDTH;
 const WEEK_DAY_MIN_WIDTH = CALENDAR_WEEK_DAY_MIN_WIDTH;
 const WEEK_HOUR_ROW_MIN_HEIGHT = CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT;
 const WEEK_TOTAL_HOURS = CALENDAR_WEEK_TOTAL_HOURS;
-const WEEK_MIN_GRID_HEIGHT = CALENDAR_WEEK_MIN_GRID_HEIGHT;
-const WEEK_MIN_TOTAL_HEIGHT = CALENDAR_WEEK_MIN_TOTAL_HEIGHT;
 const WEEK_HOURS = Array.from(
   { length: WEEK_TOTAL_HOURS + 1 },
   (_, index) => DAY_START + index,
@@ -92,7 +91,12 @@ function getDecimalHour(time: number) {
   return getLabDecimalHour(time);
 }
 
-function buildWeekEventLayouts(events: CalendarRangeEvent[], day: Date) {
+function buildWeekEventLayouts(
+  events: CalendarRangeEvent[],
+  day: Date,
+  minGridHeight: number,
+  minEventHeight: number,
+) {
   const { start: dayStartDate, endExclusive: dayEndDate } =
     getLabDayBounds(day);
   const dayStart = dayStartDate.getTime();
@@ -131,7 +135,7 @@ function buildWeekEventLayouts(events: CalendarRangeEvent[], day: Date) {
     topPercent: ((item.start - DAY_START) / WEEK_TOTAL_HOURS) * 100,
     heightPercent: Math.max(
       ((item.end - item.start) / WEEK_TOTAL_HOURS) * 100,
-      (26 / WEEK_MIN_GRID_HEIGHT) * 100,
+      (minEventHeight / minGridHeight) * 100,
     ),
   }));
 }
@@ -157,6 +161,8 @@ function buildEventsByDay(days: Date[], events: CalendarRangeEvent[]) {
 function buildWeekLayoutsByDay(
   days: Date[],
   eventsByDay: Map<string, CalendarRangeEvent[]>,
+  minGridHeight: number,
+  minEventHeight: number,
 ) {
   const layouts = new Map<string, WeekEventLayout[]>();
 
@@ -164,7 +170,12 @@ function buildWeekLayoutsByDay(
     const dayKey = toDayKey(day);
     layouts.set(
       dayKey,
-      buildWeekEventLayouts(eventsByDay.get(dayKey) ?? [], day),
+      buildWeekEventLayouts(
+        eventsByDay.get(dayKey) ?? [],
+        day,
+        minGridHeight,
+        minEventHeight,
+      ),
     );
   }
 
@@ -174,11 +185,13 @@ function buildWeekLayoutsByDay(
 function EventCard({
   event,
   compact = false,
+  dense = false,
   showDetails = true,
   onOpenProjectDetails,
 }: {
   event: CalendarRangeEvent;
   compact?: boolean;
+  dense?: boolean;
   showDetails?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }) {
@@ -198,14 +211,18 @@ function EventCard({
         canOpenProjectDetails
           ? "cursor-pointer hover:opacity-90"
           : "cursor-default",
-        compact ? "min-h-8 px-2.5 py-1.5" : "px-3 py-2.5",
+        dense
+          ? "min-h-6 rounded-lg px-1.5 py-1"
+          : compact
+            ? "min-h-8 px-2.5 py-1.5"
+            : "px-3 py-2.5",
       )}
     >
-      <div className={cn(compact ? "pl-2.5" : "pl-3")}>
+      <div className={cn(dense ? "pl-2" : compact ? "pl-2.5" : "pl-3")}>
         <div
           className={cn(
             "truncate font-semibold leading-tight text-foreground",
-            compact ? "text-[11px]" : "text-xs",
+            dense ? "text-[10px]" : compact ? "text-[11px]" : "text-xs",
           )}
         >
           {event.projectAlias}
@@ -227,9 +244,11 @@ function EventCard({
 
 function WeekEventBlock({
   event,
+  compact = false,
   onOpenProjectDetails,
 }: {
   event: WeekEventLayout;
+  compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
 }) {
   const canOpenProjectDetails =
@@ -247,6 +266,7 @@ function WeekEventBlock({
         canOpenProjectDetails
           ? "cursor-pointer hover:opacity-90"
           : "cursor-default",
+        compact && "rounded-md px-1 py-0.5",
       )}
       style={{
         top: `calc(${event.topPercent}% + 2px)`,
@@ -255,13 +275,20 @@ function WeekEventBlock({
         width: `calc(${100 / event.trackCount}% - 4px)`,
       }}
     >
-      <div className="pl-2.5">
-        <div className="truncate text-md font-semibold text-foreground">
+      <div className={cn(compact ? "pl-1.5" : "pl-2.5")}>
+        <div
+          className={cn(
+            "truncate font-semibold text-foreground",
+            compact ? "text-[10px] leading-tight" : "text-md",
+          )}
+        >
           {event.projectAlias}
         </div>
-        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
-          {event.secondaryLabel}
-        </div>
+        {compact ? null : (
+          <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+            {event.secondaryLabel}
+          </div>
+        )}
       </div>
     </button>
   );
@@ -276,16 +303,30 @@ export function CalendarRangeView({
   onSelectDay,
   onOpenProjectDetails,
 }: CalendarRangeViewProps) {
+  const isMobile = useIsMobile();
   const eventsByDay = buildEventsByDay(days, events);
-  const weekMinWidth = WEEK_TIME_COL_WIDTH + days.length * WEEK_DAY_MIN_WIDTH;
-  const weekLayoutsByDay = buildWeekLayoutsByDay(days, eventsByDay);
+  const weekTimeColWidth = isMobile ? 44 : WEEK_TIME_COL_WIDTH;
+  const weekDayMinWidth = isMobile ? 0 : WEEK_DAY_MIN_WIDTH;
+  const weekHourRowMinHeight = isMobile ? 36 : WEEK_HOUR_ROW_MIN_HEIGHT;
+  const weekMinGridHeight = WEEK_TOTAL_HOURS * weekHourRowMinHeight;
+  const weekMinTotalHeight = weekMinGridHeight + CALENDAR_WEEK_HEADER_HEIGHT;
+  const weekMinWidth = weekTimeColWidth + days.length * WEEK_DAY_MIN_WIDTH;
+  const weekMinEventHeight = isMobile ? 18 : 26;
+  const weekLayoutsByDay = buildWeekLayoutsByDay(
+    days,
+    eventsByDay,
+    weekMinGridHeight,
+    weekMinEventHeight,
+  );
+  const monthDensity: MonthLayoutDensity = isMobile ? "compact" : "default";
+  const monthDayMinWidth = isMobile ? 0 : MONTH_DAY_MIN_WIDTH;
+  const monthCellMinHeight = isMobile ? 76 : MONTH_CELL_MIN_HEIGHT;
   const monthMinWidth = 7 * MONTH_DAY_MIN_WIDTH;
   const monthRowCount = Math.max(days.length / 7, 1);
   const monthWeekdays = days.slice(0, 7);
   const monthBodyRef = React.useRef<HTMLDivElement | null>(null);
-  const [monthRowHeight, setMonthRowHeight] = React.useState(
-    MONTH_CELL_MIN_HEIGHT,
-  );
+  const [monthRowHeight, setMonthRowHeight] =
+    React.useState(monthCellMinHeight);
 
   React.useEffect(() => {
     const grid = monthBodyRef.current;
@@ -308,7 +349,7 @@ export function CalendarRangeView({
     observer.observe(grid);
 
     return () => observer.disconnect();
-  }, [monthRowCount]);
+  }, [monthCellMinHeight, monthRowCount]);
 
   if (viewMode === "week") {
     return (
@@ -319,21 +360,26 @@ export function CalendarRangeView({
         <div
           className="grid h-full min-h-full min-w-0 flex-1"
           style={{
-            width: `max(100%, ${weekMinWidth}px)`,
-            minHeight: WEEK_MIN_TOTAL_HEIGHT,
-            gridTemplateRows: `auto minmax(${WEEK_MIN_GRID_HEIGHT}px, 1fr)`,
+            width: isMobile ? "100%" : `max(100%, ${weekMinWidth}px)`,
+            minHeight: weekMinTotalHeight,
+            gridTemplateRows: `auto minmax(${weekMinGridHeight}px, 1fr)`,
           }}
         >
           <ViewHeader className="border-0 shadow-none">
             <div
               className="grid border-b"
               style={{
-                gridTemplateColumns: `${WEEK_TIME_COL_WIDTH}px repeat(${days.length}, minmax(${WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+                gridTemplateColumns: `${weekTimeColWidth}px repeat(${days.length}, minmax(${weekDayMinWidth}px, 1fr))`,
               }}
             >
               <ViewHeaderLeading
-                width={WEEK_TIME_COL_WIDTH}
-                className="border-r px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                width={weekTimeColWidth}
+                className={cn(
+                  "border-r font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  isMobile
+                    ? "px-1.5 py-1.5 text-[9px]"
+                    : "px-3 py-2 text-[10px]",
+                )}
               >
                 Time
               </ViewHeaderLeading>
@@ -345,15 +391,26 @@ export function CalendarRangeView({
                 return (
                   <div
                     key={dayKey}
-                    className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
+                    className={cn(
+                      "border-r bg-muted/10 last:border-r-0",
+                      isMobile ? "px-1 py-1.5" : "px-3 py-2",
+                    )}
                   >
                     <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      {formatLabDate(day, { weekday: "short" })}
+                      {formatLabDate(day, {
+                        weekday: isMobile ? "narrow" : "short",
+                      })}
                     </div>
-                    <div className="mt-1 flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "flex items-center",
+                        isMobile ? "mt-0.5 justify-center" : "mt-1 gap-2",
+                      )}
+                    >
                       <span
                         className={cn(
-                          "inline-flex size-7 items-center justify-center rounded-full text-sm font-semibold",
+                          "inline-flex items-center justify-center rounded-full font-semibold",
+                          isMobile ? "size-5 text-[11px]" : "size-7 text-sm",
                           isCurrentLabDay(day)
                             ? "bg-card text-foreground ring-1 ring-border"
                             : "text-foreground",
@@ -361,9 +418,11 @@ export function CalendarRangeView({
                       >
                         {formatLabDate(day, { day: "numeric" })}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {formatBookingCount(dayEvents.length)}
-                      </span>
+                      {isMobile ? null : (
+                        <span className="text-[11px] text-muted-foreground">
+                          {formatBookingCount(dayEvents.length)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -374,25 +433,35 @@ export function CalendarRangeView({
           <div
             className="grid h-full min-h-0"
             style={{
-              gridTemplateColumns: `${WEEK_TIME_COL_WIDTH}px repeat(${days.length}, minmax(${WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+              gridTemplateColumns: `${weekTimeColWidth}px repeat(${days.length}, minmax(${weekDayMinWidth}px, 1fr))`,
             }}
           >
             <div
               className="grid border-r bg-background"
               style={{
-                gridTemplateRows: `repeat(${WEEK_TOTAL_HOURS}, minmax(${WEEK_HOUR_ROW_MIN_HEIGHT}px, 1fr))`,
+                gridTemplateRows: `repeat(${WEEK_TOTAL_HOURS}, minmax(${weekHourRowMinHeight}px, 1fr))`,
               }}
             >
               {WEEK_HOURS.map((hour, index) => (
                 <div
                   key={`week-time-${hour}`}
-                  className="border-b border-border/60 px-3"
+                  className={cn(
+                    "border-b border-border/60",
+                    isMobile ? "px-1.5" : "px-3",
+                  )}
                   style={{
                     display:
                       index === WEEK_HOURS.length - 1 ? "none" : undefined,
                   }}
                 >
-                  <span className="-translate-y-2.5 inline-block bg-background pr-2 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <span
+                    className={cn(
+                      "inline-block bg-background font-medium uppercase tracking-[0.12em] text-muted-foreground",
+                      isMobile
+                        ? "-translate-y-2 pr-1 text-[9px]"
+                        : "-translate-y-2.5 pr-2 text-[10px]",
+                    )}
+                  >
                     {formatWeekAxisLabel(hour)}
                   </span>
                 </div>
@@ -407,7 +476,7 @@ export function CalendarRangeView({
                 <div
                   key={`week-column-${dayKey}`}
                   className="relative border-r last:border-r-0"
-                  style={{ minHeight: WEEK_MIN_GRID_HEIGHT }}
+                  style={{ minHeight: weekMinGridHeight }}
                 >
                   {WEEK_HALF_HOUR_MARKS.map((mark, index) => (
                     <div
@@ -428,6 +497,7 @@ export function CalendarRangeView({
                     <WeekEventBlock
                       key={event.id}
                       event={event}
+                      compact={isMobile}
                       onOpenProjectDetails={onOpenProjectDetails}
                     />
                   ))}
@@ -448,7 +518,7 @@ export function CalendarRangeView({
       <div
         className="grid h-full min-h-0 min-w-0 flex-1"
         style={{
-          width: `max(100%, ${monthMinWidth}px)`,
+          width: isMobile ? "100%" : `max(100%, ${monthMinWidth}px)`,
           gridTemplateRows: "auto minmax(0, 1fr)",
         }}
       >
@@ -456,18 +526,21 @@ export function CalendarRangeView({
           <div
             className="grid border-b"
             style={{
-              gridTemplateColumns: `repeat(7, minmax(${MONTH_DAY_MIN_WIDTH}px, 1fr))`,
+              gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
             }}
           >
             {monthWeekdays.map((day, index) => (
               <div
                 key={`month-weekday-${toDayKey(day)}`}
                 className={cn(
-                  "truncate whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  "truncate whitespace-nowrap font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  isMobile
+                    ? "px-1 py-1.5 text-[9px] text-center"
+                    : "px-3 py-2 text-[10px]",
                   index === 0 ? "" : "border-l",
                 )}
               >
-                {formatLabDate(day, { weekday: "long" })}
+                {formatLabDate(day, { weekday: isMobile ? "narrow" : "long" })}
               </div>
             ))}
           </div>
@@ -477,8 +550,8 @@ export function CalendarRangeView({
           ref={monthBodyRef}
           className="grid min-h-0 border-b border-r bg-background"
           style={{
-            gridTemplateColumns: `repeat(7, minmax(${MONTH_DAY_MIN_WIDTH}px, 1fr))`,
-            gridTemplateRows: `repeat(${monthRowCount}, minmax(${MONTH_CELL_MIN_HEIGHT}px, 1fr))`,
+            gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
+            gridTemplateRows: `repeat(${monthRowCount}, minmax(${monthCellMinHeight}px, 1fr))`,
           }}
         >
           {days.map((day) => {
@@ -487,6 +560,7 @@ export function CalendarRangeView({
             const visibleEventLimit = getMonthVisibleEventLimit(
               monthRowHeight,
               dayEvents.length,
+              monthDensity,
             );
             const visibleDayEvents = dayEvents.slice(0, visibleEventLimit);
             const hiddenEventCount = Math.max(
@@ -498,6 +572,7 @@ export function CalendarRangeView({
               canShowMonthOverflowLabel(
                 monthRowHeight,
                 visibleDayEvents.length,
+                monthDensity,
               );
 
             return (
@@ -513,7 +588,8 @@ export function CalendarRangeView({
                   disabled={onSelectDay === undefined}
                   title={`Open ${formatLabDate(day, { month: "long", day: "numeric" })} in day view`}
                   className={cn(
-                    "flex items-center justify-between gap-2 border-b bg-muted/10 px-3 py-2 text-left",
+                    "flex items-center justify-between gap-2 border-b bg-muted/10 text-left",
+                    isMobile ? "px-1.5 py-1" : "px-3 py-2",
                     onSelectDay === undefined
                       ? "cursor-default"
                       : "transition-colors hover:bg-muted/20",
@@ -522,7 +598,8 @@ export function CalendarRangeView({
                 >
                   <span
                     className={cn(
-                      "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                      "inline-flex shrink-0 items-center justify-center rounded-full font-semibold",
+                      isMobile ? "size-5 text-[11px]" : "size-7 text-sm",
                       isCurrentMonth
                         ? "text-foreground"
                         : "text-muted-foreground",
@@ -531,25 +608,36 @@ export function CalendarRangeView({
                   >
                     {formatLabDate(day, { day: "numeric" })}
                   </span>
-                  {dayEvents.length > 0 ? (
+                  {dayEvents.length > 0 && !isMobile ? (
                     <span className="truncate text-[10px] font-medium text-muted-foreground">
                       {formatBookingCount(dayEvents.length)}
                     </span>
                   ) : null}
                 </button>
 
-                <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden p-2">
+                <div
+                  className={cn(
+                    "flex min-h-0 flex-1 flex-col overflow-hidden",
+                    isMobile ? "gap-1 p-1" : "gap-1.5 p-2",
+                  )}
+                >
                   {visibleDayEvents.map((event) => (
                     <EventCard
                       key={event.id}
                       compact
+                      dense={isMobile}
                       event={event}
                       showDetails={false}
                       onOpenProjectDetails={onOpenProjectDetails}
                     />
                   ))}
                   {showOverflowLabel ? (
-                    <div className="px-2 text-[10px] font-medium text-muted-foreground">
+                    <div
+                      className={cn(
+                        "font-medium text-muted-foreground",
+                        isMobile ? "px-1 text-[9px]" : "px-2 text-[10px]",
+                      )}
+                    >
                       +{hiddenEventCount} more
                     </div>
                   ) : null}

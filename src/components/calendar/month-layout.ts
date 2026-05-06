@@ -6,42 +6,75 @@ import {
 export const MONTH_DAY_MIN_WIDTH = CALENDAR_MONTH_DAY_MIN_WIDTH;
 export const MONTH_CELL_MIN_HEIGHT = CALENDAR_MONTH_CELL_MIN_HEIGHT;
 
-const MONTH_DAY_HEADER_HEIGHT = 45;
-const MONTH_CELL_PADDING_Y = 16;
-const MONTH_CELL_EVENT_GAP = 6;
-const MONTH_EVENT_CARD_MIN_HEIGHT = 32;
-const MONTH_MORE_LABEL_HEIGHT = 12;
+export type MonthLayoutDensity = "default" | "compact";
 
-function getMonthContentHeight(rowHeight: number) {
+const MONTH_LAYOUT_DENSITY = {
+  default: {
+    dayHeaderHeight: 45,
+    cellPaddingY: 16,
+    cellEventGap: 6,
+    eventCardMinHeight: 32,
+    moreLabelHeight: 12,
+    minVisibleEvents: 2,
+  },
+  compact: {
+    dayHeaderHeight: 34,
+    cellPaddingY: 8,
+    cellEventGap: 4,
+    eventCardMinHeight: 24,
+    moreLabelHeight: 10,
+    minVisibleEvents: 1,
+  },
+} as const satisfies Record<
+  MonthLayoutDensity,
+  {
+    dayHeaderHeight: number;
+    cellPaddingY: number;
+    cellEventGap: number;
+    eventCardMinHeight: number;
+    moreLabelHeight: number;
+    minVisibleEvents: number;
+  }
+>;
+
+function getMonthContentHeight(
+  rowHeight: number,
+  density: MonthLayoutDensity = "default",
+) {
+  const layout = MONTH_LAYOUT_DENSITY[density];
+
   return Math.max(
-    rowHeight - MONTH_DAY_HEADER_HEIGHT - MONTH_CELL_PADDING_Y,
-    MONTH_EVENT_CARD_MIN_HEIGHT * 2 + MONTH_CELL_EVENT_GAP,
+    rowHeight - layout.dayHeaderHeight - layout.cellPaddingY,
+    layout.eventCardMinHeight * layout.minVisibleEvents +
+      Math.max(layout.minVisibleEvents - 1, 0) * layout.cellEventGap,
   );
 }
 
 export function getMonthVisibleEventLimit(
   rowHeight: number,
   totalEvents: number,
+  density: MonthLayoutDensity = "default",
 ) {
   if (totalEvents === 0) return 0;
 
-  const availableHeight = getMonthContentHeight(rowHeight);
+  const layout = MONTH_LAYOUT_DENSITY[density];
+  const availableHeight = getMonthContentHeight(rowHeight, density);
   let visibleCount = Math.max(
-    2,
+    layout.minVisibleEvents,
     Math.floor(
-      (availableHeight + MONTH_CELL_EVENT_GAP) /
-        (MONTH_EVENT_CARD_MIN_HEIGHT + MONTH_CELL_EVENT_GAP),
+      (availableHeight + layout.cellEventGap) /
+        (layout.eventCardMinHeight + layout.cellEventGap),
     ),
   );
 
   visibleCount = Math.min(visibleCount, totalEvents);
 
-  while (visibleCount > 2 && visibleCount < totalEvents) {
+  while (visibleCount > layout.minVisibleEvents && visibleCount < totalEvents) {
     const contentHeight =
-      visibleCount * MONTH_EVENT_CARD_MIN_HEIGHT +
-      Math.max(visibleCount - 1, 0) * MONTH_CELL_EVENT_GAP +
-      MONTH_CELL_EVENT_GAP +
-      MONTH_MORE_LABEL_HEIGHT;
+      visibleCount * layout.eventCardMinHeight +
+      Math.max(visibleCount - 1, 0) * layout.cellEventGap +
+      layout.cellEventGap +
+      layout.moreLabelHeight;
 
     if (contentHeight <= availableHeight) break;
 
@@ -54,15 +87,17 @@ export function getMonthVisibleEventLimit(
 export function canShowMonthOverflowLabel(
   rowHeight: number,
   visibleCount: number,
+  density: MonthLayoutDensity = "default",
 ) {
   if (visibleCount === 0) return false;
 
-  const availableHeight = getMonthContentHeight(rowHeight);
+  const layout = MONTH_LAYOUT_DENSITY[density];
+  const availableHeight = getMonthContentHeight(rowHeight, density);
   const requiredHeight =
-    visibleCount * MONTH_EVENT_CARD_MIN_HEIGHT +
-    Math.max(visibleCount - 1, 0) * MONTH_CELL_EVENT_GAP +
-    MONTH_CELL_EVENT_GAP +
-    MONTH_MORE_LABEL_HEIGHT;
+    visibleCount * layout.eventCardMinHeight +
+    Math.max(visibleCount - 1, 0) * layout.cellEventGap +
+    layout.cellEventGap +
+    layout.moreLabelHeight;
 
   return requiredHeight <= availableHeight;
 }
