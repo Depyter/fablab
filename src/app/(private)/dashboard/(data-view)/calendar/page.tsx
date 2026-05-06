@@ -1,5 +1,5 @@
-import { BookingCalendarShell } from "@/components/calendar/booking-calendar-shell";
+import { BookingCalendarPage } from "@/components/calendar/booking-calendar-page";
 
 export default function CalendarPage() {
-  return <BookingCalendarShell />;
+  return <BookingCalendarPage />;
 }

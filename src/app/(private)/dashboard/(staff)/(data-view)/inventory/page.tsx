@@ -1,5 +1,5 @@
-import { InventoryClient } from "./_client";
+import { InventoryPageContent } from "./_page";
 
 export default function InventoryPage() {
-  return <InventoryClient />;
+  return <InventoryPageContent />;
 }

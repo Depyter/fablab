@@ -1,5 +1,5 @@
-import { ServicesListClient } from "./_client";
+import { ServicesPageContent } from "./_page";
 
 export default function ServicesPage() {
-  return <ServicesListClient />;
+  return <ServicesPageContent />;
 }
