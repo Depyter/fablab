@@ -24,37 +24,30 @@ export function BookingCalendarShell() {
   return (
     <>
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-        {controller.isCalendarLoading ? (
-          <CalendarContentLoadingState
-            viewMode={controller.viewMode}
-            activeTab={controller.activeTab}
-          />
-        ) : (
-          <React.Suspense
-            fallback={
-              <CalendarContentLoadingState
-                viewMode={controller.viewMode}
-                activeTab={controller.activeTab}
-              />
-            }
-          >
-            <BookingCalendarClient
-              date={controller.date}
+        <React.Suspense
+          fallback={
+            <CalendarContentLoadingState
               viewMode={controller.viewMode}
-              visibleRange={controller.visibleRange}
-              onSelectDay={controller.handleOpenDay}
-              onOpenProjectDetails={controller.handleOpenProjectDetails}
               activeTab={controller.activeTab}
-              isAdminOrMaker={controller.isAdminOrMaker}
-              bookingsLoading={controller.bookingsLoading}
-              serviceMachines={controller.serviceMachines}
-              resourceMachines={controller.resourceMachines}
-              serviceUsages={controller.serviceUsages}
-              resourceUsages={controller.resourceUsages}
-              rangeEvents={controller.rangeEvents}
             />
-          </React.Suspense>
-        )}
+          }
+        >
+          <BookingCalendarClient
+            date={controller.date}
+            viewMode={controller.viewMode}
+            visibleRange={controller.visibleRange}
+            onSelectDay={controller.handleOpenDay}
+            onOpenProjectDetails={controller.handleOpenProjectDetails}
+            activeTab={controller.activeTab}
+            isAdminOrMaker={controller.isAdminOrMaker}
+            bookingsLoading={controller.bookingsLoading}
+            serviceMachines={controller.serviceMachines}
+            resourceMachines={controller.resourceMachines}
+            serviceUsages={controller.serviceUsages}
+            resourceUsages={controller.resourceUsages}
+            rangeEvents={controller.rangeEvents}
+          />
+        </React.Suspense>
       </div>
 
       <ProjectDetails
