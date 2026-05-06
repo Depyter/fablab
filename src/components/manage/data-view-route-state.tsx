@@ -92,5 +92,10 @@ export function useDataViewRouteState() {
     [pathname, router, searchParams],
   );
 
-  return { pathname, searchParams, section, replaceParams };
+  return {
+    pathname,
+    searchParams,
+    section,
+    replaceParams,
+  };
 }

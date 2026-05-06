@@ -1,4 +1,4 @@
-import type { CalendarViewMode } from "../../lib/calendar";
+import type { CalendarTab, CalendarViewMode } from "../../lib/calendar";
 import {
   addLabDays,
   addLabMonths,
@@ -7,13 +7,17 @@ import {
   endOfLabMonth,
   endOfLabWeek,
   formatLabDate,
+  getCurrentTimestamp,
   getLabDayBounds,
   getLabDayStart,
+  parseLabDayKey,
   startOfLabMonth,
   startOfLabWeek,
 } from "../../lib/lab-time";
 
 export const WEEK_STARTS_ON = 1 as const;
+export const DEFAULT_CALENDAR_VIEW_MODE = "day" as const;
+export const DEFAULT_CALENDAR_TAB = "services" as const;
 
 export interface CalendarVisibleRange {
   start: Date;
@@ -102,4 +106,30 @@ export function shiftDate(
   }
 
   return addLabMonths(date, direction);
+}
+
+export function resolveCalendarViewMode(
+  value: string | null | undefined,
+): CalendarViewMode {
+  return value === "week" || value === "month"
+    ? value
+    : DEFAULT_CALENDAR_VIEW_MODE;
+}
+
+export function resolveCalendarTab(
+  value: string | null | undefined,
+  canViewResources: boolean,
+): CalendarTab {
+  return canViewResources && value === "resources"
+    ? "resources"
+    : DEFAULT_CALENDAR_TAB;
+}
+
+export function getCalendarSelectedDate(
+  dateKey: string | null | undefined,
+  referenceTime = getCurrentTimestamp(),
+) {
+  return (
+    (dateKey ? parseLabDayKey(dateKey) : null) ?? getLabDayStart(referenceTime)
+  );
 }

@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  getCalendarSelectedDate,
   getVisibleRange,
+  resolveCalendarTab,
+  resolveCalendarViewMode,
   shiftDate,
 } from "../src/components/calendar/calendar-state";
 import { getLabDayKey } from "../src/lib/lab-time";
@@ -47,5 +50,18 @@ describe("calendar state", () => {
     expect(range.days).toHaveLength(35);
     expect(getLabDayKey(range.days[0])).toBe("2026-04-27");
     expect(getLabDayKey(range.days[34])).toBe("2026-05-31");
+  });
+
+  test("sanitizes calendar url state before rendering", () => {
+    expect(resolveCalendarViewMode("week")).toBe("week");
+    expect(resolveCalendarViewMode("invalid")).toBe("day");
+    expect(resolveCalendarTab("resources", true)).toBe("resources");
+    expect(resolveCalendarTab("resources", false)).toBe("services");
+    expect(getLabDayKey(getCalendarSelectedDate("2026-05-06"))).toBe(
+      "2026-05-06",
+    );
+    expect(
+      getLabDayKey(getCalendarSelectedDate("invalid", Date.UTC(2026, 4, 7))),
+    ).toBe("2026-05-07");
   });
 });

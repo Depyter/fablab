@@ -20,17 +20,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ManageFilterBar,
   ManageFilterClear,
   ManageFilterSearch,
 } from "@/components/manage/manage-primitives";
 import {
-  DATA_VIEW_SECTION_CONFIG,
   getProjectsView,
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
 import { cn } from "@/lib/utils";
+import {
+  ViewHeader,
+  ViewHeaderMain,
+  ViewHeaderRow,
+} from "@/components/ui/view-header";
+import {
+  CalendarNavigation,
+  CalendarTabSwitcher,
+  CalendarViewSwitcher,
+} from "@/components/calendar/booking-calendar-toolbar";
+import {
+  BookingCalendarProvider,
+  useBookingCalendarController,
+} from "@/components/calendar/use-booking-calendar-controller";
 
 // ---------------------------------------------------------------------------
 // Constants & Icons
@@ -50,28 +62,6 @@ const VIEW_LABELS: Record<ProjectViewMode, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Heading Components
-// ---------------------------------------------------------------------------
-
-export function DataViewPageHeading() {
-  const { section } = useDataViewRouteState();
-  if (!section) return null;
-
-  const config = DATA_VIEW_SECTION_CONFIG[section];
-
-  return (
-    <div className="min-w-0">
-      <h1 className="font-bold text-base leading-tight truncate">
-        {config.title}
-      </h1>
-      <div className="text-[11px] text-muted-foreground hidden sm:block">
-        {config.subtitle}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Action Components
 // ---------------------------------------------------------------------------
 
@@ -80,7 +70,7 @@ function DataViewViewToggle() {
   const view = getProjectsView(searchParams);
 
   return (
-    <div className="flex items-center border rounded-md h-8 shrink-0">
+    <div className="flex items-center border rounded-md h-8 shrink-0 bg-background">
       {PROJECT_VIEWS.map((nextView, index) => (
         <Button
           key={nextView}
@@ -111,7 +101,7 @@ export function DataViewToolbarActions() {
 
   if (section === "projects") {
     return (
-      <>
+      <div className="flex items-center gap-2">
         <DataViewViewToggle />
         <Button size="sm" className="h-8 gap-1 shrink-0" asChild>
           <Link href="/services">
@@ -119,7 +109,7 @@ export function DataViewToolbarActions() {
             <span className="hidden sm:inline">Add Project</span>
           </Link>
         </Button>
-      </>
+      </div>
     );
   }
 
@@ -171,7 +161,38 @@ export function DataViewToolbarActions() {
 // Filter Components
 // ---------------------------------------------------------------------------
 
-export function DataViewPageFilters() {
+function CalendarControls() {
+  const controller = useBookingCalendarController();
+
+  return (
+    <ViewHeaderMain>
+      <CalendarNavigation
+        date={controller.date}
+        visibleRange={controller.visibleRange}
+        onSelectDate={controller.setDate}
+        onPrevPeriod={controller.handlePrevPeriod}
+        onNextPeriod={controller.handleNextPeriod}
+        onReset={controller.handleReset}
+        className="rounded-md border bg-background p-0.5"
+      />
+      <div className="flex-1" />
+      <div className="flex items-center gap-2">
+        <CalendarViewSwitcher
+          viewMode={controller.viewMode}
+          onViewModeChange={controller.setViewMode}
+        />
+        {controller.isAdminOrMaker ? (
+          <CalendarTabSwitcher
+            activeTab={controller.activeTab}
+            onTabChange={controller.setActiveTab}
+          />
+        ) : null}
+      </div>
+    </ViewHeaderMain>
+  );
+}
+
+export function DataViewControls() {
   const { section, pathname, searchParams, replaceParams } =
     useDataViewRouteState();
   const search = getSearchParam(searchParams, "search");
@@ -179,7 +200,7 @@ export function DataViewPageFilters() {
   if (!section) return null;
 
   if (section === "calendar") {
-    return null;
+    return <CalendarControls />;
   }
 
   if (section === "projects") {
@@ -194,108 +215,110 @@ export function DataViewPageFilters() {
     ].filter(Boolean).length;
 
     return (
-      <ManageFilterBar>
+      <ViewHeaderMain>
         <DataViewSearchField
           key={`${pathname}:${search}`}
           search={search}
           placeholder="Search projects…"
         />
-        <Select
-          value={status}
-          onValueChange={(value) =>
-            replaceParams({ status: value === "all" ? null : value })
-          }
-        >
-          <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all" className="text-xs">
-              All statuses
-            </SelectItem>
-            <SelectItem value="pending" className="text-xs">
-              Review
-            </SelectItem>
-            <SelectItem value="approved" className="text-xs">
-              Fabrication
-            </SelectItem>
-            <SelectItem value="completed" className="text-xs">
-              Payment
-            </SelectItem>
-            <SelectItem value="paid" className="text-xs">
-              Claim
-            </SelectItem>
-            <SelectItem value="rejected" className="text-xs">
-              Rejected
-            </SelectItem>
-            <SelectItem value="cancelled" className="text-xs">
-              Cancelled
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={date}
-          onValueChange={(value) =>
-            replaceParams({ date: value === "all" ? null : value })
-          }
-        >
-          <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
-            <SelectValue placeholder="Date" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all" className="text-xs">
-              All dates
-            </SelectItem>
-            <SelectItem value="today" className="text-xs">
-              Today
-            </SelectItem>
-            <SelectItem value="week" className="text-xs">
-              This week
-            </SelectItem>
-            <SelectItem value="month" className="text-xs">
-              This month
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={sort}
-          onValueChange={(value) =>
-            replaceParams({ sort: value === "newest" ? null : value })
-          }
-        >
-          <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest" className="text-xs">
-              Newest first
-            </SelectItem>
-            <SelectItem value="oldest" className="text-xs">
-              Oldest first
-            </SelectItem>
-            <SelectItem value="price-high" className="text-xs">
-              Price: high → low
-            </SelectItem>
-            <SelectItem value="price-low" className="text-xs">
-              Price: low → high
-            </SelectItem>
-            <SelectItem value="name-az" className="text-xs">
-              Name A → Z
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <ManageFilterClear
-          activeCount={activeFilterCount}
-          onClear={() =>
-            replaceParams({
-              search: null,
-              status: null,
-              date: null,
-              sort: null,
-            })
-          }
-        />
-      </ManageFilterBar>
+        <div className="hidden items-center gap-2 sm:flex">
+          <Select
+            value={status}
+            onValueChange={(value) =>
+              replaceParams({ status: value === "all" ? null : value })
+            }
+          >
+            <SelectTrigger className="h-8 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">
+                All statuses
+              </SelectItem>
+              <SelectItem value="pending" className="text-xs">
+                Review
+              </SelectItem>
+              <SelectItem value="approved" className="text-xs">
+                Fabrication
+              </SelectItem>
+              <SelectItem value="completed" className="text-xs">
+                Payment
+              </SelectItem>
+              <SelectItem value="paid" className="text-xs">
+                Claim
+              </SelectItem>
+              <SelectItem value="rejected" className="text-xs">
+                Rejected
+              </SelectItem>
+              <SelectItem value="cancelled" className="text-xs">
+                Cancelled
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={date}
+            onValueChange={(value) =>
+              replaceParams({ date: value === "all" ? null : value })
+            }
+          >
+            <SelectTrigger className="h-8 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">
+                All dates
+              </SelectItem>
+              <SelectItem value="today" className="text-xs">
+                Today
+              </SelectItem>
+              <SelectItem value="week" className="text-xs">
+                This week
+              </SelectItem>
+              <SelectItem value="month" className="text-xs">
+                This month
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={sort}
+            onValueChange={(value) =>
+              replaceParams({ sort: value === "newest" ? null : value })
+            }
+          >
+            <SelectTrigger className="h-8 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest" className="text-xs">
+                Newest first
+              </SelectItem>
+              <SelectItem value="oldest" className="text-xs">
+                Oldest first
+              </SelectItem>
+              <SelectItem value="price-high" className="text-xs">
+                Price: high → low
+              </SelectItem>
+              <SelectItem value="price-low" className="text-xs">
+                Price: low → high
+              </SelectItem>
+              <SelectItem value="name-az" className="text-xs">
+                Name A → Z
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <ManageFilterClear
+            activeCount={activeFilterCount}
+            onClear={() =>
+              replaceParams({
+                search: null,
+                status: null,
+                date: null,
+                sort: null,
+              })
+            }
+          />
+        </div>
+      </ViewHeaderMain>
     );
   }
 
@@ -306,38 +329,40 @@ export function DataViewPageFilters() {
     ).length;
 
     return (
-      <ManageFilterBar>
+      <ViewHeaderMain>
         <DataViewSearchField
           key={`${pathname}:${search}`}
           search={search}
           placeholder="Search services…"
         />
-        <Select
-          value={sort}
-          onValueChange={(value) =>
-            replaceParams({ sort: value === "name-az" ? null : value })
-          }
-        >
-          <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name-az" className="text-xs">
-              Name A → Z
-            </SelectItem>
-            <SelectItem value="price-high" className="text-xs">
-              Price: high → low
-            </SelectItem>
-            <SelectItem value="price-low" className="text-xs">
-              Price: low → high
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <ManageFilterClear
-          activeCount={activeFilterCount}
-          onClear={() => replaceParams({ search: null, sort: null })}
-        />
-      </ManageFilterBar>
+        <div className="hidden items-center gap-2 sm:flex">
+          <Select
+            value={sort}
+            onValueChange={(value) =>
+              replaceParams({ sort: value === "name-az" ? null : value })
+            }
+          >
+            <SelectTrigger className="h-8 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-az" className="text-xs">
+                Name A → Z
+              </SelectItem>
+              <SelectItem value="price-high" className="text-xs">
+                Price: high → low
+              </SelectItem>
+              <SelectItem value="price-low" className="text-xs">
+                Price: low → high
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <ManageFilterClear
+            activeCount={activeFilterCount}
+            onClear={() => replaceParams({ search: null, sort: null })}
+          />
+        </div>
+      </ViewHeaderMain>
     );
   }
 
@@ -345,7 +370,7 @@ export function DataViewPageFilters() {
     const activeFilterCount = search.trim() !== "" ? 1 : 0;
 
     return (
-      <ManageFilterBar>
+      <ViewHeaderMain>
         <DataViewSearchField
           key={`${pathname}:${search}`}
           search={search}
@@ -355,7 +380,7 @@ export function DataViewPageFilters() {
           activeCount={activeFilterCount}
           onClear={() => replaceParams({ search: null })}
         />
-      </ManageFilterBar>
+      </ViewHeaderMain>
     );
   }
 
@@ -365,35 +390,37 @@ export function DataViewPageFilters() {
   ).length;
 
   return (
-    <ManageFilterBar>
+    <ViewHeaderMain>
       <DataViewSearchField
         key={`${pathname}:${search}`}
         search={search}
         placeholder="Search inventory…"
       />
-      <Select
-        value={sort}
-        onValueChange={(value) =>
-          replaceParams({ sort: value === "name-az" ? null : value })
-        }
-      >
-        <SelectTrigger className="h-7 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
-          <SelectValue placeholder="Sort" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="name-az" className="text-xs">
-            Name A → Z
-          </SelectItem>
-          <SelectItem value="status" className="text-xs">
-            Status
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <ManageFilterClear
-        activeCount={activeFilterCount}
-        onClear={() => replaceParams({ search: null, sort: null })}
-      />
-    </ManageFilterBar>
+      <div className="hidden items-center gap-2 sm:flex">
+        <Select
+          value={sort}
+          onValueChange={(value) =>
+            replaceParams({ sort: value === "name-az" ? null : value })
+          }
+        >
+          <SelectTrigger className="h-8 w-auto min-w-28 text-xs bg-background border-border/60 shadow-none gap-1.5">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-az" className="text-xs">
+              Name A → Z
+            </SelectItem>
+            <SelectItem value="status" className="text-xs">
+              Status
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <ManageFilterClear
+          activeCount={activeFilterCount}
+          onClear={() => replaceParams({ search: null, sort: null })}
+        />
+      </div>
+    </ViewHeaderMain>
   );
 }
 
@@ -419,6 +446,7 @@ function DataViewSearchField({
       onChange={setSearchDraft}
       placeholder={placeholder}
       onClear={() => setSearchDraft("")}
+      className="max-w-xs"
     />
   );
 }
@@ -428,22 +456,26 @@ function DataViewSearchField({
 // ---------------------------------------------------------------------------
 
 export function DataViewShell({ children }: { children: React.ReactNode }) {
-  return (
+  const { section } = useDataViewRouteState();
+  const content = (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-background">
-      <header className="flex h-14 shrink-0 items-center gap-2 bg-background/80 backdrop-blur-md border-b border-sidebar-border/50 sticky top-0 z-30 px-4">
-        <SidebarTrigger className="-ml-1 text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" />
-        <div className="mx-2 h-4 w-px bg-sidebar-border/60 shrink-0" />
-        <div className="flex flex-1 items-center gap-2 min-w-0">
-          <div className="flex-1 min-w-0">
-            <DataViewPageHeading />
-          </div>
+      <ViewHeader>
+        <ViewHeaderRow>
+          <SidebarTrigger className="-ml-1 text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" />
+          <div className="mx-1 h-4 w-px bg-sidebar-border/60 shrink-0" />
+          <DataViewControls />
+          <div className="flex-1" />
           <DataViewToolbarActions />
-        </div>
-      </header>
-
-      <DataViewPageFilters />
+        </ViewHeaderRow>
+      </ViewHeader>
 
       <div className="flex h-full min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
+
+  if (section === "calendar") {
+    return <BookingCalendarProvider>{content}</BookingCalendarProvider>;
+  }
+
+  return content;
 }

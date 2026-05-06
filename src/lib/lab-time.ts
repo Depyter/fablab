@@ -221,6 +221,33 @@ export function getLabDayKey(date: Date | number) {
   return `${year}-${`${month}`.padStart(2, "0")}-${`${day}`.padStart(2, "0")}`;
 }
 
+export function parseLabDayKey(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
+  }
+
+  const parsed = createLabDayStart(year, month, day);
+  return getLabDayKey(parsed) === value ? parsed : null;
+}
+
 export function isSameLabDay(left: Date | number, right: Date | number) {
   return getLabDayKey(left) === getLabDayKey(right);
 }

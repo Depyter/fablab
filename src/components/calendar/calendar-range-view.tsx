@@ -28,6 +28,7 @@ import {
   isSameLabMonth,
 } from "@/lib/lab-time";
 import { clipTimeRange, overlapsTimeRange } from "@/lib/time-range";
+import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
 import {
   canShowMonthOverflowLabel,
   getMonthVisibleEventLimit,
@@ -323,47 +324,52 @@ export function CalendarRangeView({
             gridTemplateRows: `auto minmax(${WEEK_MIN_GRID_HEIGHT}px, 1fr)`,
           }}
         >
-          <div
-            className="sticky top-0 z-20 grid border-b bg-background"
-            style={{
-              gridTemplateColumns: `${WEEK_TIME_COL_WIDTH}px repeat(${days.length}, minmax(${WEEK_DAY_MIN_WIDTH}px, 1fr))`,
-            }}
-          >
-            <div className="border-r bg-muted/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Time
+          <ViewHeader className="border-0 shadow-none">
+            <div
+              className="grid border-b"
+              style={{
+                gridTemplateColumns: `${WEEK_TIME_COL_WIDTH}px repeat(${days.length}, minmax(${WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+              }}
+            >
+              <ViewHeaderLeading
+                width={WEEK_TIME_COL_WIDTH}
+                className="border-r px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+              >
+                Time
+              </ViewHeaderLeading>
+
+              {days.map((day) => {
+                const dayKey = toDayKey(day);
+                const dayEvents = eventsByDay.get(toDayKey(day)) ?? [];
+
+                return (
+                  <div
+                    key={dayKey}
+                    className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      {formatLabDate(day, { weekday: "short" })}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "inline-flex size-7 items-center justify-center rounded-full text-sm font-semibold",
+                          isCurrentLabDay(day)
+                            ? "bg-card text-foreground ring-1 ring-border"
+                            : "text-foreground",
+                        )}
+                      >
+                        {formatLabDate(day, { day: "numeric" })}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {formatBookingCount(dayEvents.length)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            {days.map((day) => {
-              const dayKey = toDayKey(day);
-              const dayEvents = eventsByDay.get(toDayKey(day)) ?? [];
-
-              return (
-                <div
-                  key={dayKey}
-                  className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
-                >
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {formatLabDate(day, { weekday: "short" })}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex size-7 items-center justify-center rounded-full text-sm font-semibold",
-                        isCurrentLabDay(day)
-                          ? "bg-card text-foreground ring-1 ring-border"
-                          : "text-foreground",
-                      )}
-                    >
-                      {formatLabDate(day, { day: "numeric" })}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {formatBookingCount(dayEvents.length)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          </ViewHeader>
 
           <div
             className="grid h-full min-h-0"
@@ -446,24 +452,26 @@ export function CalendarRangeView({
           gridTemplateRows: "auto minmax(0, 1fr)",
         }}
       >
-        <div
-          className="grid border-b bg-muted/10"
-          style={{
-            gridTemplateColumns: `repeat(7, minmax(${MONTH_DAY_MIN_WIDTH}px, 1fr))`,
-          }}
-        >
-          {monthWeekdays.map((day, index) => (
-            <div
-              key={`month-weekday-${toDayKey(day)}`}
-              className={cn(
-                "truncate whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
-                index === 0 ? "" : "border-l",
-              )}
-            >
-              {formatLabDate(day, { weekday: "long" })}
-            </div>
-          ))}
-        </div>
+        <ViewHeader className="border-0 shadow-none">
+          <div
+            className="grid border-b"
+            style={{
+              gridTemplateColumns: `repeat(7, minmax(${MONTH_DAY_MIN_WIDTH}px, 1fr))`,
+            }}
+          >
+            {monthWeekdays.map((day, index) => (
+              <div
+                key={`month-weekday-${toDayKey(day)}`}
+                className={cn(
+                  "truncate whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  index === 0 ? "" : "border-l",
+                )}
+              >
+                {formatLabDate(day, { weekday: "long" })}
+              </div>
+            ))}
+          </div>
+        </ViewHeader>
 
         <div
           ref={monthBodyRef}

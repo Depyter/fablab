@@ -7,10 +7,11 @@ import type { Id } from "@convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
 import {
   buildCalendarDayScheduleRows,
-  CALENDAR_DAY_HEADER_HEIGHT,
   CALENDAR_DAY_LAYOUT_TEMPLATE,
+  CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_MIN_WIDTH,
   CALENDAR_DAY_TIMELINE_TEMPLATE,
   getCalendarDayNowIndicatorLeft,
@@ -277,74 +278,56 @@ export function UsageTable({
               height: "100%",
             }}
           >
-            <div
-              className="sticky top-0 z-20 grid"
-              style={{
-                gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
-                background: "var(--fab-bg-sidebar)",
-              }}
-            >
+            <ViewHeader className="border-0 shadow-none">
               <div
-                className="flex items-center"
-                style={{
-                  position: "sticky",
-                  left: 0,
-                  zIndex: 30,
-                  height: CALENDAR_DAY_HEADER_HEIGHT,
-                  background: "var(--fab-bg-sidebar)",
-                  borderBottom: "1px solid var(--fab-border-md)",
-                  borderRight: "1px solid var(--fab-border-md)",
-                  paddingLeft: 12,
-                  color: "var(--fab-text-muted)",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                }}
+                className="grid"
+                style={{ gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE }}
               >
-                {leadingColumnLabel}
-              </div>
+                <ViewHeaderLeading
+                  width={CALENDAR_DAY_LEADING_COL_WIDTH}
+                  className="h-11 border-b border-r px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+                >
+                  {leadingColumnLabel}
+                </ViewHeaderLeading>
 
-              <div
-                className="relative grid"
-                style={{
-                  gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
-                  height: CALENDAR_DAY_HEADER_HEIGHT,
-                  background: "var(--fab-bg-sidebar)",
-                }}
-              >
-                {HEADER_SLOTS.map((slot, slotIndex) => {
-                  const isCurrentHeader =
-                    currentSlotIdx !== null && slotIndex === currentSlotIdx;
+                <div
+                  className="relative grid"
+                  style={{
+                    gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                    height: 44,
+                  }}
+                >
+                  {HEADER_SLOTS.map((slot, slotIndex) => {
+                    const isCurrentHeader =
+                      currentSlotIdx !== null && slotIndex === currentSlotIdx;
 
-                  return (
-                    <div
-                      key={`header-slot-${slot}`}
-                      className="flex items-center whitespace-nowrap px-1"
-                      style={{
-                        height: "100%",
-                        borderBottom: "1px solid var(--fab-border-md)",
-                        borderLeft: "1px solid var(--fab-border)",
-                        background: isCurrentHeader
-                          ? "rgba(157,26,88,0.06)"
-                          : "var(--fab-bg-sidebar)",
-                        color: isCurrentHeader
-                          ? "var(--fab-magenta)"
-                          : "var(--fab-text-muted)",
-                        fontSize: 10,
-                        fontWeight: isCurrentHeader ? 700 : 500,
-                        paddingLeft: 4,
-                      }}
-                    >
-                      {slot % 1 === 0 ? formatShortTime(slot) : ""}
-                    </div>
-                  );
-                })}
-                {nowIndicatorLeft ? (
-                  <DayNowIndicator left={nowIndicatorLeft} showArrow />
-                ) : null}
+                    return (
+                      <div
+                        key={`header-slot-${slot}`}
+                        className="flex items-center whitespace-nowrap border-b border-l border-border px-1"
+                        style={{
+                          height: "100%",
+                          background: isCurrentHeader
+                            ? "rgba(157,26,88,0.06)"
+                            : "transparent",
+                          color: isCurrentHeader
+                            ? "var(--fab-magenta)"
+                            : "var(--fab-text-muted)",
+                          fontSize: 10,
+                          fontWeight: isCurrentHeader ? 700 : 500,
+                          paddingLeft: 4,
+                        }}
+                      >
+                        {slot % 1 === 0 ? formatShortTime(slot) : ""}
+                      </div>
+                    );
+                  })}
+                  {nowIndicatorLeft ? (
+                    <DayNowIndicator left={nowIndicatorLeft} showArrow />
+                  ) : null}
+                </div>
               </div>
-            </div>
+            </ViewHeader>
 
             <div
               className="grid min-h-0"
