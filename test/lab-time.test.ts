@@ -27,6 +27,7 @@ import {
   isLabDateBeforeToday,
   isLabTimeInPast,
   isSameLabDay,
+  parseLabDayKey,
   startOfLabMonth,
   startOfLabWeek,
 } from "../src/lib/lab-time";
@@ -58,6 +59,14 @@ describe("lab time helpers", () => {
     expect(day.getDate()).toBe(6);
     expect(start.toISOString()).toBe("2026-05-05T16:00:00.000Z");
     expect(endExclusive.toISOString()).toBe("2026-05-06T16:00:00.000Z");
+  });
+
+  test("parses canonical lab day keys without relying on native Date parsing", () => {
+    expect(parseLabDayKey("2026-05-06")?.toISOString()).toBe(
+      "2026-05-05T16:00:00.000Z",
+    );
+    expect(parseLabDayKey("2026-02-31")).toBeNull();
+    expect(parseLabDayKey("2026/05/06")).toBeNull();
   });
 
   test("formats canonical lab date and time labels for booking UI", () => {

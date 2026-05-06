@@ -1,8 +1,6 @@
 import type { ComponentProps } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import type { Preloaded } from "convex/react";
-import { api } from "@convex/_generated/api";
 import {
   Sidebar,
   SidebarFooter,
@@ -15,14 +13,8 @@ import {
   SidebarNavigation,
   SidebarUserFooter,
 } from "@/components/sidebar/app-sidebar-content";
-import { ProfileProvider } from "@/components/sidebar/profile-context";
 
-export function AppSidebar({
-  preloadedProfile,
-  ...props
-}: ComponentProps<typeof Sidebar> & {
-  preloadedProfile: Preloaded<typeof api.users.getUserProfile>;
-}) {
+export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
       collapsible="icon"
@@ -67,13 +59,11 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <ProfileProvider preloadedProfile={preloadedProfile}>
-        <SidebarNavigation />
+      <SidebarNavigation />
 
-        <SidebarFooter>
-          <SidebarUserFooter />
-        </SidebarFooter>
-      </ProfileProvider>
+      <SidebarFooter>
+        <SidebarUserFooter />
+      </SidebarFooter>
     </Sidebar>
   );
 }

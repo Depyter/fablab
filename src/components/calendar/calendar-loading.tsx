@@ -4,8 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
 import {
-  CALENDAR_DAY_HEADER_HEIGHT,
   CALENDAR_DAY_LAYOUT_TEMPLATE,
+  CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_MIN_WIDTH,
   CALENDAR_DAY_ROW_HEIGHT,
   CALENDAR_DAY_SECTION_HEIGHT,
@@ -24,7 +24,7 @@ import {
 } from "@/lib/calendar";
 import { formatLabDecimalHour } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
-import { BookingCalendarToolbarSkeleton } from "./booking-calendar-toolbar";
+import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
 
 const DAY_SECTION_BG = "rgba(220,215,245,0.55)";
 const DAY_SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
@@ -246,61 +246,43 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
               height: "100%",
             }}
           >
-            <div
-              className="sticky top-0 z-20 grid"
-              style={{
-                gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE,
-                background: "var(--fab-bg-sidebar)",
-              }}
-            >
+            <ViewHeader className="border-0 shadow-none">
               <div
-                className="flex items-center"
-                style={{
-                  position: "sticky",
-                  left: 0,
-                  zIndex: 30,
-                  height: CALENDAR_DAY_HEADER_HEIGHT,
-                  background: "var(--fab-bg-sidebar)",
-                  borderBottom: "1px solid var(--fab-border-md)",
-                  borderRight: "1px solid var(--fab-border-md)",
-                  paddingLeft: 12,
-                  color: "var(--fab-text-muted)",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                }}
+                className="grid"
+                style={{ gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE }}
               >
-                {activeTab === "resources" ? "RESOURCES" : "SERVICES"}
-              </div>
+                <ViewHeaderLeading
+                  width={CALENDAR_DAY_LEADING_COL_WIDTH}
+                  className="h-11 border-b border-r px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+                >
+                  {activeTab === "resources" ? "RESOURCES" : "SERVICES"}
+                </ViewHeaderLeading>
 
-              <div
-                className="relative grid"
-                style={{
-                  gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
-                  height: CALENDAR_DAY_HEADER_HEIGHT,
-                  background: "var(--fab-bg-sidebar)",
-                }}
-              >
-                {HEADER_SLOTS.map((slot) => (
-                  <div
-                    key={`calendar-loading-header-${slot}`}
-                    className="flex items-center whitespace-nowrap px-1"
-                    style={{
-                      height: "100%",
-                      borderBottom: "1px solid var(--fab-border-md)",
-                      borderLeft: "1px solid var(--fab-border)",
-                      color: "var(--fab-text-muted)",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      paddingLeft: 4,
-                    }}
-                  >
-                    {slot % 1 === 0 ? formatLoadingTime(slot) : ""}
-                  </div>
-                ))}
+                <div
+                  className="relative grid"
+                  style={{
+                    gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
+                    height: 44,
+                  }}
+                >
+                  {HEADER_SLOTS.map((slot) => (
+                    <div
+                      key={`calendar-loading-header-${slot}`}
+                      className="flex items-center whitespace-nowrap border-b border-l border-border px-1"
+                      style={{
+                        height: "100%",
+                        color: "var(--fab-text-muted)",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        paddingLeft: 4,
+                      }}
+                    >
+                      {slot % 1 === 0 ? formatLoadingTime(slot) : ""}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </ViewHeader>
 
             <div
               className="grid min-h-0"
@@ -506,29 +488,34 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
             gridTemplateRows: `auto minmax(${CALENDAR_WEEK_MIN_GRID_HEIGHT}px, 1fr)`,
           }}
         >
-          <div
-            className="sticky top-0 z-20 grid border-b bg-background"
-            style={{
-              gridTemplateColumns: `${CALENDAR_WEEK_TIME_COL_WIDTH}px repeat(${weekSkeletonDays.length}, minmax(${CALENDAR_WEEK_DAY_MIN_WIDTH}px, 1fr))`,
-            }}
-          >
-            <div className="border-r bg-muted/10 px-3 py-2">
-              <Skeleton className="h-3 w-8" />
-            </div>
-
-            {weekSkeletonDays.map((day) => (
-              <div
-                key={`calendar-week-loading-header-${day}`}
-                className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
+          <ViewHeader className="border-0 shadow-none">
+            <div
+              className="grid border-b"
+              style={{
+                gridTemplateColumns: `${CALENDAR_WEEK_TIME_COL_WIDTH}px repeat(${weekSkeletonDays.length}, minmax(${CALENDAR_WEEK_DAY_MIN_WIDTH}px, 1fr))`,
+              }}
+            >
+              <ViewHeaderLeading
+                width={CALENDAR_WEEK_TIME_COL_WIDTH}
+                className="border-r px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
               >
-                <Skeleton className="h-3 w-10" />
-                <div className="mt-2 flex items-center gap-2">
-                  <Skeleton className="h-7 w-7 rounded-full" />
-                  <Skeleton className="h-3 w-16" />
+                Time
+              </ViewHeaderLeading>
+
+              {weekSkeletonDays.map((day) => (
+                <div
+                  key={`calendar-week-loading-header-${day}`}
+                  className="border-r bg-muted/10 px-3 py-2 last:border-r-0"
+                >
+                  <Skeleton className="h-3 w-10" />
+                  <div className="mt-2 flex items-center gap-2">
+                    <Skeleton className="h-7 w-7 rounded-full" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </ViewHeader>
 
           <div
             className="grid h-full min-h-0"
@@ -593,21 +580,26 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
           gridTemplateRows: "auto minmax(0, 1fr)",
         }}
       >
-        <div
-          className="grid border-b bg-muted/10"
-          style={{
-            gridTemplateColumns: `repeat(7, minmax(${CALENDAR_MONTH_DAY_MIN_WIDTH}px, 1fr))`,
-          }}
-        >
-          {weekSkeletonDays.map((day) => (
-            <div
-              key={`calendar-month-loading-header-${day}`}
-              className={cn("px-3 py-2", day === 0 ? "" : "border-l")}
-            >
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
-        </div>
+        <ViewHeader className="border-0 shadow-none">
+          <div
+            className="grid border-b"
+            style={{
+              gridTemplateColumns: `repeat(7, minmax(${CALENDAR_MONTH_DAY_MIN_WIDTH}px, 1fr))`,
+            }}
+          >
+            {weekSkeletonDays.map((day) => (
+              <div
+                key={`calendar-month-loading-header-${day}`}
+                className={cn(
+                  "px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  day === 0 ? "" : "border-l",
+                )}
+              >
+                <Skeleton className="h-3 w-16" />
+              </div>
+            ))}
+          </div>
+        </ViewHeader>
 
         <div
           className="grid min-h-0 border-b border-r bg-background"
@@ -671,11 +663,6 @@ export function CalendarLoadingState({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <BookingCalendarToolbarSkeleton
-        viewMode={viewMode}
-        activeTab={activeTab}
-        showStaffTabs={showStaffTabs}
-      />
       <CalendarContentLoadingState viewMode={viewMode} activeTab={activeTab} />
     </div>
   );
