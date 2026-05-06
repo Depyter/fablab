@@ -3,6 +3,94 @@ import { ConvexError, v } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
 import { QueryCtx } from "../_generated/server";
 import { authQuery } from "../helper";
+import {
+  addLabDays,
+  endOfLabMonth,
+  endOfLabWeek,
+  getCurrentTimestamp,
+  getLabDayBoundsMs,
+  startOfLabMonth,
+  startOfLabWeek,
+} from "../../src/lib/lab-time";
+
+const PROJECT_WEEK_STARTS_ON = 1 as const;
+type StatusUnion =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "completed"
+  | "cancelled"
+  | "paid";
+
+function resolveProjectDateBounds(dateFilter?: string) {
+  const now = getCurrentTimestamp();
+
+  if (dateFilter === "today") {
+    return getLabDayBoundsMs(now);
+  }
+
+  if (dateFilter === "week") {
+    const start = startOfLabWeek(now, PROJECT_WEEK_STARTS_ON);
+    const end = endOfLabWeek(now, PROJECT_WEEK_STARTS_ON);
+
+    return {
+      startTime: start.getTime(),
+      endTime: addLabDays(end, 1).getTime(),
+    };
+  }
+
+  if (dateFilter === "month") {
+    const start = startOfLabMonth(now);
+    const end = endOfLabMonth(now);
+
+    return {
+      startTime: start.getTime(),
+      endTime: addLabDays(end, 1).getTime(),
+    };
+  }
+
+  return null;
+}
+
+function compareByCreationTime(left: Doc<"projects">, right: Doc<"projects">) {
+  return (
+    left._creationTime - right._creationTime ||
+    left._id.localeCompare(right._id)
+  );
+}
+
+function sortProjectsForList(projects: Doc<"projects">[], sortBy?: string) {
+  const sorted = [...projects];
+
+  if (sortBy === "oldest" || sortBy === "price-low" || sortBy === "name-az") {
+    sorted.sort(compareByCreationTime);
+    return sorted;
+  }
+
+  sorted.sort((left, right) => compareByCreationTime(right, left));
+  return sorted;
+}
+
+function getPaginationOffset(cursor: string | null) {
+  if (cursor === null) return 0;
+
+  const offset = Number(cursor);
+  return Number.isInteger(offset) && offset >= 0 ? offset : 0;
+}
+
+function paginateProjects<T>(
+  projects: T[],
+  paginationOpts: { cursor: string | null; numItems: number },
+) {
+  const start = getPaginationOffset(paginationOpts.cursor);
+  const end = Math.min(start + paginationOpts.numItems, projects.length);
+
+  return {
+    page: projects.slice(start, end),
+    isDone: end >= projects.length,
+    continueCursor: `${end}`,
+  };
+}
 
 export const getProjects = authQuery({
   args: {
@@ -18,14 +106,6 @@ export const getProjects = authQuery({
 
     const hasStatusFilter =
       args.statusFilter !== undefined && args.statusFilter !== "all";
-
-    type StatusUnion =
-      | "pending"
-      | "approved"
-      | "rejected"
-      | "completed"
-      | "cancelled"
-      | "paid";
 
     // ── Search path: uses the search index, applies status as a filter field ─
     if (args.searchText && args.searchText.trim() !== "") {
@@ -45,6 +125,71 @@ export const getProjects = authQuery({
       }
 
       const result = await searchQuery.paginate(args.paginationOpts);
+      const enrichedPage = await enrichProjects(ctx, result.page);
+      return { ...result, page: enrichedPage };
+    }
+
+    const dateBounds = resolveProjectDateBounds(args.dateFilter);
+    if (dateBounds !== null) {
+      const projectsById = new Map<Id<"projects">, Doc<"projects">>();
+      const datedProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_bookingStartTime", (q) =>
+          q
+            .gte("bookingStartTime", dateBounds.startTime)
+            .lt("bookingStartTime", dateBounds.endTime),
+        )
+        .collect();
+
+      for (const project of datedProjects) {
+        projectsById.set(project._id, project);
+      }
+
+      const matchingUsages = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_startTime", (q) =>
+          q
+            .gte("startTime", dateBounds.startTime)
+            .lt("startTime", dateBounds.endTime),
+        )
+        .collect();
+
+      const missingProjectIds = [
+        ...new Set(
+          matchingUsages
+            .map((usage) => usage.projectId)
+            .filter((projectId) => !projectsById.has(projectId)),
+        ),
+      ];
+
+      const fallbackProjects = await Promise.all(
+        missingProjectIds.map((projectId) => ctx.db.get(projectId)),
+      );
+
+      for (const project of fallbackProjects) {
+        if (project) {
+          projectsById.set(project._id, project);
+        }
+      }
+
+      const filteredProjects = sortProjectsForList(
+        [...projectsById.values()].filter((project) => {
+          if (!isPrivileged && project.userId !== callerId) {
+            return false;
+          }
+
+          if (
+            hasStatusFilter &&
+            project.status !== (args.statusFilter as StatusUnion)
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+        args.sortBy,
+      );
+      const result = paginateProjects(filteredProjects, args.paginationOpts);
       const enrichedPage = await enrichProjects(ctx, result.page);
       return { ...result, page: enrichedPage };
     }
@@ -104,9 +249,6 @@ export const getProjects = authQuery({
         q.eq(q.field("status"), args.statusFilter as StatusUnion),
       );
     }
-
-    // dateFilter is not supported after the scheduling refactor
-    // (startTime now lives on resourceUsage, not projects)
 
     const result = await query.paginate(args.paginationOpts);
     const enrichedPage = await enrichProjects(ctx, result.page);

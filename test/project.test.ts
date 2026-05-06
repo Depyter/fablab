@@ -2,6 +2,15 @@ import { describe, expect, test } from "vitest";
 import { flushScheduledFunctions, setupProject, setupUsers } from "./helper";
 import { api, internal } from "../convex/_generated/api";
 import { syncProjectTotalInvoice } from "../convex/projects/helper";
+import {
+  addLabDays,
+  addLabMonths,
+  endOfLabMonth,
+  endOfLabWeek,
+  getLabDayStart,
+  startOfLabMonth,
+  startOfLabWeek,
+} from "../src/lib/lab-time";
 
 const HOUR_MS = 1000 * 60 * 60;
 
@@ -1724,6 +1733,179 @@ describe("Project and Chat functionality", () => {
         projectDetails.resourceUsages.find((usage) => usage._id === usageId)
           ?.snapshot.costAtTime,
       ).toBe(8);
+    });
+
+    test("Project list date filters follow current lab day, week, and month windows", async () => {
+      const { t, tHarley, tAera } = await setupUsers();
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "laser cutting",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "FABRICATION",
+          materials: [],
+          setupFee: 1,
+          unitName: "hour",
+          timeRate: 2,
+        },
+        requirements: [],
+        fileTypes: [],
+        description: "cut parts",
+        status: "Available",
+      });
+
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db.query("services").first();
+        return service!._id;
+      });
+
+      const todayProject = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "today project",
+          pricing: "Default",
+          description: "scheduled today",
+          fulfillmentMode: "self-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "today",
+          booking: {
+            startTime: Date.now() + 72 * HOUR_MS,
+            endTime: Date.now() + 73 * HOUR_MS,
+            date: Date.now() + 72 * HOUR_MS,
+          },
+        },
+      );
+      const weekProject = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "week project",
+          pricing: "Default",
+          description: "scheduled this week",
+          fulfillmentMode: "self-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "week",
+          booking: {
+            startTime: Date.now() + 74 * HOUR_MS,
+            endTime: Date.now() + 75 * HOUR_MS,
+            date: Date.now() + 74 * HOUR_MS,
+          },
+        },
+      );
+      const nextMonthProject = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "next month project",
+          pricing: "Default",
+          description: "scheduled next month",
+          fulfillmentMode: "self-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "month",
+          booking: {
+            startTime: Date.now() + 76 * HOUR_MS,
+            endTime: Date.now() + 77 * HOUR_MS,
+            date: Date.now() + 76 * HOUR_MS,
+          },
+        },
+      );
+
+      await flushScheduledFunctions(t);
+
+      const currentDay = getLabDayStart(Date.now());
+      const currentWeekStart = startOfLabWeek(currentDay, 1);
+      const currentWeekEnd = endOfLabWeek(currentDay, 1);
+      const currentMonthStart = startOfLabMonth(currentDay);
+      const currentMonthEnd = endOfLabMonth(currentDay);
+      const sameWeekDay =
+        currentDay.getTime() === currentWeekEnd.getTime()
+          ? addLabDays(currentDay, -1)
+          : addLabDays(currentDay, 1);
+      const nextMonthDay = startOfLabMonth(addLabMonths(currentDay, 1));
+
+      const todayStartTime = currentDay.getTime() + 9 * HOUR_MS;
+      const weekStartTime = sameWeekDay.getTime() + 10 * HOUR_MS;
+      const nextMonthStartTime = nextMonthDay.getTime() + 11 * HOUR_MS;
+
+      await t.run(async (ctx) => {
+        const assignments = [
+          [todayProject.projectId, todayStartTime],
+          [weekProject.projectId, weekStartTime],
+          [nextMonthProject.projectId, nextMonthStartTime],
+        ] as const;
+
+        for (const [projectId, startTime] of assignments) {
+          const usage = await ctx.db
+            .query("resourceUsage")
+            .withIndex("by_project", (q) => q.eq("projectId", projectId))
+            .first();
+
+          await ctx.db.patch(projectId, {
+            bookingStartTime: startTime,
+            bookingEndTime: startTime + HOUR_MS,
+          });
+
+          await ctx.db.patch(usage!._id, {
+            startTime,
+            endTime: startTime + HOUR_MS,
+          });
+        }
+      });
+
+      const todayList = await tHarley.query(api.projects.query.getProjects, {
+        paginationOpts: { cursor: null, numItems: 10 },
+        dateFilter: "today",
+      });
+      const weekList = await tHarley.query(api.projects.query.getProjects, {
+        paginationOpts: { cursor: null, numItems: 10 },
+        dateFilter: "week",
+      });
+      const monthList = await tHarley.query(api.projects.query.getProjects, {
+        paginationOpts: { cursor: null, numItems: 10 },
+        dateFilter: "month",
+      });
+
+      const expectedWeekNames = [
+        ["today project", todayStartTime],
+        ["week project", weekStartTime],
+        ["next month project", nextMonthStartTime],
+      ]
+        .filter(([, startTime]) => {
+          return (
+            startTime >= currentWeekStart.getTime() &&
+            startTime < addLabDays(currentWeekEnd, 1).getTime()
+          );
+        })
+        .map(([name]) => name)
+        .sort();
+      const expectedMonthNames = [
+        ["today project", todayStartTime],
+        ["week project", weekStartTime],
+        ["next month project", nextMonthStartTime],
+      ]
+        .filter(([, startTime]) => {
+          return (
+            startTime >= currentMonthStart.getTime() &&
+            startTime < addLabDays(currentMonthEnd, 1).getTime()
+          );
+        })
+        .map(([name]) => name)
+        .sort();
+
+      expect(todayList.page.map((project) => project.name)).toEqual([
+        "today project",
+      ]);
+      expect(weekList.page.map((project) => project.name).sort()).toEqual(
+        expectedWeekNames,
+      );
+      expect(monthList.page.map((project) => project.name).sort()).toEqual(
+        expectedMonthNames,
+      );
     });
   });
 
