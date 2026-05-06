@@ -1,5 +1,5 @@
-import { ProjectsListClient } from "./_client";
+import { ProjectsPage as ProjectsPageContent } from "./_page";
 
 export default function ProjectsPage() {
-  return <ProjectsListClient />;
+  return <ProjectsPageContent />;
 }

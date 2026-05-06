@@ -1,13 +1,22 @@
 "use client";
 
+import * as React from "react";
 import {
   Calendar as CalendarIcon,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
   Users,
 } from "lucide-react";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -15,7 +24,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { LAB_TIME_ZONE } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
@@ -35,6 +52,24 @@ export const BOOKING_CALENDAR_STAFF_TABS = [
   label: string;
   icon: typeof LayoutGrid;
 }>;
+
+function useIsTablet() {
+  const [isTablet, setIsTablet] = React.useState(() =>
+    typeof window !== "undefined"
+      ? window.innerWidth >= 768 && window.innerWidth < 1024
+      : false,
+  );
+
+  React.useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+    const onChange = () =>
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return isTablet;
+}
 
 export function CalendarNavigation({
   date,
@@ -59,7 +94,7 @@ export function CalendarNavigation({
         variant="ghost"
         size="icon"
         onClick={onPrevPeriod}
-        className="h-8 w-8 rounded-sm"
+        className="h-7 w-7 rounded-sm"
         aria-label={visibleRange.previousLabel}
         title={visibleRange.previousLabel}
       >
@@ -70,7 +105,7 @@ export function CalendarNavigation({
         variant="ghost"
         size="icon"
         onClick={onNextPeriod}
-        className="h-8 w-8 rounded-sm"
+        className="h-7 w-7 rounded-sm"
         aria-label={visibleRange.nextLabel}
         title={visibleRange.nextLabel}
       >
@@ -79,7 +114,7 @@ export function CalendarNavigation({
 
       <Button
         variant="ghost"
-        className="h-8 rounded-sm px-2 text-xs font-medium text-muted-foreground hover:text-foreground hidden sm:flex"
+        className="hidden h-7 rounded-sm px-2.5 text-[10px] font-medium text-muted-foreground hover:text-foreground sm:flex sm:text-xs"
         onClick={onReset}
       >
         Today
@@ -91,7 +126,7 @@ export function CalendarNavigation({
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
-            className="h-8 max-w-full gap-2 rounded-sm px-2 text-xs font-medium"
+            className="h-7 max-w-full gap-2 rounded-sm px-2.5 text-[10px] font-medium sm:text-xs"
           >
             <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="truncate hidden sm:inline">
@@ -122,6 +157,73 @@ export function CalendarViewSwitcher({
   onViewModeChange: (mode: CalendarViewMode) => void;
   className?: string;
 }) {
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const currentLabel =
+    BOOKING_CALENDAR_VIEW_MODE_OPTIONS.find(
+      ([mode]) => mode === viewMode,
+    )?.[1] ?? "Day";
+
+  if (isMobile) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              "h-7 gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium",
+              className,
+            )}
+          >
+            {currentLabel}
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-28">
+          {BOOKING_CALENDAR_VIEW_MODE_OPTIONS.map(([mode, label]) => (
+            <DropdownMenuItem
+              key={mode}
+              onSelect={() => onViewModeChange(mode)}
+              className={cn(
+                "justify-between",
+                viewMode === mode && "bg-muted text-foreground",
+              )}
+            >
+              {label}
+              {viewMode === mode ? <Check className="h-4 w-4" /> : null}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  if (isTablet) {
+    return (
+      <Select
+        value={viewMode}
+        onValueChange={(value) => onViewModeChange(value as CalendarViewMode)}
+      >
+        <SelectTrigger
+          className={cn(
+            "h-7 min-w-24 rounded-md border bg-background px-2.5 text-xs shadow-none",
+            className,
+          )}
+        >
+          <SelectValue placeholder="View">{currentLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent align="end">
+          {BOOKING_CALENDAR_VIEW_MODE_OPTIONS.map(([mode, label]) => (
+            <SelectItem key={mode} value={mode}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
   return (
     <div
       className={cn(

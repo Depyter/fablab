@@ -7,10 +7,13 @@ import {
   DataViewContent,
   DataViewLoadMore,
 } from "@/components/manage/data-view";
+import { ManageFilterClear } from "@/components/manage/manage-primitives";
+import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import {
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
+import { DataViewSearchField } from "@/components/manage/data-view-toolbar";
 import {
   Table,
   TableBody,
@@ -58,6 +61,35 @@ import {
 import { toast } from "sonner";
 import { UserRole, UserRoleType } from "@convex/constants";
 import { format } from "date-fns";
+import { ViewHeaderMain } from "@/components/ui/view-header";
+
+function UsersPageHeader() {
+  const { pathname, searchParams, replaceParams } = useDataViewRouteState();
+  const search = getSearchParam(searchParams, "search");
+  const activeFilterCount = search.trim() !== "" ? 1 : 0;
+
+  return (
+    <DataViewPageHeader>
+      <ViewHeaderMain>
+        <DataViewSearchField
+          key={`${pathname}:${search}`}
+          search={search}
+          onSearchChange={(value) =>
+            replaceParams({ search: value ? value : null })
+          }
+          placeholder="Search users by email…"
+          className="max-w-sm"
+        />
+        <div className="flex shrink-0 items-center gap-2">
+          <ManageFilterClear
+            activeCount={activeFilterCount}
+            onClear={() => replaceParams({ search: null })}
+          />
+        </div>
+      </ViewHeaderMain>
+    </DataViewPageHeader>
+  );
+}
 
 export default function UsersPage() {
   const { searchParams } = useDataViewRouteState();
@@ -127,7 +159,8 @@ export default function UsersPage() {
   };
 
   return (
-    <>
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
+      <UsersPageHeader />
       <DataViewContent
         view="list"
         items={results}
@@ -348,6 +381,6 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
