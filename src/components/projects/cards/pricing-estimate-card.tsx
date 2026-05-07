@@ -21,6 +21,8 @@ import { toast } from "sonner";
 import { ProjectMaterial } from "@convex/constants";
 import {
   derivePricingFromSchema,
+  getDurationMinutesFromUsageRanges,
+  getDurationUnitsFromMinutes,
   type PricingServiceType,
   type ServicePricing,
 } from "@/lib/project-pricing";
@@ -44,6 +46,23 @@ function buildTimestamp(dateValue: string, timeValue: string) {
   const [year, month, day] = dateValue.split("-").map(Number);
   const [hours, minutes] = timeValue.split(":").map(Number);
   return new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+}
+
+function buildBookingRange(
+  dateValue: string,
+  startTimeValue: string,
+  endTimeValue: string,
+) {
+  if (!dateValue || !startTimeValue || !endTimeValue) return null;
+
+  const startTime = buildTimestamp(dateValue, startTimeValue);
+  const endTime = buildTimestamp(dateValue, endTimeValue);
+
+  if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
+    return null;
+  }
+
+  return { startTime, endTime };
 }
 
 // ---------------------------------------------------------------------------
@@ -173,9 +192,9 @@ export function PricingEstimateCard({
   );
 
   // ── Derive defaults from service pricing + booking duration ─────────────
-  const totalDurationMs =
-    resourceUsages?.reduce((acc, u) => acc + (u.endTime - u.startTime), 0) ?? 0;
-  const totalDurationMinutes = totalDurationMs / (1000 * 60);
+  const totalDurationMinutes = getDurationMinutesFromUsageRanges(
+    resourceUsages ?? [],
+  );
 
   const primaryUsage = resourceUsages?.[0];
 
@@ -225,7 +244,6 @@ export function PricingEstimateCard({
   const initialEditState = () => ({
     setupFee: pricingSnapshot?.setupFee ?? derived.setupFee,
     rate: pricingSnapshot?.rate ?? derived.rate,
-    duration: pricingSnapshot?.duration ?? derived.duration,
   });
 
   const initialMaterialAmounts = () => ({ ...storedMaterialAmounts });
@@ -269,9 +287,31 @@ export function PricingEstimateCard({
   const pricingType = servicePricing?.type ?? "WORKSHOP";
   const isTimeBased = pricingType === "FABRICATION";
   const isBuyFromLab = material === ProjectMaterial.BUY_FROM_LAB;
+  const persistedUnitName = pricingSnapshot?.unitName ?? derived.unitName;
+
+  const editedPrimaryRange = primaryUsage
+    ? buildBookingRange(
+        bookingValues.date,
+        bookingValues.startTime,
+        bookingValues.endTime,
+      )
+    : null;
+  const editingDurationMinutes =
+    primaryUsage && editedPrimaryRange
+      ? getDurationMinutesFromUsageRanges(
+          (resourceUsages ?? []).map((usage) =>
+            usage._id === primaryUsage._id
+              ? { ...usage, ...editedPrimaryRange }
+              : usage,
+          ),
+        )
+      : totalDurationMinutes;
+  const editingDuration = isTimeBased
+    ? getDurationUnitsFromMinutes(editingDurationMinutes, persistedUnitName)
+    : 0;
 
   const computedTimeCost = isTimeBased
-    ? editValues.duration * editValues.rate
+    ? editingDuration * editValues.rate
     : 0;
   const computedMaterialCost = isBuyFromLab
     ? selectedMaterialDocs.reduce((acc, m) => {
@@ -284,9 +324,8 @@ export function PricingEstimateCard({
     editValues.setupFee + computedTimeCost + computedMaterialCost;
 
   // ── Displayed values ─────────────────────────────────────────────────────
-  const persistedUnitName = pricingSnapshot?.unitName ?? derived.unitName;
   const displayDuration = isEditing
-    ? editValues.duration
+    ? editingDuration
     : (pricingSnapshot?.duration ?? derived.duration);
   const displayRate = isEditing
     ? editValues.rate
@@ -338,7 +377,6 @@ export function PricingEstimateCard({
 
   const handleSave = async () => {
     try {
-      const mutations: Promise<unknown>[] = [];
       const materialsUsedPayload = isBuyFromLab
         ? Object.entries(materialAmounts)
             .filter(([, amt]) => amt > 0)
@@ -348,47 +386,37 @@ export function PricingEstimateCard({
             }))
         : undefined;
 
-      if (
-        primaryUsage &&
-        bookingValues.date &&
-        bookingValues.startTime &&
-        bookingValues.endTime
-      ) {
-        const nextStartTime = buildTimestamp(
-          bookingValues.date,
-          bookingValues.startTime,
-        );
-        const nextEndTime = buildTimestamp(
-          bookingValues.date,
-          bookingValues.endTime,
-        );
-
-        if (nextEndTime <= nextStartTime) {
-          toast.error("End time must be after start time.");
-          return;
-        }
-
-        mutations.push(
-          updateUsage({
-            id: primaryUsage._id as Id<"resourceUsage">,
-            startTime: nextStartTime,
-            endTime: nextEndTime,
-          }),
-        );
+      if (primaryUsage && !editedPrimaryRange) {
+        toast.error("Please enter a valid booking date and time.");
+        return;
       }
 
-      mutations.push(
+      if (
+        editedPrimaryRange &&
+        editedPrimaryRange.endTime <= editedPrimaryRange.startTime
+      ) {
+        toast.error("End time must be after start time.");
+        return;
+      }
+
+      if (primaryUsage && editedPrimaryRange) {
+        await updateUsage({
+          id: primaryUsage._id as Id<"resourceUsage">,
+          startTime: editedPrimaryRange.startTime,
+          endTime: editedPrimaryRange.endTime,
+        });
+      }
+
+      await Promise.all([
         updateCostBreakdown({
           projectId,
           setupFee: editValues.setupFee,
-          duration: editValues.duration,
+          duration: editingDuration,
           rate: editValues.rate,
-          timeCost: computedTimeCost,
+          timeCost: isTimeBased ? editingDuration * editValues.rate : 0,
           materialCost: computedMaterialCost,
           materialsUsed: materialsUsedPayload,
         }),
-      );
-      mutations.push(
         updateAssignments({
           projectId,
           makerId: selectedMakerId
@@ -401,8 +429,7 @@ export function PricingEstimateCard({
             ? (selectedMaterialIds as Id<"materials">[])
             : [],
         }),
-      );
-      await Promise.all(mutations);
+      ]);
       toast.success("Project updated.");
       setIsEditing(false);
     } catch {
@@ -850,28 +877,12 @@ export function PricingEstimateCard({
             >
               Duration ({persistedUnitName}s)
             </span>
-            {isEditing ? (
-              <Input
-                type="number"
-                min={0}
-                step="0.1"
-                value={editValues.duration}
-                onChange={(e) =>
-                  setEditValues((prev) => ({
-                    ...prev,
-                    duration: Number(e.target.value || 0),
-                  }))
-                }
-                className="h-7 w-32 text-right text-sm"
-              />
-            ) : (
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {displayDuration.toFixed(2)} {persistedUnitName}s
-              </span>
-            )}
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: "var(--fab-text-primary)" }}
+            >
+              {displayDuration.toFixed(2)} {persistedUnitName}s
+            </span>
           </div>
 
           <div className="flex items-center justify-between gap-2">
