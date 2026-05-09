@@ -81,6 +81,9 @@ export async function resolveService(
 ): Promise<ServiceDoc> {
   const service = await ctx.db.get(serviceId);
   if (!service) throw new ConvexError("Service not found!");
+  if (service.status !== "Available") {
+    throw new ConvexError("Service is currently unavailable for booking.");
+  }
   return service;
 }
 
