@@ -30,30 +30,30 @@ export function Step1ServiceType({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="text-2xl font-extrabold">
+      <DialogHeader className="shrink-0 border-b-4 border-black px-2 pb-4 sm:px-0">
+        <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Choose Service Type
         </DialogTitle>
-        <DialogDescription>
+        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
           Select how you&apos;d like to use this service.
         </DialogDescription>
       </DialogHeader>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-8">
+      <div className="grid grid-cols-1 gap-4 py-8 md:grid-cols-2">
         <Card
-          className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted/10 hover:border border-primary cursor-pointer"
+          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-teal/10"
           onClick={() => trackAndNext("self-service")}
         >
-          <h3 className="text-lg font-semibold mb-2">Self-Service</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">Self-Service</h3>
+          <p className="text-sm text-muted-foreground">
             I will operate the machine myself.
           </p>
         </Card>
         <Card
-          className="p-6 flex flex-col items-center justify-center text-center hover:bg-primary-muted/10 hover:border border-primary cursor-pointer"
+          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-magenta/10"
           onClick={() => trackAndNext("full-service")}
         >
-          <h3 className="text-lg font-semibold mb-2">Full-Service Request</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">Full-Service Request</h3>
+          <p className="text-sm text-muted-foreground">
             I need a maker to execute the project for me.
           </p>
         </Card>

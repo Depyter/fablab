@@ -24,7 +24,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
   if (!images || images.length === 0) return null;
 
   return (
-    <div className="group/carousel relative flex h-full min-h-105 w-full flex-col items-center justify-center overflow-hidden bg-background">
+    <div className="group/carousel relative flex h-full min-h-105 w-full flex-col items-center justify-center overflow-hidden bg-transparent">
       <div className="absolute inset-0 w-full h-full">
         {images.map((src, index) => (
           <div
@@ -34,7 +34,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
               current === index ? "opacity-100 z-10" : "opacity-0 z-0",
             )}
           >
-            <div className="relative h-full w-full p-4 lg:p-8">
+            <div className="relative h-full w-full">
               <Image
                 src={src}
                 alt={`Product Image ${index + 1}`}
@@ -77,7 +77,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
 
           <div className="absolute bottom-0 left-0 z-10 h-12 w-full border-t border-black" />
 
-          <div className="absolute bottom-0 left-0 z-0 h-12 w-full bg-background" />
+          <div className="absolute bottom-0 left-0 z-0 h-12 w-full bg-transparent" />
 
           <div className="hidden">
             {images.map((src, idx) => (
