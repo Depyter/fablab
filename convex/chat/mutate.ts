@@ -116,7 +116,7 @@ export const updateRoomName = authMutation({
 });
 
 export const addNewMember = authMutation({
-  role: ["maker", "admin"],
+  role: ["admin"],
   args: {
     roomId: v.id("rooms"),
     userId: v.id("userProfile"),
@@ -152,7 +152,7 @@ export const addNewMember = authMutation({
 });
 
 export const removeMember = authMutation({
-  role: ["maker", "admin"],
+  role: ["admin"],
   args: {
     roomId: v.id("rooms"),
     userId: v.id("userProfile"),
