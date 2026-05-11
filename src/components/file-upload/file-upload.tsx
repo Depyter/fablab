@@ -386,9 +386,16 @@ export function FileUpload({
   // ---------------------------------------------------------------------------
 
   return (
-    <Card className={cn("w-full rounded-lg border-4 border-black bg-background shadow-[8px_8px_0_0_#000]", className)}>
+    <Card
+      className={cn(
+        "w-full rounded-lg border-4 border-black bg-background shadow-[8px_8px_0_0_#000]",
+        className,
+      )}
+    >
       <CardHeader>
-        <CardTitle className="text-lg font-black uppercase tracking-tighter">{title}</CardTitle>
+        <CardTitle className="text-lg font-black uppercase tracking-tighter">
+          {title}
+        </CardTitle>
         <CardDescription>
           Drag and drop or click to upload. Max {maxFileSizeMB}MB per file.
         </CardDescription>

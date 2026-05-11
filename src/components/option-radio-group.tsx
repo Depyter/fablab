@@ -60,13 +60,17 @@ export function OptionRadioGroup({
           key={option.value}
           htmlFor={option.id}
           className={`rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] transition-all cursor-pointer ${
-            option.disabled ? "cursor-not-allowed opacity-50" : "hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            option.disabled
+              ? "cursor-not-allowed opacity-50"
+              : "hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           }`}
         >
           <Field orientation="horizontal">
             <FieldContent>
               <div className="flex flex-wrap items-center gap-2">
-                <FieldTitle className="font-black uppercase tracking-[0.2em] text-sm">{option.title}</FieldTitle>
+                <FieldTitle className="font-black uppercase tracking-[0.2em] text-sm">
+                  {option.title}
+                </FieldTitle>
                 {option.status && (
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${getStatusBadgeClassName(option.status)}`}

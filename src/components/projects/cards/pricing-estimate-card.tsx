@@ -310,9 +310,7 @@ export function PricingEstimateCard({
     ? getDurationUnitsFromMinutes(editingDurationMinutes, persistedUnitName)
     : 0;
 
-  const computedTimeCost = isTimeBased
-    ? editingDuration * editValues.rate
-    : 0;
+  const computedTimeCost = isTimeBased ? editingDuration * editValues.rate : 0;
   const computedMaterialCost = isBuyFromLab
     ? selectedMaterialDocs.reduce((acc, m) => {
         const price = (m as RequestedMaterial).pricePerUnit ?? 0;

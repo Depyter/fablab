@@ -136,7 +136,9 @@ export function Step2ProjectDetails({
       </DialogHeader>
 
       <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[4px_4px_0_0_#000] text-gray-500">
-        <p className="font-black uppercase tracking-[0.25em] text-gray-900">File Guidelines</p>
+        <p className="font-black uppercase tracking-[0.25em] text-gray-900">
+          File Guidelines
+        </p>
         {requirements.length > 0 ? (
           <ul className="list-disc list-inside text-sm space-y-1 ml-2">
             {requirements.map((req, i) => (
@@ -177,7 +179,12 @@ export function Step2ProjectDetails({
                 name="name"
                 children={(field: any) => (
                   <Field>
-                    <Label htmlFor="name-1" className="font-black uppercase tracking-[0.2em] text-xs">Project Name</Label>
+                    <Label
+                      htmlFor="name-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                      Project Name
+                    </Label>
                     <Input
                       id="name-1"
                       value={field.state.value}
@@ -195,7 +202,12 @@ export function Step2ProjectDetails({
                 name="description"
                 children={(field: any) => (
                   <Field>
-                    <Label htmlFor="description-1" className="font-black uppercase tracking-[0.2em] text-xs">Project Description</Label>
+                    <Label
+                      htmlFor="description-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                      Project Description
+                    </Label>
                     <Textarea
                       id="description-1"
                       value={field.state.value}
@@ -215,7 +227,12 @@ export function Step2ProjectDetails({
             name="notes"
             children={(field: any) => (
               <Field>
-                <Label htmlFor="notes-1" className="font-black uppercase tracking-[0.2em] text-xs">Special Requirements or Notes</Label>
+                <Label
+                  htmlFor="notes-1"
+                  className="font-black uppercase tracking-[0.2em] text-xs"
+                >
+                  Special Requirements or Notes
+                </Label>
                 <Textarea
                   id="notes-1"
                   value={field.state.value}
@@ -233,7 +250,12 @@ export function Step2ProjectDetails({
               name="pricing"
               children={(field: any) => (
                 <Field>
-                  <Label htmlFor="pricing-tier" className="font-black uppercase tracking-[0.2em] text-xs">Pricing Tier</Label>
+                  <Label
+                    htmlFor="pricing-tier"
+                    className="font-black uppercase tracking-[0.2em] text-xs"
+                  >
+                    Pricing Tier
+                  </Label>
                   <Select
                     value={field.state.value as string}
                     onValueChange={(val) => field.handleChange(val)}
@@ -265,7 +287,12 @@ export function Step2ProjectDetails({
                 name="material"
                 children={(field: any) => (
                   <Field>
-                    <Label htmlFor="material-1" className="font-black uppercase tracking-[0.2em] text-xs">Material Preference</Label>
+                    <Label
+                      htmlFor="material-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                      Material Preference
+                    </Label>
                     <RadioGroupChoiceCard
                       value={field.state.value}
                       disableBuyFromLab={serviceMaterials.length === 0}
@@ -290,7 +317,10 @@ export function Step2ProjectDetails({
                         const selected: string[] = field.state.value ?? [];
                         return (
                           <Field>
-                            <Label htmlFor="requestedMaterialIds" className="font-black uppercase tracking-[0.2em] text-xs">
+                            <Label
+                              htmlFor="requestedMaterialIds"
+                              className="font-black uppercase tracking-[0.2em] text-xs"
+                            >
                               Select Lab Materials
                             </Label>
                             <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[4px_4px_0_0_#000]">
@@ -436,7 +466,11 @@ export function Step2ProjectDetails({
             <ChevronLeft className="h-4 w-4 mr-1" /> Back
           </Button>
         )}
-        <Button type="submit" className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal" disabled={isUploading}>
+        <Button
+          type="submit"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
+          disabled={isUploading}
+        >
           {isUploading ? "Uploading..." : "Review & Estimate"}
         </Button>
       </div>

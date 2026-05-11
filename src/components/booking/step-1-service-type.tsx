@@ -43,7 +43,9 @@ export function Step1ServiceType({
           className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-teal/10"
           onClick={() => trackAndNext("self-service")}
         >
-          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">Self-Service</h3>
+          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">
+            Self-Service
+          </h3>
           <p className="text-sm text-muted-foreground">
             I will operate the machine myself.
           </p>
@@ -52,7 +54,9 @@ export function Step1ServiceType({
           className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-magenta/10"
           onClick={() => trackAndNext("full-service")}
         >
-          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">Full-Service Request</h3>
+          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">
+            Full-Service Request
+          </h3>
           <p className="text-sm text-muted-foreground">
             I need a maker to execute the project for me.
           </p>

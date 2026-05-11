@@ -117,7 +117,12 @@ export function DateTimePicker({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Field className="sm:col-span-2">
-        <FieldLabel htmlFor="date" className="font-black uppercase tracking-[0.2em] text-xs">Date (PST)</FieldLabel>
+        <FieldLabel
+          htmlFor="date"
+          className="font-black uppercase tracking-[0.2em] text-xs"
+        >
+          Date (PST)
+        </FieldLabel>
         <Popover>
           <div className="relative">
             <PopoverTrigger asChild>
@@ -159,7 +164,12 @@ export function DateTimePicker({
         </Popover>
       </Field>
       <Field>
-        <FieldLabel htmlFor="time-from" className="font-black uppercase tracking-[0.2em] text-xs">Start Time (PST)</FieldLabel>
+        <FieldLabel
+          htmlFor="time-from"
+          className="font-black uppercase tracking-[0.2em] text-xs"
+        >
+          Start Time (PST)
+        </FieldLabel>
         <div className="relative">
           <Select
             value={startTime}
@@ -211,7 +221,12 @@ export function DateTimePicker({
         </div>
       </Field>
       <Field>
-        <FieldLabel htmlFor="time-to" className="font-black uppercase tracking-[0.2em] text-xs">End Time (PST)</FieldLabel>
+        <FieldLabel
+          htmlFor="time-to"
+          className="font-black uppercase tracking-[0.2em] text-xs"
+        >
+          End Time (PST)
+        </FieldLabel>
         <div className="relative">
           <Select
             value={endTime}

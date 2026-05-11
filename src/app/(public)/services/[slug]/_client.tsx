@@ -160,7 +160,7 @@ export function ServiceDetailClient({
                   </div>
                 </div>
 
-                <ServiceGallery images={service.imageUrls}/>
+                <ServiceGallery images={service.imageUrls} />
               </div>
             </div>
           </div>

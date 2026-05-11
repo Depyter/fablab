@@ -15,14 +15,23 @@ describe("Room membership authorization", () => {
     const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
 
     // Get profile IDs directly from DB to avoid BetterAuth component calls in getUserProfile
-    const adminProfile = await t.run(async (ctx) => 
-      ctx.db.query("userProfile").withIndex("by_userId", q => q.eq("userId", "2")).unique()
+    const adminProfile = await t.run(async (ctx) =>
+      ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "2"))
+        .unique(),
     );
-    const makerProfile = await t.run(async (ctx) => 
-      ctx.db.query("userProfile").withIndex("by_userId", q => q.eq("userId", "3")).unique()
+    const makerProfile = await t.run(async (ctx) =>
+      ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .unique(),
     );
-    const clientProfile = await t.run(async (ctx) => 
-      ctx.db.query("userProfile").withIndex("by_userId", q => q.eq("userId", "1")).unique()
+    const clientProfile = await t.run(async (ctx) =>
+      ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "1"))
+        .unique(),
     );
 
     // 1. Create a service and a project to get a room
@@ -43,26 +52,32 @@ describe("Room membership authorization", () => {
     });
 
     const serviceId = await t.run(async (ctx) => {
-      const service = await ctx.db.query("services").filter(q => q.eq(q.field("slug"), "chat-test-service")).unique();
+      const service = await ctx.db
+        .query("services")
+        .filter((q) => q.eq(q.field("slug"), "chat-test-service"))
+        .unique();
       return service!._id;
     });
 
     const bookingDay = Date.UTC(2026, 6, 1);
-    const { roomId } = await tClient.mutation(api.projects.mutate.createProject, {
-      name: "Chat Test Project",
-      pricing: "Default",
-      description: "Test",
-      fulfillmentMode: "self-service",
-      material: "provide-own",
-      files: [],
-      service: serviceId,
-      notes: "Test",
-      booking: {
-        startTime: bookingDay + 10 * 3600000,
-        endTime: bookingDay + 11 * 3600000,
-        date: bookingDay,
+    const { roomId } = await tClient.mutation(
+      api.projects.mutate.createProject,
+      {
+        name: "Chat Test Project",
+        pricing: "Default",
+        description: "Test",
+        fulfillmentMode: "self-service",
+        material: "provide-own",
+        files: [],
+        service: serviceId,
+        notes: "Test",
+        booking: {
+          startTime: bookingDay + 10 * 3600000,
+          endTime: bookingDay + 11 * 3600000,
+          date: bookingDay,
+        },
       },
-    });
+    );
 
     // 2. Test Admin can add Maker
     await tAdmin.mutation(api.chat.mutate.addNewMember, {
@@ -105,8 +120,10 @@ describe("Room membership authorization", () => {
       tClient.mutation(api.chat.mutate.addNewMember, {
         roomId,
         userId: clientProfile!._id,
-      })
-    ).rejects.toThrow("Unauthorized: You do not have the correct permissions to mutate.");
+      }),
+    ).rejects.toThrow(
+      "Unauthorized: You do not have the correct permissions to mutate.",
+    );
 
     // 5. Test Maker status (Currently the code allows Makers, let's confirm this)
     // If the requirement is ONLY admins, we might need to change the code later.
@@ -115,7 +132,9 @@ describe("Room membership authorization", () => {
       tMaker.mutation(api.chat.mutate.addNewMember, {
         roomId,
         userId: makerProfile!._id,
-      })
-    ).rejects.toThrow("Unauthorized: You do not have the correct permissions to mutate.");
+      }),
+    ).rejects.toThrow(
+      "Unauthorized: You do not have the correct permissions to mutate.",
+    );
   });
 });

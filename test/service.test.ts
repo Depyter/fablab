@@ -405,7 +405,10 @@ describe("Service mutations and queries", () => {
       });
 
       const service = await t.run(async (ctx) =>
-        ctx.db.query("services").filter((q) => q.eq(q.field("name"), "Image Test Service")).unique(),
+        ctx.db
+          .query("services")
+          .filter((q) => q.eq(q.field("name"), "Image Test Service"))
+          .unique(),
       );
       expect(service).not.toBeNull();
       expect(service?.images).toEqual([img1]);
@@ -413,8 +416,14 @@ describe("Service mutations and queries", () => {
 
       // Check if img1 and sample1 are claimed
       await t.run(async (ctx) => {
-        const f1 = await ctx.db.query("files").withIndex("by_storageId", q => q.eq("storageId", img1)).unique();
-        const s1 = await ctx.db.query("files").withIndex("by_storageId", q => q.eq("storageId", sample1)).unique();
+        const f1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", img1))
+          .unique();
+        const s1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", sample1))
+          .unique();
         expect(f1?.status).toBe("claimed");
         expect(s1?.status).toBe("claimed");
       });
@@ -427,16 +436,30 @@ describe("Service mutations and queries", () => {
         samples: [sample1, sample2],
       });
 
-      const updatedService = await t.run(async (ctx) => ctx.db.get(service!._id));
+      const updatedService = await t.run(async (ctx) =>
+        ctx.db.get(service!._id),
+      );
       expect(updatedService?.images).toEqual([img2]);
       expect(updatedService?.samples).toEqual([sample1, sample2]);
 
       // Check file statuses
       await t.run(async (ctx) => {
-        const f1 = await ctx.db.query("files").withIndex("by_storageId", q => q.eq("storageId", img1)).unique();
-        const f2 = await ctx.db.query("files").withIndex("by_storageId", q => q.eq("storageId", img2)).unique();
-        const s1 = await ctx.db.query("files").withIndex("by_storageId", q => q.eq("storageId", sample1)).unique();
-        const s2 = await ctx.db.query("files").withIndex("by_storageId", q => q.eq("storageId", sample2)).unique();
+        const f1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", img1))
+          .unique();
+        const f2 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", img2))
+          .unique();
+        const s1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", sample1))
+          .unique();
+        const s2 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", sample2))
+          .unique();
 
         expect(f1).toBeNull(); // Should be deleted
         expect(f2?.status).toBe("claimed");
@@ -446,9 +469,8 @@ describe("Service mutations and queries", () => {
         const storageF1 = await ctx.storage.get(img1);
         expect(storageF1).toBeNull();
       });
-      });
-      });
-
+    });
+  });
 
   describe("Workshop services", () => {
     test("initializes workshop schedule slot usage to zero", async () => {
@@ -928,7 +950,10 @@ describe("Service mutations and queries", () => {
       });
 
       const serviceId = await t.run(async (ctx) => {
-        const service = await ctx.db.query("services").filter(q => q.eq(q.field("slug"), "broken-laser")).unique();
+        const service = await ctx.db
+          .query("services")
+          .filter((q) => q.eq(q.field("slug"), "broken-laser"))
+          .unique();
         return service!._id;
       });
 

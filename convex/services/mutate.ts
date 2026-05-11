@@ -244,7 +244,9 @@ export const updateService = authMutation({
     if (args.images !== undefined) {
       const oldImages = existingService.images || [];
       const newImages = args.images.filter((id) => !oldImages.includes(id));
-      const removedImages = oldImages.filter((id) => !args.images!.includes(id));
+      const removedImages = oldImages.filter(
+        (id) => !args.images!.includes(id),
+      );
 
       if (newImages.length > 0) await claimFiles(ctx, newImages);
       if (removedImages.length > 0) await deleteFiles(ctx, removedImages);
