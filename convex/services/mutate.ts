@@ -204,6 +204,8 @@ export const updateService = authMutation({
     fileTypes: v.optional(v.array(v.string())),
     resources: v.optional(v.array(v.id("resources"))),
     description: v.optional(v.string()),
+    images: v.optional(v.array(v.id("_storage"))),
+    samples: v.optional(v.array(v.id("_storage"))),
     status: v.optional(
       v.union(v.literal("Unavailable"), v.literal("Available")),
     ),
@@ -215,6 +217,9 @@ export const updateService = authMutation({
     const authorization = await checkAuthority(["admin", "maker"], user, ctx);
     if (!authorization)
       throw new ConvexError("Unauthorized. Cannot add service.");
+
+    const existingService = await ctx.db.get(args.service);
+    if (!existingService) throw new ConvexError("Service not found!");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {};
@@ -235,17 +240,40 @@ export const updateService = authMutation({
     }
     if (args.description !== undefined) updates.description = args.description;
     if (args.status !== undefined) updates.status = args.status;
+
+    if (args.images !== undefined) {
+      const oldImages = existingService.images || [];
+      const newImages = args.images.filter((id) => !oldImages.includes(id));
+      const removedImages = oldImages.filter(
+        (id) => !args.images!.includes(id),
+      );
+
+      if (newImages.length > 0) await claimFiles(ctx, newImages);
+      if (removedImages.length > 0) await deleteFiles(ctx, removedImages);
+
+      updates.images = args.images;
+    }
+
+    if (args.samples !== undefined) {
+      const oldSamples = existingService.samples || [];
+      const newSamples = args.samples.filter((id) => !oldSamples.includes(id));
+      const removedSamples = oldSamples.filter(
+        (id) => !args.samples!.includes(id),
+      );
+
+      if (newSamples.length > 0) await claimFiles(ctx, newSamples);
+      if (removedSamples.length > 0) await deleteFiles(ctx, removedSamples);
+
+      updates.samples = args.samples;
+    }
+
     if (args.serviceCategory !== undefined) {
       if (args.serviceCategory.type === "FABRICATION") {
         updates.serviceCategory = normalizeFabricationCategory(
           args.serviceCategory,
         );
       } else {
-        const existingService = await ctx.db.get(args.service);
-        if (
-          existingService &&
-          existingService.serviceCategory.type === "WORKSHOP"
-        ) {
+        if (existingService.serviceCategory.type === "WORKSHOP") {
           for (const incomingSchedule of args.serviceCategory.schedules) {
             const existingSchedule =
               existingService.serviceCategory.schedules.find(

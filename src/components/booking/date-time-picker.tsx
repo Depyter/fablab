@@ -115,16 +115,21 @@ export function DateTimePicker({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Field className="sm:col-span-2">
-        <FieldLabel htmlFor="date">Date (PST)</FieldLabel>
+        <FieldLabel
+          htmlFor="date"
+          className="font-black uppercase tracking-[0.2em] text-xs"
+        >
+          Date (PST)
+        </FieldLabel>
         <Popover>
           <div className="relative">
             <PopoverTrigger asChild>
               <Button
                 id="date"
                 variant={"outline"}
-                className={`w-full justify-start text-left font-normal rounded-lg ${!date && "text-muted-foreground"}`}
+                className={`w-full justify-start rounded-lg border-2 border-black bg-background text-left font-black uppercase shadow-[4px_4px_0_0_#000] ${!date && "text-muted-foreground"}`}
               >
                 {date ? formatLabDateNumeric(date) : <span>MM/DD/YYYY</span>}
                 <CalendarIcon className="ml-auto h-4 w-4" />
@@ -159,7 +164,12 @@ export function DateTimePicker({
         </Popover>
       </Field>
       <Field>
-        <FieldLabel htmlFor="time-from">Start Time (PST)</FieldLabel>
+        <FieldLabel
+          htmlFor="time-from"
+          className="font-black uppercase tracking-[0.2em] text-xs"
+        >
+          Start Time (PST)
+        </FieldLabel>
         <div className="relative">
           <Select
             value={startTime}
@@ -173,7 +183,7 @@ export function DateTimePicker({
           >
             <SelectTrigger
               id="time-from"
-              className="w-full bg-background rounded-lg h-10"
+              className="w-full bg-background rounded-lg border-2 border-black shadow-[4px_4px_0_0_#000] h-10 focus-visible:ring-0"
             >
               <SelectValue placeholder="Select start time" />
             </SelectTrigger>
@@ -211,7 +221,12 @@ export function DateTimePicker({
         </div>
       </Field>
       <Field>
-        <FieldLabel htmlFor="time-to">End Time (PST)</FieldLabel>
+        <FieldLabel
+          htmlFor="time-to"
+          className="font-black uppercase tracking-[0.2em] text-xs"
+        >
+          End Time (PST)
+        </FieldLabel>
         <div className="relative">
           <Select
             value={endTime}
@@ -220,7 +235,7 @@ export function DateTimePicker({
           >
             <SelectTrigger
               id="time-to"
-              className="w-full bg-background rounded-lg h-10"
+              className="w-full bg-background rounded-lg border-2 border-black shadow-[4px_4px_0_0_#000] h-10 focus-visible:ring-0"
             >
               <SelectValue placeholder="Select end time" />
             </SelectTrigger>

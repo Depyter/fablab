@@ -323,7 +323,9 @@ export function UsageTable({
   };
   const bodyGridTemplateRows =
     scheduleRows.length > 0
-      ? scheduleRows.map((row) => `${getResponsiveRowHeight(row.rowHeight)}px`).join(" ")
+      ? scheduleRows
+          .map((row) => `${getResponsiveRowHeight(row.rowHeight)}px`)
+          .join(" ")
       : undefined;
 
   const nowInRange = nowDecimal >= DAY_START && nowDecimal < DAY_END;
@@ -355,7 +357,9 @@ export function UsageTable({
                   width={dayLeadingColWidth}
                   className={cn(
                     "border-b border-r font-bold uppercase tracking-[0.1em] text-muted-foreground",
-                    isMobile ? "h-[34px] px-2 text-[9px]" : "h-11 px-3 text-[10px]",
+                    isMobile
+                      ? "h-[34px] px-2 text-[9px]"
+                      : "h-11 px-3 text-[10px]",
                   )}
                 >
                   {leadingColumnLabel}
@@ -412,12 +416,12 @@ export function UsageTable({
                 if (row.kind === "section") {
                   return (
                     <div
-                        key={row.id}
-                        className="grid"
-                        style={{
-                          gridTemplateColumns: dayLayoutTemplate,
-                          height: "100%",
-                        }}
+                      key={row.id}
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: dayLayoutTemplate,
+                        height: "100%",
+                      }}
                     >
                       {/* ✅ LEFT STICKY COLUMN (FIXED) */}
                       <div
@@ -477,13 +481,13 @@ export function UsageTable({
 
                 return (
                   <div
-                        key={row.id}
-                        className="grid"
-                        style={{
-                          gridTemplateColumns: dayLayoutTemplate,
-                          minHeight: getResponsiveRowHeight(row.rowHeight),
-                          height: "100%",
-                        }}
+                    key={row.id}
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: dayLayoutTemplate,
+                      minHeight: getResponsiveRowHeight(row.rowHeight),
+                      height: "100%",
+                    }}
                   >
                     <div
                       style={{
@@ -496,19 +500,19 @@ export function UsageTable({
                       }}
                     >
                       {row.isFirstTrack ? (
+                        <div
+                          className={cn(
+                            "flex h-full items-center gap-2",
+                            isMobile ? "px-2" : "px-3",
+                          )}
+                        >
                           <div
-                            className={cn(
-                              "flex h-full items-center gap-2",
-                              isMobile ? "px-2" : "px-3",
-                            )}
-                          >
-                            <div
-                              aria-hidden
-                              style={{
-                                width: isMobile ? 5 : 6,
-                                height: isMobile ? 5 : 6,
-                                borderRadius: "50%",
-                                flexShrink: 0,
+                            aria-hidden
+                            style={{
+                              width: isMobile ? 5 : 6,
+                              height: isMobile ? 5 : 6,
+                              borderRadius: "50%",
+                              flexShrink: 0,
                               background: renderMachineStatusColor(
                                 row.machineStatus,
                               ),
@@ -520,9 +524,9 @@ export function UsageTable({
                           />
 
                           <span
-                              className="min-w-0 flex-1 truncate text-[var(--fab-text-primary)]"
-                              style={{ fontSize: isMobile ? 10.5 : 11.5 }}
-                            >
+                            className="min-w-0 flex-1 truncate text-[var(--fab-text-primary)]"
+                            style={{ fontSize: isMobile ? 10.5 : 11.5 }}
+                          >
                             {row.machine.href ? (
                               <Link
                                 href={row.machine.href}
@@ -587,7 +591,10 @@ export function UsageTable({
                       })}
 
                       {nowIndicatorLeft ? (
-                        <DayNowIndicator left={nowIndicatorLeft} compact={isMobile} />
+                        <DayNowIndicator
+                          left={nowIndicatorLeft}
+                          compact={isMobile}
+                        />
                       ) : null}
 
                       {row.entries.map((entry) => {

@@ -126,17 +126,19 @@ export function Step2ProjectDetails({
 
   return (
     <form onSubmit={handleNext} className="flex flex-col h-full min-h-0">
-      <DialogHeader className="shrink-0 pb-4">
-        <DialogTitle className="text-2xl font-extrabold">
+      <DialogHeader className="shrink-0 px-2 pb-4 sm:px-0">
+        <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Book {serviceName}
         </DialogTitle>
-        <DialogDescription>
+        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
           Provide necessary information for your project request.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col gap-2 text-gray-500 mb-4">
-        <p className="font-semibold text-gray-700">File Guidelines</p>
+      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[4px_4px_0_0_#000] text-gray-500">
+        <p className="font-black uppercase tracking-[0.25em] text-gray-900">
+          File Guidelines
+        </p>
         {requirements.length > 0 ? (
           <ul className="list-disc list-inside text-sm space-y-1 ml-2">
             {requirements.map((req, i) => (
@@ -177,14 +179,19 @@ export function Step2ProjectDetails({
                 name="name"
                 children={(field: any) => (
                   <Field>
-                    <Label htmlFor="name-1">Project Name</Label>
+                    <Label
+                      htmlFor="name-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                      Project Name
+                    </Label>
                     <Input
                       id="name-1"
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="rounded-lg"
+                      className="rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0"
                       placeholder="e.g. Custom Cup"
                     />
                   </Field>
@@ -195,14 +202,19 @@ export function Step2ProjectDetails({
                 name="description"
                 children={(field: any) => (
                   <Field>
-                    <Label htmlFor="description-1">Project Description</Label>
+                    <Label
+                      htmlFor="description-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                      Project Description
+                    </Label>
                     <Textarea
                       id="description-1"
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="rounded-lg resize-none h-20 md:h-32"
+                      className="min-h-20 resize-none rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0 md:min-h-32"
                       placeholder="Describe your project, intended use, or specific details..."
                     />
                   </Field>
@@ -215,13 +227,18 @@ export function Step2ProjectDetails({
             name="notes"
             children={(field: any) => (
               <Field>
-                <Label htmlFor="notes-1">Special Requirements or Notes</Label>
+                <Label
+                  htmlFor="notes-1"
+                  className="font-black uppercase tracking-[0.2em] text-xs"
+                >
+                  Special Requirements or Notes
+                </Label>
                 <Textarea
                   id="notes-1"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="rounded-lg resize-none h-12 md:h-24"
+                  className="min-h-12 resize-none rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0 md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
@@ -233,7 +250,12 @@ export function Step2ProjectDetails({
               name="pricing"
               children={(field: any) => (
                 <Field>
-                  <Label htmlFor="pricing-tier">Pricing Tier</Label>
+                  <Label
+                    htmlFor="pricing-tier"
+                    className="font-black uppercase tracking-[0.2em] text-xs"
+                  >
+                    Pricing Tier
+                  </Label>
                   <Select
                     value={field.state.value as string}
                     onValueChange={(val) => field.handleChange(val)}
@@ -241,7 +263,7 @@ export function Step2ProjectDetails({
                   >
                     <SelectTrigger
                       id="pricing-tier"
-                      className="w-full bg-background border-input"
+                      className="w-full rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000]"
                     >
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
@@ -265,7 +287,12 @@ export function Step2ProjectDetails({
                 name="material"
                 children={(field: any) => (
                   <Field>
-                    <Label htmlFor="material-1">Material Preference</Label>
+                    <Label
+                      htmlFor="material-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                      Material Preference
+                    </Label>
                     <RadioGroupChoiceCard
                       value={field.state.value}
                       disableBuyFromLab={serviceMaterials.length === 0}
@@ -290,10 +317,13 @@ export function Step2ProjectDetails({
                         const selected: string[] = field.state.value ?? [];
                         return (
                           <Field>
-                            <Label htmlFor="requestedMaterialIds">
+                            <Label
+                              htmlFor="requestedMaterialIds"
+                              className="font-black uppercase tracking-[0.2em] text-xs"
+                            >
                               Select Lab Materials
                             </Label>
-                            <div className="flex flex-col gap-2 rounded-lg border border-input bg-background p-3">
+                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[4px_4px_0_0_#000]">
                               {serviceMaterials.map((m) => {
                                 const isChecked = selected.includes(m._id);
                                 return (
@@ -425,18 +455,22 @@ export function Step2ProjectDetails({
         </FieldGroup>
       </div>
 
-      <div className="shrink-0 pt-6 border-t mt-4 flex items-center justify-end gap-2">
+      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 border-t-4 border-black pt-6">
         {serviceCategory !== "WORKSHOP" && (
           <Button
             type="button"
             variant="outline"
             onClick={onPrev}
-            className="rounded-lg pl-3"
+            className="rounded-none border-2 border-black bg-background pl-3 shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           >
             <ChevronLeft className="h-4 w-4 mr-1" /> Back
           </Button>
         )}
-        <Button type="submit" className="rounded-lg" disabled={isUploading}>
+        <Button
+          type="submit"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
+          disabled={isUploading}
+        >
           {isUploading ? "Uploading..." : "Review & Estimate"}
         </Button>
       </div>

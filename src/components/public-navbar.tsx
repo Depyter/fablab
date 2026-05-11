@@ -41,7 +41,7 @@ export function PublicNavbar() {
               className="h-8 w-auto sm:h-12"
             />
           </Link>
-          <PublicNavBackButton />
+          {/* <PublicNavBackButton /> */}
         </div>
 
         <PublicMobileNavCard items={publicNavItems} />

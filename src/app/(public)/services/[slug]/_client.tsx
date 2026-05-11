@@ -1,12 +1,14 @@
 "use client";
 
+import gsap from "gsap";
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { CirclePercent } from "lucide-react";
+import { ArrowLeft, CirclePercent } from "lucide-react";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
+import Link from "next/link";
 import { BookingDialog } from "@/components/booking/dialog-form";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import posthog from "posthog-js";
 
 /**
@@ -20,6 +22,8 @@ export function ServiceDetailClient({
   preloadedService: Preloaded<typeof api.services.query.getService>;
 }) {
   const service = usePreloadedQuery(preloadedService);
+  const tealStickerRef = useRef<HTMLDivElement | null>(null);
+  const magentaStickerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!service) return;
@@ -30,6 +34,28 @@ export function ServiceDetailClient({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service?._id]);
+
+  useEffect(() => {
+    const stickers = [tealStickerRef.current, magentaStickerRef.current].filter(
+      Boolean,
+    );
+
+    if (stickers.length === 0) return;
+
+    const animations = stickers.map((sticker, index) =>
+      gsap.to(sticker, {
+        rotation: index === 0 ? 360 : -360,
+        duration: index === 0 ? 10 : 12,
+        ease: "none",
+        repeat: -1,
+        transformOrigin: "50% 50%",
+      }),
+    );
+
+    return () => {
+      animations.forEach((animation) => animation.kill());
+    };
+  }, []);
 
   const sortedFabricationDays =
     service?.serviceCategory.type === "FABRICATION"
@@ -94,13 +120,53 @@ export function ServiceDetailClient({
       <div className="pointer-events-none absolute right-0 top-40 h-80 w-80 rounded-full bg-fab-teal/10 blur-3xl" />
 
       <section className="relative z-10 border-b-8 border-black bg-fab-amber/20">
-        <div className="container mx-auto grid max-w-7xl lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="border-b-8 border-black bg-background lg:border-b-0 lg:border-r-8">
-            <ServiceGallery images={service.imageUrls} />
+        <div className="container mx-auto grid max-w-7xl lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+          <div className="relative min-h-120 overflow-visible border-b-8 border-black px-6 py-6 sm:px-8 sm:py-8 lg:min-h-152 lg:border-b-0 lg:px-10 lg:py-10">
+            <Link
+              href="/services"
+              aria-label="Back to services"
+              className="absolute left-6 top-6 z-30 inline-flex h-10 w-10 items-center justify-center border-2 border-black bg-fab-amber text-black shadow-[4px_4px_0_0_#000] transition-transform duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 sm:left-8 sm:top-8"
+            >
+              <ArrowLeft className="h-4 w-4" strokeWidth={3} />
+            </Link>
+
+            <div className="relative px-0 sm:mt-8 lg:mt-8">
+              <div className="pointer-events-none relative h-[min(82vw,40rem)] w-full max-w-160 sm:h-[min(72vw,42rem)] lg:h-[min(52vw,38rem)] lg:max-w-176 lg:rotate-[-5deg] lg:pl-0">
+                <div
+                  ref={tealStickerRef}
+                  className="absolute left-4 top-4 z-20 hidden h-16 w-16 rounded-full border-2 border-black bg-fab-teal shadow-[4px_4px_0_0_#000] sm:left-5 sm:top-5 sm:h-20 sm:w-20 lg:left-6 lg:top-6 lg:block"
+                >
+                  <div className="relative h-full w-full p-3 sm:p-4">
+                    <Image
+                      src="/fablab.svg"
+                      alt=""
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  ref={magentaStickerRef}
+                  className="absolute bottom-4 right-4 z-20 hidden h-16 w-16 rounded-full border-2 border-black bg-fab-magenta shadow-[4px_4px_0_0_#000] sm:bottom-5 sm:right-5 sm:h-20 sm:w-20 lg:bottom-6 lg:right-6 lg:block"
+                >
+                  <div className="relative h-full w-full p-3 sm:p-4">
+                    <Image
+                      src="/fablab.svg"
+                      alt=""
+                      fill
+                      className="object-contain rotate-12"
+                    />
+                  </div>
+                </div>
+
+                <ServiceGallery images={service.imageUrls} />
+              </div>
+            </div>
           </div>
 
-          <div className="flex h-full flex-col justify-between gap-8 p-6 sm:p-8 lg:p-10">
-            <div className="space-y-6">
+          <div className="flex flex-col gap-4 p-6 mt-0 lg:mt-20 sm:p-8 lg:p-10">
+            <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center border border-black bg-fab-teal px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-white">
                   {service.status}
@@ -204,7 +270,7 @@ export function ServiceDetailClient({
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2 pt-1">
               <BookingDialog
                 serviceId={service._id}
                 serviceName={service.name}
@@ -273,7 +339,7 @@ export function ServiceDetailClient({
                       return (
                         <li
                           key={`${req}-${duplicateCount}`}
-                          className="flex items-start gap-4 border-b border-black/10 pb-4 last:border-0 last:pb-0"
+                          className="flex items-center gap-4 border-b border-black/10 pb-4 last:border-0 last:pb-0"
                         >
                           <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center border border-black bg-fab-amber text-[10px] font-black uppercase tracking-[0.2em] text-black">
                             0{i + 1}

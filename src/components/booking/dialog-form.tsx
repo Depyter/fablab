@@ -289,12 +289,12 @@ export function BookingDialog({
         type="button"
         variant="outline"
         onClick={handleCreateBookingClick}
-        className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.3em] text-white shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-fab-teal hover:text-white sm:px-10"
+        className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.35em] text-white shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-amber hover:text-black sm:px-10"
       >
         Create Booking
       </Button>
 
-      <DialogContent className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none p-4 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl md:max-w-[80%] lg:max-w-[60vw]">
+      <DialogContent className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-4 border-black bg-background p-4 shadow-[12px_12px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]">
         {step === 1 && serviceCategory !== "WORKSHOP" && (
           <Step1ServiceType
             form={form}

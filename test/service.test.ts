@@ -312,7 +312,7 @@ describe("Service mutations and queries", () => {
     });
 
     test("rejects duplicate slugs on add and update", async () => {
-      const { t, tAera } = await setupUsers();
+      const { t, tAera, tHarley } = await setupUsers();
 
       await tAera.mutation(api.services.mutate.addService, {
         name: "Laser Cutting",
@@ -378,6 +378,97 @@ describe("Service mutations and queries", () => {
       ).rejects.toThrow(
         'A service with the slug "laser-cutting" already exists.',
       );
+    });
+
+    test("updates images and samples correctly, claiming and deleting files", async () => {
+      const { t, tAera } = await setupUsers();
+
+      const { storageId: img1 } = await createTrackedFile(t, "img1.png");
+      const { storageId: img2 } = await createTrackedFile(t, "img2.png");
+      const { storageId: sample1 } = await createTrackedFile(t, "sample1.png");
+      const { storageId: sample2 } = await createTrackedFile(t, "sample2.png");
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "Image Test Service",
+        images: [img1],
+        samples: [sample1],
+        serviceCategory: {
+          type: "FABRICATION",
+          setupFee: 10,
+          unitName: "hour",
+          timeRate: 5,
+        },
+        requirements: [],
+        fileTypes: [],
+        description: "Testing image updates",
+        status: "Available",
+      });
+
+      const service = await t.run(async (ctx) =>
+        ctx.db
+          .query("services")
+          .filter((q) => q.eq(q.field("name"), "Image Test Service"))
+          .unique(),
+      );
+      expect(service).not.toBeNull();
+      expect(service?.images).toEqual([img1]);
+      expect(service?.samples).toEqual([sample1]);
+
+      // Check if img1 and sample1 are claimed
+      await t.run(async (ctx) => {
+        const f1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", img1))
+          .unique();
+        const s1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", sample1))
+          .unique();
+        expect(f1?.status).toBe("claimed");
+        expect(s1?.status).toBe("claimed");
+      });
+
+      // Update images: remove img1, add img2
+      // Update samples: add sample2, keep sample1
+      await tAera.mutation(api.services.mutate.updateService, {
+        service: service!._id,
+        images: [img2],
+        samples: [sample1, sample2],
+      });
+
+      const updatedService = await t.run(async (ctx) =>
+        ctx.db.get(service!._id),
+      );
+      expect(updatedService?.images).toEqual([img2]);
+      expect(updatedService?.samples).toEqual([sample1, sample2]);
+
+      // Check file statuses
+      await t.run(async (ctx) => {
+        const f1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", img1))
+          .unique();
+        const f2 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", img2))
+          .unique();
+        const s1 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", sample1))
+          .unique();
+        const s2 = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", sample2))
+          .unique();
+
+        expect(f1).toBeNull(); // Should be deleted
+        expect(f2?.status).toBe("claimed");
+        expect(s1?.status).toBe("claimed");
+        expect(s2?.status).toBe("claimed");
+
+        const storageF1 = await ctx.storage.get(img1);
+        expect(storageF1).toBeNull();
+      });
     });
   });
 
@@ -836,6 +927,58 @@ describe("Service mutations and queries", () => {
           name: "3D Printing",
         },
       });
+    });
+
+    test("prevents booking a service when it is set to Unavailable", async () => {
+      const { t, tAera, tHarley } = await setupUsers();
+
+      // 1. Create an Unavailable service
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "Broken Laser",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "FABRICATION",
+          setupFee: 100,
+          unitName: "hour",
+          timeRate: 50,
+        },
+        requirements: [],
+        fileTypes: [],
+        description: "This service is down for repairs",
+        status: "Unavailable",
+      });
+
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db
+          .query("services")
+          .filter((q) => q.eq(q.field("slug"), "broken-laser"))
+          .unique();
+        return service!._id;
+      });
+
+      const bookingDay = Date.UTC(2026, 6, 1);
+      const bookingStart = bookingDay + 10 * HOUR_MS;
+      const bookingEnd = bookingStart + 1 * HOUR_MS;
+
+      // 2. Attempt to book it — should fail
+      await expect(
+        tHarley.mutation(api.projects.mutate.createProject, {
+          name: "Test Job",
+          pricing: "Default",
+          description: "Should not be possible",
+          fulfillmentMode: "self-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "Trying to book broken service",
+          booking: {
+            startTime: bookingStart,
+            endTime: bookingEnd,
+            date: bookingDay,
+          },
+        }),
+      ).rejects.toThrow("Service is currently unavailable for booking.");
     });
   });
 });

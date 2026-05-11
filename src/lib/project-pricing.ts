@@ -50,6 +50,32 @@ export function getDurationMinutesFromTimeRange(
   return endH * 60 + endM - (startH * 60 + startM);
 }
 
+export function getDurationMinutesFromTimestampRange(
+  startTime?: number,
+  endTime?: number,
+) {
+  if (startTime == null || endTime == null) return 0;
+  return Math.max(0, endTime - startTime) / (1000 * 60);
+}
+
+export function getDurationMinutesFromUsageRanges(
+  usages: Array<{ startTime: number; endTime: number }>,
+) {
+  return usages.reduce(
+    (total, usage) =>
+      total +
+      getDurationMinutesFromTimestampRange(usage.startTime, usage.endTime),
+    0,
+  );
+}
+
+export function getDurationUnitsFromMinutes(
+  durationMinutes: number,
+  unitName: string,
+) {
+  return Math.max(0, durationMinutes) / unitToMinutes(unitName);
+}
+
 export function derivePricingFromSchema(args: {
   servicePricing?: ServicePricing | null;
   pricingVariant?: string | null;

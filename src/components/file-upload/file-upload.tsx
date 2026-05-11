@@ -386,9 +386,16 @@ export function FileUpload({
   // ---------------------------------------------------------------------------
 
   return (
-    <Card className={cn("w-full", className)}>
+    <Card
+      className={cn(
+        "w-full rounded-lg border-4 border-black bg-background shadow-[8px_8px_0_0_#000]",
+        className,
+      )}
+    >
       <CardHeader>
-        <CardTitle className="font-bold text-lg">{title}</CardTitle>
+        <CardTitle className="text-lg font-black uppercase tracking-tighter">
+          {title}
+        </CardTitle>
         <CardDescription>
           Drag and drop or click to upload. Max {maxFileSizeMB}MB per file.
         </CardDescription>
@@ -400,11 +407,11 @@ export function FileUpload({
           onDrop={handleDrop}
           onClick={triggerFileSelect}
           className={cn(
-            "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+            "cursor-pointer border-dashed p-8 text-center shadow-[4px_4px_0_0_#000] transition-all",
             isDragging && !disabled
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
-            disabled && "opacity-50 cursor-not-allowed",
+              ? "-translate-x-0.5 -translate-y-0.5 bg-fab-teal/15"
+              : "hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-magenta/10",
+            disabled && "cursor-not-allowed opacity-50",
           )}
         >
           <div className="flex flex-col items-center gap-3">
