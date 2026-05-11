@@ -42,14 +42,18 @@ export function PublicNavAuth({
       <Authenticated>
         <Link
           href="/dashboard/chat"
-          className={dashboardClassName}
+          className={`cursor-pointer ${dashboardClassName}`}
           onClick={onNavigate}
         >
           {renderLabel("Dashboard")}
         </Link>
       </Authenticated>
       <Unauthenticated>
-        <Link href={loginHref} className={loginClassName} onClick={onNavigate}>
+        <Link
+          href={loginHref}
+          className={`cursor-pointer ${loginClassName}`}
+          onClick={onNavigate}
+        >
           {renderLabel("Login")}
         </Link>
       </Unauthenticated>

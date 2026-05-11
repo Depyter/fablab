@@ -94,6 +94,7 @@ export default function AddServicePage() {
       await deleteOrphanedFiles({ storageIds: orphans });
     }
     setSubmitError(null);
+    router.push("/dashboard/services");
   };
 
   return (

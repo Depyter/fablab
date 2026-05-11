@@ -130,7 +130,7 @@ export function GsapArrowButton({
   );
 
   const sharedClassName = cn(
-    "inline-flex min-h-20 w-fit max-w-full shrink-0 items-center overflow-hidden border-4 border-black px-5 py-4 text-left outline-none sm:min-h-24 sm:px-6 sm:py-5",
+    "inline-flex min-h-20 w-fit max-w-full shrink-0 items-center overflow-hidden border-4 border-black px-5 py-4 text-left outline-none cursor-pointer sm:min-h-24 sm:px-6 sm:py-5",
     "relative",
     className,
   );

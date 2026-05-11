@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionDialog } from "@/components/action-dialog";
 import Link from "next/link";
 import { useAppForm } from "@/lib/form-context";
 import { useQuery } from "convex/react";
@@ -113,17 +114,17 @@ export function ServiceForm({
               {submitError}
             </p>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            onClick={async () => {
+          <ActionDialog
+            onConfirm={async () => {
               await onDiscard(form.state.values);
               form.reset();
             }}
-          >
-            Discard
-          </Button>
+            title="Discard changes?"
+            description="Are you sure you want to discard your changes? This cannot be undone."
+            baseActionText="Discard"
+            confirmButtonText="Confirm Discard"
+            className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
+          />
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
@@ -262,7 +263,7 @@ export function ServiceForm({
               <div className="w-full sm:max-w-3xl">
                 <FormSection title="Status">
                   <field.SelectInput
-                    label="Status"
+                    label=""
                     placeholder="Select status..."
                     options={statusOptions}
                   />

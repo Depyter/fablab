@@ -361,7 +361,7 @@ export function ChatInterface({
                               showTimeId === message._id ? null : message._id,
                             )
                           }
-                          className="rounded-2xl bg-(--fab-bg-main)/50 px-4 py-3 text-sm leading-relaxed"
+                          className="rounded-2xl bg-(--fab-bg-main)/50 px-4 py-3 text-sm leading-relaxed cursor-pointer"
                           style={{
                             color: "var(--fab-text-primary)",
                             fontFamily: "var(--font-body)",

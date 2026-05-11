@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
 import {
   Select,
@@ -50,6 +52,21 @@ export function MultipleSelectForm({
   return (
     <div className="w-full sm:max-w-3xl">
       <FormSection title={title} className="space-y-1 flex flex-col gap-2">
+        {options.length === 0 ? (
+          <div className="w-full rounded-lg border border-dashed border-gray-200 p-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              {title.toLowerCase().includes("material")
+                ? "No available materials found."
+                : title.toLowerCase().includes("resource") ||
+                  title.toLowerCase().includes("machine")
+                ? "No available machines found."
+                : "No available options."}
+            </p>
+            <Link href="/dashboard/inventory" className="inline-block">
+              <Button className="px-4 py-2">Go to Inventory</Button>
+            </Link>
+          </div>
+        ) : null}
         {/* Render existing selections */}
         {selectedValues.map((machineValue: string, index: number) => {
           const label = options.find((o) => o.value === machineValue)?.label;
@@ -74,22 +91,24 @@ export function MultipleSelectForm({
         })}
 
         {/* Select to add a new machine */}
-        <Select onValueChange={addMachine}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((option) => (
-              <SelectItem
-                key={option.value}
-                value={option.value}
-                disabled={selectedValues.includes(option.value)}
-              >
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {options.length > 0 && (
+          <Select onValueChange={addMachine}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  disabled={selectedValues.includes(option.value)}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </FormSection>
     </div>
   );

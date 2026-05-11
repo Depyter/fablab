@@ -21,7 +21,7 @@ const publicNavItems = [
 ] as const;
 
 const desktopNavLinkClass =
-  "group inline-flex items-center gap-2 text-xl font-black uppercase tracking-tighter text-black transition-colors";
+  "group inline-flex items-center gap-2 cursor-pointer text-xl font-black uppercase tracking-tighter text-black transition-colors";
 
 export function PublicNavbar() {
   return (
@@ -30,7 +30,7 @@ export function PublicNavbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="pointer-events-auto inline-flex items-center rounded-full border-4 border-black bg-background px-4 h-12 shadow-[5px_5px_0_0_#000] transition-all duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_#000] active:translate-x-0 active:translate-y-0 active:shadow-[3px_3px_0_0_#000] sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:h-auto sm:text-4xl sm:shadow-none sm:hover:translate-x-0 sm:hover:translate-y-0 sm:hover:shadow-none"
+            className="pointer-events-auto inline-flex items-center rounded-full border-4 border-black bg-background px-4 h-12 cursor-pointer shadow-[5px_5px_0_0_#000] transition-all duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_#000] active:translate-x-0 active:translate-y-0 active:shadow-[3px_3px_0_0_#000] sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:h-auto sm:text-4xl sm:shadow-none sm:hover:translate-x-0 sm:hover:translate-y-0 sm:hover:shadow-none"
           >
             <Image
               src="/logo_1.png"
