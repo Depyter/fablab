@@ -361,22 +361,102 @@ export function ChatInterface({
                               showTimeId === message._id ? null : message._id,
                             )
                           }
-                          className="rounded-2xl bg-(--fab-bg-main)/50 px-4 py-3 text-sm leading-relaxed cursor-pointer"
+                          className="rounded-2xl bg-(--fab-bg-main) px-4 py-3 text-sm leading-relaxed cursor-pointer"
                           style={{
                             color: "var(--fab-text-primary)",
                             fontFamily: "var(--font-body)",
                           }}
                         >
-                          {message.content && (
-                            <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
-                              <ReactMarkdown>{message.content}</ReactMarkdown>
-                            </div>
-                          )}
+                          {message.content &&
+                          typeof message.content === "string" &&
+                          message.content.startsWith("New project created:") ? (
+                            (() => {
+                              const lines = message.content.split("\n").map((l) => l.trim());
+                              const data: Record<string, string> = {};
+                              // First line: New project created: {name}
+                              const first = lines[0] || "";
+                              const m = first.match(/^New project created:\s*(.*)$/i);
+                              if (m) data.title = m[1];
+                              for (let i = 1; i < lines.length; i++) {
+                                const line = lines[i];
+                                if (!line) continue;
+                                const parts = line.split(":");
+                                if (parts.length >= 2) {
+                                  const key = parts[0].trim();
+                                  const val = parts.slice(1).join(":").trim();
+                                  data[key] = val;
+                                }
+                              }
 
-                          {messageFiles.length > 0 && (
-                            <div className={cn(message.content ? "mt-2" : "")}>
-                              <MessageAttachments files={messageFiles} />
-                            </div>
+                              const booking = data["Booking"] || "";
+
+                              return (
+                                <div className="flex gap-3 items-start">
+                                  <div className="shrink-0">
+                                    {messageFiles.length > 0 ? (
+                                      <div className="w-16 h-16 overflow-hidden rounded-md bg-gray-100">
+                                        <Image
+                                          src={messageFiles[0].fileUrl}
+                                          alt={data.title || "image"}
+                                          width={64}
+                                          height={64}
+                                          className="object-cover w-16 h-16"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="w-16 h-16 flex items-center justify-center rounded-md bg-gray-100 text-sm font-semibold text-gray-600">
+                                        {data.title ? data.title.charAt(0) : "#"}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <div className="truncate">
+                                        <div className="text-sm font-bold text-[15px] truncate" style={{color: "var(--fab-text-primary)"}}>
+                                          {data.title || data["Service"]}
+                                        </div>
+                                        {data["Service"] && (
+                                          <div className="text-xs text-muted-foreground truncate">
+                                            {data["Service"]}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-xs text-muted-foreground">{booking}</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                      {data["Type"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Type:</strong> <div className="opacity-80">{data["Type"]}</div></div>}
+                                      {data["Fulfillment"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Fulfillment:</strong> <div className="opacity-80">{data["Fulfillment"]}</div></div>}
+                                      {data["Material"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Material:</strong> <div className="opacity-80">{data["Material"]}</div></div>}
+                                      {data["Pricing"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Pricing:</strong> <div className="opacity-80">{data["Pricing"]}</div></div>}
+                                    </div>
+
+                                    {data["Description"] && (
+                                      <p className="mt-3 text-sm text-muted-foreground truncate">
+                                        {data["Description"]}
+                                      </p>
+                                    )}
+
+                    
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <>
+                              <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
+                                <ReactMarkdown>{message.content}</ReactMarkdown>
+                              </div>
+
+                              {messageFiles.length > 0 && (
+                                <div className={cn(message.content ? "mt-2" : "")}>
+                                  <MessageAttachments files={messageFiles} />
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
 
