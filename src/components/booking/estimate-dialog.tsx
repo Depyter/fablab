@@ -99,18 +99,18 @@ export function EstimateProjectDetails({
   const isBuyFromLab = data.material === "buy-from-lab";
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <DialogHeader className="shrink-0 pb-4">
-        <DialogTitle className="text-2xl font-extrabold">
+    <div className="flex h-full min-h-0 flex-col">
+      <DialogHeader className="shrink-0 px-2 pb-4 sm:px-0">
+        <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Review & Estimate Project
         </DialogTitle>
-        <DialogDescription className="text-sm">
+        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
           Please review all details before submitting.
         </DialogDescription>
       </DialogHeader>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-1 no-scrollbar">
-        <Card className="rounded-lg py-4">
+        <Card className="rounded-none border-4 border-black bg-background py-4">
           <div className="divide-y">
             {/* Service Summary */}
             <div className="px-4 pb-4">
@@ -302,12 +302,12 @@ export function EstimateProjectDetails({
             </div>
 
             {/* Terms */}
-            <div className="flex items-start p-4 bg-gray-50/50">
+            <div className="flex items-start border-t-2 border-black bg-fab-teal/10 p-4">
               <input
                 type="checkbox"
                 id="terms"
                 required
-                className="mt-1 h-4 w-4 text-chart-6 rounded"
+                className="mt-1 h-4 w-4 rounded border-black text-fab-magenta"
                 onChange={handleCheckboxChange}
               />
               <label
@@ -330,10 +330,10 @@ export function EstimateProjectDetails({
         </Card>
       </div>
 
-      <div className="shrink-0 pt-4 border-t mt-4 flex items-center justify-end gap-2">
+      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 pt-4">
         <Button
           variant="outline"
-          className="rounded-lg"
+          className="rounded-none border-2 border-black bg-background shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           onClick={onBack}
           disabled={isSubmitting}
         >
@@ -341,7 +341,7 @@ export function EstimateProjectDetails({
         </Button>
         <Button
           type="submit"
-          className="rounded-lg"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber hover:text-black"
           disabled={isSubmitting || canSubmit === false || !isChecked}
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}

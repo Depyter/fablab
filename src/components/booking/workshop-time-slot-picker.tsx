@@ -45,8 +45,8 @@ export function WorkshopTimeSlotPicker({
 }: WorkshopTimeSlotPickerProps) {
   return (
     <>
-      <div className="flex flex-col gap-1 mb-2">
-        <Label className="font-bold text-lg">
+      <div className="mb-2 flex flex-col gap-1">
+        <Label className="text-lg font-black uppercase tracking-tighter">
           Select Workshop Time Slot (PST)
         </Label>
         <p className="text-sm text-muted-foreground">
@@ -93,12 +93,12 @@ export function WorkshopTimeSlotPicker({
                         originalEndTime: slot.endTime,
                       });
                     }}
-                    className={`rounded-lg border p-4 transition-colors ${
+                    className={`rounded-lg border-2 p-4 shadow-[4px_4px_0_0_#000] transition-all ${
                       isFull
-                        ? "bg-gray-100 opacity-60 cursor-not-allowed"
+                        ? "cursor-not-allowed border-black/20 bg-gray-200 opacity-60"
                         : isSelected
-                          ? "cursor-pointer border-primary bg-primary/5 ring-1 ring-primary"
-                          : "cursor-pointer border-gray-200 bg-white hover:border-primary/50"
+                          ? "cursor-pointer border-black bg-fab-teal/15 -translate-x-0.5 -translate-y-0.5"
+                          : "cursor-pointer border-black bg-background hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber/20"
                     }`}
                   >
                     <p className="font-medium text-sm text-gray-900">
