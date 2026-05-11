@@ -426,7 +426,12 @@ export function ChatInterface({
                                         {data["Description"]}
                                       </p>
                                     )}
-
+                                    
+                                    {messageFiles.length > 0 && (
+                                      <div className={cn(message.content ? "mt-2" : "")}>
+                                        <MessageAttachments files={messageFiles} />
+                                      </div>
+                                    )}
                     
                                   </div>
                                 </div>
