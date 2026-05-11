@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Send, User, Hash, ArrowLeft } from "lucide-react";
+import { Loader2, Send, User, Hash, ArrowLeft, Calendar } from "lucide-react";
 import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { ChatInterfaceProps, MessageFile } from "./types";
 import { ChatMessagesSkeletonList } from "./chat-loading";
 import Image from "next/image";
 import posthog from "posthog-js";
+import { FieldSeparator } from "../ui/field";
 
 const AVATAR_COLORS = [
   "var(--fab-magenta)",
@@ -392,46 +393,32 @@ export function ChatInterface({
 
                               return (
                                 <div className="flex gap-3 items-start">
-                                  <div className="shrink-0">
-                                    {messageFiles.length > 0 ? (
-                                      <div className="w-16 h-16 overflow-hidden rounded-md bg-gray-100">
-                                        <Image
-                                          src={messageFiles[0].fileUrl}
-                                          alt={data.title || "image"}
-                                          width={64}
-                                          height={64}
-                                          className="object-cover w-16 h-16"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="w-16 h-16 flex items-center justify-center rounded-md bg-gray-100 text-sm font-semibold text-gray-600">
-                                        {data.title ? data.title.charAt(0) : "#"}
-                                      </div>
-                                    )}
-                                  </div>
-
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between">
-                                      <div className="truncate">
-                                        <div className="text-sm font-bold text-[15px] truncate" style={{color: "var(--fab-text-primary)"}}>
+                                    <div className="flex flex-col items-start">
+                                      <div className="flex flex-row items-center gap-2">
+                                        <div className="text-sm font-bold text-[15px]" style={{color: "var(--fab-text-primary)"}}>
                                           {data.title || data["Service"]}
                                         </div>
+                                        <p>•</p>
                                         {data["Service"] && (
-                                          <div className="text-xs text-muted-foreground truncate">
+                                          <div className="text-[15px] text-muted-foreground truncate">
                                             {data["Service"]}
                                           </div>
                                         )}
                                       </div>
-                                      <div className="text-right">
+                                      <div className="flex flex-row gap-1 items-center text-right mt-1">
+                                        <Calendar className="inline-block h-3.5 w-3.5 mr-1 opacity-80" />
                                         <div className="text-xs text-muted-foreground">{booking}</div>
                                       </div>
                                     </div>
 
+                                    <FieldSeparator className="mt-1"/>
+
                                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                                      {data["Type"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Type:</strong> <div className="opacity-80">{data["Type"]}</div></div>}
-                                      {data["Fulfillment"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Fulfillment:</strong> <div className="opacity-80">{data["Fulfillment"]}</div></div>}
-                                      {data["Material"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Material:</strong> <div className="opacity-80">{data["Material"]}</div></div>}
-                                      {data["Pricing"] && <div><strong className="text-[11px]" style={{color: 'var(--fab-text-primary)'}}>Pricing:</strong> <div className="opacity-80">{data["Pricing"]}</div></div>}
+                                      {data["Type"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Type</p> <strong className="">{data["Type"]}</strong></div>}
+                                      {data["Fulfillment"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Fulfillment</p> <strong className=" uppercase">{data["Fulfillment"]}</strong></div>}
+                                      {data["Material"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Material</p> <strong className=" uppercase">{data["Material"]}</strong></div>}
+                                      {data["Pricing"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Pricing</p> <strong className=" uppercase">{data["Pricing"]}</strong></div>}
                                     </div>
 
                                     {data["Description"] && (
