@@ -26,6 +26,7 @@ import {
   getDurationMinutesFromTimestampRange,
   getDurationUnitsFromMinutes,
 } from "@/lib/project-pricing";
+import { getLabDayKey, getLabTimeBlock, getLabTimeRangeTimestamps } from "@/lib/lab-time";
 
 // --- Types ---
 
@@ -306,6 +307,41 @@ export function computeUsagePreview(
   };
 }
 
+export function computePeerTimeBlocks(
+  allDrafts: UsageDraft[],
+  draft: UsageDraft,
+  currentLabDate: Date | undefined,
+): { start: string; end: string }[] {
+  return allDrafts
+    .filter((peer) => peer.key !== draft.key)
+    .filter((peer) => {
+      const peerDate = parseDraftDate(peer.date);
+      if (!peerDate || !currentLabDate) return false;
+      return getLabDayKey(peerDate) === getLabDayKey(currentLabDate);
+    })
+    .filter((peer) => !draft.resourceId || peer.resourceId === draft.resourceId)
+    .filter(
+      (peer) =>
+        peer.startTime !== "" &&
+        peer.endTime !== "" &&
+        peer.startTime < peer.endTime,
+    )
+    .map((peer) => {
+      const peerDate = parseDraftDate(peer.date);
+      if (!peerDate) return null;
+      const range = getLabTimeRangeTimestamps({
+        date: peerDate,
+        startTime: peer.startTime,
+        endTime: peer.endTime,
+      });
+      return getLabTimeBlock({
+        startTime: range.startTime,
+        endTime: range.endTime,
+      });
+    })
+    .filter((block): block is { start: string; end: string } => block !== null);
+}
+
 const NO_RESOURCE_VALUE = "__no_resource__";
 const NO_MATERIAL_VALUE = "__no_material__";
 
@@ -314,12 +350,14 @@ const NO_MATERIAL_VALUE = "__no_material__";
 interface UsageScheduleEditorProps {
   draft: UsageDraft;
   service: PricingService;
+  allDrafts: UsageDraft[];
   onChange: (nextValue: DateTimePickerValue | WorkshopTimeSlotValue) => void;
 }
 
 function UsageScheduleEditor({
   draft,
   service,
+  allDrafts,
   onChange,
 }: UsageScheduleEditorProps) {
   const dateValue = parseDraftDate(draft.date);
@@ -335,6 +373,15 @@ function UsageScheduleEditor({
         }
       : "skip",
   );
+
+  const peerTimeBlocks = computePeerTimeBlocks(allDrafts, draft, dateValue);
+
+  const mergedBookedTimeBlocks = [
+    ...(bookedSlots ?? [])
+      .filter((slot) => slot.usageId !== draft.usageId)
+      .map((slot) => getLabTimeBlock(slot)),
+    ...peerTimeBlocks,
+  ];
 
   if (service.serviceCategory.type === "WORKSHOP") {
     return (
@@ -360,12 +407,7 @@ function UsageScheduleEditor({
       onChange={onChange}
       availableDays={service.serviceCategory.availableDays ?? []}
       allowPastSelection
-      bookedTimeBlocks={(bookedSlots ?? [])
-        .filter((slot) => slot.usageId !== draft.usageId)
-        .map((slot) => ({
-          start: formatTimeInputValue(slot.startTime),
-          end: formatTimeInputValue(slot.endTime),
-        }))}
+      bookedTimeBlocks={mergedBookedTimeBlocks}
     />
   );
 }
@@ -496,6 +538,7 @@ interface UsageDraftItemProps {
   editableResources: EditableResource[];
   editableMaterialDocs: RequestedMaterial[];
   isBuyFromLab: boolean;
+  allDrafts: UsageDraft[];
   onRemove: () => void;
   onUpdateDraft: (updater: (draft: UsageDraft) => UsageDraft) => void;
 }
@@ -509,6 +552,7 @@ export function UsageDraftItem({
   editableResources,
   editableMaterialDocs,
   isBuyFromLab,
+  allDrafts,
   onRemove,
   onUpdateDraft,
 }: UsageDraftItemProps) {
@@ -580,6 +624,7 @@ export function UsageDraftItem({
         <UsageScheduleEditor
           draft={draft}
           service={service}
+          allDrafts={allDrafts}
           onChange={(nextValue) =>
             onUpdateDraft((currentDraft) => ({
               ...currentDraft,

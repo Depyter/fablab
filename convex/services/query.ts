@@ -159,8 +159,8 @@ export const getBookedTimeSlots = publicQuery({
           )
           .filter((q) =>
             q.and(
-              q.gte(q.field("startTime"), dayBounds.startTime),
               q.lt(q.field("startTime"), dayBounds.endTime),
+              q.gt(q.field("endTime"), dayBounds.startTime),
             ),
           )
           .collect()
@@ -171,8 +171,8 @@ export const getBookedTimeSlots = publicQuery({
             .withIndex("by_service", (q) => q.eq("service", args.serviceId))
             .filter((q) =>
               q.and(
-                q.gte(q.field("startTime"), dayBounds.startTime),
                 q.lt(q.field("startTime"), dayBounds.endTime),
+                q.gt(q.field("endTime"), dayBounds.startTime),
               ),
             )
             .collect();

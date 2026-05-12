@@ -726,6 +726,7 @@ export function PricingEstimateCard({
                   editableMaterialDocs as RequestedMaterial[]
                 }
                 isBuyFromLab={isBuyFromLab}
+                allDrafts={usageDrafts}
                 onRemove={() => removeUsageDraft(draft.key)}
                 onUpdateDraft={(updater) => updateDraft(draft.key, updater)}
               />
