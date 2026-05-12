@@ -71,7 +71,7 @@ const STATUS_PILL: Record<
   approved: {
     bg: "rgba(59,130,246,0.1)",
     color: "#1d4ed8",
-    border: "rgba(59,130,246,0.25)",
+    border: "rgba(59,130,246,0.1)",
   },
   completed: {
     bg: "rgba(16,185,129,0.1)",
@@ -200,6 +200,7 @@ export function ProjectDetailsContent({
     ? PROJECT_STATUS_LABELS[previousStep]
     : "";
   const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
+  
   const isClaimedProject =
     project.status === "paid" || (project.status as string) === "claimed";
   const canRebook = isClient && project.status === "cancelled";
@@ -244,7 +245,7 @@ export function ProjectDetailsContent({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2 text-[10px] font-bold uppercase tracking-[0.08em] gap-1 rounded-[5px]"
+                        className="h-6 px-2 text-[10px] font-bold uppercase tracking-[0.08em] gap-1 rounded-[5px] cursor-pointer"
                         style={{
                           background: "var(--fab-magenta-light)",
                           color: "var(--fab-magenta)",
@@ -275,43 +276,7 @@ export function ProjectDetailsContent({
                   </DropdownMenu>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {/* Status pill */}
-                <span
-                  className="inline-flex items-center rounded-[5px] px-[8px] py-[3px] text-[10px] font-bold uppercase tracking-[0.08em]"
-                  style={{
-                    background: pill.bg,
-                    color: pill.color,
-                    border: `1px solid ${pill.border}`,
-                  }}
-                >
-                  {PROJECT_STATUS_LABELS[project.status]}
-                </span>
-                {/* Service type chip */}
-                <span
-                  className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[10px] font-bold uppercase tracking-[0.08em]"
-                  style={{
-                    background: "var(--fab-bg-sidebar)",
-                    color: "var(--fab-text-muted)",
-                    border: "1px solid var(--fab-border-md)",
-                  }}
-                >
-                  {project.fulfillmentMode}
-                </span>
-                {/* Material chip */}
-                <span
-                  className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[10px] font-bold uppercase tracking-[0.08em]"
-                  style={{
-                    background: "var(--fab-amber-light)",
-                    color: "var(--fab-amber)",
-                    border: "rgba(235,170,87,0.3) 1px solid",
-                  }}
-                >
-                  {project.material === "buy-from-lab"
-                    ? "Lab Material"
-                    : "Own Material"}
-                </span>
-              </div>
+              
             </div>
 
             {/* Action buttons */}
@@ -349,11 +314,12 @@ export function ProjectDetailsContent({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 px-3 text-xs font-semibold"
+                      className="h-8 px-3 text-xs font-semibold cursor-pointer"
                       onClick={() =>
                         previousStep && handleStatusChange(previousStep)
                       }
                       disabled={!previousStep}
+                    
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                       {previousStep ? `Back: ${previousStepLabel}` : "Back"}
@@ -373,7 +339,7 @@ export function ProjectDetailsContent({
                     </Button>
                     <Button
                       size="sm"
-                      className="h-8 px-3 text-xs font-semibold"
+                      className="h-8 px-3 text-xs font-semibold cursor-pointer"
                       style={{
                         background: pill.bg,
                         color: pill.color,
