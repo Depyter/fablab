@@ -140,19 +140,42 @@ export const getBookedTimeSlots = publicQuery({
   args: {
     serviceId: v.id("services"),
     date: v.number(),
+    resourceId: v.optional(v.id("resources")),
   },
   handler: async (ctx, args) => {
     const dayBounds = getLabDayBoundsMs(args.date);
-    const usages = await ctx.db
-      .query("resourceUsage")
-      .withIndex("by_service", (q) => q.eq("service", args.serviceId))
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("startTime"), dayBounds.startTime),
-          q.lt(q.field("startTime"), dayBounds.endTime),
-        ),
-      )
-      .collect();
+    const service = await ctx.db.get(args.serviceId);
+    if (!service) return [];
+
+    const usesDiscreteResources =
+      service.serviceCategory.type === "FABRICATION" &&
+      (service.resources?.length ?? 0) > 0;
+
+    const usages = args.resourceId
+      ? await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_resource_startTime", (q) =>
+            q.eq("resource", args.resourceId!),
+          )
+          .filter((q) =>
+            q.and(
+              q.gte(q.field("startTime"), dayBounds.startTime),
+              q.lt(q.field("startTime"), dayBounds.endTime),
+            ),
+          )
+          .collect()
+      : usesDiscreteResources
+        ? []
+        : await ctx.db
+            .query("resourceUsage")
+            .withIndex("by_service", (q) => q.eq("service", args.serviceId))
+            .filter((q) =>
+              q.and(
+                q.gte(q.field("startTime"), dayBounds.startTime),
+                q.lt(q.field("startTime"), dayBounds.endTime),
+              ),
+            )
+            .collect();
 
     return usages.map((u) => ({
       startTime: u.startTime,

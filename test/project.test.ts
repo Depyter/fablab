@@ -1056,8 +1056,9 @@ describe("Project and Chat functionality", () => {
       const updatedStart = Date.now() + 144 * HOUR_MS;
       const updatedEnd = updatedStart + 4 * HOUR_MS;
 
-      await tHarley.mutation(api.resource.mutate.updateUsage, {
-        id: usageId,
+      await tHarley.mutation(api.projects.mutate.updateUsage, {
+        projectId,
+        usageId,
         startTime: updatedStart,
         endTime: updatedEnd,
       });
@@ -1092,8 +1093,9 @@ describe("Project and Chat functionality", () => {
       const updatedStart = Date.now() + 168 * HOUR_MS;
       const updatedEnd = updatedStart + 5 * HOUR_MS;
 
-      await tAera.mutation(api.resource.mutate.updateUsage, {
-        id: usageId,
+      await tAera.mutation(api.projects.mutate.updateUsage, {
+        projectId,
+        usageId,
         startTime: updatedStart,
         endTime: updatedEnd,
       });
@@ -1135,8 +1137,9 @@ describe("Project and Chat functionality", () => {
       const updatedStart = Date.now() + 192 * HOUR_MS;
       const updatedEnd = updatedStart + 6 * HOUR_MS;
 
-      await tMaker.mutation(api.resource.mutate.updateUsage, {
-        id: usageId,
+      await tMaker.mutation(api.projects.mutate.updateUsage, {
+        projectId,
+        usageId,
         startTime: updatedStart,
         endTime: updatedEnd,
       });
@@ -1184,8 +1187,9 @@ describe("Project and Chat functionality", () => {
       const updatedStart = Date.now() + 216 * HOUR_MS;
       const updatedEnd = updatedStart + 3 * HOUR_MS;
 
-      await tAera.mutation(api.resource.mutate.updateUsage, {
-        id: usageId,
+      await tAera.mutation(api.projects.mutate.updateUsage, {
+        projectId,
+        usageId,
         startTime: updatedStart,
         endTime: updatedEnd,
       });
@@ -1829,9 +1833,10 @@ describe("Project and Chat functionality", () => {
       const updatedStart = Date.now() + 120 * HOUR_MS;
       const updatedEnd = updatedStart + 3 * HOUR_MS;
 
-      await tAera.mutation(api.resource.mutate.updateUsage, {
-        id: firstUsageId,
-        resource: resourceId,
+      await tAera.mutation(api.projects.mutate.updateUsage, {
+        projectId,
+        usageId: firstUsageId,
+        resourceId,
         startTime: updatedStart,
         endTime: updatedEnd,
       });
@@ -2144,6 +2149,127 @@ describe("Project and Chat functionality", () => {
   });
 
   describe("Usage lifecycle mutations", () => {
+    test("resource-aware scheduling allows overlaps on different resources but rejects same-resource conflicts", async () => {
+      const { t, tAera, tHarley } = await setupUsers();
+
+      await tAera.mutation(api.resource.mutate.addResource, {
+        name: "Printer A",
+        category: "machine",
+        type: "3D printer",
+        images: [],
+        description: "Primary printer",
+        status: "Available",
+      });
+      await tAera.mutation(api.resource.mutate.addResource, {
+        name: "Printer B",
+        category: "machine",
+        type: "3D printer",
+        images: [],
+        description: "Secondary printer",
+        status: "Available",
+      });
+
+      const { printerAId, printerBId } = await t.run(async (ctx) => {
+        const resources = await ctx.db.query("resources").collect();
+        return {
+          printerAId: resources.find((resource) => resource.name === "Printer A")!._id,
+          printerBId: resources.find((resource) => resource.name === "Printer B")!._id,
+        };
+      });
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "multi printer",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "FABRICATION",
+          materials: [],
+          setupFee: 1,
+          unitName: "hour",
+          timeRate: 2,
+        },
+        requirements: ["model"],
+        fileTypes: [],
+        description: "Parallel printers",
+        resources: [printerAId, printerBId],
+        status: "Available",
+      });
+
+      const resolvedServiceId = await t.run(async (ctx) => {
+        const service = await ctx.db.query("services").first();
+        return service!._id;
+      });
+
+      const bookingDay = Date.now() + 72 * HOUR_MS;
+      const bookingStart = bookingDay + HOUR_MS;
+      const bookingEnd = bookingStart + 2 * HOUR_MS;
+
+      const { projectId } = await tHarley.mutation(api.projects.mutate.createProject, {
+        name: "parallel prints",
+        pricing: "Default",
+        description: "first booking",
+        fulfillmentMode: "self-service",
+        material: "provide-own",
+        files: [],
+        service: resolvedServiceId,
+        notes: "first machine",
+        booking: {
+          startTime: bookingStart,
+          endTime: bookingEnd,
+          date: bookingDay,
+        },
+      });
+
+      const firstUsageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      await tAera.mutation(api.projects.mutate.updateUsageAssignments, {
+        projectId,
+        usageId: firstUsageId,
+        resourceId: printerAId,
+      });
+
+      const overlappingStart = bookingStart + 30 * 60 * 1000;
+      const overlappingEnd = overlappingStart + 90 * 60 * 1000;
+
+      const { usageId: secondUsageId } = await tAera.mutation(
+        api.projects.mutate.createUsage,
+        {
+          projectId,
+          startTime: overlappingStart,
+          endTime: overlappingEnd,
+          resourceId: printerBId,
+        },
+      );
+
+      await expect(
+        tAera.mutation(api.projects.mutate.createUsage, {
+          projectId,
+          startTime: overlappingStart,
+          endTime: overlappingEnd,
+          resourceId: printerAId,
+        }),
+      ).rejects.toThrow("This timeslot is already booked.");
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(details.resourceUsages).toHaveLength(2);
+      expect(
+        details.resourceUsages.find((usage) => usage._id === secondUsageId),
+      ).toMatchObject({
+        resource: printerBId,
+        startTime: overlappingStart,
+        endTime: overlappingEnd,
+      });
+    });
+
     test("createUsage appends a usage with independent pricing and preserves the project schedule", async () => {
       const { tAera, tHarley, projectId } = await setupProject();
       const initialDetails = await tHarley.query(api.projects.query.getProject, {
@@ -2243,6 +2369,112 @@ describe("Project and Chat functionality", () => {
           description: "Secondary printer",
         },
       });
+    });
+
+    test("resource usage updates reject moving onto an occupied resource timeline", async () => {
+      const { t, tAera, tHarley } = await setupUsers();
+
+      await tAera.mutation(api.resource.mutate.addResource, {
+        name: "Printer A",
+        category: "machine",
+        type: "3D printer",
+        images: [],
+        description: "Primary printer",
+        status: "Available",
+      });
+      await tAera.mutation(api.resource.mutate.addResource, {
+        name: "Printer B",
+        category: "machine",
+        type: "3D printer",
+        images: [],
+        description: "Secondary printer",
+        status: "Available",
+      });
+
+      const { printerAId, printerBId } = await t.run(async (ctx) => {
+        const resources = await ctx.db.query("resources").collect();
+        return {
+          printerAId: resources.find((resource) => resource.name === "Printer A")!._id,
+          printerBId: resources.find((resource) => resource.name === "Printer B")!._id,
+        };
+      });
+
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "reschedulable printers",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "FABRICATION",
+          materials: [],
+          setupFee: 1,
+          unitName: "hour",
+          timeRate: 2,
+        },
+        requirements: ["model"],
+        fileTypes: [],
+        description: "Parallel printers",
+        resources: [printerAId, printerBId],
+        status: "Available",
+      });
+
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db.query("services").first();
+        return service!._id;
+      });
+
+      const bookingDay = Date.now() + 96 * HOUR_MS;
+      const firstStart = bookingDay + HOUR_MS;
+      const firstEnd = firstStart + 2 * HOUR_MS;
+
+      const { projectId } = await tHarley.mutation(api.projects.mutate.createProject, {
+        name: "reschedule conflict",
+        pricing: "Default",
+        description: "base booking",
+        fulfillmentMode: "self-service",
+        material: "provide-own",
+        files: [],
+        service: serviceId,
+        notes: "reschedule",
+        booking: {
+          startTime: firstStart,
+          endTime: firstEnd,
+          date: bookingDay,
+        },
+      });
+
+      const firstUsageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      await tAera.mutation(api.projects.mutate.updateUsageAssignments, {
+        projectId,
+        usageId: firstUsageId,
+        resourceId: printerAId,
+      });
+
+      const { usageId: secondUsageId } = await tAera.mutation(
+        api.projects.mutate.createUsage,
+        {
+          projectId,
+          startTime: firstEnd + HOUR_MS,
+          endTime: firstEnd + 2 * HOUR_MS,
+          resourceId: printerBId,
+        },
+      );
+
+      await expect(
+        tAera.mutation(api.projects.mutate.updateUsage, {
+          projectId,
+          usageId: secondUsageId,
+          resourceId: printerAId,
+          startTime: firstStart + 15 * 60 * 1000,
+          endTime: firstStart + 75 * 60 * 1000,
+        }),
+      ).rejects.toThrow("This timeslot is already booked.");
     });
 
     test("updateUsagePricing only changes the targeted usage and refreshes project totals", async () => {
@@ -2567,7 +2799,10 @@ describe("Project and Chat functionality", () => {
         return usage!._id;
       });
 
-      await tAera.mutation(api.resource.mutate.deleteUsage, { usage: usageId });
+      await tAera.mutation(api.projects.mutate.deleteUsage, {
+        projectId,
+        usageId,
+      });
 
       await t.run(async (ctx) => {
         const project = await ctx.db.get(projectId);

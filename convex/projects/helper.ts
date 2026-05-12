@@ -137,11 +137,20 @@ export function validateBookingTiming(booking: BookingWindow): void {
   }
 }
 
+function serviceUsesDiscreteResources(service: ServiceDoc) {
+  return service.serviceCategory.type === "FABRICATION" &&
+    (service.resources?.length ?? 0) > 0;
+}
+
 export async function validateFabricationAvailability(
   ctx: MutationCtx,
   serviceId: Id<"services">,
   service: ServiceDoc,
   booking: BookingWindow,
+  options?: {
+    resourceId?: Id<"resources"> | null;
+    excludeUsageId?: Id<"resourceUsage">;
+  },
 ): Promise<void> {
   if (service.serviceCategory.type !== "FABRICATION") return;
 
@@ -155,13 +164,26 @@ export async function validateFabricationAvailability(
     }
   }
 
-  // Conflict check — query all usages for this service and check time overlap
-  const existingUsages = await ctx.db
-    .query("resourceUsage")
-    .withIndex("by_service", (q) => q.eq("service", serviceId))
-    .collect();
+  // Conflict check — prefer resource timelines when the service has discrete
+  // resources, otherwise fall back to the pooled service timeline.
+  const existingUsages = options?.resourceId
+    ? await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_resource_startTime", (q) =>
+          q.eq("resource", options.resourceId!),
+        )
+        .collect()
+    : serviceUsesDiscreteResources(service)
+      ? []
+      : await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", serviceId))
+          .collect();
 
   for (const usage of existingUsages) {
+    if (options?.excludeUsageId && usage._id === options.excludeUsageId) {
+      continue;
+    }
     if (
       booking.startTime < usage.endTime &&
       booking.endTime > usage.startTime
@@ -998,28 +1020,6 @@ export async function applyMakerAssignment(
   await ctx.db.patch(project._id, { assignedMaker: makerId });
 
   return [`- Assigned maker updated to: **${makerProfile.name}**`];
-}
-
-/**
- * Assigns a resource to the project's resource usage record.
- * Returns change-log lines for the system message.
- */
-export async function applyResourceAssignment(
-  ctx: MutationCtx,
-  project: Doc<"projects">,
-  resourceId: Id<"resources">,
-): Promise<string[]> {
-  const resourceDoc = await ctx.db.get(resourceId);
-  if (!resourceDoc) throw new ConvexError("Resource not found.");
-
-  const usage = await findProjectUsage(ctx, project);
-  if (usage?.resource === resourceId) return [];
-
-  if (usage) {
-    await ctx.db.patch(usage._id, { resource: resourceId });
-  }
-
-  return [`- Resource updated to: **${resourceDoc.name}**`];
 }
 
 /**

@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { authMutation, claimFiles } from "../helper";
+import { authMutation, checkAuthority, claimFiles } from "../helper";
 import { Id } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
 import {
@@ -33,7 +33,6 @@ import {
   sendProjectSystemMessage,
   applyStatusChange,
   applyMakerAssignment,
-  applyResourceAssignment,
   applyMaterialAssignment,
   syncMaterialUsageStock,
   buildMaterialSnapshot,
@@ -266,7 +265,6 @@ export const updateProject = authMutation({
     ),
     // Assignments
     makerId: v.optional(v.id("userProfile")),
-    resourceId: v.optional(v.id("resources")),
     materialIds: v.optional(v.array(v.id("materials"))),
   },
   handler: async (ctx, args) => {
@@ -293,16 +291,6 @@ export const updateProject = authMutation({
     // ── Maker assignment ─────────────────────────────────────────────────────
     if (args.makerId !== undefined) {
       const lines = await applyMakerAssignment(ctx, project, args.makerId);
-      messagelines.push(...lines);
-    }
-
-    // ── Resource assignment ──────────────────────────────────────────────────
-    if (args.resourceId !== undefined) {
-      const lines = await applyResourceAssignment(
-        ctx,
-        project,
-        args.resourceId,
-      );
       messagelines.push(...lines);
     }
 
@@ -342,13 +330,14 @@ export const createUsage = authMutation({
     };
 
     validateBookingTiming(booking);
-    await validateFabricationAvailability(ctx, project.service, service, booking);
-
     const resource = await resolveCompatibleResource(
       ctx,
       service,
       args.resourceId ?? null,
     );
+    await validateFabricationAvailability(ctx, project.service, service, booking, {
+      resourceId: resource?._id ?? null,
+    });
     const provisional = computeProvisionalCostBreakdown(
       service,
       project.pricing,
@@ -443,6 +432,21 @@ export const updateUsageAssignments = authMutation({
 
     if (usage.resource === nextResourceId) return;
 
+    await validateFabricationAvailability(
+      ctx,
+      project.service,
+      service,
+      {
+        startTime: usage.startTime,
+        endTime: usage.endTime,
+        date: getLabDayStartTimestamp(usage.startTime),
+      },
+      {
+        resourceId: nextResourceId ?? null,
+        excludeUsageId: usage._id,
+      },
+    );
+
     await ctx.db.patch(usage._id, { resource: nextResourceId });
     await scheduleProjectUpdateEmail(ctx, project._id);
     await sendProjectSystemMessage(ctx, project._id, [
@@ -451,6 +455,104 @@ export const updateUsageAssignments = authMutation({
         ? `- Resource: **${resource.name}**`
         : "- Resource cleared",
     ]);
+  },
+});
+
+export const updateUsage = authMutation({
+  args: {
+    projectId: v.id("projects"),
+    usageId: v.id("resourceUsage"),
+    startTime: v.optional(v.number()),
+    endTime: v.optional(v.number()),
+    resourceId: v.optional(v.union(v.id("resources"), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const [project, usage] = await Promise.all([
+      ctx.db.get(args.projectId),
+      ctx.db.get(args.usageId),
+    ]);
+    if (!project) throw new ConvexError("Project not found.");
+    if (!usage) throw new ConvexError("Usage not found.");
+    assertUsageBelongsToProject(usage, args.projectId);
+
+    const isOwner = project.userId === ctx.profile._id;
+    const isPrivileged = await checkAuthority(["admin", "maker"], ctx.user, ctx);
+
+    if (!isOwner && !isPrivileged) {
+      throw new ConvexError("Unauthorized. Cannot update resource.");
+    }
+
+    if (!isPrivileged && args.resourceId !== undefined) {
+      throw new ConvexError("Unauthorized. Cannot modify restricted fields.");
+    }
+
+    const service = await ctx.db.get(project.service);
+    if (!service) throw new ConvexError("Service not found.");
+
+    const nextStartTime = args.startTime ?? usage.startTime;
+    const nextEndTime = args.endTime ?? usage.endTime;
+    const bookingChanged =
+      nextStartTime !== usage.startTime || nextEndTime !== usage.endTime;
+
+    const nextResource =
+      args.resourceId !== undefined
+        ? await resolveCompatibleResource(ctx, service, args.resourceId)
+        : null;
+    const nextResourceId =
+      args.resourceId !== undefined
+        ? (nextResource?._id ?? undefined)
+        : usage.resource;
+    const resourceChanged = usage.resource !== nextResourceId;
+
+    if (!bookingChanged && !resourceChanged) return;
+
+    const booking: BookingWindow = {
+      startTime: nextStartTime,
+      endTime: nextEndTime,
+      date: getLabDayStartTimestamp(nextStartTime),
+    };
+    validateBookingTiming(booking);
+    await validateFabricationAvailability(
+      ctx,
+      project.service,
+      service,
+      booking,
+      {
+        resourceId: nextResourceId ?? null,
+        excludeUsageId: usage._id,
+      },
+    );
+
+    const updates: {
+      startTime?: number;
+      endTime?: number;
+      resource?: Id<"resources">;
+    } = {};
+    if (bookingChanged) {
+      updates.startTime = nextStartTime;
+      updates.endTime = nextEndTime;
+    }
+    if (args.resourceId !== undefined) {
+      updates.resource = nextResourceId;
+    }
+
+    await ctx.db.patch(usage._id, updates);
+    await syncProjectTotalInvoice(ctx, project._id);
+    await scheduleProjectUpdateEmail(ctx, project._id);
+
+    const lines: string[] = [];
+    if (bookingChanged) {
+      lines.push("Booking updated:", buildScheduleSystemLine(nextStartTime, nextEndTime));
+    }
+    if (args.resourceId !== undefined) {
+      if (lines.length === 0) {
+        lines.push("Usage assignment updated:");
+      }
+      lines.push(
+        nextResource ? `- Resource: **${nextResource.name}**` : "- Resource cleared",
+      );
+    }
+    await sendProjectSystemMessage(ctx, project._id, lines);
   },
 });
 
@@ -579,6 +681,26 @@ export const updateUsagePricing = authMutation({
       `- **Subtotal: ₱${updates.pricingSnapshot.subtotal.toFixed(2)}**`,
       ...materialLines,
     ]);
+  },
+});
+
+export const deleteUsage = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    projectId: v.id("projects"),
+    usageId: v.id("resourceUsage"),
+  },
+  handler: async (ctx, args) => {
+    const [project, usage] = await Promise.all([
+      ctx.db.get(args.projectId),
+      ctx.db.get(args.usageId),
+    ]);
+    if (!project) throw new ConvexError("Project not found.");
+    if (!usage) throw new ConvexError("Usage not found.");
+    assertUsageBelongsToProject(usage, args.projectId);
+
+    await ctx.db.delete(usage._id);
+    await syncProjectTotalInvoice(ctx, project._id);
   },
 });
 

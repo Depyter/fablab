@@ -311,13 +311,21 @@ describe("Resource lifecycle and resourceUsage integration", () => {
       status: "Available",
     });
 
-    const resourceId = await t.run(async (ctx) => {
+    const { resourceId, usageId } = await t.run(async (ctx) => {
       const resource = await ctx.db.query("resources").first();
-      return resource!._id;
+      const usage = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .first();
+      return {
+        resourceId: resource!._id,
+        usageId: usage!._id,
+      };
     });
 
-    await tAera.mutation(api.projects.mutate.updateProject, {
+    await tAera.mutation(api.projects.mutate.updateUsageAssignments, {
       projectId,
+      usageId,
       resourceId,
     });
 
@@ -385,9 +393,10 @@ describe("Resource lifecycle and resourceUsage integration", () => {
     const updatedStart = Date.now() + 48 * HOUR_MS;
     const updatedEnd = updatedStart + 4 * HOUR_MS;
 
-    await tAera.mutation(api.resource.mutate.updateUsage, {
-      id: usageId,
-      resource: resourceId,
+    await tAera.mutation(api.projects.mutate.updateUsage, {
+      projectId,
+      usageId,
+      resourceId,
       startTime: updatedStart,
       endTime: updatedEnd,
     });

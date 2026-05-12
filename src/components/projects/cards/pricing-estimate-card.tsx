@@ -178,7 +178,7 @@ export function PricingEstimateCard({
     api.projects.mutate.updateCostBreakdown,
   );
   const updateAssignments = useMutation(api.projects.mutate.updateProject);
-  const updateUsage = useMutation(api.resource.mutate.updateUsage);
+  const updateUsage = useMutation(api.projects.mutate.updateUsage);
 
   // ── Assignment data (admin/maker only) ───────────────────────────────────
   const makers = useQuery(api.users.getMakers, readOnly ? "skip" : {});
@@ -399,9 +399,13 @@ export function PricingEstimateCard({
 
       if (primaryUsage && editedPrimaryRange) {
         await updateUsage({
-          id: primaryUsage._id as Id<"resourceUsage">,
+          projectId,
+          usageId: primaryUsage._id as Id<"resourceUsage">,
           startTime: editedPrimaryRange.startTime,
           endTime: editedPrimaryRange.endTime,
+          resourceId: selectedResourceId
+            ? (selectedResourceId as Id<"resources">)
+            : null,
         });
       }
 
@@ -419,9 +423,6 @@ export function PricingEstimateCard({
           projectId,
           makerId: selectedMakerId
             ? (selectedMakerId as Id<"userProfile">)
-            : undefined,
-          resourceId: selectedResourceId
-            ? (selectedResourceId as Id<"resources">)
             : undefined,
           materialIds: selectedMaterialIds.length
             ? (selectedMaterialIds as Id<"materials">[])
