@@ -141,8 +141,8 @@ export const getProjects = authQuery({
       return { ...result, page: enrichedPage };
     }
 
-  const dateBounds = resolveProjectDateBounds(args.dateFilter);
-  if (dateBounds !== null) {
+    const dateBounds = resolveProjectDateBounds(args.dateFilter);
+    if (dateBounds !== null) {
       const datedProjects = await ctx.db
         .query("projects")
         .withIndex("by_bookingStartTime", (q) =>

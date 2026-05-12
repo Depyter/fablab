@@ -122,7 +122,9 @@ function sameStringSet(left: string[], right: string[]) {
   if (left.length !== right.length) return false;
   const normalizedLeft = [...left].sort();
   const normalizedRight = [...right].sort();
-  return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+  return normalizedLeft.every(
+    (value, index) => value === normalizedRight[index],
+  );
 }
 
 function nearlyEqual(left: number, right: number) {
@@ -285,7 +287,11 @@ function computeUsagePreview(
   pricingType: ServicePricing["type"],
   materialLookup: MaterialLookup,
 ) {
-  const bookingRange = buildBookingRange(draft.date, draft.startTime, draft.endTime);
+  const bookingRange = buildBookingRange(
+    draft.date,
+    draft.startTime,
+    draft.endTime,
+  );
   const durationMinutes = bookingRange
     ? getDurationMinutesFromTimestampRange(
         bookingRange.startTime,
@@ -450,7 +456,8 @@ function UsageMaterialEditor({
                   className="text-[10px]"
                   style={{ color: "var(--fab-text-muted)" }}
                 >
-                  {formatCurrency(materialDoc.pricePerUnit ?? 0)}/{materialDoc.unit}
+                  {formatCurrency(materialDoc.pricePerUnit ?? 0)}/
+                  {materialDoc.unit}
                 </p>
               </div>
               <Input
@@ -479,10 +486,7 @@ function UsageMaterialEditor({
           ))}
         </div>
       ) : (
-        <p
-          className="text-[12px]"
-          style={{ color: "var(--fab-text-muted)" }}
-        >
+        <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
           No materials selected.
         </p>
       )}
@@ -492,7 +496,8 @@ function UsageMaterialEditor({
 
 function sortUsages(usages: ResourceUsage[]) {
   return [...usages].sort(
-    (left, right) => left.startTime - right.startTime || left._id.localeCompare(right._id),
+    (left, right) =>
+      left.startTime - right.startTime || left._id.localeCompare(right._id),
   );
 }
 
@@ -532,8 +537,12 @@ export function PricingEstimateCard({
   const updateProject = useMutation(api.projects.mutate.updateProject);
   const createUsage = useMutation(api.projects.mutate.createUsage);
   const updateUsage = useMutation(api.projects.mutate.updateUsage);
-  const updateUsagePricing = useMutation(api.projects.mutate.updateUsagePricing);
-  const updateProjectSchedule = useMutation(api.projects.mutate.updateProjectSchedule);
+  const updateUsagePricing = useMutation(
+    api.projects.mutate.updateUsagePricing,
+  );
+  const updateProjectSchedule = useMutation(
+    api.projects.mutate.updateProjectSchedule,
+  );
   const deleteUsage = useMutation(api.projects.mutate.deleteUsage);
 
   const makers = useQuery(api.users.getMakers, readOnly ? "skip" : {});
@@ -600,7 +609,9 @@ export function PricingEstimateCard({
         new Set([
           ...(service?.resources ?? []),
           ...orderedUsages
-            .map((usage) => usage.resourceDetails?._id ?? usage.resource ?? null)
+            .map(
+              (usage) => usage.resourceDetails?._id ?? usage.resource ?? null,
+            )
             .filter((resourceId): resourceId is string => !!resourceId),
         ]),
       ),
@@ -620,13 +631,19 @@ export function PricingEstimateCard({
     () =>
       editableMaterialIds
         .map((id) => materials?.find((materialDoc) => materialDoc._id === id))
-        .filter((materialDoc): materialDoc is NonNullable<typeof materialDoc> => !!materialDoc),
+        .filter(
+          (materialDoc): materialDoc is NonNullable<typeof materialDoc> =>
+            !!materialDoc,
+        ),
     [editableMaterialIds, materials],
   );
   const editableMaterialLookup = useMemo(
     () =>
       new Map(
-        editableMaterialDocs.map((materialDoc) => [materialDoc._id, materialDoc]),
+        editableMaterialDocs.map((materialDoc) => [
+          materialDoc._id,
+          materialDoc,
+        ]),
       ),
     [editableMaterialDocs],
   );
@@ -730,7 +747,11 @@ export function PricingEstimateCard({
     const sourceDraft = usageDrafts.at(-1);
     const sourceRange =
       (sourceDraft &&
-        buildBookingRange(sourceDraft.date, sourceDraft.startTime, sourceDraft.endTime)) ||
+        buildBookingRange(
+          sourceDraft.date,
+          sourceDraft.startTime,
+          sourceDraft.endTime,
+        )) ||
       (headlineBookingStartTime != null && headlineBookingEndTime != null
         ? {
             startTime: headlineBookingStartTime,
@@ -738,11 +759,12 @@ export function PricingEstimateCard({
           }
         : null);
 
-    const fallbackStart =
-      sourceRange?.endTime ?? Date.now() + 60 * 60 * 1000;
+    const fallbackStart = sourceRange?.endTime ?? Date.now() + 60 * 60 * 1000;
     const fallbackDurationMs = Math.max(
       60 * 60 * 1000,
-      sourceRange ? sourceRange.endTime - sourceRange.startTime : 60 * 60 * 1000,
+      sourceRange
+        ? sourceRange.endTime - sourceRange.startTime
+        : 60 * 60 * 1000,
     );
     const defaultStart = fallbackStart;
     const defaultEnd = fallbackStart + fallbackDurationMs;
@@ -787,7 +809,11 @@ export function PricingEstimateCard({
 
       const bookingPayloads = new Map<
         string,
-        { startTime: number; endTime: number; resourceId: Id<"resources"> | null }
+        {
+          startTime: number;
+          endTime: number;
+          resourceId: Id<"resources"> | null;
+        }
       >();
 
       for (const draft of usageDrafts) {
@@ -797,7 +823,9 @@ export function PricingEstimateCard({
           draft.endTime,
         );
         if (!bookingRange) {
-          toast.error("Please enter a valid booking date and time for every usage.");
+          toast.error(
+            "Please enter a valid booking date and time for every usage.",
+          );
           setIsSaving(false);
           return;
         }
@@ -824,7 +852,10 @@ export function PricingEstimateCard({
         headlineBookingStartTime != null &&
         isPastBookingRange(headlineBookingStartTime);
 
-      if (!allowPastBooking && (hasPastUsageBooking || hasPastHeadlineBooking)) {
+      if (
+        !allowPastBooking &&
+        (hasPastUsageBooking || hasPastHeadlineBooking)
+      ) {
         setShowPastBookingDialog(true);
         setIsSaving(false);
         return;
@@ -885,8 +916,9 @@ export function PricingEstimateCard({
           originalUsage.startTime !== booking.startTime ||
           originalUsage.endTime !== booking.endTime;
         const resourceChanged =
-          (originalUsage.resourceDetails?._id ?? originalUsage.resource ?? "") !==
-          (draft.resourceId || "");
+          (originalUsage.resourceDetails?._id ??
+            originalUsage.resource ??
+            "") !== (draft.resourceId || "");
 
         if (scheduleChanged || resourceChanged) {
           await updateUsage({
@@ -921,10 +953,12 @@ export function PricingEstimateCard({
           pricingType,
           editableMaterialLookup,
         );
-        const originalMaterialMap = toMaterialAmountMap(originalUsage?.materialsUsed);
-        const originalMaterialIdsForUsage = (originalUsage?.materialsUsed ?? []).map(
-          (materialEntry) => materialEntry.materialId,
+        const originalMaterialMap = toMaterialAmountMap(
+          originalUsage?.materialsUsed,
         );
+        const originalMaterialIdsForUsage = (
+          originalUsage?.materialsUsed ?? []
+        ).map((materialEntry) => materialEntry.materialId);
         const draftMaterialIds = getDraftMaterialIds(draft);
 
         const shouldUpdatePricing =
@@ -935,14 +969,20 @@ export function PricingEstimateCard({
             draft.setupFeePortion,
           ) ||
           !nearlyEqual(originalUsage.pricingSnapshot.rate, draft.rate) ||
-          !nearlyEqual(originalUsage.pricingSnapshot.duration, preview.duration) ||
-          !nearlyEqual(originalUsage.pricingSnapshot.timeCost, preview.timeCost) ||
-           !nearlyEqual(
-             originalUsage.pricingSnapshot.materialCost,
-             preview.materialCost,
-           ) ||
-           originalUsage.pricingSnapshot.unitName !== draft.unitName ||
-           (isBuyFromLab &&
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.duration,
+            preview.duration,
+          ) ||
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.timeCost,
+            preview.timeCost,
+          ) ||
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.materialCost,
+            preview.materialCost,
+          ) ||
+          originalUsage.pricingSnapshot.unitName !== draft.unitName ||
+          (isBuyFromLab &&
             (!sameStringSet(draftMaterialIds, originalMaterialIdsForUsage) ||
               draftMaterialIds.some(
                 (materialId) =>
@@ -1007,98 +1047,339 @@ export function PricingEstimateCard({
         isSaving={isSaving}
         bodyClassName="space-y-4 py-3"
       >
-      {!readOnly && (
-        <>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <p
-                className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Assigned Maker
-              </p>
-              {isEditing ? (
-                <Select
-                  value={selectedMakerId || NO_MAKER_VALUE}
-                  onValueChange={(value) =>
-                    setSelectedMakerId(
-                      value === NO_MAKER_VALUE ? "" : value,
-                    )
-                  }
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Select a maker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_MAKER_VALUE}>Unassigned</SelectItem>
-                    {makers?.map((maker) => (
-                      <SelectItem key={maker._id} value={maker._id}>
-                        {maker.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : assignedMaker ? (
+        {!readOnly && (
+          <>
+            <div className="space-y-3">
+              <div className="space-y-1">
                 <p
-                  className="text-[12px] font-medium"
-                  style={{ color: "var(--fab-text-primary)" }}
+                  className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
                 >
-                  {assignedMaker.name}
+                  Assigned Maker
                 </p>
-              ) : (
-                <p
-                  className="text-[12px]"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  Unassigned
-                </p>
-              )}
+                {isEditing ? (
+                  <Select
+                    value={selectedMakerId || NO_MAKER_VALUE}
+                    onValueChange={(value) =>
+                      setSelectedMakerId(value === NO_MAKER_VALUE ? "" : value)
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Select a maker" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_MAKER_VALUE}>Unassigned</SelectItem>
+                      {makers?.map((maker) => (
+                        <SelectItem key={maker._id} value={maker._id}>
+                          {maker.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : assignedMaker ? (
+                  <p
+                    className="text-[12px] font-medium"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {assignedMaker.name}
+                  </p>
+                ) : (
+                  <p
+                    className="text-[12px]"
+                    style={{ color: "var(--fab-text-muted)" }}
+                  >
+                    Unassigned
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          <FieldSeparator className="my-1" />
-        </>
-      )}
+            <FieldSeparator className="my-1" />
+          </>
+        )}
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <p
-            className="text-[9px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Usages
-          </p>
-          {isEditing && !readOnly && (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 gap-1.5 px-3 text-xs font-semibold"
-              onClick={addUsageDraft}
-              style={{ background: "var(--fab-teal)", border: "none" }}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
             >
-              <Plus className="h-3.5 w-3.5" />
-              Add Usage
-            </Button>
-          )}
-        </div>
-
-        {(isEditing ? usageDrafts : orderedUsages).length === 0 ? (
-          <div
-            className="rounded-lg border border-dashed px-3 py-4 text-sm"
-            style={{
-              borderColor: "var(--fab-border-md)",
-              color: "var(--fab-text-muted)",
-            }}
-          >
-            No usages yet.
+              Usages
+            </p>
+            {isEditing && !readOnly && (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5 px-3 text-xs font-semibold"
+                onClick={addUsageDraft}
+                style={{ background: "var(--fab-teal)", border: "none" }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Usage
+              </Button>
+            )}
           </div>
-        ) : isEditing ? (
-          usageDrafts.map((draft, index) => {
-            const preview = previewByDraftKey.get(draft.key)!;
 
-            return (
+          {(isEditing ? usageDrafts : orderedUsages).length === 0 ? (
+            <div
+              className="rounded-lg border border-dashed px-3 py-4 text-sm"
+              style={{
+                borderColor: "var(--fab-border-md)",
+                color: "var(--fab-text-muted)",
+              }}
+            >
+              No usages yet.
+            </div>
+          ) : isEditing ? (
+            usageDrafts.map((draft, index) => {
+              const preview = previewByDraftKey.get(draft.key)!;
+
+              return (
+                <div
+                  key={draft.key}
+                  className="space-y-3 border-b pb-4 last:border-b-0 last:pb-0"
+                  style={{
+                    borderColor: "var(--fab-border-soft)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p
+                      className="text-[12px] font-semibold"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      Usage {index + 1}
+                    </p>
+                    <span
+                      className="text-[12px] font-semibold"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatCurrency(preview.subtotal)}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => removeUsageDraft(draft.key)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+
+                  {pricingType === "FABRICATION" &&
+                    editableResources.length > 0 && (
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Resource
+                        </p>
+                        <Select
+                          value={draft.resourceId || NO_RESOURCE_VALUE}
+                          onValueChange={(value) =>
+                            updateDraft(draft.key, (currentDraft) => ({
+                              ...currentDraft,
+                              resourceId:
+                                value === NO_RESOURCE_VALUE ? "" : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select a resource" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_RESOURCE_VALUE}>
+                              No resource
+                            </SelectItem>
+                            {editableResources.map((resourceDoc) => (
+                              <SelectItem
+                                key={resourceDoc._id}
+                                value={resourceDoc._id}
+                              >
+                                {resourceDoc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                  {service && (
+                    <UsageScheduleEditor
+                      draft={draft}
+                      service={service}
+                      onChange={(nextValue) =>
+                        updateDraft(draft.key, (currentDraft) => ({
+                          ...currentDraft,
+                          date: nextValue.date
+                            ? formatDateInputValue(nextValue.date.getTime())
+                            : "",
+                          startTime: nextValue.startTime,
+                          endTime: nextValue.endTime,
+                        }))
+                      }
+                    />
+                  )}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        {pricingType === "WORKSHOP"
+                          ? "Amount"
+                          : "Setup Fee Portion"}
+                      </p>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={draft.setupFeePortion}
+                        onChange={(event) =>
+                          updateDraft(draft.key, (currentDraft) => ({
+                            ...currentDraft,
+                            setupFeePortion: Number(event.target.value || 0),
+                          }))
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {pricingType === "FABRICATION" && (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Rate
+                        </p>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={draft.rate}
+                          onChange={(event) =>
+                            updateDraft(draft.key, (currentDraft) => ({
+                              ...currentDraft,
+                              rate: Number(event.target.value || 0),
+                            }))
+                          }
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Duration
+                        </p>
+                        <p
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {preview.duration.toFixed(2)} {draft.unitName}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Time Cost
+                        </p>
+                        <p
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {formatCurrency(preview.timeCost)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isBuyFromLab &&
+                    pricingType === "FABRICATION" &&
+                    editableMaterialDocs.length > 0 && (
+                      <UsageMaterialEditor
+                        draft={draft}
+                        materialOptions={editableMaterialDocs}
+                        onAddMaterial={(materialId) =>
+                          updateDraft(draft.key, (currentDraft) => ({
+                            ...currentDraft,
+                            materialAmounts: {
+                              ...currentDraft.materialAmounts,
+                              [materialId]:
+                                currentDraft.materialAmounts[materialId] ?? 0,
+                            },
+                          }))
+                        }
+                        onUpdateAmount={(materialId, amountUsed) =>
+                          updateDraft(draft.key, (currentDraft) => ({
+                            ...currentDraft,
+                            materialAmounts: {
+                              ...currentDraft.materialAmounts,
+                              [materialId]: amountUsed,
+                            },
+                          }))
+                        }
+                        onRemoveMaterial={(materialId) =>
+                          updateDraft(draft.key, (currentDraft) => {
+                            const nextMaterialAmounts = {
+                              ...currentDraft.materialAmounts,
+                            };
+                            delete nextMaterialAmounts[materialId];
+                            return {
+                              ...currentDraft,
+                              materialAmounts: nextMaterialAmounts,
+                            };
+                          })
+                        }
+                      />
+                    )}
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        Material Cost
+                      </span>
+                      <span
+                        className="text-[12px] font-medium"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {formatCurrency(preview.materialCost)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        Subtotal
+                      </span>
+                      <span
+                        className="text-[12px] font-semibold"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {formatCurrency(preview.subtotal)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            orderedUsages.map((usage, index) => (
               <div
-                key={draft.key}
+                key={usage._id}
                 className="space-y-3 border-b pb-4 last:border-b-0 last:pb-0"
                 style={{
                   borderColor: "var(--fab-border-soft)",
@@ -1115,183 +1396,183 @@ export function PricingEstimateCard({
                     className="text-[12px] font-semibold"
                     style={{ color: "var(--fab-text-primary)" }}
                   >
-                    {formatCurrency(preview.subtotal)}
+                    {formatCurrency(
+                      usage.pricingSnapshot?.subtotal ??
+                        usage.snapshot.costAtTime,
+                    )}
                   </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                    onClick={() => removeUsageDraft(draft.key)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </Button>
                 </div>
 
-                {pricingType === "FABRICATION" && editableResources.length > 0 && (
+                <div
+                  className={`grid gap-3 ${
+                    pricingType === "FABRICATION" ? "sm:grid-cols-2" : ""
+                  }`}
+                >
+                  {pricingType === "FABRICATION" && (
+                    <div className="space-y-1">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        Resource
+                      </p>
+                      <p
+                        className="text-[12px] font-medium"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {usage.resourceDetails?._id
+                          ? usage.resourceDetails.name
+                          : "No resource assigned"}
+                      </p>
+                      {usage.resourceDetails?._id &&
+                        (usage.resourceDetails.category ||
+                          usage.resourceDetails.type ||
+                          usage.resourceDetails.status) && (
+                          <p
+                            className="text-[10px]"
+                            style={{ color: "var(--fab-text-muted)" }}
+                          >
+                            {[
+                              usage.resourceDetails.category,
+                              usage.resourceDetails.type,
+                              usage.resourceDetails.status,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <p
                       className="text-[9px] font-bold uppercase tracking-[0.12em]"
                       style={{ color: "var(--fab-text-dim)" }}
                     >
-                      Resource
+                      Schedule
                     </p>
-                    <Select
-                      value={draft.resourceId || NO_RESOURCE_VALUE}
-                      onValueChange={(value) =>
-                        updateDraft(draft.key, (currentDraft) => ({
-                          ...currentDraft,
-                          resourceId: value === NO_RESOURCE_VALUE ? "" : value,
-                        }))
-                      }
+                    <p
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--fab-text-primary)" }}
                     >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Select a resource" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_RESOURCE_VALUE}>No resource</SelectItem>
-                        {editableResources.map((resourceDoc) => (
-                          <SelectItem key={resourceDoc._id} value={resourceDoc._id}>
-                            {resourceDoc.name}
-                          </SelectItem>
+                      {formatUsageDate(usage.startTime)}
+                    </p>
+                    <p
+                      className="text-[10px]"
+                      style={{ color: "var(--fab-text-muted)" }}
+                    >
+                      {formatUsageTimeRange(usage.startTime, usage.endTime)}
+                    </p>
+                  </div>
+                </div>
+
+                {isBuyFromLab && pricingType === "FABRICATION" && (
+                  <div className="space-y-1">
+                    <p
+                      className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Material Usage
+                    </p>
+                    {(usage.materialsUsed ?? []).length > 0 ? (
+                      <div className="space-y-1.5">
+                        {(usage.materialsUsed ?? []).map((materialEntry) => (
+                          <div
+                            key={materialEntry.materialId}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <span
+                              className="text-[12px]"
+                              style={{ color: "var(--fab-text-primary)" }}
+                            >
+                              {materialEntry.name ?? "Material"}
+                            </span>
+                            <span
+                              className="text-[11px]"
+                              style={{ color: "var(--fab-text-muted)" }}
+                            >
+                              {materialEntry.amountUsed}{" "}
+                              {materialEntry.unit ?? "units"}
+                            </span>
+                          </div>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    ) : (
+                      <p
+                        className="text-[12px]"
+                        style={{ color: "var(--fab-text-muted)" }}
+                      >
+                        No materials allocated.
+                      </p>
+                    )}
                   </div>
-                )}
-
-                {service && (
-                  <UsageScheduleEditor
-                    draft={draft}
-                    service={service}
-                    onChange={(nextValue) =>
-                      updateDraft(draft.key, (currentDraft) => ({
-                        ...currentDraft,
-                        date: nextValue.date
-                          ? formatDateInputValue(nextValue.date.getTime())
-                          : "",
-                        startTime: nextValue.startTime,
-                        endTime: nextValue.endTime,
-                      }))
-                    }
-                  />
-                )}
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <p
-                      className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      {pricingType === "WORKSHOP" ? "Amount" : "Setup Fee Portion"}
-                    </p>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={draft.setupFeePortion}
-                      onChange={(event) =>
-                        updateDraft(draft.key, (currentDraft) => ({
-                          ...currentDraft,
-                          setupFeePortion: Number(event.target.value || 0),
-                        }))
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
-
-                {pricingType === "FABRICATION" && (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="space-y-1">
-                      <p
-                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Rate
-                      </p>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={draft.rate}
-                        onChange={(event) =>
-                          updateDraft(draft.key, (currentDraft) => ({
-                            ...currentDraft,
-                            rate: Number(event.target.value || 0),
-                          }))
-                        }
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <p
-                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Duration
-                      </p>
-                      <p
-                        className="text-[12px] font-medium"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {preview.duration.toFixed(2)} {draft.unitName}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p
-                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Time Cost
-                      </p>
-                      <p
-                        className="text-[12px] font-medium"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {formatCurrency(preview.timeCost)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {isBuyFromLab && pricingType === "FABRICATION" && editableMaterialDocs.length > 0 && (
-                  <UsageMaterialEditor
-                    draft={draft}
-                    materialOptions={editableMaterialDocs}
-                    onAddMaterial={(materialId) =>
-                      updateDraft(draft.key, (currentDraft) => ({
-                        ...currentDraft,
-                        materialAmounts: {
-                          ...currentDraft.materialAmounts,
-                          [materialId]: currentDraft.materialAmounts[materialId] ?? 0,
-                        },
-                      }))
-                    }
-                    onUpdateAmount={(materialId, amountUsed) =>
-                      updateDraft(draft.key, (currentDraft) => ({
-                        ...currentDraft,
-                        materialAmounts: {
-                          ...currentDraft.materialAmounts,
-                          [materialId]: amountUsed,
-                        },
-                      }))
-                    }
-                    onRemoveMaterial={(materialId) =>
-                      updateDraft(draft.key, (currentDraft) => {
-                        const nextMaterialAmounts = { ...currentDraft.materialAmounts };
-                        delete nextMaterialAmounts[materialId];
-                        return {
-                          ...currentDraft,
-                          materialAmounts: nextMaterialAmounts,
-                        };
-                      })
-                    }
-                  />
                 )}
 
                 <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      {pricingType === "WORKSHOP"
+                        ? "Amount"
+                        : "Setup Fee Portion"}
+                    </span>
+                    <span
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatCurrency(
+                        usage.pricingSnapshot?.setupFeePortion ?? 0,
+                      )}
+                    </span>
+                  </div>
+                  {pricingType === "FABRICATION" && (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Duration
+                        </span>
+                        <span
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {(usage.pricingSnapshot?.duration ?? 0).toFixed(2)}{" "}
+                          {usage.pricingSnapshot?.unitName ?? persistedUnitName}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Rate
+                        </span>
+                        <span
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {formatCurrency(usage.pricingSnapshot?.rate ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Time Cost
+                        </span>
+                        <span
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {formatCurrency(usage.pricingSnapshot?.timeCost ?? 0)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <span
                       className="text-[10px] font-bold uppercase tracking-[0.12em]"
@@ -1303,7 +1584,7 @@ export function PricingEstimateCard({
                       className="text-[12px] font-medium"
                       style={{ color: "var(--fab-text-primary)" }}
                     >
-                      {formatCurrency(preview.materialCost)}
+                      {formatCurrency(usage.pricingSnapshot?.materialCost ?? 0)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -1317,338 +1598,116 @@ export function PricingEstimateCard({
                       className="text-[12px] font-semibold"
                       style={{ color: "var(--fab-text-primary)" }}
                     >
-                      {formatCurrency(preview.subtotal)}
+                      {formatCurrency(
+                        usage.pricingSnapshot?.subtotal ??
+                          usage.snapshot.costAtTime,
+                      )}
                     </span>
                   </div>
                 </div>
               </div>
-            );
-          })
-        ) : (
-          orderedUsages.map((usage, index) => (
-            <div
-              key={usage._id}
-              className="space-y-3 border-b pb-4 last:border-b-0 last:pb-0"
-              style={{
-                borderColor: "var(--fab-border-soft)",
-              }}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p
-                  className="text-[12px] font-semibold"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  Usage {index + 1}
-                </p>
-                <span
-                  className="text-[12px] font-semibold"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  {formatCurrency(
-                    usage.pricingSnapshot?.subtotal ?? usage.snapshot.costAtTime,
-                  )}
-                </span>
-              </div>
-
-              <div
-                className={`grid gap-3 ${
-                  pricingType === "FABRICATION" ? "sm:grid-cols-2" : ""
-                }`}
-              >
-                {pricingType === "FABRICATION" && (
-                  <div className="space-y-1">
-                    <p
-                      className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
-                    >
-                      Resource
-                    </p>
-                    <p
-                      className="text-[12px] font-medium"
-                      style={{ color: "var(--fab-text-primary)" }}
-                    >
-                      {usage.resourceDetails?._id
-                        ? usage.resourceDetails.name
-                        : "No resource assigned"}
-                    </p>
-                    {usage.resourceDetails?._id &&
-                      (usage.resourceDetails.category ||
-                        usage.resourceDetails.type ||
-                        usage.resourceDetails.status) && (
-                        <p
-                          className="text-[10px]"
-                          style={{ color: "var(--fab-text-muted)" }}
-                        >
-                          {[
-                            usage.resourceDetails.category,
-                            usage.resourceDetails.type,
-                            usage.resourceDetails.status,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      )}
-                  </div>
-                )}
-                <div className="space-y-1">
-                  <p
-                    className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Schedule
-                  </p>
-                  <p
-                    className="text-[12px] font-medium"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {formatUsageDate(usage.startTime)}
-                  </p>
-                  <p
-                    className="text-[10px]"
-                    style={{ color: "var(--fab-text-muted)" }}
-                  >
-                    {formatUsageTimeRange(usage.startTime, usage.endTime)}
-                  </p>
-                </div>
-              </div>
-
-              {isBuyFromLab && pricingType === "FABRICATION" && (
-                <div className="space-y-1">
-                  <p
-                    className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Material Usage
-                  </p>
-                  {(usage.materialsUsed ?? []).length > 0 ? (
-                    <div className="space-y-1.5">
-                      {(usage.materialsUsed ?? []).map((materialEntry) => (
-                        <div
-                          key={materialEntry.materialId}
-                          className="flex items-center justify-between gap-3"
-                        >
-                          <span
-                            className="text-[12px]"
-                            style={{ color: "var(--fab-text-primary)" }}
-                          >
-                            {materialEntry.name ?? "Material"}
-                          </span>
-                          <span
-                            className="text-[11px]"
-                            style={{ color: "var(--fab-text-muted)" }}
-                          >
-                            {materialEntry.amountUsed} {materialEntry.unit ?? "units"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p
-                      className="text-[12px]"
-                      style={{ color: "var(--fab-text-muted)" }}
-                    >
-                      No materials allocated.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="flex items-center justify-between gap-3">
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    {pricingType === "WORKSHOP" ? "Amount" : "Setup Fee Portion"}
-                  </span>
-                  <span
-                    className="text-[12px] font-medium"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {formatCurrency(usage.pricingSnapshot?.setupFeePortion ?? 0)}
-                  </span>
-                </div>
-                {pricingType === "FABRICATION" && (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Duration
-                      </span>
-                      <span
-                        className="text-[12px] font-medium"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {(usage.pricingSnapshot?.duration ?? 0).toFixed(2)}{" "}
-                        {usage.pricingSnapshot?.unitName ?? persistedUnitName}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Rate
-                      </span>
-                      <span
-                        className="text-[12px] font-medium"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {formatCurrency(usage.pricingSnapshot?.rate ?? 0)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
-                        Time Cost
-                      </span>
-                      <span
-                        className="text-[12px] font-medium"
-                        style={{ color: "var(--fab-text-primary)" }}
-                      >
-                        {formatCurrency(usage.pricingSnapshot?.timeCost ?? 0)}
-                      </span>
-                    </div>
-                  </>
-                )}
-                <div className="flex items-center justify-between gap-3">
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Material Cost
-                  </span>
-                  <span
-                    className="text-[12px] font-medium"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {formatCurrency(usage.pricingSnapshot?.materialCost ?? 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Subtotal
-                  </span>
-                  <span
-                    className="text-[12px] font-semibold"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {formatCurrency(
-                      usage.pricingSnapshot?.subtotal ?? usage.snapshot.costAtTime,
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <FieldSeparator className="my-1" />
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <span
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            {pricingType === "WORKSHOP" ? "Amount" : "Setup Fee"}
-          </span>
-          <span
-            className="text-[13px] font-medium"
-            style={{ color: "var(--fab-text-primary)" }}
-          >
-            {formatCurrency(displaySetupFee)}
-          </span>
+            ))
+          )}
         </div>
 
-        {pricingType === "FABRICATION" && (
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Duration
-              </span>
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {displayDuration.toFixed(2)} {persistedUnitName}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Time Cost
-              </span>
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {formatCurrency(displayTimeCost)}
-              </span>
-            </div>
-            {!isEditing && (
-              <div className="flex items-center justify-between gap-3">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                  style={{ color: "var(--fab-text-dim)" }}
-                >
-                  Rate
-                </span>
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
-                  {formatCurrency(displayRate)}
-                </span>
-              </div>
-            )}
-          </>
-        )}
+        <FieldSeparator className="my-1" />
 
-        {isBuyFromLab && (
+        <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <span
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Material Cost
+              {pricingType === "WORKSHOP" ? "Amount" : "Setup Fee"}
             </span>
             <span
               className="text-[13px] font-medium"
               style={{ color: "var(--fab-text-primary)" }}
             >
-              {formatCurrency(displayMaterialCost)}
+              {formatCurrency(displaySetupFee)}
             </span>
           </div>
-        )}
 
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <span
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Total
-          </span>
-          <span
-            className="text-[15px] font-semibold"
-            style={{ color: "var(--fab-text-primary)" }}
-          >
-            {formatCurrency(displayTotal)}
-          </span>
-        </div>
+          {pricingType === "FABRICATION" && (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
+                >
+                  Duration
+                </span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  {displayDuration.toFixed(2)} {persistedUnitName}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
+                >
+                  Time Cost
+                </span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  {formatCurrency(displayTimeCost)}
+                </span>
+              </div>
+              {!isEditing && (
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: "var(--fab-text-dim)" }}
+                  >
+                    Rate
+                  </span>
+                  <span
+                    className="text-[13px] font-medium"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {formatCurrency(displayRate)}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {isBuyFromLab && (
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Material Cost
+              </span>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                {formatCurrency(displayMaterialCost)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Total
+            </span>
+            <span
+              className="text-[15px] font-semibold"
+              style={{ color: "var(--fab-text-primary)" }}
+            >
+              {formatCurrency(displayTotal)}
+            </span>
+          </div>
         </div>
       </DetailCard>
 

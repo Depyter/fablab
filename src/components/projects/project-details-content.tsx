@@ -117,7 +117,8 @@ export function ProjectDetailsContent({
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const canEdit = !!onUpdateDetails && (!isClient || project.status === "pending");
+  const canEdit =
+    !!onUpdateDetails && (!isClient || project.status === "pending");
 
   function openEdit() {
     setEditDescription(project.description ?? "");

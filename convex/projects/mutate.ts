@@ -323,9 +323,15 @@ export const createUsage = authMutation({
       service,
       args.resourceId ?? null,
     );
-    await validateFabricationAvailability(ctx, project.service, service, booking, {
-      resourceId: resource?._id ?? null,
-    });
+    await validateFabricationAvailability(
+      ctx,
+      project.service,
+      service,
+      booking,
+      {
+        resourceId: resource?._id ?? null,
+      },
+    );
     const provisional = computeProvisionalCostBreakdown(
       service,
       project.pricing,
@@ -413,7 +419,11 @@ export const updateUsage = authMutation({
     assertUsageBelongsToProject(usage, args.projectId);
 
     const isOwner = project.userId === ctx.profile._id;
-    const isPrivileged = await checkAuthority(["admin", "maker"], ctx.user, ctx);
+    const isPrivileged = await checkAuthority(
+      ["admin", "maker"],
+      ctx.user,
+      ctx,
+    );
 
     if (!isOwner && !isPrivileged) {
       throw new ConvexError("Unauthorized. Cannot update resource.");
@@ -481,14 +491,19 @@ export const updateUsage = authMutation({
 
     const lines: string[] = [];
     if (bookingChanged) {
-      lines.push("Booking updated:", buildScheduleSystemLine(nextStartTime, nextEndTime));
+      lines.push(
+        "Booking updated:",
+        buildScheduleSystemLine(nextStartTime, nextEndTime),
+      );
     }
     if (args.resourceId !== undefined) {
       if (lines.length === 0) {
         lines.push("Usage assignment updated:");
       }
       lines.push(
-        nextResource ? `- Resource: **${nextResource.name}**` : "- Resource cleared",
+        nextResource
+          ? `- Resource: **${nextResource.name}**`
+          : "- Resource cleared",
       );
     }
     await sendProjectSystemMessage(ctx, project._id, lines);
@@ -558,8 +573,7 @@ export const updateUsagePricing = authMutation({
       }),
       snapshot: {
         ...usage.snapshot,
-        costAtTime:
-          args.setupFeePortion + args.timeCost + args.materialCost,
+        costAtTime: args.setupFeePortion + args.timeCost + args.materialCost,
       },
     };
 
@@ -573,7 +587,9 @@ export const updateUsagePricing = authMutation({
       );
 
       for (const existing of usage.materialsUsed ?? []) {
-        if (!args.materialsUsed.some((m) => m.materialId === existing.materialId)) {
+        if (
+          !args.materialsUsed.some((m) => m.materialId === existing.materialId)
+        ) {
           await syncMaterialUsageStock(
             ctx,
             existing.materialId,
@@ -586,7 +602,12 @@ export const updateUsagePricing = authMutation({
       const nextMaterials = await Promise.all(
         args.materialsUsed.map(async ({ materialId, amountUsed }) => {
           const previousAmount = previousAmounts.get(materialId) ?? 0;
-          await syncMaterialUsageStock(ctx, materialId, previousAmount, amountUsed);
+          await syncMaterialUsageStock(
+            ctx,
+            materialId,
+            previousAmount,
+            amountUsed,
+          );
           const materialDoc = await ctx.db.get(materialId);
           if (materialDoc) {
             materialLines.push(
@@ -809,10 +830,7 @@ export const updateOwnProjectDetails = authMutation({
       v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     ),
     fulfillmentMode: v.optional(
-      v.union(
-        v.literal("self-service"),
-        v.literal("full-service"),
-      ),
+      v.union(v.literal("self-service"), v.literal("full-service")),
     ),
     files: v.optional(v.array(v.id("_storage"))),
   },

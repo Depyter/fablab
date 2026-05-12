@@ -141,8 +141,10 @@ export function validateBookingTiming(
 }
 
 function serviceUsesDiscreteResources(service: ServiceDoc) {
-  return service.serviceCategory.type === "FABRICATION" &&
-    (service.resources?.length ?? 0) > 0;
+  return (
+    service.serviceCategory.type === "FABRICATION" &&
+    (service.resources?.length ?? 0) > 0
+  );
 }
 
 export async function validateFabricationAvailability(
@@ -695,12 +697,11 @@ export async function syncProjectTotalInvoice(
     return fallbackTotal;
   }
 
-  const usagePricingSnapshots =
-    usages.map((usage, index) =>
-      options?.preferStoredUsageSnapshots && usage.pricingSnapshot
-        ? usage.pricingSnapshot
-        : deriveUsagePricingSnapshot(project, service, usage, index),
-    );
+  const usagePricingSnapshots = usages.map((usage, index) =>
+    options?.preferStoredUsageSnapshots && usage.pricingSnapshot
+      ? usage.pricingSnapshot
+      : deriveUsagePricingSnapshot(project, service, usage, index),
+  );
 
   await Promise.all(
     usages.map(async (usage, index) => {
@@ -929,7 +930,8 @@ export async function scheduleProjectUpdateEmail(
       : undefined;
 
   const estimatedTime =
-    project.bookingStartTime !== undefined && project.bookingEndTime !== undefined
+    project.bookingStartTime !== undefined &&
+    project.bookingEndTime !== undefined
       ? `${(
           (project.bookingEndTime - project.bookingStartTime) /
           (1000 * 60 * 60)
@@ -937,8 +939,11 @@ export async function scheduleProjectUpdateEmail(
       : undefined;
 
   const bookingDurationMinutes =
-    project.bookingStartTime !== undefined && project.bookingEndTime !== undefined
-      ? Math.floor((project.bookingEndTime - project.bookingStartTime) / (1000 * 60))
+    project.bookingStartTime !== undefined &&
+    project.bookingEndTime !== undefined
+      ? Math.floor(
+          (project.bookingEndTime - project.bookingStartTime) / (1000 * 60),
+        )
       : 0;
 
   const derivedPricing = derivePricingFromSchema({
