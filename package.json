@@ -21,10 +21,11 @@
     "test:coverage": "vitest run --coverage --coverage.reporter=text",
     "preview": "bun run build:worker && opennextjs-cloudflare preview",
     "deploy": "bun run build:worker && bun run deploy:worker",
-    "deploy:preview": "bun run build:worker:preview && bun run deploy:worker:preview",
+    "deploy:preview": "bun run build:worker:preview && bun run upload:worker:preview",
     "deploy:worker": "opennextjs-cloudflare deploy",
-    "deploy:worker:preview": "opennextjs-cloudflare deploy --env preview",
-    "upload": "bun run build:worker && opennextjs-cloudflare upload",
+    "upload": "bun run build:worker && bun run upload:worker",
+    "upload:worker": "opennextjs-cloudflare upload",
+    "upload:worker:preview": "opennextjs-cloudflare upload --env preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

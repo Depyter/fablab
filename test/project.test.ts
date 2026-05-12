@@ -1097,9 +1097,12 @@ describe("Project and Chat functionality", () => {
   describe("Booking updates and permissions", () => {
     test("Client can update their own booking", async () => {
       const { t, tHarley, projectId } = await setupProject();
-      const initialDetails = await tHarley.query(api.projects.query.getProject, {
-        projectId,
-      });
+      const initialDetails = await tHarley.query(
+        api.projects.query.getProject,
+        {
+          projectId,
+        },
+      );
 
       const usageId = await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -1134,9 +1137,12 @@ describe("Project and Chat functionality", () => {
 
     test("Admin can update a booking", async () => {
       const { t, tAera, tHarley, projectId } = await setupProject();
-      const initialDetails = await tHarley.query(api.projects.query.getProject, {
-        projectId,
-      });
+      const initialDetails = await tHarley.query(
+        api.projects.query.getProject,
+        {
+          projectId,
+        },
+      );
 
       const usageId = await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -1171,9 +1177,12 @@ describe("Project and Chat functionality", () => {
 
     test("Maker can update a booking", async () => {
       const { t, tHarley, projectId } = await setupProject();
-      const initialDetails = await tHarley.query(api.projects.query.getProject, {
-        projectId,
-      });
+      const initialDetails = await tHarley.query(
+        api.projects.query.getProject,
+        {
+          projectId,
+        },
+      );
 
       await t.mutation(internal.users.createMaker, {
         userId: "3",
@@ -1226,12 +1235,15 @@ describe("Project and Chat functionality", () => {
         }),
       ).rejects.toThrow("Cannot book a date or time in the past.");
 
-      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
-        projectId,
-        startTime: pastStart,
-        endTime: pastEnd,
-        allowPastBooking: true,
-      });
+      const { usageId } = await tAera.mutation(
+        api.projects.mutate.createUsage,
+        {
+          projectId,
+          startTime: pastStart,
+          endTime: pastEnd,
+          allowPastBooking: true,
+        },
+      );
 
       const details = await tHarley.query(api.projects.query.getProject, {
         projectId,
@@ -1941,9 +1953,12 @@ describe("Project and Chat functionality", () => {
 
     test("Updating usage records recalculates fabrication pricing and surfaces the edited usage", async () => {
       const { t, tAera, tHarley, projectId, serviceId } = await setupProject();
-      const initialDetails = await tHarley.query(api.projects.query.getProject, {
-        projectId,
-      });
+      const initialDetails = await tHarley.query(
+        api.projects.query.getProject,
+        {
+          projectId,
+        },
+      );
 
       await tAera.mutation(api.resource.mutate.addResource, {
         name: "Prusa MK4",
@@ -2015,7 +2030,9 @@ describe("Project and Chat functionality", () => {
         tax: 0,
         total: 10,
       });
-      expect(projectDetails.bookingStartTime).toBe(initialDetails.bookingStartTime);
+      expect(projectDetails.bookingStartTime).toBe(
+        initialDetails.bookingStartTime,
+      );
       expect(projectDetails.bookingEndTime).toBe(initialDetails.bookingEndTime);
       expect(updatedUsage).toMatchObject({
         _id: firstUsageId,
@@ -2057,7 +2074,8 @@ describe("Project and Chat functionality", () => {
 
     test("Project queries do not infer the main booking window from resource usages", async () => {
       const { t, tHarley, projectId } = await setupProject();
-      const usageStartTime = getLabDayStart(new Date()).getTime() + 10 * HOUR_MS;
+      const usageStartTime =
+        getLabDayStart(new Date()).getTime() + 10 * HOUR_MS;
 
       await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -2249,7 +2267,11 @@ describe("Project and Chat functionality", () => {
           [nextMonthProject.projectId, nextMonthStartTime, todayStartTime],
         ] as const;
 
-        for (const [projectId, bookingStartTime, usageStartTime] of assignments) {
+        for (const [
+          projectId,
+          bookingStartTime,
+          usageStartTime,
+        ] of assignments) {
           const usage = await ctx.db
             .query("resourceUsage")
             .withIndex("by_project", (q) => q.eq("projectId", projectId))
@@ -2343,8 +2365,12 @@ describe("Project and Chat functionality", () => {
       const { printerAId, printerBId } = await t.run(async (ctx) => {
         const resources = await ctx.db.query("resources").collect();
         return {
-          printerAId: resources.find((resource) => resource.name === "Printer A")!._id,
-          printerBId: resources.find((resource) => resource.name === "Printer B")!._id,
+          printerAId: resources.find(
+            (resource) => resource.name === "Printer A",
+          )!._id,
+          printerBId: resources.find(
+            (resource) => resource.name === "Printer B",
+          )!._id,
         };
       });
 
@@ -2375,21 +2401,24 @@ describe("Project and Chat functionality", () => {
       const bookingStart = bookingDay + HOUR_MS;
       const bookingEnd = bookingStart + 2 * HOUR_MS;
 
-      const { projectId } = await tHarley.mutation(api.projects.mutate.createProject, {
-        name: "parallel prints",
-        pricing: "Default",
-        description: "first booking",
-        fulfillmentMode: "self-service",
-        material: "provide-own",
-        files: [],
-        service: resolvedServiceId,
-        notes: "first machine",
-        booking: {
-          startTime: bookingStart,
-          endTime: bookingEnd,
-          date: bookingDay,
+      const { projectId } = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "parallel prints",
+          pricing: "Default",
+          description: "first booking",
+          fulfillmentMode: "self-service",
+          material: "provide-own",
+          files: [],
+          service: resolvedServiceId,
+          notes: "first machine",
+          booking: {
+            startTime: bookingStart,
+            endTime: bookingEnd,
+            date: bookingDay,
+          },
         },
-      });
+      );
 
       const firstUsageId = await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -2443,17 +2472,23 @@ describe("Project and Chat functionality", () => {
 
     test("createUsage appends a usage with independent pricing and preserves the project schedule", async () => {
       const { tAera, tHarley, projectId } = await setupProject();
-      const initialDetails = await tHarley.query(api.projects.query.getProject, {
-        projectId,
-      });
+      const initialDetails = await tHarley.query(
+        api.projects.query.getProject,
+        {
+          projectId,
+        },
+      );
       const startTime = Date.now() + 80 * HOUR_MS;
       const endTime = startTime + 2 * HOUR_MS;
 
-      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
-        projectId,
-        startTime,
-        endTime,
-      });
+      const { usageId } = await tAera.mutation(
+        api.projects.mutate.createUsage,
+        {
+          projectId,
+          startTime,
+          endTime,
+        },
+      );
 
       const details = await tHarley.query(api.projects.query.getProject, {
         projectId,
@@ -2511,11 +2546,14 @@ describe("Project and Chat functionality", () => {
         status: "Available",
       });
 
-      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
-        projectId,
-        startTime: Date.now() + 96 * HOUR_MS,
-        endTime: Date.now() + 98 * HOUR_MS,
-      });
+      const { usageId } = await tAera.mutation(
+        api.projects.mutate.createUsage,
+        {
+          projectId,
+          startTime: Date.now() + 96 * HOUR_MS,
+          endTime: Date.now() + 98 * HOUR_MS,
+        },
+      );
 
       const resourceId = await t.run(async (ctx) => {
         const resource = await ctx.db.query("resources").first();
@@ -2574,8 +2612,12 @@ describe("Project and Chat functionality", () => {
       const { printerAId, printerBId } = await t.run(async (ctx) => {
         const resources = await ctx.db.query("resources").collect();
         return {
-          printerAId: resources.find((resource) => resource.name === "Printer A")!._id,
-          printerBId: resources.find((resource) => resource.name === "Printer B")!._id,
+          printerAId: resources.find(
+            (resource) => resource.name === "Printer A",
+          )!._id,
+          printerBId: resources.find(
+            (resource) => resource.name === "Printer B",
+          )!._id,
         };
       });
 
@@ -2606,21 +2648,24 @@ describe("Project and Chat functionality", () => {
       const firstStart = bookingDay + HOUR_MS;
       const firstEnd = firstStart + 2 * HOUR_MS;
 
-      const { projectId } = await tHarley.mutation(api.projects.mutate.createProject, {
-        name: "reschedule conflict",
-        pricing: "Default",
-        description: "base booking",
-        fulfillmentMode: "self-service",
-        material: "provide-own",
-        files: [],
-        service: serviceId,
-        notes: "reschedule",
-        booking: {
-          startTime: firstStart,
-          endTime: firstEnd,
-          date: bookingDay,
+      const { projectId } = await tHarley.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "reschedule conflict",
+          pricing: "Default",
+          description: "base booking",
+          fulfillmentMode: "self-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "reschedule",
+          booking: {
+            startTime: firstStart,
+            endTime: firstEnd,
+            date: bookingDay,
+          },
         },
-      });
+      );
 
       const firstUsageId = await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -2660,11 +2705,14 @@ describe("Project and Chat functionality", () => {
     test("updateUsagePricing only changes the targeted usage and refreshes project totals", async () => {
       const { tAera, tHarley, projectId } = await setupProject();
 
-      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
-        projectId,
-        startTime: Date.now() + 104 * HOUR_MS,
-        endTime: Date.now() + 106 * HOUR_MS,
-      });
+      const { usageId } = await tAera.mutation(
+        api.projects.mutate.createUsage,
+        {
+          projectId,
+          startTime: Date.now() + 104 * HOUR_MS,
+          endTime: Date.now() + 106 * HOUR_MS,
+        },
+      );
 
       await tAera.mutation(api.projects.mutate.updateUsagePricing, {
         projectId,

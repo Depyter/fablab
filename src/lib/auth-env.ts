@@ -6,17 +6,28 @@ const splitCsv = (value?: string) =>
     .map((entry) => entry.trim())
     .filter(Boolean) ?? [];
 
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+
 export const getProductionAuthUrl = () => {
-  return process.env.BETTER_AUTH_URL?.trim() || PRODUCTION_AUTH_URL;
+  return process.env.BETTER_AUTH_PRODUCTION_URL?.trim() || PRODUCTION_AUTH_URL;
 };
 
-export const getBetterAuthTrustedOrigins = (siteUrl?: string) => {
+export const assertDynamicBetterAuthBaseUrlConfig = () => {
+  if (process.env.BETTER_AUTH_URL?.trim()) {
+    throw new Error(
+      "BETTER_AUTH_URL must be unset for preview-safe Better Auth deployments. Use BETTER_AUTH_PRODUCTION_URL for OAuth proxy routing so Better Auth can infer the current preview origin from the request.",
+    );
+  }
+};
+
+export const getBetterAuthTrustedOrigins = () => {
   return [
     ...new Set([
-      "http://localhost:3000",
-      getProductionAuthUrl(),
-      ...(siteUrl ? [siteUrl.trim()] : []),
-      ...splitCsv(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
+      "http://localhost:*",
+      trimTrailingSlash(getProductionAuthUrl()),
+      ...splitCsv(process.env.BETTER_AUTH_TRUSTED_ORIGINS).map(
+        trimTrailingSlash,
+      ),
     ]),
   ];
 };

@@ -10,6 +10,7 @@ import { authQuery } from "./helper";
 import authSchema from "./betterAuth/schema";
 import { admin, oAuthProxy } from "better-auth/plugins";
 import {
+  assertDynamicBetterAuthBaseUrlConfig,
   getBetterAuthTrustedOrigins,
   getProductionAuthUrl,
 } from "../src/lib/auth-env";
@@ -39,7 +40,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 );
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = process.env.SITE_URL!;
+  assertDynamicBetterAuthBaseUrlConfig();
 
   return {
     secret: process.env.BETTER_AUTH_SECRET as string,
@@ -56,10 +57,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         },
       },
     },
-    baseURL: siteUrl,
-    trustedOrigins: getBetterAuthTrustedOrigins(siteUrl),
+    trustedOrigins: getBetterAuthTrustedOrigins(),
     onAPIError: {
-      errorURL: `${siteUrl}/error`,
+      errorURL: "/error",
+    },
+    advanced: {
+      trustedProxyHeaders: true,
     },
     database: authComponent.adapter(ctx),
     socialProviders: {

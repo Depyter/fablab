@@ -259,15 +259,18 @@ describe("Material lifecycle and resourceUsage integration", () => {
   test("usage materials stay usage-scoped and deleting a usage restores material summary and stock", async () => {
     const { t, tAera, tHarley } = await setupUsers();
 
-    const firstMaterialId = await tAera.mutation(api.materials.mutate.addMaterial, {
-      name: "PLA",
-      category: "Filament",
-      unit: "g",
-      currentStock: 100,
-      pricePerUnit: 2,
-      reorderThreshold: 10,
-      status: "IN_STOCK",
-    });
+    const firstMaterialId = await tAera.mutation(
+      api.materials.mutate.addMaterial,
+      {
+        name: "PLA",
+        category: "Filament",
+        unit: "g",
+        currentStock: 100,
+        pricePerUnit: 2,
+        reorderThreshold: 10,
+        status: "IN_STOCK",
+      },
+    );
 
     const secondMaterialId = await tAera.mutation(
       api.materials.mutate.addMaterial,

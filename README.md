@@ -149,7 +149,7 @@ bun run dev   # → http://localhost:3000
 The repo now splits deployment into three GitHub Actions workflows:
 
 - **CI** runs `bun run ci` for pull requests and `main`.
-- **Preview Deploy** runs on same-repo pull requests, creates a Convex preview deployment, builds the OpenNext worker against that preview, and deploys the `preview` Cloudflare Worker environment.
+- **Preview Deploy** runs on same-repo pull requests, creates a Convex preview deployment, builds the OpenNext worker against that preview, and uploads a versioned `preview` Cloudflare Worker so each PR build gets a unique preview URL.
 - **Production Deploy** runs on pushes to `main`, builds against the production Convex deployment, and deploys the default Cloudflare Worker.
 
 Convex is responsible for injecting `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` at build time, so those values are no longer hardcoded in `wrangler.jsonc`.
@@ -161,14 +161,13 @@ Set these GitHub repository secrets before enabling the workflows:
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-Keep Better Auth deployment hosts in Convex environment variables for each deployment. At minimum, set `SITE_URL` per deployment and use `BETTER_AUTH_TRUSTED_ORIGINS` if your preview and production domains differ.
+Do **not** set `BETTER_AUTH_URL` in Convex when you want Better Auth to infer the active preview URL from the request. Keep the production OAuth callback URL separate with `BETTER_AUTH_PRODUCTION_URL`, and use `BETTER_AUTH_TRUSTED_ORIGINS` for preview host patterns.
 
 Google OAuth now uses Better Auth's OAuth Proxy so preview and staging deployments can reuse the production Google OAuth app. Configure auth like this across Convex deployments:
 
-- `BETTER_AUTH_URL=https://fablab.harleyvan.com`
+- `BETTER_AUTH_PRODUCTION_URL=https://fablab.harleyvan.com`
 - `BETTER_AUTH_SECRET=<same value in production and every preview/staging deployment>`
-- `SITE_URL=<the current deployment URL>`
-- `BETTER_AUTH_TRUSTED_ORIGINS=<comma-separated preview/staging origins or wildcard patterns>`
+- `BETTER_AUTH_TRUSTED_ORIGINS=<comma-separated preview host patterns, for example *-fablab-preview.<workers-subdomain>.workers.dev>`
 
 Register only the production Google callback URL:
 
@@ -177,6 +176,7 @@ https://fablab.harleyvan.com/api/auth/callback/google
 ```
 
 ```sh
-# First time only — create the shared OpenNext cache bucket
-bunx wrangler r2 bucket create fablab-opennext-cache
+# First time only — create isolated OpenNext cache buckets
+bunx wrangler r2 bucket create fablab-opennext-cache-prod
+bunx wrangler r2 bucket create fablab-opennext-cache-preview
 ```

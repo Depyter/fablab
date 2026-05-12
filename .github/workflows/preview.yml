@@ -2,11 +2,16 @@ name: Preview Deploy
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
     branches:
       - main
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
@@ -16,6 +21,7 @@ jobs:
   preview:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -26,6 +32,17 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies and Next cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            .next/cache
+          key: ${{ runner.os }}-preview-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-preview-
+            ${{ runner.os }}-
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -34,8 +51,57 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
 
-      - name: Deploy Cloudflare preview worker
-        run: bun run deploy:worker:preview
+      - name: Upload Cloudflare preview worker version
+        id: cloudflare_preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun run upload:worker:preview | tee upload.log
+          preview_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev[^[:space:]]*' upload.log | head -n1)"
+          if [ -z "$preview_url" ]; then
+            echo "Could not determine the Cloudflare preview URL from upload output." >&2
+            exit 1
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.cloudflare_preview.outputs.preview_url }}
+        with:
+          script: |
+            const marker = '<!-- cloudflare-preview-url -->';
+            const body = `${marker}
+            **Cloudflare preview**: ${process.env.PREVIEW_URL}
+
+            - Built inside Convex preview deployment context.
+            - This is a versioned preview URL and will change on the next preview upload.`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find(
+              (comment) => comment.user.type === 'Bot' && comment.body?.includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
