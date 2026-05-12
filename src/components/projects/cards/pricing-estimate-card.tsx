@@ -48,13 +48,16 @@ import {
   formatTimeInputValue,
   buildBookingRange,
   computeUsagePreview,
-  nearlyEqual,
-  sameStringSet,
-  toMaterialAmountMap,
   sortUsages,
   buildUsageDraft,
-  isPastBookingRange,
 } from "./usage-item";
+import {
+  validateUsageBookingPayloads,
+  hasPastBooking,
+  extractRetainedUsageIds,
+  shouldUpdatePricingSnapshot,
+  buildSyncMaterials,
+} from "./pricing-persistence";
 
 interface TotalInvoice {
   subtotal: number;
@@ -176,21 +179,6 @@ export function PricingEstimateCard({
             ]),
           )
         : [],
-    [orderedUsages, service],
-  );
-  const editableResourceIds = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...(service?.resources ?? []),
-          ...orderedUsages
-            .map(
-              (usage: ResourceUsage) =>
-                usage.resourceDetails?._id ?? usage.resource ?? null,
-            )
-            .filter((resourceId): resourceId is string => !!resourceId),
-        ]),
-      ),
     [orderedUsages, service],
   );
 
@@ -384,54 +372,21 @@ export function PricingEstimateCard({
         orderedUsages.map((usage: ResourceUsage) => [usage._id, usage]),
       );
 
-      const bookingPayloads = new Map<
-        string,
-        {
-          startTime: number;
-          endTime: number;
-          resourceId: Id<"resources"> | null;
-        }
-      >();
-
-      for (const draft of usageDrafts) {
-        const bookingRange = buildBookingRange(
-          draft.date,
-          draft.startTime,
-          draft.endTime,
-        );
-        if (!bookingRange) {
-          toast.error(
-            "Please enter a valid booking date and time for every usage.",
-          );
-          setIsSaving(false);
-          return;
-        }
-        if (bookingRange.endTime <= bookingRange.startTime) {
-          toast.error("Every usage must end after it starts.");
-          setIsSaving(false);
-          return;
-        }
-
-        bookingPayloads.set(draft.key, {
-          startTime: bookingRange.startTime,
-          endTime: bookingRange.endTime,
-          resourceId: draft.resourceId
-            ? (draft.resourceId as Id<"resources">)
-            : null,
-        });
+      const validation = validateUsageBookingPayloads(usageDrafts);
+      if (!validation.valid) {
+        toast.error(validation.error);
+        setIsSaving(false);
+        return;
       }
-
-      const hasPastUsageBooking = Array.from(bookingPayloads.values()).some(
-        ({ startTime }) => isPastBookingRange(startTime),
-      );
-      const hasPastHeadlineBooking =
-        usageDrafts.length === 0 &&
-        headlineBookingStartTime != null &&
-        isPastBookingRange(headlineBookingStartTime);
+      const bookingPayloads = validation.bookingPayloads;
 
       if (
         !allowPastBooking &&
-        (hasPastUsageBooking || hasPastHeadlineBooking)
+        hasPastBooking({
+          bookingPayloads,
+          usageDraftsLength: usageDrafts.length,
+          headlineBookingStartTime,
+        })
       ) {
         setShowPastBookingDialog(true);
         setIsSaving(false);
@@ -447,11 +402,7 @@ export function PricingEstimateCard({
         });
       }
 
-      const retainedUsageIds = new Set(
-        usageDrafts
-          .map((draft) => draft.usageId)
-          .filter((usageId): usageId is string => !!usageId),
-      );
+      const retainedUsageIds = extractRetainedUsageIds(usageDrafts);
 
       for (const usage of orderedUsages) {
         if (!retainedUsageIds.has(usage._id)) {
@@ -518,60 +469,23 @@ export function PricingEstimateCard({
         const originalUsage = draft.usageId
           ? originalUsageMap.get(draft.usageId)
           : undefined;
-        const selectedUsageMaterials = isBuyFromLab
-          ? Object.keys(draft.materialAmounts)
-              .sort()
-              .map((materialId) => ({
-                materialId: materialId as Id<"materials">,
-                amountUsed: draft.materialAmounts[materialId] ?? 0,
-              }))
-          : undefined;
 
         const preview = computeUsagePreview(
           draft,
           pricingType,
           editableMaterialLookup,
         );
-        const originalMaterialMap = toMaterialAmountMap(
-          originalUsage?.materialsUsed,
-        );
-        const originalMaterialIdsForUsage = (
-          originalUsage?.materialsUsed ?? []
-        ).map(
-          (materialEntry: { materialId: string }) => materialEntry.materialId,
-        );
-        const draftMaterialIds = Object.keys(draft.materialAmounts).sort();
 
-        const shouldUpdatePricing =
-          !originalUsage ||
-          !originalUsage.pricingSnapshot ||
-          !nearlyEqual(
-            originalUsage.pricingSnapshot.setupFeePortion,
-            draft.setupFeePortion,
-          ) ||
-          !nearlyEqual(originalUsage.pricingSnapshot.rate, draft.rate) ||
-          !nearlyEqual(
-            originalUsage.pricingSnapshot.duration,
-            preview.duration,
-          ) ||
-          !nearlyEqual(
-            originalUsage.pricingSnapshot.timeCost,
-            preview.timeCost,
-          ) ||
-          !nearlyEqual(
-            originalUsage.pricingSnapshot.materialCost,
-            preview.materialCost,
-          ) ||
-          originalUsage.pricingSnapshot.unitName !== draft.unitName ||
-          (isBuyFromLab &&
-            (!sameStringSet(draftMaterialIds, originalMaterialIdsForUsage) ||
-              draftMaterialIds.some(
-                (materialId) =>
-                  (draft.materialAmounts[materialId] ?? 0) !==
-                  (originalMaterialMap[materialId] ?? 0),
-              )));
-
-        if (!shouldUpdatePricing) continue;
+        if (
+          !shouldUpdatePricingSnapshot({
+            draft,
+            originalUsage,
+            preview,
+            isBuyFromLab,
+          })
+        ) {
+          continue;
+        }
 
         await updateUsagePricing({
           projectId,
@@ -582,7 +496,7 @@ export function PricingEstimateCard({
           materialCost: preview.materialCost,
           setupFeePortion: draft.setupFeePortion,
           unitName: draft.unitName,
-          materialsUsed: selectedUsageMaterials,
+          materialsUsed: buildSyncMaterials(draft, isBuyFromLab),
         });
       }
 
