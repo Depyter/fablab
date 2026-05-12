@@ -8,10 +8,6 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
-  "vars": {
-    "CONVEX_SITE_URL": "https://coordinated-eagle-168.convex.site",
-    "NEXT_PUBLIC_CONVEX_URL": "https://coordinated-eagle-168.convex.cloud",
-  },
   "services": [
     {
       // Self-reference service binding, the service name must match the worker name
@@ -35,5 +31,31 @@
     // Enable image optimization
     // see https://opennext.js.org/cloudflare/howtos/image
     "binding": "IMAGES",
+  },
+  "env": {
+    "preview": {
+      // Convex injects NEXT_PUBLIC_CONVEX_URL and NEXT_PUBLIC_CONVEX_SITE_URL
+      // during the preview build, so keep them out of Wrangler config.
+      "workers_dev": true,
+      "assets": {
+        "directory": ".open-next/assets",
+        "binding": "ASSETS",
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "fablab-preview",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "fablab-opennext-cache",
+        },
+      ],
+      "images": {
+        "binding": "IMAGES",
+      },
+    },
   },
 }
