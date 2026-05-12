@@ -148,7 +148,7 @@ bun run dev   # → http://localhost:3000
 
 The repo now splits deployment into three GitHub Actions workflows:
 
-- **CI** runs `bun run ci` for pull requests and `main`.
+- **CI** runs `bun run ci:checks` for pull requests and `main`.
 - **Preview Deploy** runs on same-repo pull requests, creates a Convex preview deployment, builds the OpenNext worker against that preview, and uploads a versioned `preview` Cloudflare Worker so each PR build gets a unique preview URL.
 - **Production Deploy** runs on pushes to `main`, builds against the production Convex deployment, and deploys the default Cloudflare Worker.
 

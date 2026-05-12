@@ -57,12 +57,10 @@ jobs:
         run: |
           set -euo pipefail
           bun run upload:worker:preview | tee upload.log
-          preview_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev[^[:space:]]*' upload.log | head -n1)"
-          if [ -z "$preview_url" ]; then
-            echo "Could not determine the Cloudflare preview URL from upload output." >&2
-            exit 1
-          fi
+          preview_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev[^[:space:]]*' upload.log | head -n1 || true)"
+          worker_version_id="$(sed -n 's/^Worker Version ID: //p' upload.log | tail -n1)"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "worker_version_id=$worker_version_id" >> "$GITHUB_OUTPUT"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -71,14 +69,24 @@ jobs:
         uses: actions/github-script@v7
         env:
           PREVIEW_URL: ${{ steps.cloudflare_preview.outputs.preview_url }}
+          WORKER_VERSION_ID: ${{ steps.cloudflare_preview.outputs.worker_version_id }}
         with:
           script: |
             const marker = '<!-- cloudflare-preview-url -->';
-            const body = `${marker}
-            **Cloudflare preview**: ${process.env.PREVIEW_URL}
+            const previewUrl = process.env.PREVIEW_URL?.trim();
+            const workerVersionId = process.env.WORKER_VERSION_ID?.trim();
+            const body = previewUrl
+              ? `${marker}
+            **Cloudflare preview**: ${previewUrl}
 
             - Built inside Convex preview deployment context.
-            - This is a versioned preview URL and will change on the next preview upload.`;
+            - This is a versioned preview URL and will change on the next preview upload.`
+              : `${marker}
+            **Cloudflare preview upload succeeded**, but the CLI did not print a preview URL.
+
+            - Worker version ID: \`${workerVersionId || 'unknown'}\`
+            - Built inside Convex preview deployment context.
+            - Check the Cloudflare Worker deployments/versions UI for the generated preview URL.`;
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.paginate(github.rest.issues.listComments, {
