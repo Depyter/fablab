@@ -421,7 +421,7 @@ export const getProject = authQuery({
 
         const resourceDetails = {
           _id: usage.resource ?? null,
-          name: usage.snapshot.name,
+          name: resourceDoc?.name ?? usage.snapshot.name,
           category: resourceDoc?.category ?? null,
           type: resourceDoc?.type ?? null,
           status: resourceDoc?.status ?? null,
