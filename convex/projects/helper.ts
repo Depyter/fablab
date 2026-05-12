@@ -210,12 +210,6 @@ function sortProjectUsages(usages: Doc<"resourceUsage">[]) {
   );
 }
 
-function getPrimaryProjectUsage(usages: Doc<"resourceUsage">[]) {
-  return [...usages].sort(
-    (a, b) => a._creationTime - b._creationTime || a._id.localeCompare(b._id),
-  )[0];
-}
-
 function getUsageDurationMs(usage: Doc<"resourceUsage">) {
   return Math.max(0, usage.endTime - usage.startTime);
 }
@@ -662,8 +656,6 @@ export async function syncProjectTotalInvoice(
 
   if (!service || usages.length === 0) {
     await ctx.db.patch(projectId, {
-      bookingStartTime: undefined,
-      bookingEndTime: undefined,
       totalInvoice:
         fallbackTotal !== undefined
           ? buildTotalInvoice(fallbackTotal)
@@ -778,15 +770,8 @@ export async function syncProjectTotalInvoice(
     options?.manualSnapshot !== undefined
       ? buildPricingSnapshot(options.manualSnapshot)
       : deriveProjectPricingSnapshot(project, service, normalizedUsages);
-  const primaryUsageSource = getPrimaryProjectUsage(usageDocs);
-  const primaryUsage = primaryUsageSource
-    ? (normalizedUsages.find((usage) => usage._id === primaryUsageSource._id) ??
-      primaryUsageSource)
-    : undefined;
 
   await ctx.db.patch(projectId, {
-    bookingStartTime: primaryUsage?.startTime,
-    bookingEndTime: primaryUsage?.endTime,
     totalInvoice: buildTotalInvoice(total),
     pricingSnapshot,
   });

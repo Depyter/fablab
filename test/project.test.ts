@@ -1001,6 +1001,9 @@ describe("Project and Chat functionality", () => {
   describe("Booking updates and permissions", () => {
     test("Client can update their own booking", async () => {
       const { t, tHarley, projectId } = await setupProject();
+      const initialDetails = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
 
       const usageId = await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -1023,8 +1026,8 @@ describe("Project and Chat functionality", () => {
         projectId,
       });
 
-      expect(details.bookingStartTime).toBe(updatedStart);
-      expect(details.bookingEndTime).toBe(updatedEnd);
+      expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
+      expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
       expect(details.resourceUsages[0]).toMatchObject({
         _id: usageId,
         startTime: updatedStart,
@@ -1034,6 +1037,9 @@ describe("Project and Chat functionality", () => {
 
     test("Admin can update a booking", async () => {
       const { t, tAera, tHarley, projectId } = await setupProject();
+      const initialDetails = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
 
       const usageId = await t.run(async (ctx) => {
         const usage = await ctx.db
@@ -1056,8 +1062,8 @@ describe("Project and Chat functionality", () => {
         projectId,
       });
 
-      expect(details.bookingStartTime).toBe(updatedStart);
-      expect(details.bookingEndTime).toBe(updatedEnd);
+      expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
+      expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
       expect(details.resourceUsages[0]).toMatchObject({
         _id: usageId,
         startTime: updatedStart,
@@ -1067,6 +1073,9 @@ describe("Project and Chat functionality", () => {
 
     test("Maker can update a booking", async () => {
       const { t, tHarley, projectId } = await setupProject();
+      const initialDetails = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
 
       await t.mutation(internal.users.createMaker, {
         userId: "3",
@@ -1096,8 +1105,8 @@ describe("Project and Chat functionality", () => {
         projectId,
       });
 
-      expect(details.bookingStartTime).toBe(updatedStart);
-      expect(details.bookingEndTime).toBe(updatedEnd);
+      expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
+      expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
       expect(details.resourceUsages[0]).toMatchObject({
         _id: usageId,
         startTime: updatedStart,
@@ -1698,6 +1707,9 @@ describe("Project and Chat functionality", () => {
 
     test("Updating usage records recalculates fabrication pricing and surfaces the edited usage", async () => {
       const { t, tAera, tHarley, projectId, serviceId } = await setupProject();
+      const initialDetails = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
 
       await tAera.mutation(api.resource.mutate.addResource, {
         name: "Prusa MK4",
@@ -1768,8 +1780,8 @@ describe("Project and Chat functionality", () => {
         tax: 0,
         total: 10,
       });
-      expect(projectDetails.bookingStartTime).toBe(updatedStart);
-      expect(projectDetails.bookingEndTime).toBe(updatedEnd);
+      expect(projectDetails.bookingStartTime).toBe(initialDetails.bookingStartTime);
+      expect(projectDetails.bookingEndTime).toBe(initialDetails.bookingEndTime);
       expect(updatedUsage).toMatchObject({
         _id: firstUsageId,
         resource: resourceId,
@@ -1786,6 +1798,29 @@ describe("Project and Chat functionality", () => {
         },
       });
       expect(unchangedUsage?.snapshot.costAtTime).toBe(4);
+    });
+
+    test("Project queries do not infer the main booking window from resource usages", async () => {
+      const { t, tHarley, projectId } = await setupProject();
+
+      await t.run(async (ctx) => {
+        await ctx.db.patch(projectId, {
+          bookingStartTime: undefined,
+          bookingEndTime: undefined,
+        });
+      });
+
+      const [details, list] = await Promise.all([
+        tHarley.query(api.projects.query.getProject, { projectId }),
+        tHarley.query(api.projects.query.getProjects, {
+          paginationOpts: { cursor: null, numItems: 10 },
+        }),
+      ]);
+
+      expect(details.bookingStartTime).toBeNull();
+      expect(details.bookingEndTime).toBeNull();
+      expect(list.page[0].bookingStartTime).toBeNull();
+      expect(list.page[0].bookingEndTime).toBeNull();
     });
 
     test("Invoice sync corrects stale usage snapshot totals from duration-based pricing", async () => {

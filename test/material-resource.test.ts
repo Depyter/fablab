@@ -356,6 +356,9 @@ describe("Resource lifecycle and resourceUsage integration", () => {
 
   test("usage updates preserve resource assignments and recalculate project totals", async () => {
     const { t, tAera, tHarley, projectId } = await setupProject();
+    const initialDetails = await tHarley.query(api.projects.query.getProject, {
+      projectId,
+    });
 
     await tAera.mutation(api.resource.mutate.addResource, {
       name: "Prusa MK4",
@@ -398,8 +401,8 @@ describe("Resource lifecycle and resourceUsage integration", () => {
       tax: 0,
       total: 8,
     });
-    expect(details.bookingStartTime).toBe(updatedStart);
-    expect(details.bookingEndTime).toBe(updatedEnd);
+    expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
+    expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
     expect(details.resourceUsages[0]).toMatchObject({
       _id: usageId,
       resource: resourceId,

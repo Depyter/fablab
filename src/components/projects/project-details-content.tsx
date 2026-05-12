@@ -165,10 +165,8 @@ export function ProjectDetailsContent({
     setIsSaving(false);
   }
 
-  const primaryUsage = project.resourceUsages?.[0];
-
-  const bookingDateStr = primaryUsage?.startTime
-    ? new Date(primaryUsage.startTime).toLocaleDateString("en-US", {
+  const bookingDateStr = project.bookingStartTime
+    ? new Date(project.bookingStartTime).toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -176,15 +174,16 @@ export function ProjectDetailsContent({
       })
     : "Not specified";
 
-  const bookingTimeRange = primaryUsage
-    ? `${new Date(primaryUsage.startTime).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} - ${new Date(primaryUsage.endTime).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
-    : "Not specified";
+  const bookingTimeRange =
+    project.bookingStartTime && project.bookingEndTime
+      ? `${new Date(project.bookingStartTime).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} - ${new Date(project.bookingEndTime).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
   const statusOrder = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatusType[];
