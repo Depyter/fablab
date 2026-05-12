@@ -16,7 +16,7 @@ export interface CalendarDayWindow {
 }
 
 export interface CalendarBookingItem {
-  _id: Id<"resourceUsage">;
+  _id: string;
   startTime: number;
   endTime: number;
   projectId: Id<"projects"> | null;
