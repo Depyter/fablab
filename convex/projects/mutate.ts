@@ -88,7 +88,7 @@ export const createProject = authMutation({
       v.literal("full-service"),
     ),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
-    requestedMaterials: v.optional(v.array(v.id("materials"))),
+    materialIds: v.optional(v.array(v.id("materials"))),
     service: v.id("services"),
     pricing: v.string(),
     files: v.optional(v.array(v.id("_storage"))),
@@ -188,7 +188,7 @@ export const createProject = authMutation({
         projectId,
         usageSnapshot,
         usagePricingSnapshot,
-        args.requestedMaterials,
+        args.materialIds,
       );
       await incrementWorkshopSlot(ctx, service, booking);
     } else {
@@ -199,7 +199,7 @@ export const createProject = authMutation({
         projectId,
         usageSnapshot,
         usagePricingSnapshot,
-        args.requestedMaterials,
+        args.materialIds,
       );
     }
 

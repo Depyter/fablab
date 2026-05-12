@@ -60,6 +60,17 @@ function compareByCreationTime(left: Doc<"projects">, right: Doc<"projects">) {
   );
 }
 
+function compareUsageOrder(
+  left: Doc<"resourceUsage">,
+  right: Doc<"resourceUsage">,
+) {
+  return (
+    left.startTime - right.startTime ||
+    left._creationTime - right._creationTime ||
+    left._id.localeCompare(right._id)
+  );
+}
+
 function sortProjectsForList(projects: Doc<"projects">[], sortBy?: string) {
   const sorted = [...projects];
 
@@ -130,9 +141,8 @@ export const getProjects = authQuery({
       return { ...result, page: enrichedPage };
     }
 
-    const dateBounds = resolveProjectDateBounds(args.dateFilter);
-    if (dateBounds !== null) {
-      const projectsById = new Map<Id<"projects">, Doc<"projects">>();
+  const dateBounds = resolveProjectDateBounds(args.dateFilter);
+  if (dateBounds !== null) {
       const datedProjects = await ctx.db
         .query("projects")
         .withIndex("by_bookingStartTime", (q) =>
@@ -142,39 +152,8 @@ export const getProjects = authQuery({
         )
         .collect();
 
-      for (const project of datedProjects) {
-        projectsById.set(project._id, project);
-      }
-
-      const matchingUsages = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_startTime", (q) =>
-          q
-            .gte("startTime", dateBounds.startTime)
-            .lt("startTime", dateBounds.endTime),
-        )
-        .collect();
-
-      const missingProjectIds = [
-        ...new Set(
-          matchingUsages
-            .map((usage) => usage.projectId)
-            .filter((projectId) => !projectsById.has(projectId)),
-        ),
-      ];
-
-      const fallbackProjects = await Promise.all(
-        missingProjectIds.map((projectId) => ctx.db.get(projectId)),
-      );
-
-      for (const project of fallbackProjects) {
-        if (project) {
-          projectsById.set(project._id, project);
-        }
-      }
-
       const filteredProjects = sortProjectsForList(
-        [...projectsById.values()].filter((project) => {
+        datedProjects.filter((project) => {
           if (!isPrivileged && project.userId !== callerId) {
             return false;
           }
@@ -262,9 +241,14 @@ export const getProjects = authQuery({
 async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
   return Promise.all(
     projects.map(async (project) => {
-      const [clientProfile, service] = await Promise.all([
+      const [clientProfile, service, usageCount] = await Promise.all([
         ctx.db.get(project.userId as Id<"userProfile">),
         ctx.db.get(project.service as Id<"services">),
+        ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", project._id))
+          .collect()
+          .then((usages) => usages.length),
       ]);
 
       const coverUrl =
@@ -295,6 +279,7 @@ async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
         // Audit dates
         requestedDate: project._creationTime,
         estimatedPrice: project.totalInvoice?.total ?? 0,
+        usageCount,
         coverUrl,
       };
     }),
@@ -408,9 +393,10 @@ export const getProject = authQuery({
       .query("resourceUsage")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))
       .collect();
+    const orderedUsageDocs = [...usageDocs].sort(compareUsageOrder);
 
     const resourceUsages = await Promise.all(
-      usageDocs.map(async (usage) => {
+      orderedUsageDocs.map(async (usage) => {
         const resourceDoc = usage.resource
           ? await ctx.db.get(usage.resource as Id<"resources">)
           : null;

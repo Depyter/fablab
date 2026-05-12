@@ -864,7 +864,7 @@ describe("Service mutations and queries", () => {
           description: "Prototype print",
           fulfillmentMode: "self-service",
           material: "buy-from-lab",
-          requestedMaterials: [materialId],
+          materialIds: [materialId],
           files: [],
           service: serviceId,
           notes: "Use the XL machine",

@@ -39,6 +39,7 @@ type EnrichedProject = {
   description: string;
   clientName: string;
   serviceName: string;
+  usageCount: number;
   bookingStartTime: number | null;
   bookingEndTime: number | null;
   estimatedPrice: number;
@@ -125,7 +126,8 @@ function ProjectListRow({
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="font-semibold text-sm truncate">{project.name}</span>
           <span className="text-xs text-muted-foreground truncate">
-            {project.serviceName} · {project.clientName}
+            {project.serviceName} · {project.clientName} · {project.usageCount}{" "}
+            {project.usageCount === 1 ? "usage" : "usages"}
           </span>
         </div>
 
@@ -244,6 +246,7 @@ export function ProjectsListClient() {
             description={project.description}
             clientName={project.clientName}
             serviceName={project.serviceName}
+            usageCount={project.usageCount}
             bookingDate={project.bookingStartTime}
             bookingStartTime={project.bookingStartTime}
             bookingEndTime={project.bookingEndTime}

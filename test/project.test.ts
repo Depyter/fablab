@@ -725,7 +725,7 @@ describe("Project and Chat functionality", () => {
           description: "reserve then cancel",
           fulfillmentMode: "self-service",
           material: "buy-from-lab",
-          requestedMaterials: [materialId],
+          materialIds: [materialId],
           files: [],
           service: serviceId,
           notes: "cancel later",
@@ -1469,7 +1469,7 @@ describe("Project and Chat functionality", () => {
         description: "hello",
         fulfillmentMode: "self-service",
         material: "buy-from-lab",
-        requestedMaterials: [materialId],
+        materialIds: [materialId],
         files: [],
         service: serviceId,
         notes: "pls na",
@@ -1652,7 +1652,7 @@ describe("Project and Chat functionality", () => {
         description: "hello",
         fulfillmentMode: "self-service",
         material: "buy-from-lab",
-        requestedMaterials: [materialId],
+        materialIds: [materialId],
         files: [],
         service: serviceId,
         notes: "pls na",
@@ -1813,7 +1813,7 @@ describe("Project and Chat functionality", () => {
         description: "hello",
         fulfillmentMode: "self-service",
         material: "buy-from-lab",
-        requestedMaterials: [materialId],
+        materialIds: [materialId],
         files: [],
         service: serviceId,
         notes: "pls na",
@@ -2057,18 +2057,33 @@ describe("Project and Chat functionality", () => {
 
     test("Project queries do not infer the main booking window from resource usages", async () => {
       const { t, tHarley, projectId } = await setupProject();
+      const usageStartTime = getLabDayStart(new Date()).getTime() + 10 * HOUR_MS;
 
       await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+
         await ctx.db.patch(projectId, {
           bookingStartTime: undefined,
           bookingEndTime: undefined,
         });
+
+        await ctx.db.patch(usage!._id, {
+          startTime: usageStartTime,
+          endTime: usageStartTime + HOUR_MS,
+        });
       });
 
-      const [details, list] = await Promise.all([
+      const [details, list, todayList] = await Promise.all([
         tHarley.query(api.projects.query.getProject, { projectId }),
         tHarley.query(api.projects.query.getProjects, {
           paginationOpts: { cursor: null, numItems: 10 },
+        }),
+        tHarley.query(api.projects.query.getProjects, {
+          paginationOpts: { cursor: null, numItems: 10 },
+          dateFilter: "today",
         }),
       ]);
 
@@ -2076,6 +2091,7 @@ describe("Project and Chat functionality", () => {
       expect(details.bookingEndTime).toBeNull();
       expect(list.page[0].bookingStartTime).toBeNull();
       expect(list.page[0].bookingEndTime).toBeNull();
+      expect(todayList.page).toHaveLength(0);
     });
 
     test("Invoice sync corrects stale usage snapshot totals from duration-based pricing", async () => {
@@ -2228,25 +2244,25 @@ describe("Project and Chat functionality", () => {
 
       await t.run(async (ctx) => {
         const assignments = [
-          [todayProject.projectId, todayStartTime],
-          [weekProject.projectId, weekStartTime],
-          [nextMonthProject.projectId, nextMonthStartTime],
+          [todayProject.projectId, todayStartTime, nextMonthStartTime],
+          [weekProject.projectId, weekStartTime, todayStartTime],
+          [nextMonthProject.projectId, nextMonthStartTime, todayStartTime],
         ] as const;
 
-        for (const [projectId, startTime] of assignments) {
+        for (const [projectId, bookingStartTime, usageStartTime] of assignments) {
           const usage = await ctx.db
             .query("resourceUsage")
             .withIndex("by_project", (q) => q.eq("projectId", projectId))
             .first();
 
           await ctx.db.patch(projectId, {
-            bookingStartTime: startTime,
-            bookingEndTime: startTime + HOUR_MS,
+            bookingStartTime,
+            bookingEndTime: bookingStartTime + HOUR_MS,
           });
 
           await ctx.db.patch(usage!._id, {
-            startTime,
-            endTime: startTime + HOUR_MS,
+            startTime: usageStartTime,
+            endTime: usageStartTime + HOUR_MS,
           });
         }
       });
@@ -2442,6 +2458,9 @@ describe("Project and Chat functionality", () => {
       const details = await tHarley.query(api.projects.query.getProject, {
         projectId,
       });
+      const list = await tHarley.query(api.projects.query.getProjects, {
+        paginationOpts: { cursor: null, numItems: 10 },
+      });
       const createdUsage = details.resourceUsages.find(
         (usage) => usage._id === usageId,
       );
@@ -2453,6 +2472,11 @@ describe("Project and Chat functionality", () => {
       });
       expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
       expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
+      expect(details.resourceUsages.map((usage) => usage.startTime)).toEqual(
+        [...details.resourceUsages.map((usage) => usage.startTime)].sort(
+          (left, right) => left - right,
+        ),
+      );
       expect(createdUsage).toMatchObject({
         _id: usageId,
         startTime,
@@ -2472,6 +2496,7 @@ describe("Project and Chat functionality", () => {
           pricingVariant: "UP",
         },
       });
+      expect(list.page[0].usageCount).toBe(2);
     });
 
     test("updateUsage targets only the selected usage resource", async () => {
@@ -2766,7 +2791,7 @@ describe("Project and Chat functionality", () => {
         description: "cut an acrylic sign",
         fulfillmentMode: "full-service",
         material: "buy-from-lab",
-        requestedMaterials: [materialId],
+        materialIds: [materialId],
         files: [],
         service: serviceId,
         notes: "use clear acrylic",

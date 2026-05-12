@@ -10,6 +10,7 @@ interface ProjectCardProps {
   description: string;
   clientName: string;
   serviceName: string;
+  usageCount: number;
   bookingDate: number | null;
   bookingStartTime: number | null;
   bookingEndTime: number | null;
@@ -25,6 +26,7 @@ export function ProjectCard({
   description,
   clientName,
   serviceName,
+  usageCount,
   bookingDate,
   bookingStartTime,
   bookingEndTime,
@@ -58,7 +60,9 @@ export function ProjectCard({
     <ManageCard
       className={className}
       title={title}
-      subtitle={`${serviceName} · ${clientName}`}
+      subtitle={`${serviceName} · ${clientName} · ${usageCount} ${
+        usageCount === 1 ? "usage" : "usages"
+      }`}
       description={description}
       coverUrl={coverUrl}
       coverFallback={
