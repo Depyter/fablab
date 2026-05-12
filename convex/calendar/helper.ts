@@ -223,3 +223,65 @@ export async function loadCalendarBookings(
     }),
   );
 }
+
+async function loadCandidateServiceProjects(
+  ctx: CalendarQueryContext,
+  range: CalendarBookingRange,
+) {
+  const ownedProjectIds = await loadOwnedProjectIds(ctx);
+  const isPrivileged = isPrivilegedRole(ctx.profile.role);
+
+  const candidateProjects = await ctx.db
+    .query("projects")
+    .withIndex("by_bookingStartTime", (q) =>
+      q
+        .gte("bookingStartTime", range.startTime)
+        .lt("bookingStartTime", range.endTime),
+    )
+    .collect();
+
+  // Apply access filter
+  const visibleProjects = candidateProjects.filter((project) => {
+    if (isPrivileged) return true;
+    return ownedProjectIds.has(project._id);
+  });
+
+  return visibleProjects;
+}
+
+function mapServiceBookingItem(args: {
+  role: CalendarRole;
+  project: Doc<"projects">;
+  client: Doc<"userProfile"> | undefined;
+}): CalendarBookingItem {
+  return {
+    _id: args.project._id,
+    startTime: args.project.bookingStartTime ?? 0,
+    endTime: args.project.bookingEndTime ?? args.project.bookingStartTime ?? 0,
+    projectId: args.project._id,
+    projectAlias: args.project.name,
+    projectStatus: args.project.status,
+    clientName: args.client?.name ?? "Unknown Client",
+    serviceId: args.project.service,
+    resourceId: null,
+  };
+}
+
+export async function loadServiceCalendarBookings(
+  ctx: CalendarQueryContext,
+  range: CalendarBookingRange,
+): Promise<CalendarBookingItem[]> {
+  const projects = await loadCandidateServiceProjects(ctx, range);
+
+  // Load client profiles for all visible projects
+  const clientIds = new Set(projects.map((p) => p.userId));
+  const clientById = await loadClientsById(ctx, clientIds);
+
+  return projects.map((project) =>
+    mapServiceBookingItem({
+      role: ctx.profile.role,
+      project,
+      client: clientById.get(project.userId),
+    }),
+  );
+}

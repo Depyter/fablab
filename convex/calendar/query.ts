@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { authQuery } from "../helper";
-import { loadCalendarBookings, loadCalendarFrame } from "./helper";
+import {
+  loadCalendarBookings,
+  loadCalendarFrame,
+  loadServiceCalendarBookings,
+} from "./helper";
 
 export const getCalendarFrame = authQuery({
   role: ["admin", "maker", "client"],
@@ -13,6 +17,12 @@ export const getCalendarBookings = authQuery({
   args: {
     startTime: v.number(),
     endTime: v.number(),
+    tab: v.union(v.literal("services"), v.literal("resources")),
   },
-  handler: async (ctx, args) => loadCalendarBookings(ctx, args),
+  handler: async (ctx, args) => {
+    if (args.tab === "services") {
+      return loadServiceCalendarBookings(ctx, args);
+    }
+    return loadCalendarBookings(ctx, args);
+  },
 });

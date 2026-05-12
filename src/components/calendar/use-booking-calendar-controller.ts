@@ -137,9 +137,11 @@ function useCreateBookingCalendarController() {
   const bookings = useQuery(api.calendar.query.getCalendarBookings, {
     startTime: queryRange.startTime,
     endTime: queryRange.endTime,
+    tab: activeTab,
   });
   const bookingsLoading = bookings === undefined;
   const bookingItems: CalendarBookingItem[] = bookings ?? [];
+
   const totalBookings = bookingItems.length;
   const totalProjects = new Set(
     bookingItems.flatMap((booking) =>
@@ -217,7 +219,6 @@ function useCreateBookingCalendarController() {
     isAdminOrMaker,
     isCalendarLoading: frameLoading || bookingsLoading,
     bookingsLoading,
-    bookingItems,
     totalBookings,
     totalProjects,
     selectedProjectId,
