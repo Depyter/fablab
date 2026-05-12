@@ -27,7 +27,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ActionDialog } from "../action-dialog";
 import { api } from "@/../convex/_generated/api";
 import {
   PROJECT_STATUS_LABELS,
@@ -43,13 +42,11 @@ export type ProjectData = NonNullable<
 
 interface ProjectDetailsContentProps {
   project: ProjectData;
-  styles?: { badge?: string; cover?: string };
   timelineSteps: ProjectTimelineStep[];
   onOpenAssignView: () => void;
   onUpdateStatus: (newStatus: ProjectStatusType) => void;
   onMarkPaid: () => void;
   isClient: boolean;
-  onCancelProject: () => void;
   onUpdateDetails?: (args: {
     description?: string;
     notes?: string;
@@ -102,14 +99,11 @@ const STATUS_PILL: Record<
 
 export function ProjectDetailsContent({
   project,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  styles: _styles,
   timelineSteps,
   onOpenAssignView,
   onUpdateStatus,
   onMarkPaid,
   isClient,
-  onCancelProject,
   onUpdateDetails,
 }: ProjectDetailsContentProps) {
   // ── Edit state (review stage) ───────────────────────────────────────────
@@ -205,11 +199,6 @@ export function ProjectDetailsContent({
     : "";
   const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
 
-  const isPostPaymentProject =
-    project.status === "paid" || project.status === "claimed";
-  const canRebook = isClient && project.status === "cancelled";
-  const canSubmitReview = isClient && project.status === "claimed";
-
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
       onOpenAssignView();
@@ -284,33 +273,7 @@ export function ProjectDetailsContent({
 
             {/* Action buttons */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {isClient ? (
-                <>
-                  {canRebook ? (
-                    <ActionDialog
-                      title="Rebook Project Request"
-                      description="Do you want to rebook this project request?"
-                      onConfirm={() => {}}
-                      baseActionText="Rebook Request"
-                      cancelButtonText="Back"
-                      confirmButtonText="Yes, rebook"
-                      className="w-full sm:w-auto"
-                      disabled={isPostPaymentProject}
-                    />
-                  ) : (
-                    <ActionDialog
-                      title="Cancel Project Request"
-                      description="Do you want to cancel this project request?"
-                      onConfirm={() => {}}
-                      baseActionText="Cancel   Request"
-                      cancelButtonText="Back"
-                      confirmButtonText="Yes, cancel"
-                      className="w-full sm:w-auto"
-                      disabled={isPostPaymentProject}
-                    />
-                  )}
-                </>
-              ) : (
+              {!isClient && (
                 <>
                   {/* Back · Current state · Next */}
                   <div className="flex items-center gap-1.5">
@@ -440,7 +403,6 @@ export function ProjectDetailsContent({
               serviceType={project.fulfillmentMode}
               resourceUsages={project.resourceUsages}
               projectPricing={project.pricing}
-              requestedMaterials={project.requestedMaterials ?? []}
               assignedMaker={project.assignedMaker ?? undefined}
               headlineBookingStartTime={project.bookingStartTime}
               headlineBookingEndTime={project.bookingEndTime}

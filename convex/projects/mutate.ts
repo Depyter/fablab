@@ -26,17 +26,12 @@ import {
   createFabricationUsage,
   ensureProjectRoom,
   createProjectThread,
-  computeCompletionCost,
   computeMaterialsUsedCost,
-  consumeMaterials,
-  findProjectUsage,
   syncProjectTotalInvoice,
   sendProjectSystemMessage,
   applyStatusChange,
   applyMakerAssignment,
-  applyMaterialAssignment,
   syncMaterialUsageStock,
-  syncProjectRequestedMaterialsFromUsages,
   buildMaterialSnapshot,
   scheduleProjectUpdateEmail,
 } from "./helper";
@@ -158,7 +153,6 @@ export const createProject = authMutation({
       type: projectType,
       fulfillmentMode: args.fulfillmentMode,
       material: args.material,
-      requestedMaterials: args.requestedMaterials,
       userId: userProfile._id,
       assignedMaker: args.assignedMaker,
       service: args.service,
@@ -267,7 +261,6 @@ export const updateProject = authMutation({
     ),
     // Assignments
     makerId: v.optional(v.id("userProfile")),
-    materialIds: v.optional(v.array(v.id("materials"))),
   },
   handler: async (ctx, args) => {
     const existingProject = await ctx.db.get(args.projectId);
@@ -293,16 +286,6 @@ export const updateProject = authMutation({
     // ── Maker assignment ─────────────────────────────────────────────────────
     if (args.makerId !== undefined) {
       const lines = await applyMakerAssignment(ctx, project, args.makerId);
-      messagelines.push(...lines);
-    }
-
-    // ── Material assignment ──────────────────────────────────────────────────
-    if (args.materialIds !== undefined) {
-      const lines = await applyMaterialAssignment(
-        ctx,
-        project,
-        args.materialIds,
-      );
       messagelines.push(...lines);
     }
 
@@ -408,56 +391,6 @@ export const createUsage = authMutation({
     await sendProjectSystemMessage(ctx, project._id, lines);
 
     return { usageId };
-  },
-});
-
-export const updateUsageAssignments = authMutation({
-  role: ["admin", "maker"],
-  args: {
-    projectId: v.id("projects"),
-    usageId: v.id("resourceUsage"),
-    resourceId: v.union(v.id("resources"), v.null()),
-  },
-  handler: async (ctx, args) => {
-    const [project, usage] = await Promise.all([
-      ctx.db.get(args.projectId),
-      ctx.db.get(args.usageId),
-    ]);
-    if (!project) throw new ConvexError("Project not found.");
-    if (!usage) throw new ConvexError("Usage not found.");
-    assertUsageBelongsToProject(usage, args.projectId);
-
-    const service = await ctx.db.get(project.service);
-    if (!service) throw new ConvexError("Service not found.");
-
-    const resource = await resolveCompatibleResource(ctx, service, args.resourceId);
-    const nextResourceId = resource?._id ?? undefined;
-
-    if (usage.resource === nextResourceId) return;
-
-    await validateFabricationAvailability(
-      ctx,
-      project.service,
-      service,
-      {
-        startTime: usage.startTime,
-        endTime: usage.endTime,
-        date: getLabDayStartTimestamp(usage.startTime),
-      },
-      {
-        resourceId: nextResourceId ?? null,
-        excludeUsageId: usage._id,
-      },
-    );
-
-    await ctx.db.patch(usage._id, { resource: nextResourceId });
-    await scheduleProjectUpdateEmail(ctx, project._id);
-    await sendProjectSystemMessage(ctx, project._id, [
-      "Usage assignment updated:",
-      resource
-        ? `- Resource: **${resource.name}**`
-        : "- Resource cleared",
-    ]);
   },
 });
 
@@ -674,7 +607,6 @@ export const updateUsagePricing = authMutation({
     }
 
     await ctx.db.patch(usage._id, updates);
-    await syncProjectRequestedMaterialsFromUsages(ctx, project._id);
     await syncProjectTotalInvoice(ctx, project._id, {
       preferStoredUsageSnapshots: true,
     });
@@ -723,7 +655,6 @@ export const deleteUsage = authMutation({
     }
 
     await ctx.db.delete(usage._id);
-    await syncProjectRequestedMaterialsFromUsages(ctx, project._id);
     await syncProjectTotalInvoice(ctx, project._id);
     await scheduleProjectUpdateEmail(ctx, project._id);
   },
@@ -766,187 +697,6 @@ export const updateProjectSchedule = authMutation({
       "Project schedule updated:",
       buildScheduleSystemLine(args.startTime, args.endTime),
     ]);
-  },
-});
-
-export const updateCostBreakdown = authMutation({
-  role: ["admin", "maker"],
-  args: {
-    projectId: v.id("projects"),
-    setupFee: v.number(),
-    duration: v.number(),
-    rate: v.number(),
-    timeCost: v.number(),
-    materialCost: v.number(),
-    materialsUsed: v.optional(
-      v.array(
-        v.object({
-          materialId: v.id("materials"),
-          amountUsed: v.number(),
-        }),
-      ),
-    ),
-  },
-  handler: async (ctx, args) => {
-    const project = await ctx.db.get(args.projectId);
-    if (!project) throw new ConvexError("Project not found.");
-    const service = await ctx.db.get(project.service);
-    if (!service) throw new ConvexError("Service not found.");
-
-    const subtotal = args.setupFee + args.timeCost + args.materialCost;
-    const total = subtotal;
-    const unitName =
-      service.serviceCategory.type === "FABRICATION"
-        ? service.serviceCategory.unitName
-        : "unit";
-    const pricingSnapshotChanged =
-      !project.pricingSnapshot ||
-      Math.abs(project.pricingSnapshot.setupFee - args.setupFee) > 0.0001 ||
-      Math.abs(project.pricingSnapshot.duration - args.duration) > 0.0001 ||
-      Math.abs(project.pricingSnapshot.rate - args.rate) > 0.0001 ||
-      Math.abs(project.pricingSnapshot.timeCost - args.timeCost) > 0.0001 ||
-      Math.abs(project.pricingSnapshot.materialCost - args.materialCost) >
-        0.0001 ||
-      project.pricingSnapshot.unitName !== unitName;
-
-    // ── Detect what actually changed ─────────────────────────────────────────
-    const breakdownChanged = project.totalInvoice?.subtotal !== subtotal;
-
-    let usage = null;
-    let materialsChanged = false;
-
-    if (args.materialsUsed && args.materialsUsed.length > 0) {
-      usage = await findProjectUsage(ctx, project);
-      for (const { materialId, amountUsed } of args.materialsUsed) {
-        const existing =
-          usage?.materialsUsed?.find((m) => m.materialId === materialId)
-            ?.amountUsed ?? 0;
-        if (amountUsed !== existing) {
-          materialsChanged = true;
-          break;
-        }
-      }
-    }
-
-    if (Math.abs(args.duration * args.rate - args.timeCost) > 0.0001) {
-      throw new ConvexError(
-        "Time cost must match the provided duration and rate.",
-      );
-    }
-
-    if (!breakdownChanged && !pricingSnapshotChanged && !materialsChanged) {
-      return;
-    }
-
-    const resolvedUsage = usage ?? (await findProjectUsage(ctx, project));
-
-    const expectedMaterialCost = args.materialsUsed
-      ? await computeMaterialsUsedCost(ctx, args.materialsUsed)
-      : (resolvedUsage?.materialsUsed?.reduce(
-          (sum, material) =>
-            sum + material.amountUsed * (material.snapshot?.pricePerUnit ?? 0),
-          0,
-        ) ?? 0);
-
-    if (Math.abs(expectedMaterialCost - args.materialCost) > 0.0001) {
-      throw new ConvexError(
-        "Material cost must match the selected materials and quantities.",
-      );
-    }
-
-    // ── Persist invoice ───────────────────────────────────────────────────────
-    // ── Sync per-material amounts + stock ─────────────────────────────────────
-    if (materialsChanged && resolvedUsage && args.materialsUsed) {
-      let nextMaterials = [...(resolvedUsage.materialsUsed ?? [])];
-      const systemLines: string[] = [];
-
-      for (const { materialId, amountUsed } of args.materialsUsed) {
-        const existing = nextMaterials.find((m) => m.materialId === materialId);
-        const previousAmount = existing?.amountUsed ?? 0;
-        if (amountUsed === previousAmount) continue;
-
-        await syncMaterialUsageStock(
-          ctx,
-          materialId,
-          previousAmount,
-          amountUsed,
-        );
-
-        const materialDoc = await ctx.db.get(materialId);
-        nextMaterials = [
-          ...nextMaterials.filter((m) => m.materialId !== materialId),
-          {
-            materialId,
-            amountUsed,
-            snapshot: materialDoc
-              ? buildMaterialSnapshot(materialDoc)
-              : undefined,
-          },
-        ];
-
-        if (materialDoc) {
-          systemLines.push(
-            `- Material used: ${amountUsed} ${materialDoc.unit} of ${materialDoc.name}`,
-          );
-        }
-      }
-
-      await ctx.db.patch(resolvedUsage._id, { materialsUsed: nextMaterials });
-      await syncProjectTotalInvoice(ctx, args.projectId, {
-        fallbackTotal: total,
-        manualSnapshot: {
-          setupFee: args.setupFee,
-          duration: args.duration,
-          rate: args.rate,
-          timeCost: args.timeCost,
-          materialCost: args.materialCost,
-          unitName,
-        },
-      });
-
-      // ── System message ──────────────────────────────────────────────────────
-      const lines: string[] = [];
-      if (breakdownChanged || pricingSnapshotChanged) {
-        lines.push(
-          `Invoice updated:`,
-          `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
-          `- Time cost: ₱${args.timeCost.toFixed(2)}`,
-          `- Material cost: ₱${args.materialCost.toFixed(2)}`,
-          `- **Total: ₱${total.toFixed(2)}**`,
-        );
-      }
-      lines.push(...systemLines);
-      await sendProjectSystemMessage(ctx, args.projectId, lines);
-      await scheduleProjectUpdateEmail(ctx, args.projectId);
-      return;
-    }
-
-    if (breakdownChanged || pricingSnapshotChanged || materialsChanged) {
-      await syncProjectTotalInvoice(ctx, args.projectId, {
-        fallbackTotal: total,
-        manualSnapshot: {
-          setupFee: args.setupFee,
-          duration: args.duration,
-          rate: args.rate,
-          timeCost: args.timeCost,
-          materialCost: args.materialCost,
-          unitName,
-        },
-      });
-    }
-
-    // ── System message (breakdown only) ──────────────────────────────────────
-    if (breakdownChanged || pricingSnapshotChanged) {
-      await sendProjectSystemMessage(ctx, args.projectId, [
-        `Invoice updated:`,
-        `- Setup fee: ₱${args.setupFee.toFixed(2)}`,
-        `- Time cost: ₱${args.timeCost.toFixed(2)}`,
-        `- Material cost: ₱${args.materialCost.toFixed(2)}`,
-        `- **Total: ₱${total.toFixed(2)}**`,
-      ]);
-    }
-
-    await scheduleProjectUpdateEmail(ctx, args.projectId);
   },
 });
 
@@ -1043,98 +793,6 @@ export const cancelOwnProject = authMutation({
     // applyStatusChange handles the patch, workshop slot release, and returns log lines
     const lines = await applyStatusChange(ctx, project, project, "cancelled");
     await scheduleProjectUpdateEmail(ctx, args.projectId);
-    await sendProjectSystemMessage(ctx, args.projectId, lines);
-  },
-});
-
-// ============================================================================
-
-export const completeProject = authMutation({
-  role: ["admin", "maker"],
-  args: {
-    projectId: v.id("projects"),
-    actualDurationMs: v.number(),
-    materialsUsed: v.optional(
-      v.array(
-        v.object({
-          materialId: v.id("materials"),
-          amountUsed: v.number(),
-        }),
-      ),
-    ),
-  },
-  handler: async (ctx, args) => {
-    const project = await ctx.db.get(args.projectId);
-    if (!project) throw new ConvexError("Project not found.");
-
-    const service = await ctx.db.get(project.service);
-    if (!service) throw new ConvexError("Service not found.");
-
-    // ── 1. Time-based cost ───────────────────────────────────────────────────
-    const { setupFee, timeCost } = computeCompletionCost(
-      service,
-      project,
-      args.actualDurationMs,
-    );
-
-    // ── 2. Material cost + stock deduction ───────────────────────────────────
-    const materialCost =
-      project.material === "buy-from-lab" && args.materialsUsed?.length
-        ? await consumeMaterials(ctx, args.materialsUsed)
-        : 0;
-
-    // ── 3. Persist final invoice ─────────────────────────────────────────────
-    const total = setupFee + timeCost + materialCost;
-
-    await ctx.db.patch(args.projectId, {
-      status: "completed",
-    });
-
-    // ── 4. Update usage snapshot and record materials ─────────────────────────
-    const usage = await findProjectUsage(ctx, project);
-    if (usage) {
-      if (args.materialsUsed) {
-        const materialsWithSnapshots = await Promise.all(
-          args.materialsUsed.map(async (m) => {
-            const materialDoc = await ctx.db.get(m.materialId);
-            return {
-              ...m,
-              snapshot: materialDoc
-                ? buildMaterialSnapshot(materialDoc)
-                : undefined,
-            };
-          }),
-        );
-        await ctx.db.patch(usage._id, {
-          materialsUsed: materialsWithSnapshots,
-        });
-      }
-    }
-
-    await syncProjectTotalInvoice(ctx, args.projectId, {
-      fallbackTotal: total,
-      actualDurationMs: args.actualDurationMs,
-    });
-    await scheduleProjectUpdateEmail(ctx, args.projectId);
-
-    // ── 5. System message ────────────────────────────────────────────────────
-    const durationHours = (args.actualDurationMs / (1000 * 60 * 60)).toFixed(2);
-    const lines: string[] = [
-      `Fabrication complete. Project moved to **payment**.`,
-      `- Actual duration: ${durationHours} hours`,
-      `- Setup fee: ₱${setupFee.toFixed(2)}`,
-      `- Time cost: ₱${timeCost.toFixed(2)}`,
-      `- Material cost: ₱${materialCost.toFixed(2)}`,
-      `- **Total: ₱${total.toFixed(2)}**`,
-    ];
-    if (args.materialsUsed && args.materialsUsed.length > 0) {
-      for (const m of args.materialsUsed) {
-        const materialDoc = await ctx.db.get(m.materialId);
-        lines.push(
-          `- Material consumed: ${m.amountUsed} ${materialDoc?.unit ?? "units"} of ${materialDoc?.name ?? m.materialId}`,
-        );
-      }
-    }
     await sendProjectSystemMessage(ctx, args.projectId, lines);
   },
 });

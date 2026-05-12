@@ -451,27 +451,6 @@ export const getProject = authQuery({
     );
 
     // -------------------------------------------------------------------------
-    // Requested materials
-    // -------------------------------------------------------------------------
-    const requestedMaterials = project.requestedMaterials
-      ? (
-          await Promise.all(
-            project.requestedMaterials.map(async (id) => {
-              const doc = await ctx.db.get(id as Id<"materials">);
-              return doc
-                ? {
-                    _id: doc._id,
-                    name: doc.name,
-                    unit: doc.unit,
-                    pricePerUnit: doc.pricePerUnit ?? 0,
-                  }
-                : null;
-            }),
-          )
-        ).filter((m): m is NonNullable<typeof m> => m !== null)
-      : [];
-
-    // -------------------------------------------------------------------------
     // Thread
     // -------------------------------------------------------------------------
     const thread = await ctx.db
@@ -515,7 +494,6 @@ export const getProject = authQuery({
       resolvedFiles,
       receipt,
       resourceUsages,
-      requestedMaterials,
       threadId: thread?._id ?? null,
       roomId: thread?.roomId ?? null,
     };

@@ -886,7 +886,7 @@ describe("Service mutations and queries", () => {
         return usage!._id;
       });
 
-      await tAera.mutation(api.projects.mutate.updateUsageAssignments, {
+      await tAera.mutation(api.projects.mutate.updateUsage, {
         projectId,
         usageId,
         resourceId: machineId,

@@ -160,7 +160,7 @@ interface RequestedMaterial {
   _id: string;
   name: string;
   unit: string;
-  pricePerUnit: number;
+  pricePerUnit?: number;
 }
 
 interface AssignedMaker {
@@ -251,14 +251,12 @@ interface PricingEstimateCardProps {
   serviceType?: PricingServiceType;
   projectPricing?: string;
   resourceUsages?: ResourceUsage[];
-  requestedMaterials?: RequestedMaterial[];
   assignedMaker?: AssignedMaker | null;
   headlineBookingStartTime?: number | null;
   headlineBookingEndTime?: number | null;
   readOnly?: boolean;
 }
 
-const EMPTY_REQUESTED_MATERIALS: RequestedMaterial[] = [];
 const NO_RESOURCE_VALUE = "__no_resource__";
 const NO_MAKER_VALUE = "__no_maker__";
 const NO_MATERIAL_VALUE = "__no_material__";
@@ -452,7 +450,7 @@ function UsageMaterialEditor({
                   className="text-[10px]"
                   style={{ color: "var(--fab-text-muted)" }}
                 >
-                  {formatCurrency(materialDoc.pricePerUnit)}/{materialDoc.unit}
+                  {formatCurrency(materialDoc.pricePerUnit ?? 0)}/{materialDoc.unit}
                 </p>
               </div>
               <Input
@@ -526,7 +524,6 @@ export function PricingEstimateCard({
   serviceType,
   projectPricing = "Default",
   resourceUsages,
-  requestedMaterials = EMPTY_REQUESTED_MATERIALS,
   assignedMaker,
   headlineBookingStartTime,
   headlineBookingEndTime,
@@ -587,9 +584,6 @@ export function PricingEstimateCard({
         ? Array.from(
             new Set([
               ...(service.serviceCategory.materials ?? []),
-              ...requestedMaterials.map(
-                (requestedMaterial) => requestedMaterial._id,
-              ),
               ...orderedUsages.flatMap((usage) =>
                 (usage.materialsUsed ?? []).map(
                   (materialEntry) => materialEntry.materialId,
@@ -598,7 +592,7 @@ export function PricingEstimateCard({
             ]),
           )
         : [],
-    [orderedUsages, requestedMaterials, service],
+    [orderedUsages, service],
   );
   const editableResourceIds = useMemo(
     () =>
@@ -625,13 +619,9 @@ export function PricingEstimateCard({
   const editableMaterialDocs = useMemo(
     () =>
       editableMaterialIds
-        .map(
-          (id) =>
-            materials?.find((materialDoc) => materialDoc._id === id) ??
-            requestedMaterials.find((materialDoc) => materialDoc._id === id),
-        )
-        .filter((materialDoc): materialDoc is RequestedMaterial => !!materialDoc),
-    [editableMaterialIds, materials, requestedMaterials],
+        .map((id) => materials?.find((materialDoc) => materialDoc._id === id))
+        .filter((materialDoc): materialDoc is NonNullable<typeof materialDoc> => !!materialDoc),
+    [editableMaterialIds, materials],
   );
   const editableMaterialLookup = useMemo(
     () =>
