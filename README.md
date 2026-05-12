@@ -149,7 +149,7 @@ bun run dev   # → http://localhost:3000
 The repo now splits deployment into three GitHub Actions workflows:
 
 - **CI** runs `bun run ci:checks` for pull requests and `main`.
-- **Preview Deploy** runs on same-repo pull requests, creates a Convex preview deployment, builds the OpenNext worker against that preview, and uploads a versioned `preview` Cloudflare Worker so each PR build gets a unique preview URL.
+- **Preview Deploy** runs on same-repo pull requests, creates a Convex preview deployment, builds the OpenNext worker against that preview, and uploads a `preview` Cloudflare Worker version with a stable PR alias URL.
 - **Production Deploy** runs on pushes to `main`, builds against the production Convex deployment, and deploys the default Cloudflare Worker.
 
 Convex is responsible for injecting `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` at build time, so those values are no longer hardcoded in `wrangler.jsonc`.
@@ -167,7 +167,7 @@ Google OAuth now uses Better Auth's OAuth Proxy so preview and staging deploymen
 
 - `BETTER_AUTH_PRODUCTION_URL=https://fablab.harleyvan.com`
 - `BETTER_AUTH_SECRET=<same value in production and every preview/staging deployment>`
-- `BETTER_AUTH_TRUSTED_ORIGINS=<comma-separated preview host patterns, for example *-fablab-preview.<workers-subdomain>.workers.dev>`
+- `BETTER_AUTH_TRUSTED_ORIGINS=<comma-separated preview host patterns, for example *-fablab-preview.acabalharleyvan.workers.dev>`
 
 Register only the production Google callback URL:
 
