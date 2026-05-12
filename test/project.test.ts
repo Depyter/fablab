@@ -937,6 +937,44 @@ describe("Project and Chat functionality", () => {
       });
     });
 
+    test("Admin and maker can update project details after review has started", async () => {
+      const { t, tAera, projectId } = await setupProject();
+
+      await t.mutation(internal.users.createMaker, {
+        userId: "3",
+        email: "maker@gmail.com",
+        name: "Maker",
+      });
+      const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
+
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "approved",
+      });
+
+      await tAera.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        description: "updated after review by admin",
+      });
+
+      await tMaker.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        notes: "maker note after review",
+        material: "buy-from-lab",
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+
+        expect(project).toMatchObject({
+          status: "approved",
+          description: "updated after review by admin",
+          notes: "maker note after review",
+          material: "buy-from-lab",
+        });
+      });
+    });
+
     test("Other clients cannot update another client's project details", async () => {
       const { t, tHarley, projectId } = await setupProject();
 
@@ -1154,6 +1192,79 @@ describe("Project and Chat functionality", () => {
         _id: usageId,
         startTime: updatedStart,
         endTime: updatedEnd,
+      });
+    });
+
+    test("Privileged users can create past usages when explicitly allowed", async () => {
+      const { tAera, tHarley, projectId } = await setupProject();
+      const pastStart = Date.now() - 6 * HOUR_MS;
+      const pastEnd = pastStart + 2 * HOUR_MS;
+
+      await expect(
+        tAera.mutation(api.projects.mutate.createUsage, {
+          projectId,
+          startTime: pastStart,
+          endTime: pastEnd,
+        }),
+      ).rejects.toThrow("Cannot book a date or time in the past.");
+
+      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
+        projectId,
+        startTime: pastStart,
+        endTime: pastEnd,
+        allowPastBooking: true,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(
+        details.resourceUsages.find((usage) => usage._id === usageId),
+      ).toMatchObject({
+        _id: usageId,
+        startTime: pastStart,
+        endTime: pastEnd,
+      });
+    });
+
+    test("Privileged users can move usages into the past when explicitly allowed", async () => {
+      const { t, tAera, tHarley, projectId } = await setupProject();
+      const usageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+      const pastStart = Date.now() - 4 * HOUR_MS;
+      const pastEnd = pastStart + 90 * 60 * 1000;
+
+      await expect(
+        tAera.mutation(api.projects.mutate.updateUsage, {
+          projectId,
+          usageId,
+          startTime: pastStart,
+          endTime: pastEnd,
+        }),
+      ).rejects.toThrow("Cannot book a date or time in the past.");
+
+      await tAera.mutation(api.projects.mutate.updateUsage, {
+        projectId,
+        usageId,
+        startTime: pastStart,
+        endTime: pastEnd,
+        allowPastBooking: true,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(details.resourceUsages[0]).toMatchObject({
+        _id: usageId,
+        startTime: pastStart,
+        endTime: pastEnd,
       });
     });
 

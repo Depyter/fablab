@@ -21,6 +21,7 @@ import {
   buildPricingSnapshot,
   buildUsagePricingSnapshot,
   incrementWorkshopSlot,
+  decrementWorkshopSlot,
   createWorkshopUsage,
   createFabricationUsage,
   ensureProjectRoom,
@@ -35,6 +36,7 @@ import {
   applyMakerAssignment,
   applyMaterialAssignment,
   syncMaterialUsageStock,
+  syncProjectRequestedMaterialsFromUsages,
   buildMaterialSnapshot,
   scheduleProjectUpdateEmail,
 } from "./helper";
@@ -316,6 +318,7 @@ export const createUsage = authMutation({
     startTime: v.number(),
     endTime: v.number(),
     resourceId: v.optional(v.id("resources")),
+    allowPastBooking: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
@@ -329,7 +332,9 @@ export const createUsage = authMutation({
       date: getLabDayStartTimestamp(args.startTime),
     };
 
-    validateBookingTiming(booking);
+    validateBookingTiming(booking, {
+      allowPastBooking: args.allowPastBooking,
+    });
     const resource = await resolveCompatibleResource(
       ctx,
       service,
@@ -372,7 +377,6 @@ export const createUsage = authMutation({
             project._id,
             usageSnapshot,
             usagePricingSnapshot,
-            project.requestedMaterials,
           )
         : await createFabricationUsage(
             ctx,
@@ -381,7 +385,6 @@ export const createUsage = authMutation({
             project._id,
             usageSnapshot,
             usagePricingSnapshot,
-            project.requestedMaterials,
           );
 
     if (service.serviceCategory.type === "WORKSHOP") {
@@ -465,6 +468,7 @@ export const updateUsage = authMutation({
     startTime: v.optional(v.number()),
     endTime: v.optional(v.number()),
     resourceId: v.optional(v.union(v.id("resources"), v.null())),
+    allowPastBooking: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const [project, usage] = await Promise.all([
@@ -511,7 +515,9 @@ export const updateUsage = authMutation({
       endTime: nextEndTime,
       date: getLabDayStartTimestamp(nextStartTime),
     };
-    validateBookingTiming(booking);
+    validateBookingTiming(booking, {
+      allowPastBooking: args.allowPastBooking,
+    });
     await validateFabricationAvailability(
       ctx,
       project.service,
@@ -668,6 +674,7 @@ export const updateUsagePricing = authMutation({
     }
 
     await ctx.db.patch(usage._id, updates);
+    await syncProjectRequestedMaterialsFromUsages(ctx, project._id);
     await syncProjectTotalInvoice(ctx, project._id, {
       preferStoredUsageSnapshots: true,
     });
@@ -699,8 +706,26 @@ export const deleteUsage = authMutation({
     if (!usage) throw new ConvexError("Usage not found.");
     assertUsageBelongsToProject(usage, args.projectId);
 
+    const service = await ctx.db.get(project.service);
+    if (!service) throw new ConvexError("Service not found.");
+
+    if (service.serviceCategory.type === "WORKSHOP") {
+      await decrementWorkshopSlot(ctx, service, usage);
+    }
+
+    for (const material of usage.materialsUsed ?? []) {
+      await syncMaterialUsageStock(
+        ctx,
+        material.materialId,
+        material.amountUsed,
+        0,
+      );
+    }
+
     await ctx.db.delete(usage._id);
+    await syncProjectRequestedMaterialsFromUsages(ctx, project._id);
     await syncProjectTotalInvoice(ctx, project._id);
+    await scheduleProjectUpdateEmail(ctx, project._id);
   },
 });
 
@@ -710,6 +735,7 @@ export const updateProjectSchedule = authMutation({
     projectId: v.id("projects"),
     startTime: v.number(),
     endTime: v.number(),
+    allowPastBooking: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
@@ -720,7 +746,9 @@ export const updateProjectSchedule = authMutation({
       endTime: args.endTime,
       date: getLabDayStartTimestamp(args.startTime),
     };
-    validateBookingTiming(booking);
+    validateBookingTiming(booking, {
+      allowPastBooking: args.allowPastBooking,
+    });
 
     if (
       project.bookingStartTime === args.startTime &&
@@ -1143,7 +1171,7 @@ export const updateOwnProjectDetails = authMutation({
       throw new ConvexError("You do not own this project.");
     }
 
-    if (project.status !== "pending") {
+    if (!isPrivileged && project.status !== "pending") {
       throw new ConvexError(
         "Project details can only be updated while still in review.",
       );

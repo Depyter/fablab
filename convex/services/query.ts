@@ -178,6 +178,7 @@ export const getBookedTimeSlots = publicQuery({
             .collect();
 
     return usages.map((u) => ({
+      usageId: u._id,
       startTime: u.startTime,
       endTime: u.endTime,
     }));

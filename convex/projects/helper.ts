@@ -127,9 +127,12 @@ export async function validateFileTypes(
 // Helpers — Booking Resolution
 // ============================================================================
 
-export function validateBookingTiming(booking: BookingWindow): void {
+export function validateBookingTiming(
+  booking: BookingWindow,
+  options?: { allowPastBooking?: boolean },
+): void {
   const now = getCurrentTimestamp();
-  if (booking.startTime < now) {
+  if (!options?.allowPastBooking && booking.startTime < now) {
     throw new ConvexError("Cannot book a date or time in the past.");
   }
   if (booking.endTime <= booking.startTime) {
@@ -1094,6 +1097,42 @@ export async function syncMaterialUsageStock(
     currentStock: newStock,
     status: resolveMaterialStatus(newStock, material.reorderThreshold),
   });
+}
+
+export async function syncProjectRequestedMaterialsFromUsages(
+  ctx: MutationCtx,
+  projectId: Id<"projects">,
+): Promise<Id<"materials">[]> {
+  const usages = await ctx.db
+    .query("resourceUsage")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .collect();
+
+  const nextMaterialIds = Array.from(
+    new Set(
+      usages.flatMap((usage) =>
+        (usage.materialsUsed ?? []).map((material) => material.materialId),
+      ),
+    ),
+  ).sort();
+
+  const project = await ctx.db.get(projectId);
+  if (!project) {
+    throw new ConvexError("Project not found.");
+  }
+
+  const currentMaterialIds = [...(project.requestedMaterials ?? [])].sort();
+  const changed =
+    currentMaterialIds.length !== nextMaterialIds.length ||
+    currentMaterialIds.some((materialId, index) => materialId !== nextMaterialIds[index]);
+
+  if (changed) {
+    await ctx.db.patch(projectId, {
+      requestedMaterials: nextMaterialIds,
+    });
+  }
+
+  return nextMaterialIds;
 }
 
 export async function consumeMaterials(

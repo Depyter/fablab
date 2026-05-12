@@ -123,7 +123,7 @@ export function ProjectDetailsContent({
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const canEdit = project.status === "pending" && !!onUpdateDetails;
+  const canEdit = !!onUpdateDetails && (!isClient || project.status === "pending");
 
   function openEdit() {
     setEditDescription(project.description ?? "");
@@ -442,6 +442,8 @@ export function ProjectDetailsContent({
               projectPricing={project.pricing}
               requestedMaterials={project.requestedMaterials ?? []}
               assignedMaker={project.assignedMaker ?? undefined}
+              headlineBookingStartTime={project.bookingStartTime}
+              headlineBookingEndTime={project.bookingEndTime}
               readOnly={isClient}
             />
           </div>

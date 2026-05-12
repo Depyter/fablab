@@ -915,7 +915,7 @@ describe("Service mutations and queries", () => {
         },
       );
       expect(bookedTimeSlots).toEqual([
-        { startTime: bookingStart, endTime: bookingEnd },
+        { usageId, startTime: bookingStart, endTime: bookingEnd },
       ]);
 
       const serviceLevelBookedSlots = await t.query(

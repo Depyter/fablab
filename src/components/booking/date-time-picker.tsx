@@ -53,6 +53,7 @@ export interface DateTimePickerProps {
   onChange: (value: DateTimePickerValue) => void;
   availableDays?: number[];
   bookedTimeBlocks?: { start: string; end: string }[];
+  allowPastSelection?: boolean;
 }
 
 type BookedTimeBlock = { start: string; end: string };
@@ -65,6 +66,7 @@ export function DateTimePicker({
   onChange,
   availableDays = EMPTY_AVAILABLE_DAYS,
   bookedTimeBlocks = EMPTY_BOOKED_TIME_BLOCKS,
+  allowPastSelection = false,
 }: DateTimePickerProps) {
   const { date, startTime, endTime } = value;
 
@@ -75,7 +77,7 @@ export function DateTimePicker({
   const bookedDates: Date[] = []; // Replace with actual booked dates array
 
   const isDateDisabled = (nextDate: Date) => {
-    if (isLabDateBeforeToday(nextDate)) return true;
+    if (!allowPastSelection && isLabDateBeforeToday(nextDate)) return true;
 
     // If availableDays are specified, disable dates that don't fall on those days
     if (
@@ -96,8 +98,10 @@ export function DateTimePicker({
 
     // Disable times that have already passed today
     if (
-      isLabDateBeforeToday(date, getCurrentTimestamp()) ||
-      isLabTimeInPast(date, timeSlot, getCurrentTimestamp())
+      (!allowPastSelection &&
+        isLabDateBeforeToday(date, getCurrentTimestamp())) ||
+      (!allowPastSelection &&
+        isLabTimeInPast(date, timeSlot, getCurrentTimestamp()))
     ) {
       return true;
     }

@@ -258,6 +258,166 @@ describe("Material lifecycle and resourceUsage integration", () => {
       },
     ]);
   });
+
+  test("usage materials stay usage-scoped and deleting a usage restores material summary and stock", async () => {
+    const { t, tAera, tHarley } = await setupUsers();
+
+    const firstMaterialId = await tAera.mutation(api.materials.mutate.addMaterial, {
+      name: "PLA",
+      category: "Filament",
+      unit: "g",
+      currentStock: 100,
+      pricePerUnit: 2,
+      reorderThreshold: 10,
+      status: "IN_STOCK",
+    });
+
+    const secondMaterialId = await tAera.mutation(
+      api.materials.mutate.addMaterial,
+      {
+        name: "PETG",
+        category: "Filament",
+        unit: "g",
+        currentStock: 100,
+        pricePerUnit: 3,
+        reorderThreshold: 10,
+        status: "IN_STOCK",
+      },
+    );
+
+    await tAera.mutation(api.services.mutate.addService, {
+      name: "3d printing",
+      images: [],
+      samples: [],
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [firstMaterialId, secondMaterialId],
+        setupFee: 1,
+        unitName: "hour",
+        timeRate: 2,
+      },
+      requirements: ["design"],
+      fileTypes: [],
+      description: "3d printing service",
+      status: "Available",
+    });
+
+    const serviceId = await t.run(async (ctx) => {
+      const service = await ctx.db.query("services").first();
+      return service!._id;
+    });
+
+    const initialStart = Date.now() + HOUR_MS;
+    const initialEnd = initialStart + HOUR_MS;
+
+    const { projectId } = await tHarley.mutation(
+      api.projects.mutate.createProject,
+      {
+        name: "usage scoped materials",
+        pricing: "Default",
+        description: "different materials per usage",
+        fulfillmentMode: "self-service",
+        material: "buy-from-lab",
+        requestedMaterials: [firstMaterialId],
+        files: [],
+        service: serviceId,
+        notes: "separate usage materials",
+        booking: {
+          startTime: initialStart,
+          endTime: initialEnd,
+          date: initialStart,
+        },
+      },
+    );
+
+    await flushScheduledFunctions(t);
+
+    const initialUsageId = await t.run(async (ctx) => {
+      const usage = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .first();
+      return usage!._id;
+    });
+
+    const secondUsageStart = initialEnd + HOUR_MS;
+    const secondUsageEnd = secondUsageStart + HOUR_MS;
+    const { usageId: secondUsageId } = await tAera.mutation(
+      api.projects.mutate.createUsage,
+      {
+        projectId,
+        startTime: secondUsageStart,
+        endTime: secondUsageEnd,
+      },
+    );
+
+    await t.run(async (ctx) => {
+      const secondUsage = await ctx.db.get(secondUsageId);
+      expect(secondUsage?.materialsUsed ?? []).toEqual([]);
+    });
+
+    await tAera.mutation(api.projects.mutate.updateUsagePricing, {
+      projectId,
+      usageId: initialUsageId,
+      duration: 1,
+      rate: 2,
+      timeCost: 2,
+      materialCost: 10,
+      setupFeePortion: 1,
+      unitName: "hour",
+      materialsUsed: [{ materialId: firstMaterialId, amountUsed: 5 }],
+    });
+
+    await tAera.mutation(api.projects.mutate.updateUsagePricing, {
+      projectId,
+      usageId: secondUsageId,
+      duration: 1,
+      rate: 2,
+      timeCost: 2,
+      materialCost: 21,
+      setupFeePortion: 0,
+      unitName: "hour",
+      materialsUsed: [{ materialId: secondMaterialId, amountUsed: 7 }],
+    });
+
+    await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectId);
+      const firstMaterial = await ctx.db.get(firstMaterialId);
+      const secondMaterial = await ctx.db.get(secondMaterialId);
+
+      expect([...(project?.requestedMaterials ?? [])].sort()).toEqual(
+        [firstMaterialId, secondMaterialId].sort(),
+      );
+      expect(firstMaterial?.currentStock).toBe(95);
+      expect(secondMaterial?.currentStock).toBe(93);
+    });
+
+    await tAera.mutation(api.projects.mutate.deleteUsage, {
+      projectId,
+      usageId: secondUsageId,
+    });
+
+    const details = await tHarley.query(api.projects.query.getProject, {
+      projectId,
+    });
+
+    await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectId);
+      const secondMaterial = await ctx.db.get(secondMaterialId);
+
+      expect(project?.requestedMaterials).toEqual([firstMaterialId]);
+      expect(secondMaterial?.currentStock).toBe(100);
+    });
+
+    expect(details.requestedMaterials).toEqual([
+      {
+        _id: firstMaterialId,
+        name: "PLA",
+        unit: "g",
+        pricePerUnit: 2,
+      },
+    ]);
+  });
 });
 
 describe("Resource lifecycle and resourceUsage integration", () => {
