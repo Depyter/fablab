@@ -13,6 +13,7 @@ import {
   computeProvisionalCostBreakdown,
   buildTotalInvoice,
   buildPricingSnapshot,
+  buildUsagePricingSnapshot,
   createWorkshopUsage,
   createFabricationUsage,
   incrementWorkshopSlot,
@@ -93,6 +94,15 @@ export const createProject = authMutation({
           ? service.serviceCategory.unitName
           : "session",
     };
+    const usagePricingSnapshot = buildUsagePricingSnapshot({
+      duration: provisional.duration,
+      rate: provisional.rate,
+      timeCost: provisional.timeCost,
+      materialCost: provisional.materialCost,
+      setupFeePortion: provisional.setupFee,
+      unitName: provisional.unitName,
+      pricingVariant: args.pricing,
+    });
 
     // ── 6. Insert the project record ──────────────────────────────────────────
     const now = Date.now();
@@ -137,6 +147,7 @@ export const createProject = authMutation({
         booking,
         projectId,
         usageSnapshot,
+        usagePricingSnapshot,
         args.requestedMaterials,
       );
       await incrementWorkshopSlot(ctx, service, booking);
@@ -147,6 +158,7 @@ export const createProject = authMutation({
         booking,
         projectId,
         usageSnapshot,
+        usagePricingSnapshot,
         args.requestedMaterials,
       );
     }

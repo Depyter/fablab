@@ -154,6 +154,18 @@ export default defineSchema({
       costAtTime: v.number(),
       unit: v.string(),
     }),
+    pricingSnapshot: v.optional(
+      v.object({
+        duration: v.number(),
+        rate: v.number(),
+        timeCost: v.number(),
+        materialCost: v.number(),
+        setupFeePortion: v.number(),
+        subtotal: v.number(),
+        unitName: v.string(),
+        pricingVariant: v.optional(v.string()),
+      }),
+    ),
 
     // Inventory deductions mapped to this specific session
     materialsUsed: v.optional(

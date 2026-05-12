@@ -56,6 +56,17 @@ export type ProjectPricingSnapshot = {
   unitName: string;
 };
 
+export type UsagePricingSnapshot = {
+  duration: number;
+  rate: number;
+  timeCost: number;
+  materialCost: number;
+  setupFeePortion: number;
+  subtotal: number;
+  unitName: string;
+  pricingVariant?: string;
+};
+
 export function resolveMaterialStatus(
   stock: number,
   reorderThreshold?: number,
@@ -201,6 +212,16 @@ export function buildPricingSnapshot(
   };
 }
 
+export function buildUsagePricingSnapshot(
+  snapshot: Omit<UsagePricingSnapshot, "subtotal">,
+): UsagePricingSnapshot {
+  return {
+    ...snapshot,
+    subtotal:
+      snapshot.setupFeePortion + snapshot.timeCost + snapshot.materialCost,
+  };
+}
+
 function sortProjectUsages(usages: Doc<"resourceUsage">[]) {
   return [...usages].sort(
     (a, b) =>
@@ -225,34 +246,57 @@ function getUsageMaterialCost(usage: Doc<"resourceUsage">) {
 }
 
 function deriveProjectPricingSnapshot(
-  project: Doc<"projects">,
-  service: ServiceDoc,
-  usages: Doc<"resourceUsage">[],
+  usagePricingSnapshots: UsagePricingSnapshot[],
+  fallbackUnitName: string,
 ): ProjectPricingSnapshot {
-  const materialCost = usages.reduce(
-    (sum, usage) => sum + getUsageMaterialCost(usage),
+  const setupFee = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.setupFeePortion,
     0,
   );
-  const bookingDurationMinutes = usages.reduce(
-    (sum, usage) => sum + getUsageDurationMs(usage) / (1000 * 60),
+  const timeCost = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.timeCost,
     0,
   );
-  const derived = derivePricingFromSchema({
-    servicePricing: service.serviceCategory,
-    pricingVariant: project.pricing,
-    serviceType: project.fulfillmentMode,
-    bookingDurationMinutes,
-    materialCost,
-  });
+  const materialCost = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.materialCost,
+    0,
+  );
+  const duration = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.duration,
+    0,
+  );
+  const unitName = usagePricingSnapshots[0]?.unitName ?? fallbackUnitName;
+  const rate =
+    duration > 0
+      ? timeCost / duration
+      : (usagePricingSnapshots.find((usage) => usage.rate > 0)?.rate ?? 0);
 
   return buildPricingSnapshot({
-    setupFee: derived.setupFee,
-    timeCost: derived.timeCost,
-    materialCost: derived.materialCost,
-    duration: derived.duration,
-    rate: derived.rate,
-    unitName: derived.unitName,
+    setupFee,
+    timeCost,
+    materialCost,
+    duration,
+    rate,
+    unitName,
   });
+}
+
+function usagePricingSnapshotEquals(
+  left: UsagePricingSnapshot | undefined,
+  right: UsagePricingSnapshot,
+) {
+  if (!left) return false;
+
+  return (
+    Math.abs(left.duration - right.duration) <= 0.0001 &&
+    Math.abs(left.rate - right.rate) <= 0.0001 &&
+    Math.abs(left.timeCost - right.timeCost) <= 0.0001 &&
+    Math.abs(left.materialCost - right.materialCost) <= 0.0001 &&
+    Math.abs(left.setupFeePortion - right.setupFeePortion) <= 0.0001 &&
+    Math.abs(left.subtotal - right.subtotal) <= 0.0001 &&
+    left.unitName === right.unitName &&
+    left.pricingVariant === right.pricingVariant
+  );
 }
 
 function allocateByWeights(total: number, weights: number[]) {
@@ -295,6 +339,7 @@ export async function createWorkshopUsage(
   booking: BookingWindow,
   projectId: Id<"projects">,
   snapshot: { name: string; costAtTime: number; unit: string },
+  pricingSnapshot: UsagePricingSnapshot,
   requestedMaterials?: Id<"materials">[],
 ): Promise<void> {
   // Capacity check against the schedule time slot
@@ -325,6 +370,7 @@ export async function createWorkshopUsage(
     startTime: booking.startTime,
     endTime: booking.endTime,
     snapshot,
+    pricingSnapshot,
     materialsUsed,
   });
 }
@@ -335,6 +381,7 @@ export async function createFabricationUsage(
   booking: BookingWindow,
   projectId: Id<"projects">,
   snapshot: { name: string; costAtTime: number; unit: string },
+  pricingSnapshot: UsagePricingSnapshot,
   requestedMaterials?: Id<"materials">[],
 ): Promise<void> {
   const materialsUsed =
@@ -348,6 +395,7 @@ export async function createFabricationUsage(
     startTime: booking.startTime,
     endTime: booking.endTime,
     snapshot,
+    pricingSnapshot,
     materialsUsed,
   });
 }
@@ -574,9 +622,9 @@ export function computeCompletionCost(
     return 1;
   };
 
-  // Derive from live service doc using the variant chosen at booking time.
-  // The computed cost is persisted in resourceUsage.snapshot.costAtTime, so
-  // historical accuracy is preserved at the output level, not the rate level.
+  // Derive from the live service doc using the variant chosen at booking time.
+  // The result is persisted onto the usage pricing snapshot and mirrored into
+  // resourceUsage.snapshot.costAtTime for compatibility.
   const sc = service.serviceCategory as {
     type: string;
     amount?: number;
@@ -694,12 +742,17 @@ export async function syncProjectTotalInvoice(
     );
   }
 
-  const usageTotals =
+  const usagePricingSnapshots =
     options?.manualSnapshot !== undefined
       ? (() => {
+          const durationWeights = normalizedUsages.map(getUsageDurationMs);
+          const durationShares = allocateByWeights(
+            options.manualSnapshot.duration,
+            durationWeights,
+          );
           const timeShares = allocateByWeights(
             options.manualSnapshot.timeCost,
-            normalizedUsages.map(getUsageDurationMs),
+            durationWeights,
           );
           const materialShares = normalizedUsages.map(getUsageMaterialCost);
           const materialTotal = materialShares.reduce(
@@ -714,11 +767,16 @@ export async function syncProjectTotalInvoice(
                 : index === 0
                   ? options.manualSnapshot!.materialCost
                   : 0;
-            return (
-              timeShares[index] +
-              materialCost +
-              (index === 0 ? options.manualSnapshot!.setupFee : 0)
-            );
+
+            return buildUsagePricingSnapshot({
+              duration: durationShares[index],
+              rate: options.manualSnapshot!.rate,
+              timeCost: timeShares[index],
+              materialCost,
+              setupFeePortion: index === 0 ? options.manualSnapshot!.setupFee : 0,
+              unitName: options.manualSnapshot!.unitName,
+              pricingVariant: project.pricing,
+            });
           });
         })()
       : service.serviceCategory.type === "WORKSHOP"
@@ -730,7 +788,15 @@ export async function syncProjectTotalInvoice(
               materialCost: getUsageMaterialCost(usage),
             });
 
-            return sessionPrice.total;
+            return buildUsagePricingSnapshot({
+              duration: sessionPrice.duration,
+              rate: sessionPrice.rate,
+              timeCost: sessionPrice.timeCost,
+              materialCost: sessionPrice.materialCost,
+              setupFeePortion: sessionPrice.setupFee,
+              unitName: sessionPrice.unitName,
+              pricingVariant: project.pricing,
+            });
           })
         : (() => {
             const setupFee = derivePricingFromSchema({
@@ -741,35 +807,61 @@ export async function syncProjectTotalInvoice(
             }).setupFee;
 
             return normalizedUsages.map((usage, index) => {
-              const materialCost = getUsageMaterialCost(usage);
-              const timeCost = derivePricingFromSchema({
+              const usagePricing = derivePricingFromSchema({
                 servicePricing: service.serviceCategory,
                 pricingVariant: project.pricing,
                 serviceType: project.fulfillmentMode,
                 bookingDurationMinutes: getUsageDurationMs(usage) / (1000 * 60),
-              }).timeCost;
+                materialCost: getUsageMaterialCost(usage),
+              });
 
-              return timeCost + materialCost + (index === 0 ? setupFee : 0);
+              return buildUsagePricingSnapshot({
+                duration: usagePricing.duration,
+                rate: usagePricing.rate,
+                timeCost: usagePricing.timeCost,
+                materialCost: usagePricing.materialCost,
+                setupFeePortion: index === 0 ? setupFee : 0,
+                unitName: usagePricing.unitName,
+                pricingVariant: project.pricing,
+              });
             });
           })();
 
   await Promise.all(
     normalizedUsages.map(async (usage, index) => {
-      if (usage.snapshot.costAtTime === usageTotals[index]) return;
+      const nextPricingSnapshot = usagePricingSnapshots[index];
+      const subtotalMatches =
+        Math.abs(usage.snapshot.costAtTime - nextPricingSnapshot.subtotal) <=
+        0.0001;
+      const pricingSnapshotMatches = usagePricingSnapshotEquals(
+        usage.pricingSnapshot,
+        nextPricingSnapshot,
+      );
+
+      if (subtotalMatches && pricingSnapshotMatches) return;
       await ctx.db.patch(usage._id, {
         snapshot: {
           ...usage.snapshot,
-          costAtTime: usageTotals[index],
+          costAtTime: nextPricingSnapshot.subtotal,
         },
+        pricingSnapshot: nextPricingSnapshot,
       });
     }),
   );
 
-  const total = usageTotals.reduce((sum, usageTotal) => sum + usageTotal, 0);
+  const total = usagePricingSnapshots.reduce(
+    (sum, usagePricing) => sum + usagePricing.subtotal,
+    0,
+  );
   const pricingSnapshot =
     options?.manualSnapshot !== undefined
       ? buildPricingSnapshot(options.manualSnapshot)
-      : deriveProjectPricingSnapshot(project, service, normalizedUsages);
+      : deriveProjectPricingSnapshot(
+          usagePricingSnapshots,
+          service.serviceCategory.type === "FABRICATION"
+            ? service.serviceCategory.unitName
+            : "unit",
+        );
 
   await ctx.db.patch(projectId, {
     totalInvoice: buildTotalInvoice(total),

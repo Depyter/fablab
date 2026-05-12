@@ -108,6 +108,16 @@ describe("Project and Chat functionality", () => {
             costAtTime: 2,
             unit: "hour",
           },
+          pricingSnapshot: {
+            duration: 1,
+            rate: 2,
+            timeCost: 2,
+            materialCost: 0,
+            setupFeePortion: 0,
+            subtotal: 2,
+            unitName: "hour",
+            pricingVariant: "UP",
+          },
         });
 
         // Check if the room was added
@@ -191,6 +201,16 @@ describe("Project and Chat functionality", () => {
             name: "3d printing",
             costAtTime: 2,
             unit: "hour",
+          },
+          pricingSnapshot: {
+            duration: 1,
+            rate: 2,
+            timeCost: 2,
+            materialCost: 0,
+            setupFeePortion: 0,
+            subtotal: 2,
+            unitName: "hour",
+            pricingVariant: "UP",
           },
         });
       });
@@ -314,6 +334,16 @@ describe("Project and Chat functionality", () => {
             costAtTime: 350,
             unit: "session",
           },
+          pricingSnapshot: {
+            duration: 0,
+            rate: 0,
+            timeCost: 0,
+            materialCost: 0,
+            setupFeePortion: 350,
+            subtotal: 350,
+            unitName: "unit",
+            pricingVariant: "Student",
+          },
         });
 
         expect(service?.serviceCategory.type).toBe("WORKSHOP");
@@ -371,6 +401,16 @@ describe("Project and Chat functionality", () => {
       expect(details.resourceUsages).toHaveLength(1);
       expect(details.resourceUsages[0].snapshot.costAtTime).toBe(350);
       expect(details.resourceUsages[0].snapshot.unit).toBe("session");
+      expect(details.resourceUsages[0].pricingSnapshot).toEqual({
+        duration: 0,
+        rate: 0,
+        timeCost: 0,
+        materialCost: 0,
+        setupFeePortion: 350,
+        subtotal: 350,
+        unitName: "unit",
+        pricingVariant: "Student",
+      });
       expect(list.page[0].estimatedPrice).toBe(350);
     });
   });
@@ -1347,6 +1387,16 @@ describe("Project and Chat functionality", () => {
         expect(usage!.projectId).toBe(projectId);
         expect(usage!.service).toBe(serviceId);
         expect(usage!.snapshot.costAtTime).toBe(23);
+        expect(usage!.pricingSnapshot).toEqual({
+          duration: 1,
+          rate: 2,
+          timeCost: 2,
+          materialCost: 20,
+          setupFeePortion: 1,
+          subtotal: 23,
+          unitName: "hour",
+          pricingVariant: "Default",
+        });
         expect(usage!.materialsUsed).toEqual([
           {
             materialId,
@@ -1392,6 +1442,16 @@ describe("Project and Chat functionality", () => {
           unitName: "hour",
         });
         expect(usage!.snapshot.costAtTime).toBe(9);
+        expect(usage!.pricingSnapshot).toEqual({
+          duration: 1,
+          rate: 2,
+          timeCost: 2,
+          materialCost: 6,
+          setupFeePortion: 1,
+          subtotal: 9,
+          unitName: "hour",
+          pricingVariant: "Default",
+        });
         expect(usage!.materialsUsed).toEqual([
           {
             materialId,
@@ -1531,6 +1591,16 @@ describe("Project and Chat functionality", () => {
           unitName: "hour",
         });
         expect(usage!.snapshot.costAtTime).toBe(370);
+        expect(usage!.pricingSnapshot).toEqual({
+          duration: 24,
+          rate: 5,
+          timeCost: 120,
+          materialCost: 0,
+          setupFeePortion: 250,
+          subtotal: 370,
+          unitName: "hour",
+          pricingVariant: "UP",
+        });
       });
 
       expect(details.totalInvoice).toEqual({
@@ -1702,6 +1772,11 @@ describe("Project and Chat functionality", () => {
           0,
         ),
       ).toBe(12);
+      expect(
+        projectDetails.resourceUsages
+          .map((usage) => usage.pricingSnapshot?.subtotal)
+          .sort((a, b) => (a ?? 0) - (b ?? 0)),
+      ).toEqual([2, 4, 6]);
       expect(projectList.page[0].estimatedPrice).toBe(12);
     });
 
@@ -1790,6 +1865,16 @@ describe("Project and Chat functionality", () => {
         snapshot: {
           costAtTime: 6,
         },
+        pricingSnapshot: {
+          duration: 3,
+          rate: 2,
+          timeCost: 6,
+          materialCost: 0,
+          setupFeePortion: 0,
+          subtotal: 6,
+          unitName: "hour",
+          pricingVariant: "UP",
+        },
         resourceDetails: {
           _id: resourceId,
           category: "machine",
@@ -1798,6 +1883,16 @@ describe("Project and Chat functionality", () => {
         },
       });
       expect(unchangedUsage?.snapshot.costAtTime).toBe(4);
+      expect(unchangedUsage?.pricingSnapshot).toEqual({
+        duration: 2,
+        rate: 2,
+        timeCost: 4,
+        materialCost: 0,
+        setupFeePortion: 0,
+        subtotal: 4,
+        unitName: "hour",
+        pricingVariant: "UP",
+      });
     });
 
     test("Project queries do not infer the main booking window from resource usages", async () => {
@@ -1859,6 +1954,19 @@ describe("Project and Chat functionality", () => {
         projectDetails.resourceUsages.find((usage) => usage._id === usageId)
           ?.snapshot.costAtTime,
       ).toBe(8);
+      expect(
+        projectDetails.resourceUsages.find((usage) => usage._id === usageId)
+          ?.pricingSnapshot,
+      ).toEqual({
+        duration: 4,
+        rate: 2,
+        timeCost: 8,
+        materialCost: 0,
+        setupFeePortion: 0,
+        subtotal: 8,
+        unitName: "hour",
+        pricingVariant: "UP",
+      });
     });
 
     test("Project list date filters follow current lab day, week, and month windows", async () => {
@@ -2121,6 +2229,16 @@ describe("Project and Chat functionality", () => {
         expect(usage!.projectId).toBe(projectId);
         expect(usage!.service).toBe(serviceId);
         expect(usage!.snapshot.costAtTime).toBe(15);
+        expect(usage!.pricingSnapshot).toEqual({
+          duration: 3,
+          rate: 2,
+          timeCost: 6,
+          materialCost: 8,
+          setupFeePortion: 1,
+          subtotal: 15,
+          unitName: "hour",
+          pricingVariant: "Default",
+        });
         expect(usage!.materialsUsed).toEqual([
           {
             materialId,
@@ -2214,6 +2332,9 @@ describe("Project and Chat functionality", () => {
         const sortedCosts = usages
           .map((usage) => usage.snapshot.costAtTime)
           .sort((a, b) => a - b);
+        const sortedPricing = usages
+          .map((usage) => usage.pricingSnapshot)
+          .sort((a, b) => (a?.subtotal ?? 0) - (b?.subtotal ?? 0));
 
         expect(project!.totalInvoice).toEqual({
           subtotal: 13,
@@ -2221,6 +2342,28 @@ describe("Project and Chat functionality", () => {
           total: 13,
         });
         expect(sortedCosts).toEqual([5, 8]);
+        expect(sortedPricing).toEqual([
+          {
+            duration: 2,
+            rate: 2,
+            timeCost: 4,
+            materialCost: 0,
+            setupFeePortion: 1,
+            subtotal: 5,
+            unitName: "hour",
+            pricingVariant: "Default",
+          },
+          {
+            duration: 4,
+            rate: 2,
+            timeCost: 8,
+            materialCost: 0,
+            setupFeePortion: 0,
+            subtotal: 8,
+            unitName: "hour",
+            pricingVariant: "Default",
+          },
+        ]);
       });
     });
 
