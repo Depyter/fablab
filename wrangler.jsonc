@@ -38,14 +38,6 @@
       // See https://developers.cloudflare.com/workers/wrangler/commands/#r2-bucket-create
       "bucket_name": "fablab-opennext-cache-prod",
     },
-    {
-      "bucket_name": "fablab-opennext-cache-preview",
-      "binding": "fablab_opennext_cache_preview",
-    },
-    {
-      "bucket_name": "fablab-opennext-cache-prod",
-      "binding": "fablab_opennext_cache_prod",
-    },
   ],
   "images": {
     // Enable image optimization
