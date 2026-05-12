@@ -42,7 +42,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       .filter(Boolean) ?? [];
 
   return {
-    baseURL: process.env.CURRENT_SITE_URL,
+    // baseURL: process.env.CURRENT_SITE_URL,
     secret: process.env.BETTER_AUTH_SECRET as string,
     rateLimit: {
       enabled: true,
