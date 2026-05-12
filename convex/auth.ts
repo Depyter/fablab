@@ -78,6 +78,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     plugins: [
       oAuthProxy({
         productionURL: betterAuthUrl,
+        currentURL: process.env.CURRENT_SITE_URL,
       }),
       // The Convex plugin is required for Convex compatibility
       convex({ authConfig }),

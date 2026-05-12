@@ -51,6 +51,13 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
 
+      - name: Set preview site URL in Convex preview deployment
+        run: |
+          PREVIEW_URL="https://pr-${{ github.event.pull_request.number }}-fablab-preview.acabalharleyvan.workers.dev"
+          bunx convex env set --preview-name "${{ github.head_ref }}" CURRENT_SITE_URL "$PREVIEW_URL"
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+
       - name: Upload Cloudflare preview worker version
         id: cloudflare_preview
         shell: bash
