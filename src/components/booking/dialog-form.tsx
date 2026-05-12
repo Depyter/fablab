@@ -152,7 +152,7 @@ export function BookingDialog({
           description: value.description || `Booking for ${serviceName}`,
           fulfillmentMode: value.serviceType,
           material: value.material,
-          requestedMaterials: value.requestedMaterialIds as Id<"materials">[],
+          materialIds: value.requestedMaterialIds as Id<"materials">[],
           service: serviceId,
           pricing: value.pricing,
           notes: value.notes,
@@ -200,7 +200,7 @@ export function BookingDialog({
     defaultValues: {
       serviceType:
         serviceCategory === "WORKSHOP"
-          ? FulfillmentMode.STAFF_LED
+          ? FulfillmentMode.FULL_SERVICE
           : FulfillmentMode.SELF_SERVICE,
       name: "",
       description: "",

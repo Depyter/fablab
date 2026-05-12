@@ -864,7 +864,7 @@ describe("Service mutations and queries", () => {
           description: "Prototype print",
           fulfillmentMode: "self-service",
           material: "buy-from-lab",
-          requestedMaterials: [materialId],
+          materialIds: [materialId],
           files: [],
           service: serviceId,
           notes: "Use the XL machine",
@@ -878,8 +878,17 @@ describe("Service mutations and queries", () => {
 
       await flushScheduledFunctions(t);
 
-      await tAera.mutation(api.projects.mutate.updateProject, {
+      const usageId = await t.run(async (ctx) => {
+        const usage = await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first();
+        return usage!._id;
+      });
+
+      await tAera.mutation(api.projects.mutate.updateUsage, {
         projectId,
+        usageId,
         resourceId: machineId,
       });
 
@@ -902,11 +911,21 @@ describe("Service mutations and queries", () => {
         {
           serviceId,
           date: bookingDay,
+          resourceId: machineId,
         },
       );
       expect(bookedTimeSlots).toEqual([
-        { startTime: bookingStart, endTime: bookingEnd },
+        { usageId, startTime: bookingStart, endTime: bookingEnd },
       ]);
+
+      const serviceLevelBookedSlots = await t.query(
+        api.services.query.getBookedTimeSlots,
+        {
+          serviceId,
+          date: bookingDay,
+        },
+      );
+      expect(serviceLevelBookedSlots).toEqual([]);
 
       const bookings = await tHarley.query(api.resource.query.getBookings, {
         date: bookingDay,

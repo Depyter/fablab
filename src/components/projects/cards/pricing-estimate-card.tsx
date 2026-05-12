@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -10,6 +11,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldSeparator } from "@/components/ui/field";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DateTimePicker,
+  type DateTimePickerValue,
+} from "@/components/booking/date-time-picker";
+import {
+  WorkshopTimeSlotPicker,
+  type WorkshopTimeSlotValue,
+} from "@/components/booking/workshop-time-slot-picker";
 import {
   DetailCard,
   DetailChip,
@@ -21,11 +40,12 @@ import { toast } from "sonner";
 import { ProjectMaterial } from "@convex/constants";
 import {
   derivePricingFromSchema,
-  getDurationMinutesFromUsageRanges,
+  getDurationMinutesFromTimestampRange,
   getDurationUnitsFromMinutes,
   type PricingServiceType,
   type ServicePricing,
 } from "@/lib/project-pricing";
+import { Plus, Trash2 } from "lucide-react";
 
 function formatDateInputValue(timestamp: number) {
   const date = new Date(timestamp);
@@ -65,9 +85,51 @@ function buildBookingRange(
   return { startTime, endTime };
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+function formatUsageDate(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatUsageTimeRange(startTime: number, endTime: number) {
+  return `${new Date(startTime).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })} - ${new Date(endTime).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
+
+function formatCurrency(amount: number) {
+  return `₱${amount.toFixed(2)}`;
+}
+
+function toMaterialAmountMap(
+  materialsUsed?: Array<{ materialId: string; amountUsed: number }>,
+) {
+  const amounts: Record<string, number> = {};
+  for (const material of materialsUsed ?? []) {
+    amounts[material.materialId] = material.amountUsed;
+  }
+  return amounts;
+}
+
+function sameStringSet(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  const normalizedLeft = [...left].sort();
+  const normalizedRight = [...right].sort();
+  return normalizedLeft.every(
+    (value, index) => value === normalizedRight[index],
+  );
+}
+
+function nearlyEqual(left: number, right: number) {
+  return Math.abs(left - right) <= 0.0001;
+}
 
 interface TotalInvoice {
   subtotal: number;
@@ -85,11 +147,22 @@ interface PricingSnapshot {
   unitName: string;
 }
 
+interface UsagePricingSnapshot {
+  duration: number;
+  rate: number;
+  timeCost: number;
+  materialCost: number;
+  setupFeePortion: number;
+  subtotal: number;
+  unitName: string;
+  pricingVariant?: string;
+}
+
 interface RequestedMaterial {
   _id: string;
   name: string;
   unit: string;
-  pricePerUnit: number;
+  pricePerUnit?: number;
 }
 
 interface AssignedMaker {
@@ -104,6 +177,7 @@ interface ResourceDetails {
   category?: string | null;
   type?: string | null;
   status?: string | null;
+  description?: string | null;
 }
 
 interface ResourceUsage {
@@ -111,6 +185,11 @@ interface ResourceUsage {
   startTime: number;
   endTime: number;
   resource?: string;
+  snapshot: {
+    costAtTime: number;
+    unit: string;
+  };
+  pricingSnapshot?: UsagePricingSnapshot;
   resourceDetails?: ResourceDetails | null;
   materialsUsed?: Array<{
     amountUsed: number;
@@ -120,10 +199,17 @@ interface ResourceUsage {
   }>;
 }
 
-interface BookingEditState {
+interface UsageDraft {
+  key: string;
+  usageId?: string;
   date: string;
   startTime: string;
   endTime: string;
+  resourceId: string;
+  setupFeePortion: number;
+  rate: number;
+  unitName: string;
+  materialAmounts: Record<string, number>;
 }
 
 interface PricingEstimateCardProps {
@@ -132,14 +218,27 @@ interface PricingEstimateCardProps {
   totalInvoice?: TotalInvoice;
   pricingSnapshot?: PricingSnapshot;
   service?: {
+    _id: Id<"services">;
+    resources?: Id<"resources">[];
     serviceCategory:
       | {
           type: "WORKSHOP";
+          schedules: Array<{
+            date: number;
+            timeSlots: Array<{
+              startTime: number;
+              endTime: number;
+              maxSlots: number;
+              usedUpSlots?: number;
+            }>;
+          }>;
           amount: number;
           variants?: Array<{ name: string; amount: number }>;
         }
       | {
           type: "FABRICATION";
+          availableDays?: number[];
+          materials?: Id<"materials">[];
           setupFee: number;
           unitName: string;
           timeRate: number;
@@ -154,12 +253,272 @@ interface PricingEstimateCardProps {
   serviceType?: PricingServiceType;
   projectPricing?: string;
   resourceUsages?: ResourceUsage[];
-  requestedMaterials?: RequestedMaterial[];
   assignedMaker?: AssignedMaker | null;
+  headlineBookingStartTime?: number | null;
+  headlineBookingEndTime?: number | null;
   readOnly?: boolean;
 }
 
-const EMPTY_REQUESTED_MATERIALS: RequestedMaterial[] = [];
+const NO_RESOURCE_VALUE = "__no_resource__";
+const NO_MAKER_VALUE = "__no_maker__";
+const NO_MATERIAL_VALUE = "__no_material__";
+
+function parseDraftDate(dateValue: string) {
+  if (!dateValue) return undefined;
+
+  const timestamp = buildTimestamp(dateValue, "00:00");
+  if (Number.isNaN(timestamp)) return undefined;
+
+  return new Date(timestamp);
+}
+
+function getDraftMaterialIds(draft: UsageDraft) {
+  return Object.keys(draft.materialAmounts).sort();
+}
+
+function isPastBookingRange(startTime: number) {
+  return startTime < Date.now();
+}
+
+type MaterialLookup = Map<string, RequestedMaterial>;
+
+function computeUsagePreview(
+  draft: UsageDraft,
+  pricingType: ServicePricing["type"],
+  materialLookup: MaterialLookup,
+) {
+  const bookingRange = buildBookingRange(
+    draft.date,
+    draft.startTime,
+    draft.endTime,
+  );
+  const durationMinutes = bookingRange
+    ? getDurationMinutesFromTimestampRange(
+        bookingRange.startTime,
+        bookingRange.endTime,
+      )
+    : 0;
+  const duration =
+    pricingType === "FABRICATION"
+      ? getDurationUnitsFromMinutes(durationMinutes, draft.unitName)
+      : 0;
+  const timeCost = pricingType === "FABRICATION" ? duration * draft.rate : 0;
+  const materialCost = Object.entries(draft.materialAmounts).reduce(
+    (sum, [materialId, amountUsed]) =>
+      sum + amountUsed * (materialLookup.get(materialId)?.pricePerUnit ?? 0),
+    0,
+  );
+
+  return {
+    duration,
+    timeCost,
+    materialCost,
+    subtotal: draft.setupFeePortion + timeCost + materialCost,
+    unitName: draft.unitName,
+  };
+}
+
+interface UsageScheduleEditorProps {
+  draft: UsageDraft;
+  service: NonNullable<PricingEstimateCardProps["service"]>;
+  onChange: (nextValue: DateTimePickerValue | WorkshopTimeSlotValue) => void;
+}
+
+function UsageScheduleEditor({
+  draft,
+  service,
+  onChange,
+}: UsageScheduleEditorProps) {
+  const dateValue = parseDraftDate(draft.date);
+  const bookedSlots = useQuery(
+    api.services.query.getBookedTimeSlots,
+    service.serviceCategory.type === "FABRICATION" && dateValue
+      ? {
+          serviceId: service._id,
+          date: dateValue.getTime(),
+          resourceId: draft.resourceId
+            ? (draft.resourceId as Id<"resources">)
+            : undefined,
+        }
+      : "skip",
+  );
+
+  if (service.serviceCategory.type === "WORKSHOP") {
+    return (
+      <WorkshopTimeSlotPicker
+        value={{
+          date: dateValue,
+          startTime: draft.startTime,
+          endTime: draft.endTime,
+        }}
+        onChange={onChange}
+        schedules={service.serviceCategory.schedules}
+      />
+    );
+  }
+
+  return (
+    <DateTimePicker
+      value={{
+        date: dateValue,
+        startTime: draft.startTime,
+        endTime: draft.endTime,
+      }}
+      onChange={onChange}
+      availableDays={service.serviceCategory.availableDays ?? []}
+      allowPastSelection
+      bookedTimeBlocks={(bookedSlots ?? [])
+        .filter((slot) => slot.usageId !== draft.usageId)
+        .map((slot) => ({
+          start: formatTimeInputValue(slot.startTime),
+          end: formatTimeInputValue(slot.endTime),
+        }))}
+    />
+  );
+}
+
+interface UsageMaterialEditorProps {
+  draft: UsageDraft;
+  materialOptions: RequestedMaterial[];
+  onAddMaterial: (materialId: string) => void;
+  onUpdateAmount: (materialId: string, amountUsed: number) => void;
+  onRemoveMaterial: (materialId: string) => void;
+}
+
+function UsageMaterialEditor({
+  draft,
+  materialOptions,
+  onAddMaterial,
+  onUpdateAmount,
+  onRemoveMaterial,
+}: UsageMaterialEditorProps) {
+  const [pickerValue, setPickerValue] = useState(NO_MATERIAL_VALUE);
+  const selectedMaterialIds = getDraftMaterialIds(draft);
+  const selectedMaterials = selectedMaterialIds
+    .map((materialId) =>
+      materialOptions.find((materialDoc) => materialDoc._id === materialId),
+    )
+    .filter((materialDoc): materialDoc is RequestedMaterial => !!materialDoc);
+  const addableMaterials = materialOptions.filter(
+    (materialDoc) => !selectedMaterialIds.includes(materialDoc._id),
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p
+          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+          style={{ color: "var(--fab-text-dim)" }}
+        >
+          Materials
+        </p>
+        {addableMaterials.length > 0 && (
+          <Select
+            value={pickerValue}
+            onValueChange={(value) => {
+              if (value === NO_MATERIAL_VALUE) {
+                return;
+              }
+              onAddMaterial(value);
+              setPickerValue(NO_MATERIAL_VALUE);
+            }}
+          >
+            <SelectTrigger className="h-8 w-full text-sm sm:w-[220px]">
+              <SelectValue placeholder="Add material" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_MATERIAL_VALUE}>Add material</SelectItem>
+              {addableMaterials.map((materialDoc) => (
+                <SelectItem key={materialDoc._id} value={materialDoc._id}>
+                  {materialDoc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {selectedMaterials.length > 0 ? (
+        <div className="space-y-2">
+          {selectedMaterials.map((materialDoc) => (
+            <div
+              key={materialDoc._id}
+              className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_auto]"
+            >
+              <div className="min-w-0">
+                <p
+                  className="text-[12px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  {materialDoc.name}
+                </p>
+                <p
+                  className="text-[10px]"
+                  style={{ color: "var(--fab-text-muted)" }}
+                >
+                  {formatCurrency(materialDoc.pricePerUnit ?? 0)}/
+                  {materialDoc.unit}
+                </p>
+              </div>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={draft.materialAmounts[materialDoc._id] ?? 0}
+                onChange={(event) =>
+                  onUpdateAmount(
+                    materialDoc._id,
+                    Number(event.target.value || 0),
+                  )
+                }
+                className="h-8 text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => onRemoveMaterial(materialDoc._id)}
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[12px]" style={{ color: "var(--fab-text-muted)" }}>
+          No materials selected.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function sortUsages(usages: ResourceUsage[]) {
+  return [...usages].sort(
+    (left, right) =>
+      left.startTime - right.startTime || left._id.localeCompare(right._id),
+  );
+}
+
+function buildUsageDraft(
+  usage: ResourceUsage,
+  fallbackUnitName: string,
+): UsageDraft {
+  return {
+    key: usage._id,
+    usageId: usage._id,
+    date: formatDateInputValue(usage.startTime),
+    startTime: formatTimeInputValue(usage.startTime),
+    endTime: formatTimeInputValue(usage.endTime),
+    resourceId: usage.resourceDetails?._id ?? usage.resource ?? "",
+    setupFeePortion:
+      usage.pricingSnapshot?.setupFeePortion ?? usage.snapshot.costAtTime ?? 0,
+    rate: usage.pricingSnapshot?.rate ?? 0,
+    unitName: usage.pricingSnapshot?.unitName ?? fallbackUnitName,
+    materialAmounts: toMaterialAmountMap(usage.materialsUsed),
+  };
+}
 
 export function PricingEstimateCard({
   projectId,
@@ -170,17 +529,22 @@ export function PricingEstimateCard({
   serviceType,
   projectPricing = "Default",
   resourceUsages,
-  requestedMaterials = EMPTY_REQUESTED_MATERIALS,
   assignedMaker,
+  headlineBookingStartTime,
+  headlineBookingEndTime,
   readOnly = false,
 }: PricingEstimateCardProps) {
-  const updateCostBreakdown = useMutation(
-    api.projects.mutate.updateCostBreakdown,
+  const updateProject = useMutation(api.projects.mutate.updateProject);
+  const createUsage = useMutation(api.projects.mutate.createUsage);
+  const updateUsage = useMutation(api.projects.mutate.updateUsage);
+  const updateUsagePricing = useMutation(
+    api.projects.mutate.updateUsagePricing,
   );
-  const updateAssignments = useMutation(api.projects.mutate.updateProject);
-  const updateUsage = useMutation(api.resource.mutate.updateUsage);
+  const updateProjectSchedule = useMutation(
+    api.projects.mutate.updateProjectSchedule,
+  );
+  const deleteUsage = useMutation(api.projects.mutate.deleteUsage);
 
-  // ── Assignment data (admin/maker only) ───────────────────────────────────
   const makers = useQuery(api.users.getMakers, readOnly ? "skip" : {});
   const resources = useQuery(
     api.resource.query.getResources,
@@ -190,13 +554,6 @@ export function PricingEstimateCard({
     api.materials.query.getMaterials,
     readOnly ? "skip" : {},
   );
-
-  // ── Derive defaults from service pricing + booking duration ─────────────
-  const totalDurationMinutes = getDurationMinutesFromUsageRanges(
-    resourceUsages ?? [],
-  );
-
-  const primaryUsage = resourceUsages?.[0];
 
   const servicePricing = useMemo<ServicePricing | undefined>(() => {
     if (!service) {
@@ -223,221 +580,125 @@ export function PricingEstimateCard({
       servicePricing,
       pricingVariant: projectPricing,
       serviceType,
-      bookingDurationMinutes: totalDurationMinutes,
     });
-  }, [projectPricing, servicePricing, serviceType, totalDurationMinutes]);
+  }, [projectPricing, servicePricing, serviceType]);
 
-  // ── Editable cost state ──────────────────────────────────────────────────
+  const orderedUsages = sortUsages(resourceUsages ?? []);
+  const isBuyFromLab = material === ProjectMaterial.BUY_FROM_LAB;
+  const pricingType = servicePricing?.type ?? "WORKSHOP";
+  const persistedUnitName = pricingSnapshot?.unitName ?? derived.unitName;
+  const editableMaterialIds = useMemo(
+    () =>
+      service?.serviceCategory.type === "FABRICATION"
+        ? Array.from(
+            new Set([
+              ...(service.serviceCategory.materials ?? []),
+              ...orderedUsages.flatMap((usage) =>
+                (usage.materialsUsed ?? []).map(
+                  (materialEntry) => materialEntry.materialId,
+                ),
+              ),
+            ]),
+          )
+        : [],
+    [orderedUsages, service],
+  );
+  const editableResourceIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...(service?.resources ?? []),
+          ...orderedUsages
+            .map(
+              (usage) => usage.resourceDetails?._id ?? usage.resource ?? null,
+            )
+            .filter((resourceId): resourceId is string => !!resourceId),
+        ]),
+      ),
+    [orderedUsages, service],
+  );
+
   const [isEditing, setIsEditing] = useState(false);
-
-  // Per-material amounts: materialId → amountUsed
-  const storedMaterialAmounts = useMemo(() => {
-    const amounts: Record<string, number> = {};
-    for (const usage of resourceUsages ?? []) {
-      for (const m of usage.materialsUsed ?? []) {
-        amounts[m.materialId] = (amounts[m.materialId] ?? 0) + m.amountUsed;
-      }
-    }
-    return amounts;
-  }, [resourceUsages]);
-
-  const initialEditState = () => ({
-    setupFee: pricingSnapshot?.setupFee ?? derived.setupFee,
-    rate: pricingSnapshot?.rate ?? derived.rate,
-  });
-
-  const initialMaterialAmounts = () => ({ ...storedMaterialAmounts });
-  const initialBookingState = (): BookingEditState => ({
-    date: primaryUsage ? formatDateInputValue(primaryUsage.startTime) : "",
-    startTime: primaryUsage ? formatTimeInputValue(primaryUsage.startTime) : "",
-    endTime: primaryUsage ? formatTimeInputValue(primaryUsage.endTime) : "",
-  });
-
-  const [editValues, setEditValues] = useState(initialEditState);
-  const [materialAmounts, setMaterialAmounts] = useState<
-    Record<string, number>
-  >(initialMaterialAmounts);
-  const [bookingValues, setBookingValues] =
-    useState<BookingEditState>(initialBookingState);
-
-  // ── Assignment edit state ────────────────────────────────────────────────
+  const [isSaving, setIsSaving] = useState(false);
+  const [showPastBookingDialog, setShowPastBookingDialog] = useState(false);
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
     assignedMaker?._id ?? "",
   );
-  const [selectedResourceId, setSelectedResourceId] = useState<string>(
-    primaryUsage?.resourceDetails?._id ?? "",
-  );
-  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>(() =>
-    requestedMaterials.map((m) => m._id),
-  );
+  const [usageDrafts, setUsageDrafts] = useState<UsageDraft[]>([]);
+  const [nextDraftId, setNextDraftId] = useState(0);
 
-  // Resolve selected material docs for live price preview while editing
-  const selectedMaterialDocs = useMemo(
+  const editableMaterialDocs = useMemo(
     () =>
-      (isEditing ? selectedMaterialIds : requestedMaterials.map((m) => m._id))
-        .map(
-          (id) =>
-            materials?.find((m) => m._id === id) ??
-            requestedMaterials.find((m) => m._id === id),
-        )
-        .filter((m): m is NonNullable<typeof m> => !!m),
-    [isEditing, materials, requestedMaterials, selectedMaterialIds],
+      editableMaterialIds
+        .map((id) => materials?.find((materialDoc) => materialDoc._id === id))
+        .filter(
+          (materialDoc): materialDoc is NonNullable<typeof materialDoc> =>
+            !!materialDoc,
+        ),
+    [editableMaterialIds, materials],
+  );
+  const editableMaterialLookup = useMemo(
+    () =>
+      new Map(
+        editableMaterialDocs.map((materialDoc) => [
+          materialDoc._id,
+          materialDoc,
+        ]),
+      ),
+    [editableMaterialDocs],
+  );
+  const editableResources = useMemo(() => {
+    const matchedResources = editableResourceIds.map((resourceId) =>
+      resources?.find((resourceDoc) => resourceDoc._id === resourceId),
+    );
+
+    return matchedResources.filter(
+      (
+        resourceDoc,
+      ): resourceDoc is Exclude<(typeof matchedResources)[number], undefined> =>
+        resourceDoc !== undefined,
+    );
+  }, [editableResourceIds, resources]);
+
+  const previewByDraftKey = new Map(
+    usageDrafts.map((draft) => [
+      draft.key,
+      computeUsagePreview(draft, pricingType, editableMaterialLookup),
+    ]),
   );
 
-  const pricingType = servicePricing?.type ?? "WORKSHOP";
-  const isTimeBased = pricingType === "FABRICATION";
-  const isBuyFromLab = material === ProjectMaterial.BUY_FROM_LAB;
-  const persistedUnitName = pricingSnapshot?.unitName ?? derived.unitName;
+  const previewSummary = usageDrafts.reduce(
+    (summary, draft) => {
+      const preview = previewByDraftKey.get(draft.key);
+      if (!preview) return summary;
 
-  const editedPrimaryRange = primaryUsage
-    ? buildBookingRange(
-        bookingValues.date,
-        bookingValues.startTime,
-        bookingValues.endTime,
-      )
-    : null;
-  const editingDurationMinutes =
-    primaryUsage && editedPrimaryRange
-      ? getDurationMinutesFromUsageRanges(
-          (resourceUsages ?? []).map((usage) =>
-            usage._id === primaryUsage._id
-              ? { ...usage, ...editedPrimaryRange }
-              : usage,
-          ),
-        )
-      : totalDurationMinutes;
-  const editingDuration = isTimeBased
-    ? getDurationUnitsFromMinutes(editingDurationMinutes, persistedUnitName)
-    : 0;
+      return {
+        setupFee: summary.setupFee + draft.setupFeePortion,
+        timeCost: summary.timeCost + preview.timeCost,
+        materialCost: summary.materialCost + preview.materialCost,
+        total: summary.total + preview.subtotal,
+        duration: summary.duration + preview.duration,
+      };
+    },
+    { setupFee: 0, timeCost: 0, materialCost: 0, total: 0, duration: 0 },
+  );
 
-  const computedTimeCost = isTimeBased ? editingDuration * editValues.rate : 0;
-  const computedMaterialCost = isBuyFromLab
-    ? selectedMaterialDocs.reduce((acc, m) => {
-        const price = (m as RequestedMaterial).pricePerUnit ?? 0;
-        const amount = materialAmounts[m._id] ?? 0;
-        return acc + price * amount;
-      }, 0)
-    : 0;
-  const computedTotal =
-    editValues.setupFee + computedTimeCost + computedMaterialCost;
-
-  // ── Displayed values ─────────────────────────────────────────────────────
   const displayDuration = isEditing
-    ? editingDuration
+    ? previewSummary.duration
     : (pricingSnapshot?.duration ?? derived.duration);
-  const displayRate = isEditing
-    ? editValues.rate
-    : (pricingSnapshot?.rate ?? derived.rate);
+  const displayRate = pricingSnapshot?.rate ?? derived.rate;
   const displaySetupFee = isEditing
-    ? editValues.setupFee
+    ? previewSummary.setupFee
     : (pricingSnapshot?.setupFee ?? derived.setupFee);
   const displayTimeCost = isEditing
-    ? computedTimeCost
-    : (pricingSnapshot?.timeCost ?? derived.rate * derived.duration);
-
-  // Material cost when not editing: sum from stored amounts × pricePerUnit
-  const storedMaterialCost = requestedMaterials.reduce((acc, mat) => {
-    return acc + (storedMaterialAmounts[mat._id] ?? 0) * mat.pricePerUnit;
-  }, 0);
-
+    ? previewSummary.timeCost
+    : (pricingSnapshot?.timeCost ?? derived.timeCost);
   const displayMaterialCost = isEditing
-    ? computedMaterialCost
-    : (pricingSnapshot?.materialCost ?? storedMaterialCost);
-
+    ? previewSummary.materialCost
+    : (pricingSnapshot?.materialCost ?? 0);
   const displayTotal = isEditing
-    ? computedTotal
-    : totalInvoice
-      ? totalInvoice.total
-      : displaySetupFee +
-        displayTimeCost +
-        (isBuyFromLab ? displayMaterialCost : 0);
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-  const handleEdit = () => {
-    setEditValues(initialEditState());
-    setMaterialAmounts(storedMaterialAmounts);
-    setSelectedMakerId(assignedMaker?._id ?? "");
-    setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
-    setSelectedMaterialIds(requestedMaterials.map((m) => m._id));
-    setBookingValues(initialBookingState());
-    setIsEditing(true);
-  };
-
-  const handleDiscard = () => {
-    setIsEditing(false);
-    setEditValues(initialEditState());
-    setMaterialAmounts(initialMaterialAmounts());
-    setSelectedMakerId(assignedMaker?._id ?? "");
-    setSelectedResourceId(primaryUsage?.resourceDetails?._id ?? "");
-    setSelectedMaterialIds(requestedMaterials.map((m) => m._id));
-    setBookingValues(initialBookingState());
-  };
-
-  const handleSave = async () => {
-    try {
-      const materialsUsedPayload = isBuyFromLab
-        ? Object.entries(materialAmounts)
-            .filter(([, amt]) => amt > 0)
-            .map(([materialId, amountUsed]) => ({
-              materialId: materialId as Id<"materials">,
-              amountUsed,
-            }))
-        : undefined;
-
-      if (primaryUsage && !editedPrimaryRange) {
-        toast.error("Please enter a valid booking date and time.");
-        return;
-      }
-
-      if (
-        editedPrimaryRange &&
-        editedPrimaryRange.endTime <= editedPrimaryRange.startTime
-      ) {
-        toast.error("End time must be after start time.");
-        return;
-      }
-
-      if (primaryUsage && editedPrimaryRange) {
-        await updateUsage({
-          id: primaryUsage._id as Id<"resourceUsage">,
-          startTime: editedPrimaryRange.startTime,
-          endTime: editedPrimaryRange.endTime,
-        });
-      }
-
-      await Promise.all([
-        updateCostBreakdown({
-          projectId,
-          setupFee: editValues.setupFee,
-          duration: editingDuration,
-          rate: editValues.rate,
-          timeCost: isTimeBased ? editingDuration * editValues.rate : 0,
-          materialCost: computedMaterialCost,
-          materialsUsed: materialsUsedPayload,
-        }),
-        updateAssignments({
-          projectId,
-          makerId: selectedMakerId
-            ? (selectedMakerId as Id<"userProfile">)
-            : undefined,
-          resourceId: selectedResourceId
-            ? (selectedResourceId as Id<"resources">)
-            : undefined,
-          materialIds: selectedMaterialIds.length
-            ? (selectedMaterialIds as Id<"materials">[])
-            : [],
-        }),
-      ]);
-      toast.success("Project updated.");
-      setIsEditing(false);
-    } catch {
-      toast.error("Failed to save changes.");
-    }
-  };
-
-  const hasFinalBreakdown = !!totalInvoice;
-
-  // ── Render ───────────────────────────────────────────────────────────────
+    ? previewSummary.total
+    : (totalInvoice?.total ?? pricingSnapshot?.total ?? derived.total);
   const headerChips = (
     <>
       {projectPricing && projectPricing !== "Default" && (
@@ -457,591 +718,1024 @@ export function PricingEstimateCard({
     </>
   );
 
+  function openEdit() {
+    setSelectedMakerId(assignedMaker?._id ?? "");
+    setUsageDrafts(
+      orderedUsages.map((usage) => buildUsageDraft(usage, persistedUnitName)),
+    );
+    setIsEditing(true);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+    setSelectedMakerId(assignedMaker?._id ?? "");
+    setUsageDrafts([]);
+  }
+
+  function updateDraft(
+    draftKey: string,
+    updater: (draft: UsageDraft) => UsageDraft,
+  ) {
+    setUsageDrafts((currentDrafts) =>
+      currentDrafts.map((draft) =>
+        draft.key === draftKey ? updater(draft) : draft,
+      ),
+    );
+  }
+
+  function addUsageDraft() {
+    const sourceDraft = usageDrafts.at(-1);
+    const sourceRange =
+      (sourceDraft &&
+        buildBookingRange(
+          sourceDraft.date,
+          sourceDraft.startTime,
+          sourceDraft.endTime,
+        )) ||
+      (headlineBookingStartTime != null && headlineBookingEndTime != null
+        ? {
+            startTime: headlineBookingStartTime,
+            endTime: headlineBookingEndTime,
+          }
+        : null);
+
+    const fallbackStart = sourceRange?.endTime ?? Date.now() + 60 * 60 * 1000;
+    const fallbackDurationMs = Math.max(
+      60 * 60 * 1000,
+      sourceRange
+        ? sourceRange.endTime - sourceRange.startTime
+        : 60 * 60 * 1000,
+    );
+    const defaultStart = fallbackStart;
+    const defaultEnd = fallbackStart + fallbackDurationMs;
+
+    setUsageDrafts((currentDrafts) => [
+      ...currentDrafts,
+      {
+        key: `new-${nextDraftId}`,
+        date: formatDateInputValue(defaultStart),
+        startTime: formatTimeInputValue(defaultStart),
+        endTime: formatTimeInputValue(defaultEnd),
+        resourceId: "",
+        setupFeePortion:
+          pricingType === "WORKSHOP"
+            ? derived.setupFee
+            : currentDrafts.length === 0
+              ? derived.setupFee
+              : 0,
+        rate: derived.rate,
+        unitName: persistedUnitName,
+        materialAmounts: {},
+      },
+    ]);
+    setNextDraftId((currentDraftId) => currentDraftId + 1);
+  }
+
+  function removeUsageDraft(draftKey: string) {
+    setUsageDrafts((currentDrafts) =>
+      currentDrafts.filter((draft) => draft.key !== draftKey),
+    );
+  }
+
+  async function persistChanges(allowPastBooking: boolean) {
+    try {
+      setIsSaving(true);
+
+      const makerChanged = selectedMakerId !== (assignedMaker?._id ?? "");
+
+      const originalUsageMap = new Map(
+        orderedUsages.map((usage) => [usage._id, usage]),
+      );
+
+      const bookingPayloads = new Map<
+        string,
+        {
+          startTime: number;
+          endTime: number;
+          resourceId: Id<"resources"> | null;
+        }
+      >();
+
+      for (const draft of usageDrafts) {
+        const bookingRange = buildBookingRange(
+          draft.date,
+          draft.startTime,
+          draft.endTime,
+        );
+        if (!bookingRange) {
+          toast.error(
+            "Please enter a valid booking date and time for every usage.",
+          );
+          setIsSaving(false);
+          return;
+        }
+        if (bookingRange.endTime <= bookingRange.startTime) {
+          toast.error("Every usage must end after it starts.");
+          setIsSaving(false);
+          return;
+        }
+
+        bookingPayloads.set(draft.key, {
+          startTime: bookingRange.startTime,
+          endTime: bookingRange.endTime,
+          resourceId: draft.resourceId
+            ? (draft.resourceId as Id<"resources">)
+            : null,
+        });
+      }
+
+      const hasPastUsageBooking = Array.from(bookingPayloads.values()).some(
+        ({ startTime }) => isPastBookingRange(startTime),
+      );
+      const hasPastHeadlineBooking =
+        usageDrafts.length === 0 &&
+        headlineBookingStartTime != null &&
+        isPastBookingRange(headlineBookingStartTime);
+
+      if (
+        !allowPastBooking &&
+        (hasPastUsageBooking || hasPastHeadlineBooking)
+      ) {
+        setShowPastBookingDialog(true);
+        setIsSaving(false);
+        return;
+      }
+
+      if (makerChanged) {
+        await updateProject({
+          projectId,
+          makerId: selectedMakerId
+            ? (selectedMakerId as Id<"userProfile">)
+            : undefined,
+        });
+      }
+
+      const retainedUsageIds = new Set(
+        usageDrafts
+          .map((draft) => draft.usageId)
+          .filter((usageId): usageId is string => !!usageId),
+      );
+
+      for (const usage of orderedUsages) {
+        if (!retainedUsageIds.has(usage._id)) {
+          await deleteUsage({
+            projectId,
+            usageId: usage._id as Id<"resourceUsage">,
+          });
+        }
+      }
+
+      const syncedDrafts: Array<
+        UsageDraft & {
+          usageId: Id<"resourceUsage">;
+        }
+      > = [];
+
+      for (const draft of usageDrafts) {
+        const booking = bookingPayloads.get(draft.key)!;
+
+        if (!draft.usageId) {
+          const { usageId } = await createUsage({
+            projectId,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            resourceId: booking.resourceId ?? undefined,
+            allowPastBooking,
+          });
+          syncedDrafts.push({
+            ...draft,
+            usageId,
+          });
+          continue;
+        }
+
+        const originalUsage = originalUsageMap.get(draft.usageId);
+        if (!originalUsage) continue;
+
+        const scheduleChanged =
+          originalUsage.startTime !== booking.startTime ||
+          originalUsage.endTime !== booking.endTime;
+        const resourceChanged =
+          (originalUsage.resourceDetails?._id ??
+            originalUsage.resource ??
+            "") !== (draft.resourceId || "");
+
+        if (scheduleChanged || resourceChanged) {
+          await updateUsage({
+            projectId,
+            usageId: draft.usageId as Id<"resourceUsage">,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            resourceId: booking.resourceId,
+            allowPastBooking,
+          });
+        }
+
+        syncedDrafts.push({
+          ...draft,
+          usageId: draft.usageId as Id<"resourceUsage">,
+        });
+      }
+
+      for (const draft of syncedDrafts) {
+        const originalUsage = draft.usageId
+          ? originalUsageMap.get(draft.usageId)
+          : undefined;
+        const selectedUsageMaterials = isBuyFromLab
+          ? getDraftMaterialIds(draft).map((materialId) => ({
+              materialId: materialId as Id<"materials">,
+              amountUsed: draft.materialAmounts[materialId] ?? 0,
+            }))
+          : undefined;
+
+        const preview = computeUsagePreview(
+          draft,
+          pricingType,
+          editableMaterialLookup,
+        );
+        const originalMaterialMap = toMaterialAmountMap(
+          originalUsage?.materialsUsed,
+        );
+        const originalMaterialIdsForUsage = (
+          originalUsage?.materialsUsed ?? []
+        ).map((materialEntry) => materialEntry.materialId);
+        const draftMaterialIds = getDraftMaterialIds(draft);
+
+        const shouldUpdatePricing =
+          !originalUsage ||
+          !originalUsage.pricingSnapshot ||
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.setupFeePortion,
+            draft.setupFeePortion,
+          ) ||
+          !nearlyEqual(originalUsage.pricingSnapshot.rate, draft.rate) ||
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.duration,
+            preview.duration,
+          ) ||
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.timeCost,
+            preview.timeCost,
+          ) ||
+          !nearlyEqual(
+            originalUsage.pricingSnapshot.materialCost,
+            preview.materialCost,
+          ) ||
+          originalUsage.pricingSnapshot.unitName !== draft.unitName ||
+          (isBuyFromLab &&
+            (!sameStringSet(draftMaterialIds, originalMaterialIdsForUsage) ||
+              draftMaterialIds.some(
+                (materialId) =>
+                  (draft.materialAmounts[materialId] ?? 0) !==
+                  (originalMaterialMap[materialId] ?? 0),
+              )));
+
+        if (!shouldUpdatePricing) continue;
+
+        await updateUsagePricing({
+          projectId,
+          usageId: draft.usageId,
+          duration: preview.duration,
+          rate: draft.rate,
+          timeCost: preview.timeCost,
+          materialCost: preview.materialCost,
+          setupFeePortion: draft.setupFeePortion,
+          unitName: draft.unitName,
+          materialsUsed: selectedUsageMaterials,
+        });
+      }
+
+      if (
+        usageDrafts.length === 0 &&
+        headlineBookingStartTime != null &&
+        headlineBookingEndTime != null
+      ) {
+        await updateProjectSchedule({
+          projectId,
+          startTime: headlineBookingStartTime,
+          endTime: headlineBookingEndTime,
+          allowPastBooking,
+        });
+      }
+
+      toast.success("Project updated.");
+      setIsEditing(false);
+      setUsageDrafts([]);
+      setShowPastBookingDialog(false);
+    } catch {
+      toast.error("Failed to save changes.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function handleSave() {
+    void persistChanges(false);
+  }
+
   return (
-    <DetailCard
-      title={hasFinalBreakdown ? "Confirmed Pricing" : "Pricing Estimate"}
-      titleClassName="text-[13px] tracking-tight normal-case"
-      titleColor="var(--fab-text-primary)"
-      headerRight={headerChips}
-      onEdit={!readOnly && !isEditing ? handleEdit : undefined}
-      isEditing={isEditing}
-      onSave={handleSave}
-      onCancel={handleDiscard}
-      bodyClassName="space-y-3 py-3"
-    >
-      {/* ── Assignment section (non-clients only) ── */}
-      {!readOnly && (
-        <>
-          {/* Maker */}
-          <div className="space-y-1">
-            <p
-              className="text-[9px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Assigned Maker
-            </p>
-            {isEditing ? (
-              <Select
-                value={selectedMakerId}
-                onValueChange={setSelectedMakerId}
-              >
-                <SelectTrigger className="text-sm h-8">
-                  <SelectValue placeholder="Select a maker" />
-                </SelectTrigger>
-                <SelectContent>
-                  {makers?.map((maker) => (
-                    <SelectItem key={maker._id} value={maker._id}>
-                      {maker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : assignedMaker ? (
-              <div className="flex items-center gap-2.5">
-                {assignedMaker.pfpUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={assignedMaker.pfpUrl}
-                    alt={assignedMaker.name}
-                    className="h-7 w-7 rounded-[6px] object-cover shrink-0"
-                  />
-                ) : (
-                  <div
-                    className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold"
-                    style={{
-                      background:
-                        "color-mix(in srgb, var(--fab-teal) 15%, var(--fab-bg-sidebar))",
-                      color: "var(--fab-teal)",
-                    }}
-                  >
-                    {assignedMaker.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p
-                    className="text-[9px] font-bold uppercase tracking-[0.1em]"
-                    style={{ color: "var(--fab-text-dim)" }}
-                  >
-                    Maker
-                  </p>
-                  <p
-                    className="text-[12px] font-medium truncate"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {assignedMaker.name}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p
-                className="text-[12px]"
-                style={{ color: "var(--fab-text-muted)" }}
-              >
-                No maker assigned yet.
-              </p>
-            )}
-          </div>
-
-          {/* Resource */}
-          <div className="space-y-1">
-            <p
-              className="text-[9px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Resource
-            </p>
-            {isEditing ? (
-              <Select
-                value={selectedResourceId}
-                onValueChange={setSelectedResourceId}
-              >
-                <SelectTrigger className="text-sm h-8">
-                  <SelectValue placeholder="Select a resource" />
-                </SelectTrigger>
-                <SelectContent>
-                  {resources?.map((resource) => (
-                    <SelectItem key={resource._id} value={resource._id}>
-                      {resource.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : primaryUsage?.resourceDetails ? (
-              <div className="flex items-start gap-2.5">
-                <div
-                  className="flex h-7 w-7 items-center justify-center rounded-[6px] shrink-0 text-[11px] font-bold mt-0.5"
-                  style={{
-                    background: "rgba(83,74,183,0.12)",
-                    color: "#534AB7",
-                  }}
+    <>
+      <DetailCard
+        title={totalInvoice ? "Confirmed Pricing" : "Pricing Estimate"}
+        titleClassName="text-[13px] tracking-tight normal-case"
+        titleColor="var(--fab-text-primary)"
+        headerRight={headerChips}
+        onEdit={!readOnly && !isEditing ? openEdit : undefined}
+        isEditing={isEditing}
+        onSave={handleSave}
+        onCancel={cancelEdit}
+        isSaving={isSaving}
+        bodyClassName="space-y-4 py-3"
+      >
+        {!readOnly && (
+          <>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p
+                  className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
                 >
-                  {primaryUsage.resourceDetails.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p
-                    className="text-[9px] font-bold uppercase tracking-[0.1em]"
-                    style={{ color: "var(--fab-text-dim)" }}
+                  Assigned Maker
+                </p>
+                {isEditing ? (
+                  <Select
+                    value={selectedMakerId || NO_MAKER_VALUE}
+                    onValueChange={(value) =>
+                      setSelectedMakerId(value === NO_MAKER_VALUE ? "" : value)
+                    }
                   >
-                    Resource
-                  </p>
-                  <p
-                    className="text-[12px] font-medium truncate"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
-                    {primaryUsage.resourceDetails.name}
-                  </p>
-                  {(primaryUsage.resourceDetails.category ||
-                    primaryUsage.resourceDetails.type) && (
-                    <p
-                      className="text-[10px] mt-0.5"
-                      style={{ color: "var(--fab-text-muted)" }}
-                    >
-                      {[
-                        primaryUsage.resourceDetails.category,
-                        primaryUsage.resourceDetails.type,
-                        primaryUsage.resourceDetails.status,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p
-                className="text-[12px]"
-                style={{ color: "var(--fab-text-muted)" }}
-              >
-                No resource assigned.
-              </p>
-            )}
-          </div>
-
-          {primaryUsage && (
-            <div className="space-y-1">
-              <p
-                className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Booking
-              </p>
-              {isEditing ? (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <Input
-                    type="date"
-                    value={bookingValues.date}
-                    onChange={(e) =>
-                      setBookingValues((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                    className="h-8 rounded-md text-sm"
-                  />
-                  <Input
-                    type="time"
-                    value={bookingValues.startTime}
-                    onChange={(e) =>
-                      setBookingValues((prev) => ({
-                        ...prev,
-                        startTime: e.target.value,
-                      }))
-                    }
-                    className="h-8 rounded-md text-sm"
-                  />
-                  <Input
-                    type="time"
-                    value={bookingValues.endTime}
-                    onChange={(e) =>
-                      setBookingValues((prev) => ({
-                        ...prev,
-                        endTime: e.target.value,
-                      }))
-                    }
-                    className="h-8 rounded-md text-sm"
-                  />
-                </div>
-              ) : (
-                <div className="min-w-0">
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Select a maker" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_MAKER_VALUE}>Unassigned</SelectItem>
+                      {makers?.map((maker) => (
+                        <SelectItem key={maker._id} value={maker._id}>
+                          {maker.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : assignedMaker ? (
                   <p
                     className="text-[12px] font-medium"
                     style={{ color: "var(--fab-text-primary)" }}
                   >
-                    {new Date(primaryUsage.startTime).toLocaleDateString(
-                      "en-US",
-                      {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      },
-                    )}
+                    {assignedMaker.name}
                   </p>
+                ) : (
                   <p
-                    className="text-[10px] mt-0.5"
+                    className="text-[12px]"
                     style={{ color: "var(--fab-text-muted)" }}
                   >
-                    {`${new Date(primaryUsage.startTime).toLocaleTimeString(
-                      "en-US",
-                      {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      },
-                    )} - ${new Date(primaryUsage.endTime).toLocaleTimeString(
-                      "en-US",
-                      {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      },
-                    )}`}
+                    Unassigned
                   </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          )}
 
-          {/* Materials (only relevant for buy-from-lab) */}
-          {isBuyFromLab && (
-            <div className="space-y-1">
-              <p
-                className="text-[9px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
-                Materials
-              </p>
-              {isEditing ? (
-                <div className="flex flex-col gap-1.5 rounded-md border border-input p-2">
-                  {materials?.map((m) => {
-                    const isChecked = selectedMaterialIds.includes(m._id);
-                    return (
-                      <label
-                        key={m._id}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedMaterialIds((prev) => [
-                                ...prev,
-                                m._id,
-                              ]);
-                            } else {
-                              setSelectedMaterialIds((prev) =>
-                                prev.filter((id) => id !== m._id),
-                              );
-                              setMaterialAmounts((prev) => {
-                                const next = { ...prev };
-                                delete next[m._id];
-                                return next;
-                              });
-                            }
-                          }}
-                          className="h-3.5 w-3.5 accent-primary"
-                        />
-                        <span className="text-[12px] flex-1">{m.name}</span>
-                        <span
-                          className="text-[10px] shrink-0"
-                          style={{ color: "var(--fab-text-muted)" }}
-                        >
-                          ₱{(m.pricePerUnit ?? 0).toFixed(2)}/{m.unit}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : requestedMaterials.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {requestedMaterials.map((mat) => (
-                    <div key={mat._id} className="flex items-center gap-2.5">
-                      <div
-                        className="flex h-6 w-6 items-center justify-center rounded-[5px] shrink-0 text-[10px] font-bold"
-                        style={{
-                          background: "var(--fab-amber-light)",
-                          color: "var(--fab-amber)",
-                        }}
-                      >
-                        {mat.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className="text-[12px] font-medium truncate"
-                          style={{ color: "var(--fab-text-primary)" }}
-                        >
-                          {mat.name}
-                        </p>
-                      </div>
-                      {mat.pricePerUnit != null && (
-                        <p
-                          className="text-[10px] shrink-0"
-                          style={{ color: "var(--fab-text-muted)" }}
-                        >
-                          ₱{mat.pricePerUnit.toFixed(2)}/{mat.unit}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p
-                  className="text-[12px]"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  No materials selected.
-                </p>
-              )}
-            </div>
-          )}
+            <FieldSeparator className="my-1" />
+          </>
+        )}
 
-          <FieldSeparator className="my-1" />
-        </>
-      )}
-
-      {/* ── Cost rows ────────────────────────────────────────────────────── */}
-
-      {/* WORKSHOP */}
-      {pricingType === "WORKSHOP" && (
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Amount
-          </span>
-          {isEditing ? (
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={editValues.setupFee}
-              onChange={(e) =>
-                setEditValues((prev) => ({
-                  ...prev,
-                  setupFee: Number(e.target.value || 0),
-                }))
-              }
-              className="h-7 w-32 text-right text-sm"
-            />
-          ) : (
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: "var(--fab-text-primary)" }}
-            >
-              ₱{displaySetupFee.toFixed(2)}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* FABRICATION */}
-      {isTimeBased && (
-        <>
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Setup Fee
-            </span>
-            {isEditing ? (
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={editValues.setupFee}
-                onChange={(e) =>
-                  setEditValues((prev) => ({
-                    ...prev,
-                    setupFee: Number(e.target.value || 0),
-                  }))
-                }
-                className="h-7 w-32 text-right text-sm"
-              />
-            ) : (
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: "var(--fab-text-primary)" }}
+              Usages
+            </p>
+            {isEditing && !readOnly && (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5 px-3 text-xs font-semibold"
+                onClick={addUsageDraft}
+                style={{ background: "var(--fab-teal)", border: "none" }}
               >
-                ₱{displaySetupFee.toFixed(2)}
-              </span>
+                <Plus className="h-3.5 w-3.5" />
+                Add Usage
+              </Button>
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Duration ({persistedUnitName}s)
-            </span>
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: "var(--fab-text-primary)" }}
-            >
-              {displayDuration.toFixed(2)} {persistedUnitName}s
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Rate / {persistedUnitName}
-            </span>
-            {isEditing ? (
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={editValues.rate}
-                onChange={(e) =>
-                  setEditValues((prev) => ({
-                    ...prev,
-                    rate: Number(e.target.value || 0),
-                  }))
-                }
-                className="h-7 w-32 text-right text-sm"
-              />
-            ) : (
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                ₱{displayRate.toFixed(2)}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Time Cost
-            </span>
-            <span
-              className="text-[13px] font-medium"
+          {(isEditing ? usageDrafts : orderedUsages).length === 0 ? (
+            <div
+              className="rounded-lg border border-dashed px-3 py-4 text-sm"
               style={{
-                color: isEditing
-                  ? "var(--fab-text-muted)"
-                  : "var(--fab-text-primary)",
+                borderColor: "var(--fab-border-md)",
+                color: "var(--fab-text-muted)",
               }}
             >
-              ₱{displayTimeCost.toFixed(2)}
-            </span>
-          </div>
-        </>
-      )}
+              No usages yet.
+            </div>
+          ) : isEditing ? (
+            usageDrafts.map((draft, index) => {
+              const preview = previewByDraftKey.get(draft.key)!;
 
-      {/* Material usage rows (buy-from-lab only) */}
-      {isBuyFromLab && (
-        <>
-          {(isEditing ? selectedMaterialDocs : requestedMaterials).map(
-            (mat) => {
-              const matId = mat._id as string;
-              const matUnit = (mat as RequestedMaterial).unit ?? "units";
-              const matPrice = (mat as RequestedMaterial).pricePerUnit ?? 0;
-              const storedAmt = storedMaterialAmounts[matId] ?? 0;
-              const displayAmt = isEditing
-                ? (materialAmounts[matId] ?? 0)
-                : storedAmt;
               return (
-                <div key={matId} className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--fab-text-dim)" }}
+                <div
+                  key={draft.key}
+                  className="space-y-3 border-b pb-4 last:border-b-0 last:pb-0"
+                  style={{
+                    borderColor: "var(--fab-border-soft)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p
+                      className="text-[12px] font-semibold"
+                      style={{ color: "var(--fab-text-primary)" }}
                     >
-                      {mat.name}
+                      Usage {index + 1}
+                    </p>
+                    <span
+                      className="text-[12px] font-semibold"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatCurrency(preview.subtotal)}
                     </span>
-                    {isEditing ? (
-                      <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => removeUsageDraft(draft.key)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+
+                  {pricingType === "FABRICATION" &&
+                    editableResources.length > 0 && (
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Resource
+                        </p>
+                        <Select
+                          value={draft.resourceId || NO_RESOURCE_VALUE}
+                          onValueChange={(value) =>
+                            updateDraft(draft.key, (currentDraft) => ({
+                              ...currentDraft,
+                              resourceId:
+                                value === NO_RESOURCE_VALUE ? "" : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select a resource" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_RESOURCE_VALUE}>
+                              No resource
+                            </SelectItem>
+                            {editableResources.map((resourceDoc) => (
+                              <SelectItem
+                                key={resourceDoc._id}
+                                value={resourceDoc._id}
+                              >
+                                {resourceDoc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                  {service && (
+                    <UsageScheduleEditor
+                      draft={draft}
+                      service={service}
+                      onChange={(nextValue) =>
+                        updateDraft(draft.key, (currentDraft) => ({
+                          ...currentDraft,
+                          date: nextValue.date
+                            ? formatDateInputValue(nextValue.date.getTime())
+                            : "",
+                          startTime: nextValue.startTime,
+                          endTime: nextValue.endTime,
+                        }))
+                      }
+                    />
+                  )}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        {pricingType === "WORKSHOP"
+                          ? "Amount"
+                          : "Setup Fee Portion"}
+                      </p>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={draft.setupFeePortion}
+                        onChange={(event) =>
+                          updateDraft(draft.key, (currentDraft) => ({
+                            ...currentDraft,
+                            setupFeePortion: Number(event.target.value || 0),
+                          }))
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {pricingType === "FABRICATION" && (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Rate
+                        </p>
                         <Input
                           type="number"
                           min={0}
                           step="0.01"
-                          value={materialAmounts[matId] ?? 0}
-                          onChange={(e) =>
-                            setMaterialAmounts((prev) => ({
-                              ...prev,
-                              [matId]: Number(e.target.value || 0),
+                          value={draft.rate}
+                          onChange={(event) =>
+                            updateDraft(draft.key, (currentDraft) => ({
+                              ...currentDraft,
+                              rate: Number(event.target.value || 0),
                             }))
                           }
-                          className="h-7 w-24 text-right text-sm"
+                          className="h-8 text-sm"
                         />
-                        <span
-                          className="text-[11px] shrink-0"
-                          style={{ color: "var(--fab-text-muted)" }}
-                        >
-                          {matUnit}
-                        </span>
                       </div>
-                    ) : (
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Duration
+                        </p>
+                        <p
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {preview.duration.toFixed(2)} {draft.unitName}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Time Cost
+                        </p>
+                        <p
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {formatCurrency(preview.timeCost)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isBuyFromLab &&
+                    pricingType === "FABRICATION" &&
+                    editableMaterialDocs.length > 0 && (
+                      <UsageMaterialEditor
+                        draft={draft}
+                        materialOptions={editableMaterialDocs}
+                        onAddMaterial={(materialId) =>
+                          updateDraft(draft.key, (currentDraft) => ({
+                            ...currentDraft,
+                            materialAmounts: {
+                              ...currentDraft.materialAmounts,
+                              [materialId]:
+                                currentDraft.materialAmounts[materialId] ?? 0,
+                            },
+                          }))
+                        }
+                        onUpdateAmount={(materialId, amountUsed) =>
+                          updateDraft(draft.key, (currentDraft) => ({
+                            ...currentDraft,
+                            materialAmounts: {
+                              ...currentDraft.materialAmounts,
+                              [materialId]: amountUsed,
+                            },
+                          }))
+                        }
+                        onRemoveMaterial={(materialId) =>
+                          updateDraft(draft.key, (currentDraft) => {
+                            const nextMaterialAmounts = {
+                              ...currentDraft.materialAmounts,
+                            };
+                            delete nextMaterialAmounts[materialId];
+                            return {
+                              ...currentDraft,
+                              materialAmounts: nextMaterialAmounts,
+                            };
+                          })
+                        }
+                      />
+                    )}
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center justify-between gap-3">
                       <span
-                        className="text-[13px] font-medium"
+                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        Material Cost
+                      </span>
+                      <span
+                        className="text-[12px] font-medium"
                         style={{ color: "var(--fab-text-primary)" }}
                       >
-                        {displayAmt} {matUnit}
+                        {formatCurrency(preview.materialCost)}
                       </span>
-                    )}
-                  </div>
-                  {matPrice > 0 && (
-                    <div className="flex items-center justify-between gap-2 pl-2">
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
                       <span
-                        className="text-[9px] tracking-normal font-normal"
-                        style={{ color: "var(--fab-text-muted)" }}
+                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
                       >
-                        ₱{matPrice.toFixed(2)} / {matUnit}
+                        Subtotal
                       </span>
                       <span
+                        className="text-[12px] font-semibold"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {formatCurrency(preview.subtotal)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            orderedUsages.map((usage, index) => (
+              <div
+                key={usage._id}
+                className="space-y-3 border-b pb-4 last:border-b-0 last:pb-0"
+                style={{
+                  borderColor: "var(--fab-border-soft)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p
+                    className="text-[12px] font-semibold"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    Usage {index + 1}
+                  </p>
+                  <span
+                    className="text-[12px] font-semibold"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {formatCurrency(
+                      usage.pricingSnapshot?.subtotal ??
+                        usage.snapshot.costAtTime,
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  className={`grid gap-3 ${
+                    pricingType === "FABRICATION" ? "sm:grid-cols-2" : ""
+                  }`}
+                >
+                  {pricingType === "FABRICATION" && (
+                    <div className="space-y-1">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--fab-text-dim)" }}
+                      >
+                        Resource
+                      </p>
+                      <p
+                        className="text-[12px] font-medium"
+                        style={{ color: "var(--fab-text-primary)" }}
+                      >
+                        {usage.resourceDetails?._id
+                          ? usage.resourceDetails.name
+                          : "No resource assigned"}
+                      </p>
+                      {usage.resourceDetails?._id &&
+                        (usage.resourceDetails.category ||
+                          usage.resourceDetails.type ||
+                          usage.resourceDetails.status) && (
+                          <p
+                            className="text-[10px]"
+                            style={{ color: "var(--fab-text-muted)" }}
+                          >
+                            {[
+                              usage.resourceDetails.category,
+                              usage.resourceDetails.type,
+                              usage.resourceDetails.status,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <p
+                      className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Schedule
+                    </p>
+                    <p
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatUsageDate(usage.startTime)}
+                    </p>
+                    <p
+                      className="text-[10px]"
+                      style={{ color: "var(--fab-text-muted)" }}
+                    >
+                      {formatUsageTimeRange(usage.startTime, usage.endTime)}
+                    </p>
+                  </div>
+                </div>
+
+                {isBuyFromLab && pricingType === "FABRICATION" && (
+                  <div className="space-y-1">
+                    <p
+                      className="text-[9px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Material Usage
+                    </p>
+                    {(usage.materialsUsed ?? []).length > 0 ? (
+                      <div className="space-y-1.5">
+                        {(usage.materialsUsed ?? []).map((materialEntry) => (
+                          <div
+                            key={materialEntry.materialId}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <span
+                              className="text-[12px]"
+                              style={{ color: "var(--fab-text-primary)" }}
+                            >
+                              {materialEntry.name ?? "Material"}
+                            </span>
+                            <span
+                              className="text-[11px]"
+                              style={{ color: "var(--fab-text-muted)" }}
+                            >
+                              {materialEntry.amountUsed}{" "}
+                              {materialEntry.unit ?? "units"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p
                         className="text-[12px]"
                         style={{ color: "var(--fab-text-muted)" }}
                       >
-                        ₱{(displayAmt * matPrice).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            },
-          )}
+                        No materials allocated.
+                      </p>
+                    )}
+                  </div>
+                )}
 
-          <div className="flex items-center justify-between gap-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      {pricingType === "WORKSHOP"
+                        ? "Amount"
+                        : "Setup Fee Portion"}
+                    </span>
+                    <span
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatCurrency(
+                        usage.pricingSnapshot?.setupFeePortion ?? 0,
+                      )}
+                    </span>
+                  </div>
+                  {pricingType === "FABRICATION" && (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Duration
+                        </span>
+                        <span
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {(usage.pricingSnapshot?.duration ?? 0).toFixed(2)}{" "}
+                          {usage.pricingSnapshot?.unitName ?? persistedUnitName}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Rate
+                        </span>
+                        <span
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {formatCurrency(usage.pricingSnapshot?.rate ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: "var(--fab-text-dim)" }}
+                        >
+                          Time Cost
+                        </span>
+                        <span
+                          className="text-[12px] font-medium"
+                          style={{ color: "var(--fab-text-primary)" }}
+                        >
+                          {formatCurrency(usage.pricingSnapshot?.timeCost ?? 0)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Material Cost
+                    </span>
+                    <span
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatCurrency(usage.pricingSnapshot?.materialCost ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--fab-text-dim)" }}
+                    >
+                      Subtotal
+                    </span>
+                    <span
+                      className="text-[12px] font-semibold"
+                      style={{ color: "var(--fab-text-primary)" }}
+                    >
+                      {formatCurrency(
+                        usage.pricingSnapshot?.subtotal ??
+                          usage.snapshot.costAtTime,
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <FieldSeparator className="my-1" />
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
             <span
               className="text-[10px] font-bold uppercase tracking-[0.12em]"
               style={{ color: "var(--fab-text-dim)" }}
             >
-              Total Material Cost
+              {pricingType === "WORKSHOP" ? "Amount" : "Setup Fee"}
             </span>
             <span
               className="text-[13px] font-medium"
               style={{ color: "var(--fab-text-primary)" }}
             >
-              ₱{displayMaterialCost.toFixed(2)}
+              {formatCurrency(displaySetupFee)}
             </span>
           </div>
-        </>
-      )}
 
-      <FieldSeparator className="my-1" />
+          {pricingType === "FABRICATION" && (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
+                >
+                  Duration
+                </span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  {displayDuration.toFixed(2)} {persistedUnitName}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
+                >
+                  Time Cost
+                </span>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  {formatCurrency(displayTimeCost)}
+                </span>
+              </div>
+              {!isEditing && (
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: "var(--fab-text-dim)" }}
+                  >
+                    Rate
+                  </span>
+                  <span
+                    className="text-[13px] font-medium"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {formatCurrency(displayRate)}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
 
-      {/* Total */}
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className="text-[10px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: "var(--fab-text-dim)" }}
-        >
-          {hasFinalBreakdown && !isEditing ? "Total" : "Estimated Total"}
-        </span>
-        <span
-          className="text-[21px] font-extrabold leading-none"
-          style={{ fontFamily: "Syne, sans-serif", color: "var(--fab-teal)" }}
-        >
-          ₱{displayTotal.toFixed(2)}
-        </span>
-      </div>
-    </DetailCard>
+          {isBuyFromLab && (
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Material Cost
+              </span>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                {formatCurrency(displayMaterialCost)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Total
+            </span>
+            <span
+              className="text-[15px] font-semibold"
+              style={{ color: "var(--fab-text-primary)" }}
+            >
+              {formatCurrency(displayTotal)}
+            </span>
+          </div>
+        </div>
+      </DetailCard>
+
+      <AlertDialog
+        open={showPastBookingDialog}
+        onOpenChange={setShowPastBookingDialog}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save past booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              One or more usage dates are in the past. Confirm to save this
+              project as backlog or historical work.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isSaving}
+              onClick={() => {
+                void persistChanges(true);
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

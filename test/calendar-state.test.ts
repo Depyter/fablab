@@ -7,11 +7,11 @@ import {
   resolveCalendarViewMode,
   shiftDate,
 } from "../src/components/calendar/calendar-state";
-import { getLabDayKey } from "../src/lib/lab-time";
+import { getLabDayKey, parseLabDayKey } from "../src/lib/lab-time";
 
 describe("calendar state", () => {
   test("week view starts from the calendar week boundary", () => {
-    const selectedDate = new Date(2026, 4, 6, 15, 30);
+    const selectedDate = parseLabDayKey("2026-05-06")!;
     const range = getVisibleRange(selectedDate, "week");
 
     expect(getLabDayKey(range.start)).toBe("2026-05-04");
@@ -29,7 +29,7 @@ describe("calendar state", () => {
   });
 
   test("week navigation still advances in seven-day increments", () => {
-    const selectedDate = new Date(2026, 4, 6, 15, 30);
+    const selectedDate = parseLabDayKey("2026-05-06")!;
 
     const nextWeek = shiftDate(selectedDate, "week", 1);
     const previousWeek = shiftDate(selectedDate, "week", -1);
@@ -41,7 +41,7 @@ describe("calendar state", () => {
   });
 
   test("month view expands to full lab weeks around the selected month", () => {
-    const selectedDate = new Date(2026, 4, 6, 15, 30);
+    const selectedDate = parseLabDayKey("2026-05-06")!;
     const range = getVisibleRange(selectedDate, "month");
 
     expect(range.label).toBe("May 2026");

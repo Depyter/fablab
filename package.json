@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:worker": "opennextjs-cloudflare build",
+    "build:worker:preview": "opennextjs-cloudflare build --env preview",
+    "ci:checks": "bun run format:check && bun run lint && bun run test:once",
+    "ci": "bun run ci:checks && bun run build",
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "next dev",
     "convex": "bunx convex dev --once",
@@ -16,9 +20,13 @@
     "test:once": "vitest run",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:coverage": "vitest run --coverage --coverage.reporter=text",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "preview": "bun run build:worker && opennextjs-cloudflare preview",
+    "deploy": "bun run build:worker && bun run deploy:worker",
+    "deploy:preview": "bun run build:worker:preview && bun run upload:worker:preview",
+    "deploy:worker": "opennextjs-cloudflare deploy",
+    "upload": "bun run build:worker && bun run upload:worker",
+    "upload:worker": "opennextjs-cloudflare upload",
+    "upload:worker:preview": "opennextjs-cloudflare upload --env preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

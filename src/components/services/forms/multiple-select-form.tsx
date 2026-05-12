@@ -58,9 +58,9 @@ export function MultipleSelectForm({
               {title.toLowerCase().includes("material")
                 ? "No available materials found."
                 : title.toLowerCase().includes("resource") ||
-                  title.toLowerCase().includes("machine")
-                ? "No available machines found."
-                : "No available options."}
+                    title.toLowerCase().includes("machine")
+                  ? "No available machines found."
+                  : "No available options."}
             </p>
             <Link href="/dashboard/inventory" className="inline-block">
               <Button className="px-4 py-2">Go to Inventory</Button>

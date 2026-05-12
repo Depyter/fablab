@@ -27,6 +27,7 @@ type StatusFilter =
   | "approved"
   | "completed"
   | "paid"
+  | "claimed"
   | "rejected"
   | "cancelled";
 type DateFilter = "all" | "today" | "week" | "month";
@@ -38,6 +39,7 @@ type EnrichedProject = {
   description: string;
   clientName: string;
   serviceName: string;
+  usageCount: number;
   bookingStartTime: number | null;
   bookingEndTime: number | null;
   estimatedPrice: number;
@@ -50,6 +52,7 @@ const STATUS_STYLES: Record<string, string> = {
   approved: "bg-blue-100 text-blue-700",
   completed: "bg-emerald-100 text-emerald-700",
   paid: "bg-teal-100 text-teal-700",
+  claimed: "bg-slate-100 text-slate-700",
   rejected: "bg-red-100 text-red-700",
   cancelled: "bg-red-100 text-red-700",
 };
@@ -59,6 +62,7 @@ const STATUS_DOT: Record<string, string> = {
   approved: "bg-blue-400",
   completed: "bg-emerald-400",
   paid: "bg-teal-400",
+  claimed: "bg-slate-400",
   rejected: "bg-red-400",
   cancelled: "bg-red-400",
 };
@@ -69,6 +73,7 @@ const STATUS_FILTERS: StatusFilter[] = [
   "approved",
   "completed",
   "paid",
+  "claimed",
   "rejected",
   "cancelled",
 ];
@@ -109,6 +114,7 @@ function ProjectListRow({
               project.status === "approved" && "bg-blue-500/20",
               project.status === "completed" && "bg-emerald-500/20",
               project.status === "paid" && "bg-teal-500/20",
+              project.status === "claimed" && "bg-slate-500/20",
               project.status === "rejected" && "bg-red-500/20",
               project.status === "cancelled" && "bg-red-500/20",
             )}
@@ -120,7 +126,8 @@ function ProjectListRow({
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="font-semibold text-sm truncate">{project.name}</span>
           <span className="text-xs text-muted-foreground truncate">
-            {project.serviceName} · {project.clientName}
+            {project.serviceName} · {project.clientName} · {project.usageCount}{" "}
+            {project.usageCount === 1 ? "usage" : "usages"}
           </span>
         </div>
 
@@ -239,6 +246,7 @@ export function ProjectsListClient() {
             description={project.description}
             clientName={project.clientName}
             serviceName={project.serviceName}
+            usageCount={project.usageCount}
             bookingDate={project.bookingStartTime}
             bookingStartTime={project.bookingStartTime}
             bookingEndTime={project.bookingEndTime}

@@ -27,7 +27,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ActionDialog } from "../action-dialog";
 import { api } from "@/../convex/_generated/api";
 import {
   PROJECT_STATUS_LABELS,
@@ -43,13 +42,11 @@ export type ProjectData = NonNullable<
 
 interface ProjectDetailsContentProps {
   project: ProjectData;
-  styles?: { badge?: string; cover?: string };
   timelineSteps: ProjectTimelineStep[];
   onOpenAssignView: () => void;
   onUpdateStatus: (newStatus: ProjectStatusType) => void;
   onMarkPaid: () => void;
   isClient: boolean;
-  onCancelProject: () => void;
   onUpdateDetails?: (args: {
     description?: string;
     notes?: string;
@@ -83,6 +80,11 @@ const STATUS_PILL: Record<
     color: "var(--fab-teal)",
     border: "color-mix(in srgb, var(--fab-teal) 30%, transparent)",
   },
+  claimed: {
+    bg: "rgba(15,23,42,0.08)",
+    color: "#0f172a",
+    border: "rgba(15,23,42,0.18)",
+  },
   rejected: {
     bg: "var(--fab-magenta-light)",
     color: "var(--fab-magenta)",
@@ -97,14 +99,11 @@ const STATUS_PILL: Record<
 
 export function ProjectDetailsContent({
   project,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  styles: _styles,
   timelineSteps,
   onOpenAssignView,
   onUpdateStatus,
   onMarkPaid,
   isClient,
-  onCancelProject,
   onUpdateDetails,
 }: ProjectDetailsContentProps) {
   // ── Edit state (review stage) ───────────────────────────────────────────
@@ -118,7 +117,8 @@ export function ProjectDetailsContent({
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const canEdit = project.status === "pending" && !!onUpdateDetails;
+  const canEdit =
+    !!onUpdateDetails && (!isClient || project.status === "pending");
 
   function openEdit() {
     setEditDescription(project.description ?? "");
@@ -160,10 +160,8 @@ export function ProjectDetailsContent({
     setIsSaving(false);
   }
 
-  const primaryUsage = project.resourceUsages?.[0];
-
-  const bookingDateStr = primaryUsage?.startTime
-    ? new Date(primaryUsage.startTime).toLocaleDateString("en-US", {
+  const bookingDateStr = project.bookingStartTime
+    ? new Date(project.bookingStartTime).toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -171,15 +169,16 @@ export function ProjectDetailsContent({
       })
     : "Not specified";
 
-  const bookingTimeRange = primaryUsage
-    ? `${new Date(primaryUsage.startTime).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} - ${new Date(primaryUsage.endTime).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
-    : "Not specified";
+  const bookingTimeRange =
+    project.bookingStartTime && project.bookingEndTime
+      ? `${new Date(project.bookingStartTime).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} - ${new Date(project.bookingEndTime).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
   const statusOrder = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatusType[];
@@ -200,11 +199,6 @@ export function ProjectDetailsContent({
     ? PROJECT_STATUS_LABELS[previousStep]
     : "";
   const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
-  
-  const isClaimedProject =
-    project.status === "paid" || (project.status as string) === "claimed";
-  const canRebook = isClient && project.status === "cancelled";
-  const canSubmitReview = isClient && isClaimedProject;
 
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
@@ -276,38 +270,11 @@ export function ProjectDetailsContent({
                   </DropdownMenu>
                 )}
               </div>
-              
             </div>
 
             {/* Action buttons */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {isClient ? (
-                <>
-                  {canRebook ? (
-                    <ActionDialog
-                      title="Rebook Project Request"
-                      description="Do you want to rebook this project request?"
-                      onConfirm={() => {}}
-                      baseActionText="Rebook Request"
-                      cancelButtonText="Back"
-                      confirmButtonText="Yes, rebook"
-                      className="w-full sm:w-auto"
-                      disabled={isClaimedProject}
-                    />
-                  ) : (
-                    <ActionDialog
-                      title="Cancel Project Request"
-                      description="Do you want to cancel this project request?"
-                      onConfirm={() => {}}
-                      baseActionText="Cancel   Request"
-                      cancelButtonText="Back"
-                      confirmButtonText="Yes, cancel"
-                      className="w-full sm:w-auto"
-                      disabled={isClaimedProject}
-                    />
-                  )}
-                </>
-              ) : (
+              {!isClient && (
                 <>
                   {/* Back · Current state · Next */}
                   <div className="flex items-center gap-1.5">
@@ -319,7 +286,6 @@ export function ProjectDetailsContent({
                         previousStep && handleStatusChange(previousStep)
                       }
                       disabled={!previousStep}
-                    
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                       {previousStep ? `Back: ${previousStepLabel}` : "Back"}
@@ -393,7 +359,6 @@ export function ProjectDetailsContent({
           <div className="min-w-0 space-y-4 lg:col-span-7">
             <ProjectInfoCard
               description={project.description}
-              projectType={project.type}
               serviceType={project.fulfillmentMode}
               material={project.material}
               bookingDateStr={bookingDateStr}
@@ -439,8 +404,9 @@ export function ProjectDetailsContent({
               serviceType={project.fulfillmentMode}
               resourceUsages={project.resourceUsages}
               projectPricing={project.pricing}
-              requestedMaterials={project.requestedMaterials ?? []}
               assignedMaker={project.assignedMaker ?? undefined}
+              headlineBookingStartTime={project.bookingStartTime}
+              headlineBookingEndTime={project.bookingEndTime}
               readOnly={isClient}
             />
           </div>

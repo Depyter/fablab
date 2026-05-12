@@ -58,7 +58,7 @@ describe("Material lifecycle and resourceUsage integration", () => {
         description: "cut an acrylic sign",
         fulfillmentMode: "self-service",
         material: "buy-from-lab",
-        requestedMaterials: [materialId],
+        materialIds: [materialId],
         files: [],
         service: serviceId,
         notes: "use black acrylic",
@@ -107,14 +107,6 @@ describe("Material lifecycle and resourceUsage integration", () => {
       ]);
     });
 
-    expect(details.requestedMaterials).toEqual([
-      {
-        _id: materialId,
-        name: "Acrylic Sheet",
-        unit: "sheet",
-        pricePerUnit: 150,
-      },
-    ]);
     expect(details.resourceUsages[0].materialsUsed).toEqual([
       {
         materialId,
@@ -131,7 +123,7 @@ describe("Material lifecycle and resourceUsage integration", () => {
     ]);
   });
 
-  test("material assignment updates requested materials and resourceUsage rows", async () => {
+  test("usage pricing updates usage materials and project query rows", async () => {
     const { t, tAera, tHarley } = await setupUsers();
 
     const firstMaterialId = await tAera.mutation(
@@ -190,7 +182,7 @@ describe("Material lifecycle and resourceUsage integration", () => {
         description: "switch materials",
         fulfillmentMode: "self-service",
         material: "buy-from-lab",
-        requestedMaterials: [firstMaterialId],
+        materialIds: [firstMaterialId],
         files: [],
         service: serviceId,
         notes: "swap to petg",
@@ -204,9 +196,24 @@ describe("Material lifecycle and resourceUsage integration", () => {
 
     await flushScheduledFunctions(t);
 
-    await tAera.mutation(api.projects.mutate.updateProject, {
+    const usageId = await t.run(async (ctx) => {
+      const usage = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .first();
+      return usage!._id;
+    });
+
+    await tAera.mutation(api.projects.mutate.updateUsagePricing, {
       projectId,
-      materialIds: [secondMaterialId],
+      usageId,
+      duration: 1,
+      rate: 2,
+      timeCost: 2,
+      materialCost: 0,
+      setupFeePortion: 1,
+      unitName: "hour",
+      materialsUsed: [{ materialId: secondMaterialId, amountUsed: 0 }],
     });
 
     const details = await tHarley.query(api.projects.query.getProject, {
@@ -214,13 +221,11 @@ describe("Material lifecycle and resourceUsage integration", () => {
     });
 
     await t.run(async (ctx) => {
-      const project = await ctx.db.get(projectId);
       const usage = await ctx.db
         .query("resourceUsage")
         .withIndex("by_project", (q) => q.eq("projectId", projectId))
         .first();
 
-      expect(project!.requestedMaterials).toEqual([secondMaterialId]);
       expect(usage!.materialsUsed).toEqual([
         {
           materialId: secondMaterialId,
@@ -235,14 +240,6 @@ describe("Material lifecycle and resourceUsage integration", () => {
       ]);
     });
 
-    expect(details.requestedMaterials).toEqual([
-      {
-        _id: secondMaterialId,
-        name: "PETG",
-        unit: "g",
-        pricePerUnit: 3,
-      },
-    ]);
     expect(details.resourceUsages[0].materialsUsed).toEqual([
       {
         materialId: secondMaterialId,
@@ -254,6 +251,169 @@ describe("Material lifecycle and resourceUsage integration", () => {
           costPerUnit: undefined,
         },
         name: "PETG",
+        unit: "g",
+      },
+    ]);
+  });
+
+  test("usage materials stay usage-scoped and deleting a usage restores material summary and stock", async () => {
+    const { t, tAera, tHarley } = await setupUsers();
+
+    const firstMaterialId = await tAera.mutation(
+      api.materials.mutate.addMaterial,
+      {
+        name: "PLA",
+        category: "Filament",
+        unit: "g",
+        currentStock: 100,
+        pricePerUnit: 2,
+        reorderThreshold: 10,
+        status: "IN_STOCK",
+      },
+    );
+
+    const secondMaterialId = await tAera.mutation(
+      api.materials.mutate.addMaterial,
+      {
+        name: "PETG",
+        category: "Filament",
+        unit: "g",
+        currentStock: 100,
+        pricePerUnit: 3,
+        reorderThreshold: 10,
+        status: "IN_STOCK",
+      },
+    );
+
+    await tAera.mutation(api.services.mutate.addService, {
+      name: "3d printing",
+      images: [],
+      samples: [],
+      serviceCategory: {
+        type: "FABRICATION",
+        materials: [firstMaterialId, secondMaterialId],
+        setupFee: 1,
+        unitName: "hour",
+        timeRate: 2,
+      },
+      requirements: ["design"],
+      fileTypes: [],
+      description: "3d printing service",
+      status: "Available",
+    });
+
+    const serviceId = await t.run(async (ctx) => {
+      const service = await ctx.db.query("services").first();
+      return service!._id;
+    });
+
+    const initialStart = Date.now() + HOUR_MS;
+    const initialEnd = initialStart + HOUR_MS;
+
+    const { projectId } = await tHarley.mutation(
+      api.projects.mutate.createProject,
+      {
+        name: "usage scoped materials",
+        pricing: "Default",
+        description: "different materials per usage",
+        fulfillmentMode: "self-service",
+        material: "buy-from-lab",
+        materialIds: [firstMaterialId],
+        files: [],
+        service: serviceId,
+        notes: "separate usage materials",
+        booking: {
+          startTime: initialStart,
+          endTime: initialEnd,
+          date: initialStart,
+        },
+      },
+    );
+
+    await flushScheduledFunctions(t);
+
+    const initialUsageId = await t.run(async (ctx) => {
+      const usage = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .first();
+      return usage!._id;
+    });
+
+    const secondUsageStart = initialEnd + HOUR_MS;
+    const secondUsageEnd = secondUsageStart + HOUR_MS;
+    const { usageId: secondUsageId } = await tAera.mutation(
+      api.projects.mutate.createUsage,
+      {
+        projectId,
+        startTime: secondUsageStart,
+        endTime: secondUsageEnd,
+      },
+    );
+
+    await t.run(async (ctx) => {
+      const secondUsage = await ctx.db.get(secondUsageId);
+      expect(secondUsage?.materialsUsed ?? []).toEqual([]);
+    });
+
+    await tAera.mutation(api.projects.mutate.updateUsagePricing, {
+      projectId,
+      usageId: initialUsageId,
+      duration: 1,
+      rate: 2,
+      timeCost: 2,
+      materialCost: 10,
+      setupFeePortion: 1,
+      unitName: "hour",
+      materialsUsed: [{ materialId: firstMaterialId, amountUsed: 5 }],
+    });
+
+    await tAera.mutation(api.projects.mutate.updateUsagePricing, {
+      projectId,
+      usageId: secondUsageId,
+      duration: 1,
+      rate: 2,
+      timeCost: 2,
+      materialCost: 21,
+      setupFeePortion: 0,
+      unitName: "hour",
+      materialsUsed: [{ materialId: secondMaterialId, amountUsed: 7 }],
+    });
+
+    await t.run(async (ctx) => {
+      const firstMaterial = await ctx.db.get(firstMaterialId);
+      const secondMaterial = await ctx.db.get(secondMaterialId);
+
+      expect(firstMaterial?.currentStock).toBe(95);
+      expect(secondMaterial?.currentStock).toBe(93);
+    });
+
+    await tAera.mutation(api.projects.mutate.deleteUsage, {
+      projectId,
+      usageId: secondUsageId,
+    });
+
+    const details = await tHarley.query(api.projects.query.getProject, {
+      projectId,
+    });
+
+    await t.run(async (ctx) => {
+      const secondMaterial = await ctx.db.get(secondMaterialId);
+
+      expect(secondMaterial?.currentStock).toBe(100);
+    });
+    expect(details.resourceUsages).toHaveLength(1);
+    expect(details.resourceUsages[0]?.materialsUsed).toEqual([
+      {
+        materialId: firstMaterialId,
+        amountUsed: 5,
+        snapshot: {
+          name: "PLA",
+          unit: "g",
+          pricePerUnit: 2,
+          costPerUnit: undefined,
+        },
+        name: "PLA",
         unit: "g",
       },
     ]);
@@ -311,13 +471,21 @@ describe("Resource lifecycle and resourceUsage integration", () => {
       status: "Available",
     });
 
-    const resourceId = await t.run(async (ctx) => {
+    const { resourceId, usageId } = await t.run(async (ctx) => {
       const resource = await ctx.db.query("resources").first();
-      return resource!._id;
+      const usage = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .first();
+      return {
+        resourceId: resource!._id,
+        usageId: usage!._id,
+      };
     });
 
-    await tAera.mutation(api.projects.mutate.updateProject, {
+    await tAera.mutation(api.projects.mutate.updateUsage, {
       projectId,
+      usageId,
       resourceId,
     });
 
@@ -356,6 +524,9 @@ describe("Resource lifecycle and resourceUsage integration", () => {
 
   test("usage updates preserve resource assignments and recalculate project totals", async () => {
     const { t, tAera, tHarley, projectId } = await setupProject();
+    const initialDetails = await tHarley.query(api.projects.query.getProject, {
+      projectId,
+    });
 
     await tAera.mutation(api.resource.mutate.addResource, {
       name: "Prusa MK4",
@@ -382,9 +553,10 @@ describe("Resource lifecycle and resourceUsage integration", () => {
     const updatedStart = Date.now() + 48 * HOUR_MS;
     const updatedEnd = updatedStart + 4 * HOUR_MS;
 
-    await tAera.mutation(api.resource.mutate.updateUsage, {
-      id: usageId,
-      resource: resourceId,
+    await tAera.mutation(api.projects.mutate.updateUsage, {
+      projectId,
+      usageId,
+      resourceId,
       startTime: updatedStart,
       endTime: updatedEnd,
     });
@@ -398,8 +570,8 @@ describe("Resource lifecycle and resourceUsage integration", () => {
       tax: 0,
       total: 8,
     });
-    expect(details.bookingStartTime).toBe(updatedStart);
-    expect(details.bookingEndTime).toBe(updatedEnd);
+    expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
+    expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
     expect(details.resourceUsages[0]).toMatchObject({
       _id: usageId,
       resource: resourceId,

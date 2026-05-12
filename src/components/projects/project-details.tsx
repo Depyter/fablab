@@ -10,7 +10,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { STATUS_STYLES } from "./project-card";
 import { useQuery, useMutation } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/../convex/_generated/api";
@@ -242,7 +241,6 @@ export function ProjectDetails({
   );
 
   const updateProject = useMutation(api.projects.mutate.updateProject);
-  const cancelOwnProject = useMutation(api.projects.mutate.cancelOwnProject);
   const markProjectPaid = useMutation(api.projects.mutate.markProjectPaid);
   const updateOwnProjectDetails = useMutation(
     api.projects.mutate.updateOwnProjectDetails,
@@ -284,19 +282,6 @@ export function ProjectDetails({
       toast.success(`Project status updated to ${newStatus}!`);
     } catch {
       toast.error(`Failed to update project status`);
-    }
-  };
-
-  const handleCancelProject = async () => {
-    try {
-      await cancelOwnProject({ projectId });
-      posthog.capture("project_cancelled", {
-        project_id: projectId,
-        project_name: project?.name,
-      });
-      toast.success("Project request cancelled.");
-    } catch {
-      toast.error("Failed to cancel project request.");
     }
   };
 
@@ -361,17 +346,6 @@ export function ProjectDetails({
     }
   };
 
-  let styles = project
-    ? (STATUS_STYLES[project.status] ?? STATUS_STYLES.pending)
-    : STATUS_STYLES.pending;
-
-  if (project?.status === "cancelled") {
-    styles = {
-      badge: "bg-red-100 text-red-700 border-red-200",
-      cover: "from-red-500/20 to-red-500/5",
-    };
-  }
-
   const timelineSteps = project
     ? [
         {
@@ -396,7 +370,8 @@ export function ProjectDetails({
           completed:
             project.status === "approved" ||
             project.status === "completed" ||
-            project.status === "paid",
+            project.status === "paid" ||
+            project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -407,7 +382,9 @@ export function ProjectDetails({
               ? "Cancelled"
               : project.status === "approved"
                 ? "In progress"
-                : project.status === "completed" || project.status === "paid"
+                : project.status === "completed" ||
+                    project.status === "paid" ||
+                    project.status === "claimed"
                   ? "Completed"
                   : "Pending",
           byLabel: project.assignedMaker
@@ -415,7 +392,9 @@ export function ProjectDetails({
             : "Waiting",
           active: project.status === "approved",
           completed:
-            project.status === "completed" || project.status === "paid",
+            project.status === "completed" ||
+            project.status === "paid" ||
+            project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -426,17 +405,17 @@ export function ProjectDetails({
               ? "Cancelled"
               : project.status === "completed"
                 ? "In progress"
-                : project.status === "paid"
+                : project.status === "paid" || project.status === "claimed"
                   ? "Completed"
                   : "Pending",
           byLabel:
-            project.status === "paid"
+            project.status === "paid" || project.status === "claimed"
               ? "FabLab Staff"
               : project.status === "completed"
                 ? "Waiting"
                 : "—",
           active: project.status === "completed",
-          completed: project.status === "paid",
+          completed: project.status === "paid" || project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -446,10 +425,18 @@ export function ProjectDetails({
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
               : project.status === "paid"
-                ? "Completed"
-                : "Pending",
-          byLabel: project.status === "paid" ? "Client" : "—",
-          completed: project.status === "paid",
+                ? "In progress"
+                : project.status === "claimed"
+                  ? "Completed"
+                  : "Pending",
+          byLabel:
+            project.status === "claimed"
+              ? "Client"
+              : project.status === "paid"
+                ? "Waiting"
+                : "—",
+          active: project.status === "paid",
+          completed: project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -568,13 +555,11 @@ export function ProjectDetails({
           <>
             <ProjectDetailsContent
               project={project}
-              styles={styles}
               timelineSteps={timelineSteps}
               onOpenAssignView={handleOpenAssignView}
               onUpdateStatus={handleUpdateStatus}
               onMarkPaid={() => handleOpenPaymentDialog()}
               isClient={isClient}
-              onCancelProject={handleCancelProject}
               onUpdateDetails={
                 isClient || isAdminOrMaker ? handleUpdateDetails : undefined
               }

@@ -77,7 +77,6 @@ export const ProjectServiceType = {
 export const FulfillmentMode = {
   SELF_SERVICE: "self-service",
   FULL_SERVICE: "full-service",
-  STAFF_LED: "staff-led",
 } as const;
 
 export const ProjectType = {
@@ -97,6 +96,7 @@ export const ProjectStatus = {
   COMPLETED: "completed",
   CANCELLED: "cancelled",
   PAID: "paid",
+  CLAIMED: "claimed",
 } as const;
 
 export const PaymentMode = {
@@ -260,6 +260,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatusType, string> = {
   approved: "Fabrication",
   completed: "Payment",
   paid: "Claim",
+  claimed: "Claimed",
   rejected: "Rejected",
   cancelled: "Cancelled",
 };
@@ -279,7 +280,8 @@ export const PROJECT_STATUS_TRANSITIONS: Record<
     ProjectStatus.CANCELLED,
   ],
   completed: [ProjectStatus.APPROVED, ProjectStatus.PAID],
-  paid: [ProjectStatus.COMPLETED],
+  paid: [ProjectStatus.COMPLETED, ProjectStatus.CLAIMED],
+  claimed: [ProjectStatus.PAID],
   rejected: [ProjectStatus.PENDING],
   cancelled: [ProjectStatus.PENDING],
 };

@@ -2,6 +2,7 @@ import schema from "../convex/schema";
 import { convexTest } from "convex-test";
 import { api, internal } from "../convex/_generated/api";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
+import resendComponent from "@convex-dev/resend/test";
 
 process.env.RESEND_TEST_MODE = "true";
 process.env.RESEND_API_KEY ??= "test-api-key";
@@ -21,6 +22,7 @@ export async function flushScheduledFunctions(t: {
 export async function setupUsers() {
   const t = convexTest(schema, import.meta.glob("../convex/**/*.{ts,tsx}"));
   rateLimiterComponent.register(t);
+  resendComponent.register(t);
 
   // Create Initial Users for mock
   await t.mutation(internal.users.createUserProfile, {

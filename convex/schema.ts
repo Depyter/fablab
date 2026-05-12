@@ -154,6 +154,18 @@ export default defineSchema({
       costAtTime: v.number(),
       unit: v.string(),
     }),
+    pricingSnapshot: v.optional(
+      v.object({
+        duration: v.number(),
+        rate: v.number(),
+        timeCost: v.number(),
+        materialCost: v.number(),
+        setupFeePortion: v.number(),
+        subtotal: v.number(),
+        unitName: v.string(),
+        pricingVariant: v.optional(v.string()),
+      }),
+    ),
 
     // Inventory deductions mapped to this specific session
     materialsUsed: v.optional(
@@ -193,14 +205,12 @@ export default defineSchema({
     fulfillmentMode: v.union(
       v.literal("self-service"),
       v.literal("full-service"),
-      v.literal("staff-led"),
     ),
 
     material: v.union(
       v.literal(ProjectMaterial.PROVIDE_OWN),
       v.literal(ProjectMaterial.BUY_FROM_LAB),
     ),
-    requestedMaterials: v.optional(v.array(v.id("materials"))),
 
     userId: v.id("userProfile"),
     assignedMaker: v.optional(v.id("userProfile")),
@@ -237,6 +247,7 @@ export default defineSchema({
       v.literal(ProjectStatus.COMPLETED),
       v.literal(ProjectStatus.CANCELLED),
       v.literal(ProjectStatus.PAID),
+      v.literal(ProjectStatus.CLAIMED),
     ),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())),

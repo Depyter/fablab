@@ -24,7 +24,11 @@ interface ReceiptCardProps {
 }
 
 export function ReceiptCard({ receipt, status, onMarkPaid }: ReceiptCardProps) {
-  const visible = receipt || status === "completed" || status === "paid";
+  const visible =
+    receipt ||
+    status === "completed" ||
+    status === "paid" ||
+    status === "claimed";
 
   if (!visible) return null;
 

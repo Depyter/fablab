@@ -109,10 +109,12 @@ function getWorkshopMemberSortValue(
       return 2;
     case "paid":
       return 3;
-    case "rejected":
+    case "claimed":
       return 4;
-    case "cancelled":
+    case "rejected":
       return 5;
+    case "cancelled":
+      return 6;
     default:
       return 99;
   }

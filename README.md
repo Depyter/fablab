@@ -122,7 +122,7 @@ bun install
 bunx convex dev --until-success
 
 # 3. Configure environment
-cp .dev.vars.example .dev.vars   # fill in BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, etc.
+cp .env.example .env.local
 
 # 4. Start dev server
 bun run dev   # → http://localhost:3000
@@ -132,10 +132,13 @@ bun run dev   # → http://localhost:3000
 
 | Command                   | Description                                   |
 | ------------------------- | --------------------------------------------- |
+| `bun run ci`              | Format check, lint, tests, and Next build     |
 | `bun run dev`             | Frontend + Convex backend (concurrent)        |
 | `bun run build`           | Build Next.js app                             |
+| `bun run build:worker`    | Build the OpenNext worker for Cloudflare      |
 | `bun run preview`         | Build & preview on Cloudflare Workers locally |
 | `bun run deploy`          | Build & deploy to Cloudflare Workers          |
+| `bun run deploy:preview`  | Build & deploy the preview worker environment |
 | `bun run test`            | Unit tests (watch mode)                       |
 | `bun run test:once`       | Unit tests (single run)                       |
 | `bun run test:coverage`   | Tests with coverage report                    |
@@ -143,12 +146,37 @@ bun run dev   # → http://localhost:3000
 
 ## Deployment
 
-```sh
-# First time only — create R2 cache bucket
-bunx wrangler r2 bucket create fablab-opennext-cache
+The repo now splits deployment into three GitHub Actions workflows:
 
-# Deploy
-bun run deploy
+- **CI** runs `bun run ci:checks` for pull requests and `main`.
+- **Preview Deploy** runs on same-repo pull requests, creates a Convex preview deployment, builds the OpenNext worker against that preview, and uploads a `preview` Cloudflare Worker version with a stable PR alias URL.
+- **Production Deploy** runs on pushes to `main`, builds against the production Convex deployment, and deploys the default Cloudflare Worker.
+
+Convex is responsible for injecting `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` at build time, so those values are no longer hardcoded in `wrangler.jsonc`.
+
+Set these GitHub repository secrets before enabling the workflows:
+
+- `CONVEX_PREVIEW_DEPLOY_KEY`
+- `CONVEX_PROD_DEPLOY_KEY`
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Do **not** set `BETTER_AUTH_URL` in Convex when you want Better Auth to infer the active preview URL from the request. Keep the production OAuth callback URL separate with `BETTER_AUTH_PRODUCTION_URL`, and use `BETTER_AUTH_TRUSTED_ORIGINS` for preview host patterns.
+
+Google OAuth now uses Better Auth's OAuth Proxy so preview and staging deployments can reuse the production Google OAuth app. Configure auth like this across Convex deployments:
+
+- `BETTER_AUTH_PRODUCTION_URL=https://fablab.harleyvan.com`
+- `BETTER_AUTH_SECRET=<same value in production and every preview/staging deployment>`
+- `BETTER_AUTH_TRUSTED_ORIGINS=<comma-separated preview host patterns, for example *-fablab-preview.acabalharleyvan.workers.dev>`
+
+Register only the production Google callback URL:
+
+```text
+https://fablab.harleyvan.com/api/auth/callback/google
 ```
 
-> Set secrets via the Cloudflare dashboard or `wrangler secret put` before deploying.
+```sh
+# First time only — create isolated OpenNext cache buckets
+bunx wrangler r2 bucket create fablab-opennext-cache-prod
+bunx wrangler r2 bucket create fablab-opennext-cache-preview
+```

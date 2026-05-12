@@ -12,7 +12,7 @@ export type ServicePricing =
       variants?: Array<{ name: string; setupFee: number; timeRate: number }>;
     };
 
-export type PricingServiceType = "self-service" | "full-service" | "staff-led";
+export type PricingServiceType = "self-service" | "full-service";
 
 export interface PricingBreakdown {
   setupFee: number;

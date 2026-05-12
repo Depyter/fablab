@@ -20,7 +20,8 @@ type StatusUnion =
   | "rejected"
   | "completed"
   | "cancelled"
-  | "paid";
+  | "paid"
+  | "claimed";
 
 function resolveProjectDateBounds(dateFilter?: string) {
   const now = getCurrentTimestamp();
@@ -54,6 +55,17 @@ function resolveProjectDateBounds(dateFilter?: string) {
 
 function compareByCreationTime(left: Doc<"projects">, right: Doc<"projects">) {
   return (
+    left._creationTime - right._creationTime ||
+    left._id.localeCompare(right._id)
+  );
+}
+
+function compareUsageOrder(
+  left: Doc<"resourceUsage">,
+  right: Doc<"resourceUsage">,
+) {
+  return (
+    left.startTime - right.startTime ||
     left._creationTime - right._creationTime ||
     left._id.localeCompare(right._id)
   );
@@ -131,7 +143,6 @@ export const getProjects = authQuery({
 
     const dateBounds = resolveProjectDateBounds(args.dateFilter);
     if (dateBounds !== null) {
-      const projectsById = new Map<Id<"projects">, Doc<"projects">>();
       const datedProjects = await ctx.db
         .query("projects")
         .withIndex("by_bookingStartTime", (q) =>
@@ -141,39 +152,8 @@ export const getProjects = authQuery({
         )
         .collect();
 
-      for (const project of datedProjects) {
-        projectsById.set(project._id, project);
-      }
-
-      const matchingUsages = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_startTime", (q) =>
-          q
-            .gte("startTime", dateBounds.startTime)
-            .lt("startTime", dateBounds.endTime),
-        )
-        .collect();
-
-      const missingProjectIds = [
-        ...new Set(
-          matchingUsages
-            .map((usage) => usage.projectId)
-            .filter((projectId) => !projectsById.has(projectId)),
-        ),
-      ];
-
-      const fallbackProjects = await Promise.all(
-        missingProjectIds.map((projectId) => ctx.db.get(projectId)),
-      );
-
-      for (const project of fallbackProjects) {
-        if (project) {
-          projectsById.set(project._id, project);
-        }
-      }
-
       const filteredProjects = sortProjectsForList(
-        [...projectsById.values()].filter((project) => {
+        datedProjects.filter((project) => {
           if (!isPrivileged && project.userId !== callerId) {
             return false;
           }
@@ -261,18 +241,15 @@ export const getProjects = authQuery({
 async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
   return Promise.all(
     projects.map(async (project) => {
-      const [clientProfile, service] = await Promise.all([
+      const [clientProfile, service, usageCount] = await Promise.all([
         ctx.db.get(project.userId as Id<"userProfile">),
         ctx.db.get(project.service as Id<"services">),
+        ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", project._id))
+          .collect()
+          .then((usages) => usages.length),
       ]);
-      const usage =
-        project.bookingStartTime === undefined &&
-        project.bookingEndTime === undefined
-          ? await ctx.db
-              .query("resourceUsage")
-              .withIndex("by_project", (q) => q.eq("projectId", project._id))
-              .first()
-          : null;
 
       const coverUrl =
         service?.images && service.images.length > 0
@@ -297,11 +274,12 @@ async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
               pfpUrl: makerPfpUrl,
             }
           : null,
-        bookingStartTime: project.bookingStartTime ?? usage?.startTime ?? null,
-        bookingEndTime: project.bookingEndTime ?? usage?.endTime ?? null,
+        bookingStartTime: project.bookingStartTime ?? null,
+        bookingEndTime: project.bookingEndTime ?? null,
         // Audit dates
         requestedDate: project._creationTime,
         estimatedPrice: project.totalInvoice?.total ?? 0,
+        usageCount,
         coverUrl,
       };
     }),
@@ -409,15 +387,16 @@ export const getProject = authQuery({
     })();
 
     // -------------------------------------------------------------------------
-    // Resource usages — source of truth for booking window and resource
+    // Resource usages — operational schedule/resource records
     // -------------------------------------------------------------------------
     const usageDocs = await ctx.db
       .query("resourceUsage")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))
       .collect();
+    const orderedUsageDocs = [...usageDocs].sort(compareUsageOrder);
 
     const resourceUsages = await Promise.all(
-      usageDocs.map(async (usage) => {
+      orderedUsageDocs.map(async (usage) => {
         const resourceDoc = usage.resource
           ? await ctx.db.get(usage.resource as Id<"resources">)
           : null;
@@ -457,30 +436,6 @@ export const getProject = authQuery({
       }),
     );
 
-    // Derive the primary booking window from the first matching usage
-    const primaryUsage = usageDocs[0] ?? null;
-
-    // -------------------------------------------------------------------------
-    // Requested materials
-    // -------------------------------------------------------------------------
-    const requestedMaterials = project.requestedMaterials
-      ? (
-          await Promise.all(
-            project.requestedMaterials.map(async (id) => {
-              const doc = await ctx.db.get(id as Id<"materials">);
-              return doc
-                ? {
-                    _id: doc._id,
-                    name: doc.name,
-                    unit: doc.unit,
-                    pricePerUnit: doc.pricePerUnit ?? 0,
-                  }
-                : null;
-            }),
-          )
-        ).filter((m): m is NonNullable<typeof m> => m !== null)
-      : [];
-
     // -------------------------------------------------------------------------
     // Thread
     // -------------------------------------------------------------------------
@@ -506,9 +461,8 @@ export const getProject = authQuery({
       ...project,
       // Audit / tracking dates
       requestedDate: project._creationTime,
-      bookingStartTime:
-        project.bookingStartTime ?? primaryUsage?.startTime ?? null,
-      bookingEndTime: project.bookingEndTime ?? primaryUsage?.endTime ?? null,
+      bookingStartTime: project.bookingStartTime ?? null,
+      bookingEndTime: project.bookingEndTime ?? null,
       // Relations
       client: {
         _id: clientProfile?._id ?? null,
@@ -526,7 +480,6 @@ export const getProject = authQuery({
       resolvedFiles,
       receipt,
       resourceUsages,
-      requestedMaterials,
       threadId: thread?._id ?? null,
       roomId: thread?.roomId ?? null,
     };

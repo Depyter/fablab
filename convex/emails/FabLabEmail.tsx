@@ -372,6 +372,12 @@ const statusConfig: Record<
     color: C.white,
     bg: C.teal,
   },
+  [ProjectStatus.CLAIMED]: {
+    heroLabel: "Project Claimed",
+    timeline: ["complete", "complete", "complete", "complete", "complete"],
+    color: C.white,
+    bg: C.black,
+  },
   [ProjectStatus.REJECTED]: {
     heroLabel: "Request Declined",
     timeline: ["complete", "pending", "pending", "pending", "pending"],
@@ -402,6 +408,8 @@ export function FabLabEmail({
   },
 }: FabLabEmailProps) {
   const config = statusConfig[status] || statusConfig[ProjectStatus.PENDING];
+  const finalTimelineLabel =
+    status === ProjectStatus.CLAIMED ? "Claimed" : "Ready for Pickup";
 
   const formatCurrency = (val: number) => `₱${val.toLocaleString()}`;
 
@@ -451,7 +459,9 @@ export function FabLabEmail({
                   ? "You're all set to make."
                   : status === ProjectStatus.PAID
                     ? "Your project is ready."
-                    : "Project Status Update"}
+                    : status === ProjectStatus.CLAIMED
+                      ? "Your project is complete."
+                      : "Project Status Update"}
             </Text>
             <Text style={S.bodyText}>
               {status === ProjectStatus.PENDING
@@ -460,7 +470,9 @@ export function FabLabEmail({
                   ? "Your project request has been approved. Your machine slot is reserved — please arrive 10 minutes early for a safety briefing."
                   : status === ProjectStatus.PAID
                     ? "Your project has been completed and payment has been verified. You can now visit the lab to pick up your items."
-                    : "There has been an update to your project status. Please check your dashboard for more details."}
+                    : status === ProjectStatus.CLAIMED
+                      ? "Your project has been successfully claimed. Thanks for creating with the lab."
+                      : "There has been an update to your project status. Please check your dashboard for more details."}
             </Text>
 
             {/* Simple Details */}
@@ -563,7 +575,7 @@ export function FabLabEmail({
             />
             <TimelineStep
               step="Step 05"
-              label="Ready for Pickup"
+              label={finalTimelineLabel}
               status={config.timeline[4]}
               last
             />

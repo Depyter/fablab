@@ -56,6 +56,17 @@ export type ProjectPricingSnapshot = {
   unitName: string;
 };
 
+export type UsagePricingSnapshot = {
+  duration: number;
+  rate: number;
+  timeCost: number;
+  materialCost: number;
+  setupFeePortion: number;
+  subtotal: number;
+  unitName: string;
+  pricingVariant?: string;
+};
+
 export function resolveMaterialStatus(
   stock: number,
   reorderThreshold?: number,
@@ -116,9 +127,12 @@ export async function validateFileTypes(
 // Helpers — Booking Resolution
 // ============================================================================
 
-export function validateBookingTiming(booking: BookingWindow): void {
+export function validateBookingTiming(
+  booking: BookingWindow,
+  options?: { allowPastBooking?: boolean },
+): void {
   const now = getCurrentTimestamp();
-  if (booking.startTime < now) {
+  if (!options?.allowPastBooking && booking.startTime < now) {
     throw new ConvexError("Cannot book a date or time in the past.");
   }
   if (booking.endTime <= booking.startTime) {
@@ -126,11 +140,22 @@ export function validateBookingTiming(booking: BookingWindow): void {
   }
 }
 
+function serviceUsesDiscreteResources(service: ServiceDoc) {
+  return (
+    service.serviceCategory.type === "FABRICATION" &&
+    (service.resources?.length ?? 0) > 0
+  );
+}
+
 export async function validateFabricationAvailability(
   ctx: MutationCtx,
   serviceId: Id<"services">,
   service: ServiceDoc,
   booking: BookingWindow,
+  options?: {
+    resourceId?: Id<"resources"> | null;
+    excludeUsageId?: Id<"resourceUsage">;
+  },
 ): Promise<void> {
   if (service.serviceCategory.type !== "FABRICATION") return;
 
@@ -144,13 +169,26 @@ export async function validateFabricationAvailability(
     }
   }
 
-  // Conflict check — query all usages for this service and check time overlap
-  const existingUsages = await ctx.db
-    .query("resourceUsage")
-    .withIndex("by_service", (q) => q.eq("service", serviceId))
-    .collect();
+  // Conflict check — prefer resource timelines when the service has discrete
+  // resources, otherwise fall back to the pooled service timeline.
+  const existingUsages = options?.resourceId
+    ? await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_resource_startTime", (q) =>
+          q.eq("resource", options.resourceId!),
+        )
+        .collect()
+    : serviceUsesDiscreteResources(service)
+      ? []
+      : await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", serviceId))
+          .collect();
 
   for (const usage of existingUsages) {
+    if (options?.excludeUsageId && usage._id === options.excludeUsageId) {
+      continue;
+    }
     if (
       booking.startTime < usage.endTime &&
       booking.endTime > usage.startTime
@@ -159,24 +197,6 @@ export async function validateFabricationAvailability(
     }
   }
 }
-
-export function validateProjectFulfillmentMode(
-  service: ServiceDoc,
-  fulfillmentMode: string,
-): void {
-  if (
-    service.serviceCategory.type === "WORKSHOP" &&
-    fulfillmentMode === "staff-led"
-  ) {
-    throw new ConvexError(
-      "Workshop services cannot use staff-led fulfillment.",
-    );
-  }
-}
-
-// ============================================================================
-// Helpers — Cost
-// ============================================================================
 
 export function computeProvisionalCostBreakdown(
   service: ServiceDoc,
@@ -187,10 +207,7 @@ export function computeProvisionalCostBreakdown(
   const breakdown = derivePricingFromSchema({
     servicePricing: service.serviceCategory,
     pricingVariant,
-    serviceType: fulfillmentMode as
-      | "self-service"
-      | "full-service"
-      | "staff-led",
+    serviceType: fulfillmentMode as "self-service" | "full-service",
     bookingDurationMinutes: bookingDurationMs / (1000 * 60),
   });
 
@@ -222,6 +239,16 @@ export function buildPricingSnapshot(
   };
 }
 
+export function buildUsagePricingSnapshot(
+  snapshot: Omit<UsagePricingSnapshot, "subtotal">,
+): UsagePricingSnapshot {
+  return {
+    ...snapshot,
+    subtotal:
+      snapshot.setupFeePortion + snapshot.timeCost + snapshot.materialCost,
+  };
+}
+
 function sortProjectUsages(usages: Doc<"resourceUsage">[]) {
   return [...usages].sort(
     (a, b) =>
@@ -229,12 +256,6 @@ function sortProjectUsages(usages: Doc<"resourceUsage">[]) {
       a._creationTime - b._creationTime ||
       a._id.localeCompare(b._id),
   );
-}
-
-function getPrimaryProjectUsage(usages: Doc<"resourceUsage">[]) {
-  return [...usages].sort(
-    (a, b) => a._creationTime - b._creationTime || a._id.localeCompare(b._id),
-  )[0];
 }
 
 function getUsageDurationMs(usage: Doc<"resourceUsage">) {
@@ -252,53 +273,106 @@ function getUsageMaterialCost(usage: Doc<"resourceUsage">) {
 }
 
 function deriveProjectPricingSnapshot(
-  project: Doc<"projects">,
-  service: ServiceDoc,
-  usages: Doc<"resourceUsage">[],
+  usagePricingSnapshots: UsagePricingSnapshot[],
+  fallbackUnitName: string,
 ): ProjectPricingSnapshot {
-  const materialCost = usages.reduce(
-    (sum, usage) => sum + getUsageMaterialCost(usage),
+  const setupFee = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.setupFeePortion,
     0,
   );
-  const bookingDurationMinutes = usages.reduce(
-    (sum, usage) => sum + getUsageDurationMs(usage) / (1000 * 60),
+  const timeCost = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.timeCost,
     0,
   );
-  const derived = derivePricingFromSchema({
-    servicePricing: service.serviceCategory,
-    pricingVariant: project.pricing,
-    serviceType: project.fulfillmentMode,
-    bookingDurationMinutes,
-    materialCost,
-  });
+  const materialCost = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.materialCost,
+    0,
+  );
+  const duration = usagePricingSnapshots.reduce(
+    (sum, usage) => sum + usage.duration,
+    0,
+  );
+  const unitName = usagePricingSnapshots[0]?.unitName ?? fallbackUnitName;
+  const rate =
+    duration > 0
+      ? timeCost / duration
+      : (usagePricingSnapshots.find((usage) => usage.rate > 0)?.rate ?? 0);
 
   return buildPricingSnapshot({
-    setupFee: derived.setupFee,
-    timeCost: derived.timeCost,
-    materialCost: derived.materialCost,
-    duration: derived.duration,
-    rate: derived.rate,
-    unitName: derived.unitName,
+    setupFee,
+    timeCost,
+    materialCost,
+    duration,
+    rate,
+    unitName,
   });
 }
 
-function allocateByWeights(total: number, weights: number[]) {
-  if (weights.length === 0) return [];
-  if (total === 0) return weights.map(() => 0);
+function usagePricingSnapshotEquals(
+  left: UsagePricingSnapshot | undefined,
+  right: UsagePricingSnapshot,
+) {
+  if (!left) return false;
 
-  const safeWeights = weights.map((weight) => Math.max(0, weight));
-  const weightTotal = safeWeights.reduce((sum, weight) => sum + weight, 0);
+  return (
+    Math.abs(left.duration - right.duration) <= 0.0001 &&
+    Math.abs(left.rate - right.rate) <= 0.0001 &&
+    Math.abs(left.timeCost - right.timeCost) <= 0.0001 &&
+    Math.abs(left.materialCost - right.materialCost) <= 0.0001 &&
+    Math.abs(left.setupFeePortion - right.setupFeePortion) <= 0.0001 &&
+    Math.abs(left.subtotal - right.subtotal) <= 0.0001 &&
+    left.unitName === right.unitName &&
+    left.pricingVariant === right.pricingVariant
+  );
+}
 
-  if (weightTotal === 0) {
-    return safeWeights.map((_, index) => (index === 0 ? total : 0));
+function deriveUsagePricingSnapshot(
+  project: Doc<"projects">,
+  service: ServiceDoc,
+  usage: Doc<"resourceUsage">,
+  index: number,
+): UsagePricingSnapshot {
+  if (service.serviceCategory.type === "WORKSHOP") {
+    const sessionPrice = derivePricingFromSchema({
+      servicePricing: service.serviceCategory,
+      pricingVariant: project.pricing,
+      serviceType: project.fulfillmentMode,
+      materialCost: getUsageMaterialCost(usage),
+    });
+
+    return buildUsagePricingSnapshot({
+      duration: sessionPrice.duration,
+      rate: sessionPrice.rate,
+      timeCost: sessionPrice.timeCost,
+      materialCost: sessionPrice.materialCost,
+      setupFeePortion: sessionPrice.setupFee,
+      unitName: sessionPrice.unitName,
+      pricingVariant: project.pricing,
+    });
   }
 
-  let remaining = total;
-  return safeWeights.map((weight, index) => {
-    if (index === safeWeights.length - 1) return remaining;
-    const share = (weight / weightTotal) * total;
-    remaining -= share;
-    return share;
+  const usagePricing = derivePricingFromSchema({
+    servicePricing: service.serviceCategory,
+    pricingVariant: project.pricing,
+    serviceType: project.fulfillmentMode,
+    bookingDurationMinutes: getUsageDurationMs(usage) / (1000 * 60),
+    materialCost: getUsageMaterialCost(usage),
+  });
+  const setupFee = derivePricingFromSchema({
+    servicePricing: service.serviceCategory,
+    pricingVariant: project.pricing,
+    serviceType: project.fulfillmentMode,
+    bookingDurationMinutes: 0,
+  }).setupFee;
+
+  return buildUsagePricingSnapshot({
+    duration: usagePricing.duration,
+    rate: usagePricing.rate,
+    timeCost: usagePricing.timeCost,
+    materialCost: usagePricing.materialCost,
+    setupFeePortion: index === 0 ? setupFee : 0,
+    unitName: usagePricing.unitName,
+    pricingVariant: project.pricing,
   });
 }
 
@@ -322,8 +396,9 @@ export async function createWorkshopUsage(
   booking: BookingWindow,
   projectId: Id<"projects">,
   snapshot: { name: string; costAtTime: number; unit: string },
-  requestedMaterials?: Id<"materials">[],
-): Promise<void> {
+  pricingSnapshot: UsagePricingSnapshot,
+  initialMaterialIds?: Id<"materials">[],
+): Promise<Id<"resourceUsage">> {
   // Capacity check against the schedule time slot
   if (service.serviceCategory.type === "WORKSHOP") {
     const schedule = service.serviceCategory.schedules.find(
@@ -342,16 +417,17 @@ export async function createWorkshopUsage(
   }
 
   const materialsUsed =
-    requestedMaterials && requestedMaterials.length > 0
-      ? await buildMaterialEntries(ctx, requestedMaterials)
+    initialMaterialIds && initialMaterialIds.length > 0
+      ? await buildMaterialEntries(ctx, initialMaterialIds)
       : undefined;
 
-  await ctx.db.insert("resourceUsage", {
+  return ctx.db.insert("resourceUsage", {
     projectId,
     service: serviceId,
     startTime: booking.startTime,
     endTime: booking.endTime,
     snapshot,
+    pricingSnapshot,
     materialsUsed,
   });
 }
@@ -362,19 +438,21 @@ export async function createFabricationUsage(
   booking: BookingWindow,
   projectId: Id<"projects">,
   snapshot: { name: string; costAtTime: number; unit: string },
-  requestedMaterials?: Id<"materials">[],
-): Promise<void> {
+  pricingSnapshot: UsagePricingSnapshot,
+  initialMaterialIds?: Id<"materials">[],
+): Promise<Id<"resourceUsage">> {
   const materialsUsed =
-    requestedMaterials && requestedMaterials.length > 0
-      ? await buildMaterialEntries(ctx, requestedMaterials)
+    initialMaterialIds && initialMaterialIds.length > 0
+      ? await buildMaterialEntries(ctx, initialMaterialIds)
       : undefined;
 
-  await ctx.db.insert("resourceUsage", {
+  return ctx.db.insert("resourceUsage", {
     projectId,
     service: serviceId,
     startTime: booking.startTime,
     endTime: booking.endTime,
     snapshot,
+    pricingSnapshot,
     materialsUsed,
   });
 }
@@ -584,83 +662,15 @@ export async function createProjectThread(
 }
 
 // ============================================================================
-// Helpers — Cost Computation (completeProject)
-// ============================================================================
-
-export function computeCompletionCost(
-  service: ServiceDoc,
-  project: Doc<"projects">,
-  actualDurationMs: number,
-): { setupFee: number; timeCost: number } {
-  const durationMinutes = actualDurationMs / (1000 * 60);
-  const isSelfService = project.fulfillmentMode === "self-service";
-
-  const unitToMinutes = (unit: string): number => {
-    if (unit === "hour") return 60;
-    if (unit === "day") return 60 * 24;
-    return 1;
-  };
-
-  // Derive from live service doc using the variant chosen at booking time.
-  // The computed cost is persisted in resourceUsage.snapshot.costAtTime, so
-  // historical accuracy is preserved at the output level, not the rate level.
-  const sc = service.serviceCategory as {
-    type: string;
-    amount?: number;
-    setupFee?: number;
-    unitName?: string;
-    timeRate?: number;
-    variants?: Array<{
-      name: string;
-      setupFee?: number;
-      timeRate?: number;
-      amount?: number;
-    }>;
-  };
-
-  if (sc.type === "WORKSHOP") {
-    const variant = sc.variants?.find((v) => v.name === project.pricing);
-    const amount = variant?.amount ?? sc.amount ?? 0;
-    return { setupFee: isSelfService ? 0 : amount, timeCost: 0 };
-  }
-
-  // FABRICATION
-  let setupFee = sc.setupFee ?? 0;
-  const variant = sc.variants?.find((v) => v.name === project.pricing);
-  if (variant?.setupFee !== undefined) setupFee = variant.setupFee;
-  if (isSelfService) setupFee = 0;
-
-  const timeRate = variant?.timeRate ?? sc.timeRate ?? 0;
-  const unitName = sc.unitName ?? "minute";
-  const timeCost = (durationMinutes / unitToMinutes(unitName)) * timeRate;
-
-  return { setupFee, timeCost };
-}
-
-// ============================================================================
 // Helpers — Project Updates
 // ============================================================================
-
-/**
- * Finds the resourceUsage record for the given project.
- */
-export async function findProjectUsage(
-  ctx: MutationCtx,
-  project: Doc<"projects">,
-): Promise<Doc<"resourceUsage"> | null> {
-  return ctx.db
-    .query("resourceUsage")
-    .withIndex("by_project", (q) => q.eq("projectId", project._id))
-    .first();
-}
 
 export async function syncProjectTotalInvoice(
   ctx: MutationCtx,
   projectId: Id<"projects">,
   options?: {
     fallbackTotal?: number;
-    actualDurationMs?: number;
-    manualSnapshot?: Omit<ProjectPricingSnapshot, "total">;
+    preferStoredUsageSnapshots?: boolean;
   },
 ): Promise<number | undefined> {
   const project = await ctx.db.get(projectId);
@@ -674,140 +684,59 @@ export async function syncProjectTotalInvoice(
     .collect();
   const usages = sortProjectUsages(usageDocs);
 
-  const fallbackTotal =
-    options?.manualSnapshot !== undefined
-      ? options.manualSnapshot.setupFee +
-        options.manualSnapshot.timeCost +
-        options.manualSnapshot.materialCost
-      : options?.fallbackTotal;
+  const fallbackTotal = options?.fallbackTotal;
 
   if (!service || usages.length === 0) {
     await ctx.db.patch(projectId, {
-      bookingStartTime: undefined,
-      bookingEndTime: undefined,
       totalInvoice:
         fallbackTotal !== undefined
           ? buildTotalInvoice(fallbackTotal)
           : undefined,
-      pricingSnapshot:
-        options?.manualSnapshot !== undefined
-          ? buildPricingSnapshot(options.manualSnapshot)
-          : undefined,
+      pricingSnapshot: undefined,
     });
     return fallbackTotal;
   }
 
-  let normalizedUsages = usages;
-
-  if (
-    options?.actualDurationMs !== undefined &&
-    service.serviceCategory.type === "FABRICATION"
-  ) {
-    const allocatedDurations = allocateByWeights(
-      options.actualDurationMs,
-      usages.map(getUsageDurationMs),
-    );
-
-    normalizedUsages = await Promise.all(
-      usages.map(async (usage, index) => {
-        const nextEndTime = usage.startTime + allocatedDurations[index];
-        if (nextEndTime !== usage.endTime) {
-          await ctx.db.patch(usage._id, { endTime: nextEndTime });
-        }
-
-        return {
-          ...usage,
-          endTime: nextEndTime,
-        };
-      }),
-    );
-  }
-
-  const usageTotals =
-    options?.manualSnapshot !== undefined
-      ? (() => {
-          const timeShares = allocateByWeights(
-            options.manualSnapshot.timeCost,
-            normalizedUsages.map(getUsageDurationMs),
-          );
-          const materialShares = normalizedUsages.map(getUsageMaterialCost);
-          const materialTotal = materialShares.reduce(
-            (sum, materialCost) => sum + materialCost,
-            0,
-          );
-
-          return normalizedUsages.map((_, index) => {
-            const materialCost =
-              materialTotal > 0
-                ? materialShares[index]
-                : index === 0
-                  ? options.manualSnapshot!.materialCost
-                  : 0;
-            return (
-              timeShares[index] +
-              materialCost +
-              (index === 0 ? options.manualSnapshot!.setupFee : 0)
-            );
-          });
-        })()
-      : service.serviceCategory.type === "WORKSHOP"
-        ? normalizedUsages.map((usage) => {
-            const sessionPrice = derivePricingFromSchema({
-              servicePricing: service.serviceCategory,
-              pricingVariant: project.pricing,
-              serviceType: project.fulfillmentMode,
-              materialCost: getUsageMaterialCost(usage),
-            });
-
-            return sessionPrice.total;
-          })
-        : (() => {
-            const setupFee = derivePricingFromSchema({
-              servicePricing: service.serviceCategory,
-              pricingVariant: project.pricing,
-              serviceType: project.fulfillmentMode,
-              bookingDurationMinutes: 0,
-            }).setupFee;
-
-            return normalizedUsages.map((usage, index) => {
-              const materialCost = getUsageMaterialCost(usage);
-              const timeCost = derivePricingFromSchema({
-                servicePricing: service.serviceCategory,
-                pricingVariant: project.pricing,
-                serviceType: project.fulfillmentMode,
-                bookingDurationMinutes: getUsageDurationMs(usage) / (1000 * 60),
-              }).timeCost;
-
-              return timeCost + materialCost + (index === 0 ? setupFee : 0);
-            });
-          })();
+  const usagePricingSnapshots = usages.map((usage, index) =>
+    options?.preferStoredUsageSnapshots && usage.pricingSnapshot
+      ? usage.pricingSnapshot
+      : deriveUsagePricingSnapshot(project, service, usage, index),
+  );
 
   await Promise.all(
-    normalizedUsages.map(async (usage, index) => {
-      if (usage.snapshot.costAtTime === usageTotals[index]) return;
+    usages.map(async (usage, index) => {
+      const nextPricingSnapshot = usagePricingSnapshots[index];
+      const subtotalMatches =
+        Math.abs(usage.snapshot.costAtTime - nextPricingSnapshot.subtotal) <=
+        0.0001;
+      const pricingSnapshotMatches = usagePricingSnapshotEquals(
+        usage.pricingSnapshot,
+        nextPricingSnapshot,
+      );
+
+      if (subtotalMatches && pricingSnapshotMatches) return;
       await ctx.db.patch(usage._id, {
         snapshot: {
           ...usage.snapshot,
-          costAtTime: usageTotals[index],
+          costAtTime: nextPricingSnapshot.subtotal,
         },
+        pricingSnapshot: nextPricingSnapshot,
       });
     }),
   );
 
-  const total = usageTotals.reduce((sum, usageTotal) => sum + usageTotal, 0);
-  const pricingSnapshot =
-    options?.manualSnapshot !== undefined
-      ? buildPricingSnapshot(options.manualSnapshot)
-      : deriveProjectPricingSnapshot(project, service, normalizedUsages);
-  const primaryUsageSource = getPrimaryProjectUsage(usageDocs);
-  const primaryUsage = primaryUsageSource
-    ? (normalizedUsages.find((usage) => usage._id === primaryUsageSource._id) ??
-      primaryUsageSource)
-    : undefined;
+  const total = usagePricingSnapshots.reduce(
+    (sum, usagePricing) => sum + usagePricing.subtotal,
+    0,
+  );
+  const pricingSnapshot = deriveProjectPricingSnapshot(
+    usagePricingSnapshots,
+    service.serviceCategory.type === "FABRICATION"
+      ? service.serviceCategory.unitName
+      : "unit",
+  );
 
   await ctx.db.patch(projectId, {
-    bookingStartTime: primaryUsage?.startTime,
-    bookingEndTime: primaryUsage?.endTime,
     totalInvoice: buildTotalInvoice(total),
     pricingSnapshot,
   });
@@ -935,82 +864,6 @@ export async function applyMakerAssignment(
   return [`- Assigned maker updated to: **${makerProfile.name}**`];
 }
 
-/**
- * Assigns a resource to the project's resource usage record.
- * Returns change-log lines for the system message.
- */
-export async function applyResourceAssignment(
-  ctx: MutationCtx,
-  project: Doc<"projects">,
-  resourceId: Id<"resources">,
-): Promise<string[]> {
-  const resourceDoc = await ctx.db.get(resourceId);
-  if (!resourceDoc) throw new ConvexError("Resource not found.");
-
-  const usage = await findProjectUsage(ctx, project);
-  if (usage?.resource === resourceId) return [];
-
-  if (usage) {
-    await ctx.db.patch(usage._id, { resource: resourceId });
-  }
-
-  return [`- Resource updated to: **${resourceDoc.name}**`];
-}
-
-/**
- * Replaces the requested materials list on a project.
- * Restores stock for removed materials; seeds new materials at amount 0.
- * Returns change-log lines for the system message.
- */
-export async function applyMaterialAssignment(
-  ctx: MutationCtx,
-  project: Doc<"projects">,
-  materialIds: Id<"materials">[],
-): Promise<string[]> {
-  const oldIds = project.requestedMaterials ?? [];
-  const removedIds = oldIds.filter((id) => !materialIds.includes(id));
-  const addedIds = materialIds.filter((id) => !oldIds.includes(id));
-
-  if (removedIds.length === 0 && addedIds.length === 0) return [];
-
-  const usage = await findProjectUsage(ctx, project);
-  let nextMaterials = [...(usage?.materialsUsed ?? [])];
-  const lines: string[] = [];
-
-  // Restore stock for removed materials that had amounts recorded
-  for (const id of removedIds) {
-    const entry = nextMaterials.find((m) => m.materialId === id);
-    if (entry && entry.amountUsed > 0) {
-      await syncMaterialUsageStock(ctx, id, entry.amountUsed, 0);
-    }
-    nextMaterials = nextMaterials.filter((m) => m.materialId !== id);
-    const doc = await ctx.db.get(id);
-    if (doc) lines.push(`- Material removed: **${doc.name}**`);
-  }
-
-  // Seed new materials at amount 0
-  for (const id of addedIds) {
-    const doc = await ctx.db.get(id);
-    if (!doc) throw new ConvexError("Material not found.");
-    nextMaterials = [
-      ...nextMaterials.filter((m) => m.materialId !== id),
-      { materialId: id, amountUsed: 0, snapshot: buildMaterialSnapshot(doc) },
-    ];
-    lines.push(`- Material added: **${doc.name}**`);
-  }
-
-  if (usage) {
-    await ctx.db.patch(usage._id, { materialsUsed: nextMaterials });
-  }
-
-  await ctx.db.patch(project._id, { requestedMaterials: materialIds });
-  await syncProjectTotalInvoice(ctx, project._id);
-
-  return lines;
-}
-
-// ============================================================================
-
 export async function syncMaterialUsageStock(
   ctx: MutationCtx,
   materialId: Id<"materials">,
@@ -1029,30 +882,6 @@ export async function syncMaterialUsageStock(
     currentStock: newStock,
     status: resolveMaterialStatus(newStock, material.reorderThreshold),
   });
-}
-
-export async function consumeMaterials(
-  ctx: MutationCtx,
-  materialsUsed: { materialId: Id<"materials">; amountUsed: number }[],
-): Promise<number> {
-  let materialCost = 0;
-
-  for (const usage of materialsUsed) {
-    const material = await ctx.db.get(usage.materialId);
-    if (!material) continue;
-
-    const rate = material.pricePerUnit || 0;
-    materialCost += usage.amountUsed * rate;
-
-    const newStock = Math.max(0, material.currentStock - usage.amountUsed);
-
-    await ctx.db.patch(material._id, {
-      currentStock: newStock,
-      status: resolveMaterialStatus(newStock, material.reorderThreshold),
-    });
-  }
-
-  return materialCost;
 }
 
 export async function computeMaterialsUsedCost(
@@ -1090,37 +919,39 @@ export async function scheduleProjectUpdateEmail(
   const user = await ctx.db.get(project.userId);
   if (!user) return;
   const service = await ctx.db.get(project.service);
-  const usage = await findProjectUsage(ctx, project);
+  const scheduledDate =
+    project.bookingStartTime !== undefined
+      ? formatLabDate(project.bookingStartTime, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : undefined;
 
-  const scheduledDate = usage
-    ? formatLabDate(usage.startTime, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : undefined;
+  const estimatedTime =
+    project.bookingStartTime !== undefined &&
+    project.bookingEndTime !== undefined
+      ? `${(
+          (project.bookingEndTime - project.bookingStartTime) /
+          (1000 * 60 * 60)
+        ).toFixed(1)} hours`
+      : undefined;
 
-  const estimatedTime = usage
-    ? `${((usage.endTime - usage.startTime) / (1000 * 60 * 60)).toFixed(1)} hours`
-    : undefined;
-
-  const bookingDurationMinutes = usage
-    ? Math.floor((usage.endTime - usage.startTime) / (1000 * 60))
-    : 0;
-
-  const materialCost =
-    usage?.materialsUsed?.reduce((sum, m) => {
-      const price = m.snapshot?.pricePerUnit ?? 0;
-      return sum + m.amountUsed * price;
-    }, 0) ?? 0;
+  const bookingDurationMinutes =
+    project.bookingStartTime !== undefined &&
+    project.bookingEndTime !== undefined
+      ? Math.floor(
+          (project.bookingEndTime - project.bookingStartTime) / (1000 * 60),
+        )
+      : 0;
 
   const derivedPricing = derivePricingFromSchema({
     servicePricing: service?.serviceCategory,
     pricingVariant: project.pricing,
     serviceType: project.fulfillmentMode,
     bookingDurationMinutes,
-    materialCost,
+    materialCost: project.pricingSnapshot?.materialCost ?? 0,
   });
   const pricingResult = project.pricingSnapshot ?? {
     setupFee: derivedPricing.setupFee,
@@ -1138,7 +969,7 @@ export async function scheduleProjectUpdateEmail(
     projectName: project.name,
     requesterName: user.name,
     status: project.status,
-    machine: usage?.snapshot.name ?? service?.name,
+    machine: service?.name,
     scheduledDate,
     estimatedTime,
     notes: project.notes,
