@@ -42,7 +42,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       .filter(Boolean) ?? [];
 
   return {
-    baseURL: betterAuthUrl,
+    baseURL: process.env.CURRENT_SITE_URL,
     secret: process.env.BETTER_AUTH_SECRET as string,
     rateLimit: {
       enabled: true,
@@ -78,6 +78,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     plugins: [
       oAuthProxy({
         productionURL: betterAuthUrl,
+        currentURL: process.env.CURRENT_SITE_URL,
       }),
       // The Convex plugin is required for Convex compatibility
       convex({ authConfig }),
