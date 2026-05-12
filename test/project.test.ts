@@ -2302,11 +2302,13 @@ describe("Project and Chat functionality", () => {
         dateFilter: "month",
       });
 
-      const expectedWeekNames = [
-        ["today project", todayStartTime],
-        ["week project", weekStartTime],
-        ["next month project", nextMonthStartTime],
-      ]
+      const expectedWeekNames = (
+        [
+          ["today project", todayStartTime],
+          ["week project", weekStartTime],
+          ["next month project", nextMonthStartTime],
+        ] as const
+      )
         .filter(([, startTime]) => {
           return (
             startTime >= currentWeekStart.getTime() &&
@@ -2315,11 +2317,13 @@ describe("Project and Chat functionality", () => {
         })
         .map(([name]) => name)
         .sort();
-      const expectedMonthNames = [
-        ["today project", todayStartTime],
-        ["week project", weekStartTime],
-        ["next month project", nextMonthStartTime],
-      ]
+      const expectedMonthNames = (
+        [
+          ["today project", todayStartTime],
+          ["week project", weekStartTime],
+          ["next month project", nextMonthStartTime],
+        ] as const
+      )
         .filter(([, startTime]) => {
           return (
             startTime >= currentMonthStart.getTime() &&
