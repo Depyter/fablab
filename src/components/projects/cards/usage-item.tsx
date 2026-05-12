@@ -26,7 +26,11 @@ import {
   getDurationMinutesFromTimestampRange,
   getDurationUnitsFromMinutes,
 } from "@/lib/project-pricing";
-import { getLabDayKey, getLabTimeBlock, getLabTimeRangeTimestamps } from "@/lib/lab-time";
+import {
+  getLabDayKey,
+  getLabTimeBlock,
+  getLabTimeRangeTimestamps,
+} from "@/lib/lab-time";
 
 // --- Types ---
 
