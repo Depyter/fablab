@@ -2143,6 +2143,195 @@ describe("Project and Chat functionality", () => {
     });
   });
 
+  describe("Usage lifecycle mutations", () => {
+    test("createUsage appends a usage with independent pricing and preserves the project schedule", async () => {
+      const { tAera, tHarley, projectId } = await setupProject();
+      const initialDetails = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+      const startTime = Date.now() + 80 * HOUR_MS;
+      const endTime = startTime + 2 * HOUR_MS;
+
+      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
+        projectId,
+        startTime,
+        endTime,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+      const createdUsage = details.resourceUsages.find(
+        (usage) => usage._id === usageId,
+      );
+
+      expect(details.totalInvoice).toEqual({
+        subtotal: 6,
+        tax: 0,
+        total: 6,
+      });
+      expect(details.bookingStartTime).toBe(initialDetails.bookingStartTime);
+      expect(details.bookingEndTime).toBe(initialDetails.bookingEndTime);
+      expect(createdUsage).toMatchObject({
+        _id: usageId,
+        startTime,
+        endTime,
+        snapshot: {
+          costAtTime: 4,
+          unit: "hour",
+        },
+        pricingSnapshot: {
+          duration: 2,
+          rate: 2,
+          timeCost: 4,
+          materialCost: 0,
+          setupFeePortion: 0,
+          subtotal: 4,
+          unitName: "hour",
+          pricingVariant: "UP",
+        },
+      });
+    });
+
+    test("updateUsageAssignments targets only the selected usage", async () => {
+      const { t, tAera, tHarley, projectId } = await setupProject();
+
+      await tAera.mutation(api.resource.mutate.addResource, {
+        name: "Prusa MK4",
+        category: "machine",
+        type: "3D printer",
+        images: [],
+        description: "Secondary printer",
+        status: "Available",
+      });
+
+      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
+        projectId,
+        startTime: Date.now() + 96 * HOUR_MS,
+        endTime: Date.now() + 98 * HOUR_MS,
+      });
+
+      const resourceId = await t.run(async (ctx) => {
+        const resource = await ctx.db.query("resources").first();
+        return resource!._id;
+      });
+
+      await tAera.mutation(api.projects.mutate.updateUsageAssignments, {
+        projectId,
+        usageId,
+        resourceId,
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+      const originalUsage = details.resourceUsages.find(
+        (usage) => usage._id !== usageId,
+      );
+      const updatedUsage = details.resourceUsages.find(
+        (usage) => usage._id === usageId,
+      );
+
+      expect(originalUsage?.resource ?? null).toBeNull();
+      expect(updatedUsage).toMatchObject({
+        _id: usageId,
+        resource: resourceId,
+        resourceDetails: {
+          _id: resourceId,
+          type: "3D printer",
+          status: "Available",
+          description: "Secondary printer",
+        },
+      });
+    });
+
+    test("updateUsagePricing only changes the targeted usage and refreshes project totals", async () => {
+      const { tAera, tHarley, projectId } = await setupProject();
+
+      const { usageId } = await tAera.mutation(api.projects.mutate.createUsage, {
+        projectId,
+        startTime: Date.now() + 104 * HOUR_MS,
+        endTime: Date.now() + 106 * HOUR_MS,
+      });
+
+      await tAera.mutation(api.projects.mutate.updateUsagePricing, {
+        projectId,
+        usageId,
+        duration: 2,
+        rate: 5,
+        timeCost: 10,
+        materialCost: 0,
+        setupFeePortion: 0,
+        unitName: "hour",
+      });
+
+      const details = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+      const unchangedUsage = details.resourceUsages.find(
+        (usage) => usage._id !== usageId,
+      );
+      const updatedUsage = details.resourceUsages.find(
+        (usage) => usage._id === usageId,
+      );
+
+      expect(details.totalInvoice).toEqual({
+        subtotal: 12,
+        tax: 0,
+        total: 12,
+      });
+      expect(details.pricingSnapshot).toEqual({
+        setupFee: 0,
+        timeCost: 12,
+        materialCost: 0,
+        total: 12,
+        duration: 3,
+        rate: 4,
+        unitName: "hour",
+      });
+      expect(unchangedUsage?.snapshot.costAtTime).toBe(2);
+      expect(updatedUsage).toMatchObject({
+        _id: usageId,
+        snapshot: {
+          costAtTime: 10,
+        },
+        pricingSnapshot: {
+          duration: 2,
+          rate: 5,
+          timeCost: 10,
+          materialCost: 0,
+          setupFeePortion: 0,
+          subtotal: 10,
+          unitName: "hour",
+          pricingVariant: "UP",
+        },
+      });
+    });
+
+    test("updateProjectSchedule changes the project headline schedule without modifying usage windows", async () => {
+      const { tHarley, tAera, projectId } = await setupProject();
+      const before = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+      const nextStart = Date.now() + 144 * HOUR_MS;
+      const nextEnd = nextStart + 5 * HOUR_MS;
+
+      await tAera.mutation(api.projects.mutate.updateProjectSchedule, {
+        projectId,
+        startTime: nextStart,
+        endTime: nextEnd,
+      });
+
+      const after = await tHarley.query(api.projects.query.getProject, {
+        projectId,
+      });
+
+      expect(after.bookingStartTime).toBe(nextStart);
+      expect(after.bookingEndTime).toBe(nextEnd);
+      expect(after.resourceUsages).toEqual(before.resourceUsages);
+    });
+  });
+
   describe("Project completion and cleanup", () => {
     test("Complete project syncs final invoice, usage snapshot, and material stock", async () => {
       const { t, tAera, tHarley } = await setupUsers();
