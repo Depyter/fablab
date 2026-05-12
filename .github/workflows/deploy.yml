@@ -51,6 +51,8 @@ jobs:
         env:
           CONVEX_SELF_HOSTED_ADMIN_KEY: ${{ secrets.CONVEX_SELF_HOSTED_ADMIN_KEY }}
           CONVEX_SELF_HOSTED_URL: ${{ secrets.CONVEX_SELF_HOSTED_URL }}
+          NEXT_PUBLIC_POSTHOG_TOKEN: ${{ vars.NEXT_PUBLIC_POSTHOG_TOKEN }}
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ vars.NEXT_PUBLIC_POSTHOG_HOST }}
 
       - name: Deploy Cloudflare Production Worker
         run: bun run deploy:worker

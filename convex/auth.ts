@@ -9,11 +9,6 @@ import { internal } from "./_generated/api";
 import { authQuery } from "./helper";
 import authSchema from "./betterAuth/schema";
 import { admin, oAuthProxy } from "better-auth/plugins";
-import {
-  assertDynamicBetterAuthBaseUrlConfig,
-  getBetterAuthTrustedOrigins,
-  getProductionAuthUrl,
-} from "../src/lib/auth-env";
 
 const authfunctions: AuthFunctions = internal.auth;
 
@@ -40,9 +35,14 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 );
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  assertDynamicBetterAuthBaseUrlConfig();
+  const betterAuthUrl = process.env.BETTER_AUTH_URL ?? "";
+  const trustedOrigins =
+    process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean) ?? [];
 
   return {
+    baseURL: betterAuthUrl,
     secret: process.env.BETTER_AUTH_SECRET as string,
     rateLimit: {
       enabled: true,
@@ -57,7 +57,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         },
       },
     },
-    trustedOrigins: getBetterAuthTrustedOrigins(),
+    trustedOrigins,
     onAPIError: {
       errorURL: "/error",
     },
@@ -77,7 +77,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     },
     plugins: [
       oAuthProxy({
-        productionURL: getProductionAuthUrl(),
+        productionURL: betterAuthUrl,
       }),
       // The Convex plugin is required for Convex compatibility
       convex({ authConfig }),
