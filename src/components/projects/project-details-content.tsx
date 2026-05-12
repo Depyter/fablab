@@ -396,7 +396,6 @@ export function ProjectDetailsContent({
           <div className="min-w-0 space-y-4 lg:col-span-7">
             <ProjectInfoCard
               description={project.description}
-              projectType={project.type}
               serviceType={project.fulfillmentMode}
               material={project.material}
               bookingDateStr={bookingDateStr}

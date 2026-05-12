@@ -160,24 +160,6 @@ export async function validateFabricationAvailability(
   }
 }
 
-export function validateProjectFulfillmentMode(
-  service: ServiceDoc,
-  fulfillmentMode: string,
-): void {
-  if (
-    service.serviceCategory.type === "WORKSHOP" &&
-    fulfillmentMode === "staff-led"
-  ) {
-    throw new ConvexError(
-      "Workshop services cannot use staff-led fulfillment.",
-    );
-  }
-}
-
-// ============================================================================
-// Helpers — Cost
-// ============================================================================
-
 export function computeProvisionalCostBreakdown(
   service: ServiceDoc,
   pricingVariant: string,
@@ -187,10 +169,7 @@ export function computeProvisionalCostBreakdown(
   const breakdown = derivePricingFromSchema({
     servicePricing: service.serviceCategory,
     pricingVariant,
-    serviceType: fulfillmentMode as
-      | "self-service"
-      | "full-service"
-      | "staff-led",
+    serviceType: fulfillmentMode as "self-service" | "full-service",
     bookingDurationMinutes: bookingDurationMs / (1000 * 60),
   });
 

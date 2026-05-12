@@ -10,7 +10,6 @@ import {
   validateFileTypes,
   validateBookingTiming,
   validateFabricationAvailability,
-  validateProjectFulfillmentMode,
   computeProvisionalCostBreakdown,
   buildTotalInvoice,
   buildPricingSnapshot,
@@ -45,7 +44,6 @@ export const createProject = authMutation({
     fulfillmentMode: v.union(
       v.literal("self-service"),
       v.literal("full-service"),
-      v.literal("staff-led"),
     ),
     material: v.union(v.literal("provide-own"), v.literal("buy-from-lab")),
     requestedMaterials: v.optional(v.array(v.id("materials"))),
@@ -73,7 +71,6 @@ export const createProject = authMutation({
     const booking: BookingWindow = args.booking;
     validateBookingTiming(booking);
     await validateFabricationAvailability(ctx, args.service, service, booking);
-    validateProjectFulfillmentMode(service, args.fulfillmentMode);
 
     // ── 4. Determine project type from service ────────────────────────────────
     const projectType =
@@ -652,7 +649,6 @@ export const updateOwnProjectDetails = authMutation({
       v.union(
         v.literal("self-service"),
         v.literal("full-service"),
-        v.literal("staff-led"),
       ),
     ),
     files: v.optional(v.array(v.id("_storage"))),
@@ -698,7 +694,6 @@ export const updateOwnProjectDetails = authMutation({
       args.fulfillmentMode !== undefined &&
       args.fulfillmentMode !== project.fulfillmentMode
     ) {
-      validateProjectFulfillmentMode(service, args.fulfillmentMode);
       patch.fulfillmentMode = args.fulfillmentMode;
       changed.push("fulfillment mode");
     }

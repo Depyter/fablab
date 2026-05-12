@@ -923,7 +923,7 @@ describe("Project and Chat functionality", () => {
       expect(details.description).toBe("hello");
     });
 
-    test("Workshop services reject staff-led fulfillment on creation and detail updates for all editors", async () => {
+    test("Workshop services accept supported fulfillment modes on creation and detail updates", async () => {
       const { t, tAera, tHarley } = await setupUsers();
       const date = Date.now() + 72 * HOUR_MS;
       const startTime = date + 2 * HOUR_MS;
@@ -954,24 +954,10 @@ describe("Project and Chat functionality", () => {
         return service!._id;
       });
 
-      await expect(
-        tHarley.mutation(api.projects.mutate.createProject, {
-          name: "invalid workshop mode",
-          pricing: "Default",
-          description: "not allowed",
-          fulfillmentMode: "staff-led",
-          material: "provide-own",
-          files: [],
-          service: serviceId,
-          notes: "nope",
-          booking: { startTime, endTime, date },
-        }),
-      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
-
       const { projectId } = await tHarley.mutation(
         api.projects.mutate.createProject,
         {
-          name: "valid workshop mode",
+          name: "supported workshop mode",
           pricing: "Default",
           description: "allowed",
           fulfillmentMode: "full-service",
@@ -990,26 +976,25 @@ describe("Project and Chat functionality", () => {
       });
       const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
 
-      await expect(
-        tHarley.mutation(api.projects.mutate.updateOwnProjectDetails, {
-          projectId,
-          fulfillmentMode: "staff-led",
-        }),
-      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+      await tHarley.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        fulfillmentMode: "self-service",
+      });
 
-      await expect(
-        tAera.mutation(api.projects.mutate.updateOwnProjectDetails, {
-          projectId,
-          fulfillmentMode: "staff-led",
-        }),
-      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+      await tAera.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        fulfillmentMode: "full-service",
+      });
 
-      await expect(
-        tMaker.mutation(api.projects.mutate.updateOwnProjectDetails, {
-          projectId,
-          fulfillmentMode: "staff-led",
-        }),
-      ).rejects.toThrow("Workshop services cannot use staff-led fulfillment.");
+      await tMaker.mutation(api.projects.mutate.updateOwnProjectDetails, {
+        projectId,
+        fulfillmentMode: "self-service",
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        expect(project!.fulfillmentMode).toBe("self-service");
+      });
     });
   });
 

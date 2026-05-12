@@ -3,7 +3,6 @@
 import {
   FulfillmentModeType,
   ProjectMaterialType,
-  ProjectTypeType,
 } from "@convex/constants";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -26,7 +25,6 @@ interface ResolvedFile {
 
 interface ProjectInfoCardProps {
   description?: string | null;
-  projectType: ProjectTypeType;
   serviceType: FulfillmentModeType;
   material: string;
   notes?: string | null;
@@ -59,7 +57,6 @@ interface ProjectInfoCardProps {
 
 export function ProjectInfoCard({
   description,
-  projectType,
   serviceType,
   material,
   notes,
@@ -145,9 +142,6 @@ export function ProjectInfoCard({
               <SelectContent>
                 <SelectItem value="self-service">Self Service</SelectItem>
                 <SelectItem value="full-service">Full Service</SelectItem>
-                {projectType === "FABRICATION" && (
-                  <SelectItem value="staff-led">Staff Led</SelectItem>
-                )}
               </SelectContent>
             </Select>
           ) : (

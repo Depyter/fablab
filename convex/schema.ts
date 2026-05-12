@@ -193,7 +193,6 @@ export default defineSchema({
     fulfillmentMode: v.union(
       v.literal("self-service"),
       v.literal("full-service"),
-      v.literal("staff-led"),
     ),
 
     material: v.union(

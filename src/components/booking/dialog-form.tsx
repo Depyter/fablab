@@ -200,7 +200,7 @@ export function BookingDialog({
     defaultValues: {
       serviceType:
         serviceCategory === "WORKSHOP"
-          ? FulfillmentMode.STAFF_LED
+          ? FulfillmentMode.FULL_SERVICE
           : FulfillmentMode.SELF_SERVICE,
       name: "",
       description: "",

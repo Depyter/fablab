@@ -77,7 +77,6 @@ export const ProjectServiceType = {
 export const FulfillmentMode = {
   SELF_SERVICE: "self-service",
   FULL_SERVICE: "full-service",
-  STAFF_LED: "staff-led",
 } as const;
 
 export const ProjectType = {
