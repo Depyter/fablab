@@ -396,7 +396,8 @@ export function ProjectDetails({
           completed:
             project.status === "approved" ||
             project.status === "completed" ||
-            project.status === "paid",
+            project.status === "paid" ||
+            project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -407,7 +408,9 @@ export function ProjectDetails({
               ? "Cancelled"
               : project.status === "approved"
                 ? "In progress"
-                : project.status === "completed" || project.status === "paid"
+                : project.status === "completed" ||
+                    project.status === "paid" ||
+                    project.status === "claimed"
                   ? "Completed"
                   : "Pending",
           byLabel: project.assignedMaker
@@ -415,7 +418,9 @@ export function ProjectDetails({
             : "Waiting",
           active: project.status === "approved",
           completed:
-            project.status === "completed" || project.status === "paid",
+            project.status === "completed" ||
+            project.status === "paid" ||
+            project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -426,17 +431,17 @@ export function ProjectDetails({
               ? "Cancelled"
               : project.status === "completed"
                 ? "In progress"
-                : project.status === "paid"
+                : project.status === "paid" || project.status === "claimed"
                   ? "Completed"
                   : "Pending",
           byLabel:
-            project.status === "paid"
+            project.status === "paid" || project.status === "claimed"
               ? "FabLab Staff"
               : project.status === "completed"
                 ? "Waiting"
                 : "—",
           active: project.status === "completed",
-          completed: project.status === "paid",
+          completed: project.status === "paid" || project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },
@@ -446,10 +451,18 @@ export function ProjectDetails({
             project.status === "rejected" || project.status === "cancelled"
               ? "Cancelled"
               : project.status === "paid"
-                ? "Completed"
-                : "Pending",
-          byLabel: project.status === "paid" ? "Client" : "—",
-          completed: project.status === "paid",
+                ? "In progress"
+                : project.status === "claimed"
+                  ? "Completed"
+                  : "Pending",
+          byLabel:
+            project.status === "claimed"
+              ? "Client"
+              : project.status === "paid"
+                ? "Waiting"
+                : "—",
+          active: project.status === "paid",
+          completed: project.status === "claimed",
           rejected:
             project.status === "rejected" || project.status === "cancelled",
         },

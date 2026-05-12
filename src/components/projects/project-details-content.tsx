@@ -83,6 +83,11 @@ const STATUS_PILL: Record<
     color: "var(--fab-teal)",
     border: "color-mix(in srgb, var(--fab-teal) 30%, transparent)",
   },
+  claimed: {
+    bg: "rgba(15,23,42,0.08)",
+    color: "#0f172a",
+    border: "rgba(15,23,42,0.18)",
+  },
   rejected: {
     bg: "var(--fab-magenta-light)",
     color: "var(--fab-magenta)",
@@ -200,11 +205,11 @@ export function ProjectDetailsContent({
     ? PROJECT_STATUS_LABELS[previousStep]
     : "";
   const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
-  
-  const isClaimedProject =
-    project.status === "paid" || (project.status as string) === "claimed";
+
+  const isPostPaymentProject =
+    project.status === "paid" || project.status === "claimed";
   const canRebook = isClient && project.status === "cancelled";
-  const canSubmitReview = isClient && isClaimedProject;
+  const canSubmitReview = isClient && project.status === "claimed";
 
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
@@ -276,7 +281,6 @@ export function ProjectDetailsContent({
                   </DropdownMenu>
                 )}
               </div>
-              
             </div>
 
             {/* Action buttons */}
@@ -292,7 +296,7 @@ export function ProjectDetailsContent({
                       cancelButtonText="Back"
                       confirmButtonText="Yes, rebook"
                       className="w-full sm:w-auto"
-                      disabled={isClaimedProject}
+                      disabled={isPostPaymentProject}
                     />
                   ) : (
                     <ActionDialog
@@ -303,7 +307,7 @@ export function ProjectDetailsContent({
                       cancelButtonText="Back"
                       confirmButtonText="Yes, cancel"
                       className="w-full sm:w-auto"
-                      disabled={isClaimedProject}
+                      disabled={isPostPaymentProject}
                     />
                   )}
                 </>
@@ -319,7 +323,6 @@ export function ProjectDetailsContent({
                         previousStep && handleStatusChange(previousStep)
                       }
                       disabled={!previousStep}
-                    
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                       {previousStep ? `Back: ${previousStepLabel}` : "Back"}

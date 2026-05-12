@@ -108,6 +108,7 @@ function ProjectFilterControls() {
             <SelectItem value="approved">Fabrication</SelectItem>
             <SelectItem value="completed">Payment</SelectItem>
             <SelectItem value="paid">Claim</SelectItem>
+            <SelectItem value="claimed">Claimed</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>

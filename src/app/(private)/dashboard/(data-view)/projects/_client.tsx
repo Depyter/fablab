@@ -27,6 +27,7 @@ type StatusFilter =
   | "approved"
   | "completed"
   | "paid"
+  | "claimed"
   | "rejected"
   | "cancelled";
 type DateFilter = "all" | "today" | "week" | "month";
@@ -50,6 +51,7 @@ const STATUS_STYLES: Record<string, string> = {
   approved: "bg-blue-100 text-blue-700",
   completed: "bg-emerald-100 text-emerald-700",
   paid: "bg-teal-100 text-teal-700",
+  claimed: "bg-slate-100 text-slate-700",
   rejected: "bg-red-100 text-red-700",
   cancelled: "bg-red-100 text-red-700",
 };
@@ -59,6 +61,7 @@ const STATUS_DOT: Record<string, string> = {
   approved: "bg-blue-400",
   completed: "bg-emerald-400",
   paid: "bg-teal-400",
+  claimed: "bg-slate-400",
   rejected: "bg-red-400",
   cancelled: "bg-red-400",
 };
@@ -69,6 +72,7 @@ const STATUS_FILTERS: StatusFilter[] = [
   "approved",
   "completed",
   "paid",
+  "claimed",
   "rejected",
   "cancelled",
 ];
@@ -109,6 +113,7 @@ function ProjectListRow({
               project.status === "approved" && "bg-blue-500/20",
               project.status === "completed" && "bg-emerald-500/20",
               project.status === "paid" && "bg-teal-500/20",
+              project.status === "claimed" && "bg-slate-500/20",
               project.status === "rejected" && "bg-red-500/20",
               project.status === "cancelled" && "bg-red-500/20",
             )}

@@ -15,6 +15,10 @@ export const STATUS_STYLES: Record<string, { badge: string; cover: string }> = {
     badge: "bg-teal-100 text-teal-700 border-teal-200",
     cover: "from-teal-500/20 to-teal-500/5",
   },
+  claimed: {
+    badge: "bg-slate-100 text-slate-700 border-slate-200",
+    cover: "from-slate-500/20 to-slate-500/5",
+  },
   rejected: {
     badge: "bg-red-100 text-red-700 border-red-200",
     cover: "from-red-500/20 to-red-500/5",

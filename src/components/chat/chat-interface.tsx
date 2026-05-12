@@ -372,11 +372,15 @@ export function ChatInterface({
                           typeof message.content === "string" &&
                           message.content.startsWith("New project created:") ? (
                             (() => {
-                              const lines = message.content.split("\n").map((l) => l.trim());
+                              const lines = message.content
+                                .split("\n")
+                                .map((l) => l.trim());
                               const data: Record<string, string> = {};
                               // First line: New project created: {name}
                               const first = lines[0] || "";
-                              const m = first.match(/^New project created:\s*(.*)$/i);
+                              const m = first.match(
+                                /^New project created:\s*(.*)$/i,
+                              );
                               if (m) data.title = m[1];
                               for (let i = 1; i < lines.length; i++) {
                                 const line = lines[i];
@@ -396,7 +400,12 @@ export function ChatInterface({
                                   <div className="flex-1 min-w-0">
                                     <div className="flex flex-col items-start">
                                       <div className="flex flex-row items-center gap-2">
-                                        <div className="text-sm font-bold text-[15px]" style={{color: "var(--fab-text-primary)"}}>
+                                        <div
+                                          className="text-sm font-bold text-[15px]"
+                                          style={{
+                                            color: "var(--fab-text-primary)",
+                                          }}
+                                        >
                                           {data.title || data["Service"]}
                                         </div>
                                         <p>•</p>
@@ -408,17 +417,75 @@ export function ChatInterface({
                                       </div>
                                       <div className="flex flex-row gap-1 items-center text-right mt-1">
                                         <Calendar className="inline-block h-3.5 w-3.5 mr-1 opacity-80" />
-                                        <div className="text-xs text-muted-foreground">{booking}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {booking}
+                                        </div>
                                       </div>
                                     </div>
 
-                                    <FieldSeparator className="mt-1"/>
+                                    <FieldSeparator className="mt-1" />
 
                                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                                      {data["Type"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Type</p> <strong className="">{data["Type"]}</strong></div>}
-                                      {data["Fulfillment"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Fulfillment</p> <strong className=" uppercase">{data["Fulfillment"]}</strong></div>}
-                                      {data["Material"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Material</p> <strong className=" uppercase">{data["Material"]}</strong></div>}
-                                      {data["Pricing"] && <div><p className="text-[11px] opacity-50 uppercase" style={{color: 'var(--fab-text-primary)'}}>Pricing</p> <strong className=" uppercase">{data["Pricing"]}</strong></div>}
+                                      {data["Type"] && (
+                                        <div>
+                                          <p
+                                            className="text-[11px] opacity-50 uppercase"
+                                            style={{
+                                              color: "var(--fab-text-primary)",
+                                            }}
+                                          >
+                                            Type
+                                          </p>{" "}
+                                          <strong className="">
+                                            {data["Type"]}
+                                          </strong>
+                                        </div>
+                                      )}
+                                      {data["Fulfillment"] && (
+                                        <div>
+                                          <p
+                                            className="text-[11px] opacity-50 uppercase"
+                                            style={{
+                                              color: "var(--fab-text-primary)",
+                                            }}
+                                          >
+                                            Fulfillment
+                                          </p>{" "}
+                                          <strong className=" uppercase">
+                                            {data["Fulfillment"]}
+                                          </strong>
+                                        </div>
+                                      )}
+                                      {data["Material"] && (
+                                        <div>
+                                          <p
+                                            className="text-[11px] opacity-50 uppercase"
+                                            style={{
+                                              color: "var(--fab-text-primary)",
+                                            }}
+                                          >
+                                            Material
+                                          </p>{" "}
+                                          <strong className=" uppercase">
+                                            {data["Material"]}
+                                          </strong>
+                                        </div>
+                                      )}
+                                      {data["Pricing"] && (
+                                        <div>
+                                          <p
+                                            className="text-[11px] opacity-50 uppercase"
+                                            style={{
+                                              color: "var(--fab-text-primary)",
+                                            }}
+                                          >
+                                            Pricing
+                                          </p>{" "}
+                                          <strong className=" uppercase">
+                                            {data["Pricing"]}
+                                          </strong>
+                                        </div>
+                                      )}
                                     </div>
 
                                     {data["Description"] && (
@@ -426,13 +493,18 @@ export function ChatInterface({
                                         {data["Description"]}
                                       </p>
                                     )}
-                                    
+
                                     {messageFiles.length > 0 && (
-                                      <div className={cn(message.content ? "mt-2" : "")}>
-                                        <MessageAttachments files={messageFiles} />
+                                      <div
+                                        className={cn(
+                                          message.content ? "mt-2" : "",
+                                        )}
+                                      >
+                                        <MessageAttachments
+                                          files={messageFiles}
+                                        />
                                       </div>
                                     )}
-                    
                                   </div>
                                 </div>
                               );
@@ -444,7 +516,9 @@ export function ChatInterface({
                               </div>
 
                               {messageFiles.length > 0 && (
-                                <div className={cn(message.content ? "mt-2" : "")}>
+                                <div
+                                  className={cn(message.content ? "mt-2" : "")}
+                                >
                                   <MessageAttachments files={messageFiles} />
                                 </div>
                               )}

@@ -20,7 +20,8 @@ type StatusUnion =
   | "rejected"
   | "completed"
   | "cancelled"
-  | "paid";
+  | "paid"
+  | "claimed";
 
 function resolveProjectDateBounds(dateFilter?: string) {
   const now = getCurrentTimestamp();

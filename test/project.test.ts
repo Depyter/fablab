@@ -13,6 +13,44 @@ import {
 } from "../src/lib/lab-time";
 
 const HOUR_MS = 1000 * 60 * 60;
+type TestConvex = Awaited<ReturnType<typeof setupUsers>>["t"];
+
+async function withScheduledEmailsEnabled<T>(callback: () => Promise<T>) {
+  const previousValue = process.env.DISABLE_SCHEDULED_EMAILS;
+  process.env.DISABLE_SCHEDULED_EMAILS = "false";
+
+  try {
+    return await callback();
+  } finally {
+    if (previousValue === undefined) {
+      delete process.env.DISABLE_SCHEDULED_EMAILS;
+    } else {
+      process.env.DISABLE_SCHEDULED_EMAILS = previousValue;
+    }
+  }
+}
+
+async function getScheduledJobs(t: TestConvex) {
+  return t.run(async (ctx) =>
+    ctx.db.system.query("_scheduled_functions").collect(),
+  );
+}
+
+async function captureNewScheduledJobs<T>(
+  t: TestConvex,
+  callback: () => Promise<T>,
+) {
+  const before = await getScheduledJobs(t);
+  const beforeIds = new Set(before.map((job) => job._id));
+  const result = await withScheduledEmailsEnabled(callback);
+  const after = await getScheduledJobs(t);
+  await flushScheduledFunctions(t);
+
+  return {
+    result,
+    jobs: after.filter((job) => !beforeIds.has(job._id)),
+  };
+}
 
 describe("Project and Chat functionality", () => {
   describe("Project initialization", () => {
@@ -334,6 +372,74 @@ describe("Project and Chat functionality", () => {
       expect(details.resourceUsages[0].snapshot.costAtTime).toBe(350);
       expect(details.resourceUsages[0].snapshot.unit).toBe("session");
       expect(list.page[0].estimatedPrice).toBe(350);
+    });
+  });
+
+  describe("Project update emails", () => {
+    test("Updating the pricing breakdown schedules a project update email", async () => {
+      const { t, tAera, projectId } = await setupProject();
+
+      const { jobs } = await captureNewScheduledJobs(t, () =>
+        tAera.mutation(api.projects.mutate.updateCostBreakdown, {
+          projectId,
+          setupFee: 1,
+          duration: 1,
+          rate: 3,
+          timeCost: 3,
+          materialCost: 0,
+        }),
+      );
+
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0]?.args[0]).toMatchObject({
+        to: "delivered+harley@resend.dev",
+        projectName: "test",
+        status: "pending",
+        pricing: {
+          setupFee: 1,
+          materialCost: 0,
+          timeCost: 3,
+          total: 4,
+        },
+      });
+    });
+
+    test("Moving a paid project to claimed schedules a claimed email", async () => {
+      const { t, tAera, projectId } = await setupProject();
+
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "approved",
+      });
+      await tAera.mutation(api.projects.mutate.completeProject, {
+        projectId,
+        actualDurationMs: 2 * HOUR_MS,
+      });
+      await tAera.mutation(api.projects.mutate.markProjectPaid, {
+        projectId,
+        receiptString: "R-1001",
+        paymentMode: "cash",
+        proof: "Paid at the front desk",
+      });
+
+      const { jobs } = await captureNewScheduledJobs(t, () =>
+        tAera.mutation(api.projects.mutate.updateProject, {
+          projectId,
+          status: "claimed",
+        }),
+      );
+
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0]?.args[0]).toMatchObject({
+        to: "delivered+harley@resend.dev",
+        projectName: "test",
+        status: "claimed",
+      });
+
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        expect(project!.status).toBe("claimed");
+      });
     });
   });
 

@@ -207,6 +207,7 @@ export const updateProject = authMutation({
         v.literal("completed"),
         v.literal("cancelled"),
         v.literal("paid"),
+        v.literal("claimed"),
       ),
     ),
     // Assignments
@@ -414,6 +415,7 @@ export const updateCostBreakdown = authMutation({
       }
       lines.push(...systemLines);
       await sendProjectSystemMessage(ctx, args.projectId, lines);
+      await scheduleProjectUpdateEmail(ctx, args.projectId);
       return;
     }
 
@@ -441,6 +443,8 @@ export const updateCostBreakdown = authMutation({
         `- **Total: ₱${total.toFixed(2)}**`,
       ]);
     }
+
+    await scheduleProjectUpdateEmail(ctx, args.projectId);
   },
 });
 
@@ -527,7 +531,9 @@ export const cancelOwnProject = authMutation({
     }
 
     if (
-      ["completed", "paid", "rejected", "cancelled"].includes(project.status)
+      ["completed", "paid", "claimed", "rejected", "cancelled"].includes(
+        project.status,
+      )
     ) {
       throw new ConvexError("Cannot cancel a project in its current status.");
     }

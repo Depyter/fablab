@@ -237,6 +237,7 @@ export default defineSchema({
       v.literal(ProjectStatus.COMPLETED),
       v.literal(ProjectStatus.CANCELLED),
       v.literal(ProjectStatus.PAID),
+      v.literal(ProjectStatus.CLAIMED),
     ),
     receipt: v.optional(v.id("receipts")),
     files: v.optional(v.array(v.string())),
