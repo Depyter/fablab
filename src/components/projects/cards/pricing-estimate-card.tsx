@@ -211,9 +211,9 @@ export function PricingEstimateCard({
       ),
     [editableMaterialDocs],
   );
-  const editableResources = useMemo<EditableResource[]>(() => {
-    // We allow selecting any resource in the lab
-    return (resources ?? []).map((resourceDoc) => ({
+  const editableResources: EditableResource[] = (resources ?? [])
+    .filter((r) => (service?.resources ?? []).includes(r._id))
+    .map((resourceDoc) => ({
       _id: resourceDoc._id,
       name: resourceDoc.name,
       category: resourceDoc.category,
@@ -221,7 +221,6 @@ export function PricingEstimateCard({
       status: resourceDoc.status,
       description: resourceDoc.description,
     }));
-  }, [resources]);
 
   const previewByDraftKey = new Map(
     usageDrafts.map((draft) => [
