@@ -116,7 +116,8 @@ export const getProjects = authQuery({
   handler: async (ctx, args) => {
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === "admin" || role === "maker";
-    const filterByAssignedMaker = args.assignedToMe === true;
+    const filterByAssignedMaker =
+      args.assignedToMe === true && role === "maker";
 
     const hasStatusFilter =
       args.statusFilter !== undefined && args.statusFilter !== "all";
@@ -191,9 +192,11 @@ export const getProjects = authQuery({
 
     let orderedQuery;
 
-    // When filtering by assigned maker without a status filter, use the
-    // by_assignedMaker index to avoid scanning the full table.
-    if (filterByAssignedMaker && !hasStatusFilter) {
+    // Track whether the by_assignedMaker index already narrowed results
+    // to avoid a redundant .filter() later.
+    const assignedMakerIndexUsed = filterByAssignedMaker && !hasStatusFilter;
+
+    if (assignedMakerIndexUsed) {
       orderedQuery = ctx.db
         .query("projects")
         .withIndex("by_assignedMaker", (q) => q.eq("assignedMaker", callerId))
@@ -242,7 +245,8 @@ export const getProjects = authQuery({
       query = query.filter((q) => q.eq(q.field("userId"), callerId));
     }
 
-    if (filterByAssignedMaker) {
+    // Only filter by assigned maker when the index didn't already handle it
+    if (filterByAssignedMaker && !assignedMakerIndexUsed) {
       query = query.filter((q) => q.eq(q.field("assignedMaker"), callerId));
     }
 

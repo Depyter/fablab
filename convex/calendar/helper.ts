@@ -242,7 +242,6 @@ async function loadCandidateServiceProjects(
   range: CalendarBookingRange,
 ) {
   const ownedProjectIds = await loadOwnedProjectIds(ctx);
-  const isPrivileged = isPrivilegedRole(ctx.profile.role);
 
   const candidateProjects = await ctx.db
     .query("projects")
@@ -253,9 +252,12 @@ async function loadCandidateServiceProjects(
     )
     .collect();
 
-  // Apply access filter
+  // Apply access filter:
+  //   - Admin  → full access (sees all)
+  //   - Maker  → only assigned projects (via ownedProjectIds)
+  //   - Client → only own projects (via ownedProjectIds)
   const visibleProjects = candidateProjects.filter((project) => {
-    if (isPrivileged) return true;
+    if (ctx.profile.role === "admin") return true;
     return ownedProjectIds.has(project._id);
   });
 
