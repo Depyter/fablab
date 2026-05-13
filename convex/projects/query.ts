@@ -111,10 +111,12 @@ export const getProjects = authQuery({
     dateFilter: v.optional(v.string()),
     sortBy: v.optional(v.string()),
     searchText: v.optional(v.string()),
+    assignedToMe: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === "admin" || role === "maker";
+    const filterByAssignedMaker = args.assignedToMe === true;
 
     const hasStatusFilter =
       args.statusFilter !== undefined && args.statusFilter !== "all";
@@ -133,6 +135,12 @@ export const getProjects = authQuery({
       if (!isPrivileged) {
         searchQuery = searchQuery.filter((q) =>
           q.eq(q.field("userId"), callerId),
+        );
+      }
+
+      if (filterByAssignedMaker) {
+        searchQuery = searchQuery.filter((q) =>
+          q.eq(q.field("assignedMaker"), callerId),
         );
       }
 
@@ -158,6 +166,10 @@ export const getProjects = authQuery({
             return false;
           }
 
+          if (filterByAssignedMaker && project.assignedMaker !== callerId) {
+            return false;
+          }
+
           if (
             hasStatusFilter &&
             project.status !== (args.statusFilter as StatusUnion)
@@ -178,46 +190,60 @@ export const getProjects = authQuery({
     const baseQuery = ctx.db.query("projects");
 
     let orderedQuery;
-    switch (args.sortBy) {
-      case "price-high":
-      case "price-low":
-        // No price index; fall through to default creation-time order
-        orderedQuery = baseQuery.order(
-          args.sortBy === "price-high" ? "desc" : "asc",
-        );
-        break;
-      case "name-az":
-        orderedQuery = baseQuery.order("asc");
-        break;
-      case "oldest":
-        if (hasStatusFilter) {
-          orderedQuery = baseQuery
-            .withIndex("by_status", (q) =>
-              q.eq("status", args.statusFilter as StatusUnion),
-            )
-            .order("asc");
-        } else {
+
+    // When filtering by assigned maker without a status filter, use the
+    // by_assignedMaker index to avoid scanning the full table.
+    if (filterByAssignedMaker && !hasStatusFilter) {
+      orderedQuery = ctx.db
+        .query("projects")
+        .withIndex("by_assignedMaker", (q) => q.eq("assignedMaker", callerId))
+        .order(args.sortBy === "oldest" ? "asc" : "desc");
+    } else {
+      switch (args.sortBy) {
+        case "price-high":
+        case "price-low":
+          // No price index; fall through to default creation-time order
+          orderedQuery = baseQuery.order(
+            args.sortBy === "price-high" ? "desc" : "asc",
+          );
+          break;
+        case "name-az":
           orderedQuery = baseQuery.order("asc");
-        }
-        break;
-      case "newest":
-      default:
-        if (hasStatusFilter) {
-          orderedQuery = baseQuery
-            .withIndex("by_status", (q) =>
-              q.eq("status", args.statusFilter as StatusUnion),
-            )
-            .order("desc");
-        } else {
-          orderedQuery = baseQuery.order("desc");
-        }
-        break;
+          break;
+        case "oldest":
+          if (hasStatusFilter) {
+            orderedQuery = baseQuery
+              .withIndex("by_status", (q) =>
+                q.eq("status", args.statusFilter as StatusUnion),
+              )
+              .order("asc");
+          } else {
+            orderedQuery = baseQuery.order("asc");
+          }
+          break;
+        case "newest":
+        default:
+          if (hasStatusFilter) {
+            orderedQuery = baseQuery
+              .withIndex("by_status", (q) =>
+                q.eq("status", args.statusFilter as StatusUnion),
+              )
+              .order("desc");
+          } else {
+            orderedQuery = baseQuery.order("desc");
+          }
+          break;
+      }
     }
 
     let query = orderedQuery;
 
     if (!isPrivileged) {
       query = query.filter((q) => q.eq(q.field("userId"), callerId));
+    }
+
+    if (filterByAssignedMaker) {
+      query = query.filter((q) => q.eq(q.field("assignedMaker"), callerId));
     }
 
     if (
@@ -294,11 +320,16 @@ export const getProject = authQuery({
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
 
-    // Access control: admins and makers see all; clients only their own
+    // Access control: admin sees all; maker sees assigned projects;
+    // client sees only their own.
     const { role, _id: callerId } = ctx.profile;
-    const isPrivileged = role === "admin" || role === "maker";
 
-    if (!isPrivileged && project.userId !== callerId) {
+    const canView =
+      role === "admin" ||
+      (role === "maker" && project.assignedMaker === callerId) ||
+      project.userId === callerId;
+
+    if (!canView) {
       throw new ConvexError("You do not have permission to view this project.");
     }
 
