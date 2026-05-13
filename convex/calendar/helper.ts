@@ -1,3 +1,4 @@
+import { UserRole } from "../constants";
 import type {
   CalendarBookingItem,
   CalendarFrameData,
@@ -18,7 +19,7 @@ export type CalendarBookingRange = {
 };
 
 function isPrivilegedRole(role: CalendarRole) {
-  return role === "admin" || role === "maker";
+  return role === UserRole.ADMIN || role === UserRole.MAKER;
 }
 
 function canSeeCalendarUsageDetails(args: {
@@ -26,7 +27,9 @@ function canSeeCalendarUsageDetails(args: {
   ownedProjectIds: Set<Id<"projects">>;
   projectId: Id<"projects">;
 }) {
-  return args.role !== "client" || args.ownedProjectIds.has(args.projectId);
+  return (
+    args.role !== UserRole.CLIENT || args.ownedProjectIds.has(args.projectId)
+  );
 }
 
 function mapCalendarFrameService(service: Doc<"services">) {
@@ -85,7 +88,7 @@ async function loadCandidateUsages(
 }
 
 async function loadOwnedProjectIds(ctx: CalendarQueryContext) {
-  if (ctx.profile.role === "client") {
+  if (ctx.profile.role === UserRole.CLIENT) {
     const projects = await ctx.db
       .query("projects")
       .withIndex("by_userProfile", (q) => q.eq("userId", ctx.profile._id))
@@ -94,7 +97,7 @@ async function loadOwnedProjectIds(ctx: CalendarQueryContext) {
     return new Set(projects.map((project) => project._id));
   }
 
-  if (ctx.profile.role === "maker") {
+  if (ctx.profile.role === UserRole.MAKER) {
     const projects = await ctx.db
       .query("projects")
       .withIndex("by_assignedMaker", (q) =>
@@ -257,7 +260,7 @@ async function loadCandidateServiceProjects(
   //   - Maker  → only assigned projects (via ownedProjectIds)
   //   - Client → only own projects (via ownedProjectIds)
   const visibleProjects = candidateProjects.filter((project) => {
-    if (ctx.profile.role === "admin") return true;
+    if (ctx.profile.role === UserRole.ADMIN) return true;
     return ownedProjectIds.has(project._id);
   });
 

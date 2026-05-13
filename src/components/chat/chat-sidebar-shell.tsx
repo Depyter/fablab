@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 export function ChatSidebarShell({
   className,
   children,
+  headerEnd,
 }: {
   className?: string;
   children: ReactNode;
+  headerEnd?: ReactNode;
 }) {
   return (
     <div
@@ -32,6 +34,7 @@ export function ChatSidebarShell({
           >
             Messaging
           </span>
+          {headerEnd}
         </div>
       </div>
 

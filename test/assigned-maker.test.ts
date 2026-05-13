@@ -512,6 +512,78 @@ describe("Assigned Maker — assignedToMe filter", () => {
     expect(after).not.toContain(makerAId);
   });
 
+  test("Unassigning a maker via null makerId clears assignment and removes from room", async () => {
+    const { t, tAera, projectAId } = await setup();
+
+    const { makerAId, roomId } = await t.run(async (ctx) => {
+      const makerA = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .first();
+      const thread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectAId))
+        .first();
+      return { makerAId: makerA!._id, roomId: thread!.roomId };
+    });
+
+    // Verify makerA is assigned
+    const before = await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectAId);
+      return project!.assignedMaker;
+    });
+    expect(before).toBe(makerAId);
+
+    // Unassign: pass null to clear the maker
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId: projectAId,
+      makerId: null,
+    });
+    await flushScheduledFunctions(t);
+
+    // Verify makerA is no longer assigned (Convex returns null for cleared optional fields)
+    const after = await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectAId);
+      return project!.assignedMaker;
+    });
+    expect(after).toBeNull();
+
+    // Verify makerA is removed from the room
+    const roomMemberIds = await t.run(async (ctx) => {
+      const members = await ctx.db
+        .query("roomMembers")
+        .filter((q) => q.eq(q.field("roomId"), roomId))
+        .collect();
+      return members.map((m) => m.participantId);
+    });
+    expect(roomMemberIds).not.toContain(makerAId);
+  });
+
+  test("Unassigning an already-unassigned project is a no-op", async () => {
+    const { t, tAera, projectBId } = await setup();
+
+    // Project B has no assigned maker
+    const before = await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectBId);
+      return project!.assignedMaker;
+    });
+    expect(before).toBeNull();
+
+    // Attempting to unassign should not throw
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId: projectBId,
+      makerId: null,
+    });
+    await flushScheduledFunctions(t);
+
+    // Still unassigned
+    const after = await t.run(async (ctx) => {
+      const project = await ctx.db.get(projectBId);
+      return project!.assignedMaker;
+    });
+    expect(after).toBeNull();
+  });
+
   test("Assigned maker can see chat messages in the project room", async () => {
     const { t, tMakerA, tHarley, projectAId } = await setup();
 

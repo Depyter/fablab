@@ -11,6 +11,7 @@ export interface ChatThreadSummary {
   lastMessageText?: string;
   unreadCount?: number;
   archived?: "Archived" | "Active";
+  projectId?: string;
 }
 
 export interface ChatRoomSummary {

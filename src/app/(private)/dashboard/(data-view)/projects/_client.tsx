@@ -173,6 +173,8 @@ export function ProjectsListClient() {
   const statusRaw = getSearchParam(searchParams, "status", "all");
   const dateRaw = getSearchParam(searchParams, "date", "all");
   const sortRaw = getSearchParam(searchParams, "sort", "newest");
+  const assignedToMeRaw = getSearchParam(searchParams, "assignedToMe");
+  const assignedToMe = assignedToMeRaw === "true";
   const view = getProjectsView(searchParams);
   const [selectedProjectId, setSelectedProjectId] =
     React.useState<Id<"projects"> | null>(null);
@@ -222,6 +224,7 @@ export function ProjectsListClient() {
       dateFilter: isSearching ? "all" : dateFilter,
       sortBy: isSearching ? "newest" : sortBy,
       searchText: search.trim() || undefined,
+      assignedToMe: assignedToMe || undefined,
     },
     { initialNumItems: 24 },
   );
@@ -265,9 +268,10 @@ export function ProjectsListClient() {
         )}
         emptyState={{
           icon: <PackageOpen className="size-12" />,
-          title: "No projects found",
-          description:
-            "The catalogue is empty. No clients have created projects or booking requests yet.",
+          title: assignedToMe ? "No assigned projects" : "No projects found",
+          description: assignedToMe
+            ? "You haven't been assigned any projects yet."
+            : "The catalogue is empty. No clients have created projects or booking requests yet.",
         }}
         filteredEmptyState={{
           icon: <Search className="size-8" />,
@@ -283,6 +287,7 @@ export function ProjectsListClient() {
                   status: null,
                   date: null,
                   sort: null,
+                  assignedToMe: null,
                 })
               }
             >

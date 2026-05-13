@@ -2,6 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
 import { QueryCtx } from "../_generated/server";
+import { UserRole } from "../constants";
 import { authQuery } from "../helper";
 import {
   addLabDays,
@@ -115,9 +116,9 @@ export const getProjects = authQuery({
   },
   handler: async (ctx, args) => {
     const { role, _id: callerId } = ctx.profile;
-    const isPrivileged = role === "admin" || role === "maker";
+    const isPrivileged = role === UserRole.ADMIN || role === UserRole.MAKER;
     const filterByAssignedMaker =
-      args.assignedToMe === true && role === "maker";
+      args.assignedToMe === true && role === UserRole.MAKER;
 
     const hasStatusFilter =
       args.statusFilter !== undefined && args.statusFilter !== "all";
@@ -266,6 +267,24 @@ export const getProjects = authQuery({
   },
 });
 
+// ── Lightweight query: assigned project IDs ───────────────────────────────────
+// Used by the chat sidebar to filter rooms to only assigned-project conversations.
+
+export const getAssignedProjectIds = authQuery({
+  args: {},
+  handler: async (ctx) => {
+    const { role, _id: callerId } = ctx.profile;
+    if (role !== UserRole.MAKER) return [];
+
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_assignedMaker", (q) => q.eq("assignedMaker", callerId))
+      .collect();
+
+    return projects.map((p) => p._id);
+  },
+});
+
 // ── Shared enrichment helper ──────────────────────────────────────────────────
 
 async function enrichProjects(ctx: QueryCtx, projects: Doc<"projects">[]) {
@@ -329,8 +348,8 @@ export const getProject = authQuery({
     const { role, _id: callerId } = ctx.profile;
 
     const canView =
-      role === "admin" ||
-      (role === "maker" && project.assignedMaker === callerId) ||
+      role === UserRole.ADMIN ||
+      (role === UserRole.MAKER && project.assignedMaker === callerId) ||
       project.userId === callerId;
 
     if (!canView) {
