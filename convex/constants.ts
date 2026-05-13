@@ -265,6 +265,13 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatusType, string> = {
   cancelled: "Cancelled",
 };
 
+/** Statuses that trigger thread archival when reached. */
+export const PROJECT_ARCHIVE_STATUSES: readonly ProjectStatusType[] = [
+  ProjectStatus.CANCELLED,
+  ProjectStatus.REJECTED,
+  ProjectStatus.CLAIMED,
+] as const;
+
 export const PROJECT_STATUS_TRANSITIONS: Record<
   ProjectStatusType,
   readonly ProjectStatusType[]

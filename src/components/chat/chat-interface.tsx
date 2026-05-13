@@ -1,12 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Send, User, Hash, ArrowLeft, Calendar } from "lucide-react";
+
+import {
+  Loader2,
+  Send,
+  User,
+  Hash,
+  ArrowLeft,
+  Calendar,
+  Clock,
+} from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { Id } from "@convex/_generated/dataModel";
+import { formatLabDate } from "@/lib/lab-time";
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import { FileUpload } from "@/components/file-upload";
 import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
 import { useChat } from "./use-chat";
@@ -61,6 +75,52 @@ function ThreadTitle({ title }: { title?: string }) {
         }}
       >
         {title ?? "channel"}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Shows a warning banner when the thread belongs to a project that has reached
+ * a terminal status (cancelled, rejected, or claimed) and is pending archival.
+ */
+function ArchivalBanner({ threadId }: { threadId: Id<"threads"> }) {
+  const info = useQuery(api.chat.query.getThreadProjectStatus, { threadId });
+
+  if (!info) return null;
+
+  const statusLabel =
+    PROJECT_STATUS_LABELS[info.status as keyof typeof PROJECT_STATUS_LABELS] ??
+    info.status;
+
+  const deadlineDate =
+    info.archivalDeadline !== null
+      ? formatLabDate(info.archivalDeadline, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hourCycle: "h12",
+        })
+      : null;
+
+  if (!deadlineDate) return null;
+
+  return (
+    <div
+      className="flex shrink-0 items-center gap-2 px-4 py-2 text-xs"
+      style={{
+        background: "var(--fab-amber-light)",
+        borderBottom: "1px solid var(--fab-border-md)",
+        color: "var(--fab-text-primary)",
+      }}
+    >
+      <Clock className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        This project has been marked as <strong>{statusLabel}</strong>. Thread
+        will be archived on <strong>{deadlineDate}</strong>.
       </span>
     </div>
   );
@@ -137,6 +197,10 @@ export function ChatInterface({
           roomId={roomId}
         />
       </div>
+
+      {/* ── Archival warning banner ──────────────────────────────────────── */}
+      <ArchivalBanner threadId={threadId} />
+
       {/* ── Grid background ───────────────────────────────────────────────── */}
       <div
         aria-hidden="true"

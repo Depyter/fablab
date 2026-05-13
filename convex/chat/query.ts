@@ -2,6 +2,9 @@ import { paginationOptsValidator } from "convex/server";
 import { authQuery } from "../helper";
 import { checkRoomMembership } from "./helper";
 import { v } from "convex/values";
+import { PROJECT_ARCHIVE_STATUSES } from "../constants";
+
+const ARCHIVE_STATUSES = new Set(PROJECT_ARCHIVE_STATUSES);
 
 export const getRoom = authQuery({
   args: { roomId: v.id("rooms") },
@@ -218,5 +221,28 @@ export const getAddableUsers = authQuery({
     const allUsers = await ctx.db.query("userProfile").collect();
 
     return allUsers.filter((u) => !memberIds.has(u._id));
+  },
+});
+
+// ── Thread archival banner info ──────────────────────────────────────────────
+// Returns the project status if the thread belongs to a project that has reached
+// a terminal state and is pending archival (thread not yet archived).
+
+export const getThreadProjectStatus = authQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread?.projectId) return null;
+
+    const project = await ctx.db.get(thread.projectId);
+    if (!project) return null;
+
+    if (thread.archived === "Archived") return null;
+    if (!ARCHIVE_STATUSES.has(project.status)) return null;
+
+    return {
+      status: project.status,
+      archivalDeadline: project.archivalDeadline ?? null,
+    };
   },
 });
