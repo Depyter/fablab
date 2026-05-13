@@ -206,7 +206,7 @@ export function ProjectDetailsContent({
       return;
     }
 
-    if (status === "paid") {
+    if (status === "paid" && !project.receipt) {
       onMarkPaid();
       return;
     }

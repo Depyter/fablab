@@ -747,7 +747,11 @@ export const markProjectPaid = authMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
-    if (project.status !== "completed" && project.status !== "paid") {
+    if (
+      project.status !== "completed" &&
+      project.status !== "paid" &&
+      project.status !== "claimed"
+    ) {
       throw new ConvexError(
         "Only completed or paid projects can have payment details set.",
       );
