@@ -319,6 +319,7 @@ export const getProject = authQuery({
           _id: serviceDoc._id,
           name: serviceDoc.name,
           status: serviceDoc.status,
+          resources: serviceDoc.resources,
           serviceCategory: serviceDoc.serviceCategory,
         }
       : null;
