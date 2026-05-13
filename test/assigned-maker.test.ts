@@ -379,4 +379,188 @@ describe("Assigned Maker — assignedToMe filter", () => {
     expect(result.page).toHaveLength(1);
     expect(result.page[0].name).toBe("Project A (assigned)");
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Tests: Chat room membership
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  test("Pre-assigned maker is added to the project chat room on creation", async () => {
+    const { t, projectAId } = await setup();
+
+    // Find the room for project A (created with assignedMaker = makerA)
+    const { roomId, makerAId } = await t.run(async (ctx) => {
+      const threadA = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectAId))
+        .first();
+      expect(threadA).not.toBeNull();
+
+      const makerA = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .first();
+
+      return { roomId: threadA!.roomId, makerAId: makerA!._id };
+    });
+
+    const roomMembers = await t.run(async (ctx) => {
+      const members = await ctx.db
+        .query("roomMembers")
+        .filter((q) => q.eq(q.field("roomId"), roomId))
+        .collect();
+      return members.map((m) => m.participantId);
+    });
+
+    // Maker A should be a member of the project's room
+    expect(roomMembers).toContain(makerAId);
+  });
+
+  test("Assigning a maker via updateProject adds them to the chat room", async () => {
+    const { t, tAera, projectBId } = await setup();
+
+    const { makerBId, roomId } = await t.run(async (ctx) => {
+      const makerB = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "4"))
+        .first();
+      const thread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectBId))
+        .first();
+      return { makerBId: makerB!._id, roomId: thread!.roomId };
+    });
+
+    // makerB should NOT be in the room yet (never assigned anywhere)
+    const before = await t.run(async (ctx) => {
+      const members = await ctx.db
+        .query("roomMembers")
+        .filter((q) => q.eq(q.field("roomId"), roomId))
+        .collect();
+      return members.map((m) => m.participantId);
+    });
+    expect(before).not.toContain(makerBId);
+
+    // Assign makerB to project B
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId: projectBId,
+      makerId: makerBId,
+    });
+    await flushScheduledFunctions(t);
+
+    // Verify makerB is now a room member
+    const after = await t.run(async (ctx) => {
+      const members = await ctx.db
+        .query("roomMembers")
+        .filter((q) => q.eq(q.field("roomId"), roomId))
+        .collect();
+      return members.map((m) => m.participantId);
+    });
+
+    expect(after).toContain(makerBId);
+  });
+
+  test("Reassigning a maker removes old maker and adds new maker to the chat room", async () => {
+    const { t, tAera, projectAId } = await setup();
+
+    const { makerAId, makerBId, roomId } = await t.run(async (ctx) => {
+      const makerA = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .first();
+      const makerB = await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "4"))
+        .first();
+      const thread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectAId))
+        .first();
+      return {
+        makerAId: makerA!._id,
+        makerBId: makerB!._id,
+        roomId: thread!.roomId,
+      };
+    });
+
+    // Verify makerA is initially in the room (pre-assigned on creation)
+    const before = await t.run(async (ctx) => {
+      const members = await ctx.db
+        .query("roomMembers")
+        .filter((q) => q.eq(q.field("roomId"), roomId))
+        .collect();
+      return members.map((m) => m.participantId);
+    });
+    expect(before).toContain(makerAId);
+
+    // Reassign: replace makerA with makerB
+    await tAera.mutation(api.projects.mutate.updateProject, {
+      projectId: projectAId,
+      makerId: makerBId,
+    });
+    await flushScheduledFunctions(t);
+
+    // Verify makerA is removed and makerB is added
+    const after = await t.run(async (ctx) => {
+      const members = await ctx.db
+        .query("roomMembers")
+        .filter((q) => q.eq(q.field("roomId"), roomId))
+        .collect();
+      return members.map((m) => m.participantId);
+    });
+
+    expect(after).toContain(makerBId);
+    expect(after).not.toContain(makerAId);
+  });
+
+  test("Assigned maker can see chat messages in the project room", async () => {
+    const { t, tMakerA, tHarley, projectAId } = await setup();
+
+    // Maker A should be able to query the room (chat queries check membership)
+    const threadId = await t.run(async (ctx) => {
+      const thread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectAId))
+        .first();
+      return thread!._id;
+    });
+
+    // Maker A can query the room's messages (convex chat query checks membership)
+    const roomId = await t.run(async (ctx) => {
+      const thread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectAId))
+        .first();
+      return thread!.roomId;
+    });
+
+    // getRooms should return the room for Maker A
+    const makerARooms = await tMakerA.query(api.chat.query.getRooms);
+    const makerARoomIds = makerARooms.map((r: any) => r._id);
+    expect(makerARoomIds).toContain(roomId);
+
+    // Maker A can retrieve messages from the project thread
+    const messages = await tMakerA.query(api.chat.query.getRoomMessages, {
+      paginationOpts: { cursor: null, numItems: 10 },
+      room: roomId,
+      threadId,
+    });
+    expect(messages.page.length).toBeGreaterThan(0);
+  });
+
+  test("Unassigned maker cannot see chat messages in the project room", async () => {
+    const { t, tMakerB, projectAId } = await setup();
+
+    const roomId = await t.run(async (ctx) => {
+      const thread = await ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", projectAId))
+        .first();
+      return thread!.roomId;
+    });
+
+    // Maker B should NOT have the room in their room list
+    const makerBRooms = await tMakerB.query(api.chat.query.getRooms);
+    const makerBRoomIds = makerBRooms.map((r: any) => r._id);
+    expect(makerBRoomIds).not.toContain(roomId);
+  });
 });

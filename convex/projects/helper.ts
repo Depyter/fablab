@@ -847,6 +847,63 @@ export async function applyStatusChange(
  * Assigns a maker to the project record and its resource usage record.
  * Returns change-log lines for the system message.
  */
+// ── Chat room membership helpers ────────────────────────────────────────────
+
+/**
+ * Find the chat room associated with a project, if any.
+ * Projects link to rooms via the threads table (threads.projectId → threads.roomId).
+ */
+async function findProjectRoom(
+  ctx: Pick<MutationCtx, "db">,
+  projectId: Id<"projects">,
+): Promise<Id<"rooms"> | null> {
+  const thread = await ctx.db
+    .query("threads")
+    .withIndex("projectId", (q) => q.eq("projectId", projectId))
+    .first();
+  return thread?.roomId ?? null;
+}
+
+/**
+ * Add a user to a room if they aren't already a member.
+ */
+export async function addRoomMember(
+  ctx: Pick<MutationCtx, "db">,
+  roomId: Id<"rooms">,
+  participantId: Id<"userProfile">,
+): Promise<void> {
+  const existing = await ctx.db
+    .query("roomMembers")
+    .withIndex("by_roomId_participantId", (q) =>
+      q.eq("roomId", roomId).eq("participantId", participantId),
+    )
+    .first();
+
+  if (!existing) {
+    await ctx.db.insert("roomMembers", { roomId, participantId });
+  }
+}
+
+/**
+ * Remove a user from a room if they are a member.
+ */
+export async function removeRoomMember(
+  ctx: Pick<MutationCtx, "db">,
+  roomId: Id<"rooms">,
+  participantId: Id<"userProfile">,
+): Promise<void> {
+  const existing = await ctx.db
+    .query("roomMembers")
+    .withIndex("by_roomId_participantId", (q) =>
+      q.eq("roomId", roomId).eq("participantId", participantId),
+    )
+    .first();
+
+  if (existing) {
+    await ctx.db.delete(existing._id);
+  }
+}
+
 export async function applyMakerAssignment(
   ctx: MutationCtx,
   project: Doc<"projects">,
@@ -859,9 +916,29 @@ export async function applyMakerAssignment(
 
   if (project.assignedMaker === makerId) return [];
 
+  const messages: string[] = [];
+
+  // Find the project room once — both removal and addition use the same room
+  const roomId = await findProjectRoom(ctx, project._id);
+
+  // If there was a previous maker who is being replaced, remove them from the room
+  if (project.assignedMaker) {
+    if (roomId) {
+      await removeRoomMember(ctx, roomId, project.assignedMaker);
+    }
+    messages.push(`- Previous maker removed from project chat room`);
+  }
+
+  // Add the new maker to the project's chat room
+  if (roomId) {
+    await addRoomMember(ctx, roomId, makerId);
+  }
+
   await ctx.db.patch(project._id, { assignedMaker: makerId });
 
-  return [`- Assigned maker updated to: **${makerProfile.name}**`];
+  messages.push(`- Assigned maker updated to: **${makerProfile.name}**`);
+
+  return messages;
 }
 
 export async function syncMaterialUsageStock(
