@@ -397,7 +397,7 @@ export function PricingEstimateCard({
           projectId,
           makerId: selectedMakerId
             ? (selectedMakerId as Id<"userProfile">)
-            : undefined,
+            : null,
         });
       }
 

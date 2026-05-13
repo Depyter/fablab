@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { LayoutGrid, List, Plus } from "lucide-react";
+import { LayoutGrid, List, Plus, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,6 +24,8 @@ import {
   DataViewSearchField,
 } from "@/components/manage/data-view-toolbar";
 import { cn } from "@/lib/utils";
+import { UserRole } from "@convex/constants";
+import { useProfile } from "@/components/sidebar/profile-context";
 import { ProjectsListClient } from "./_client";
 
 const PROJECT_VIEWS = ["gallery", "list"] as const;
@@ -155,6 +157,31 @@ function ProjectFilterControls() {
   );
 }
 
+function AssignedProjectsToggle() {
+  const { searchParams, replaceParams } = useDataViewRouteState();
+  const profile = useProfile();
+  const assignedToMe = getSearchParam(searchParams, "assignedToMe") === "true";
+
+  // Only show the toggle for maker role users
+  if (profile?.role !== UserRole.MAKER) return null;
+
+  return (
+    <Button
+      variant={assignedToMe ? "default" : "outline"}
+      size="sm"
+      className={cn("h-8 shrink-0 gap-1.5")}
+      onClick={() =>
+        replaceParams({ assignedToMe: assignedToMe ? null : "true" })
+      }
+    >
+      <UserCheck className="h-4 w-4" />
+      <span className="hidden sm:inline">
+        {assignedToMe ? "Assigned Projects" : "All Projects"}
+      </span>
+    </Button>
+  );
+}
+
 function ProjectsPageHeader() {
   const { pathname, searchParams, replaceParams } = useDataViewRouteState();
   const search = getSearchParam(searchParams, "search");
@@ -173,6 +200,7 @@ function ProjectsPageHeader() {
         />
         <div className="flex shrink-0 items-center gap-2">
           <ProjectFilterControls />
+          <AssignedProjectsToggle />
           <ProjectsViewToggle />
           <Button size="sm" className="h-8 shrink-0 gap-1" asChild>
             <Link href="/services">

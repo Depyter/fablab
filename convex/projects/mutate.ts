@@ -266,7 +266,10 @@ export const updateProject = authMutation({
       ),
     ),
     // Assignments
-    makerId: v.optional(v.id("userProfile")),
+    //   - valid ID → assign/reassign that maker
+    //   - null     → unassign the current maker
+    //   - undefined → no change
+    makerId: v.optional(v.union(v.id("userProfile"), v.null())),
   },
   handler: async (ctx, args) => {
     const existingProject = await ctx.db.get(args.projectId);

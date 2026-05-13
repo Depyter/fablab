@@ -14,6 +14,7 @@ import {
   MaterialStatus,
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_TRANSITIONS,
+  UserRole,
   type MaterialStatusType,
   type ProjectStatusType,
 } from "../constants";
@@ -907,16 +908,34 @@ export async function removeRoomMember(
 export async function applyMakerAssignment(
   ctx: MutationCtx,
   project: Doc<"projects">,
-  makerId: Id<"userProfile">,
+  makerId: Id<"userProfile"> | null,
 ): Promise<string[]> {
+  const messages: string[] = [];
+
+  // ── Unassignment path ─────────────────────────────────────────────────────
+  if (makerId === null) {
+    // Already unassigned — nothing to do
+    if (!project.assignedMaker) return [];
+
+    const roomId = await findProjectRoom(ctx, project._id);
+    if (roomId) {
+      await removeRoomMember(ctx, roomId, project.assignedMaker);
+    }
+
+    // Patch with undefined to clear the optional field
+    await ctx.db.patch(project._id, { assignedMaker: undefined });
+
+    messages.push(`- Maker unassigned from project`);
+    return messages;
+  }
+
+  // ── Assignment / reassignment path ────────────────────────────────────────
   const makerProfile = await ctx.db.get(makerId);
-  if (!makerProfile || makerProfile.role !== "maker") {
+  if (!makerProfile || makerProfile.role !== UserRole.MAKER) {
     throw new ConvexError("Assigned user must be a maker");
   }
 
   if (project.assignedMaker === makerId) return [];
-
-  const messages: string[] = [];
 
   // Find the project room once — both removal and addition use the same room
   const roomId = await findProjectRoom(ctx, project._id);

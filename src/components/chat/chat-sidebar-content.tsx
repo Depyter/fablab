@@ -113,8 +113,29 @@ function ChatThreadLink({
   );
 }
 
-export function ChatSidebarContent() {
+export function ChatSidebarContent({
+  assignedOnly = false,
+  assignedProjectIds,
+}: {
+  assignedOnly?: boolean;
+  assignedProjectIds?: readonly Id<"projects">[];
+}) {
   const { roomList, isLoading } = useChatRooms();
+
+  const assignedIdSet = React.useMemo(
+    () => new Set<string>(assignedProjectIds ?? []),
+    [assignedProjectIds],
+  );
+
+  const filteredRoomList = React.useMemo(() => {
+    if (!assignedOnly || assignedIdSet.size === 0) return roomList;
+
+    return roomList.filter((room) =>
+      room.threads?.some((thread) =>
+        thread.projectId ? assignedIdSet.has(thread.projectId) : false,
+      ),
+    );
+  }, [roomList, assignedOnly, assignedIdSet]);
 
   const [collapsedRooms, setCollapsedRooms] = React.useState<
     Record<string, boolean>
@@ -139,7 +160,7 @@ export function ChatSidebarContent() {
     return <ChatSidebarRoomsLoading />;
   }
 
-  if (roomList.length === 0) {
+  if (filteredRoomList.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
         <p
@@ -149,7 +170,9 @@ export function ChatSidebarContent() {
             fontFamily: "var(--font-body)",
           }}
         >
-          No conversations found
+          {assignedOnly
+            ? "No assigned conversations"
+            : "No conversations found"}
         </p>
       </div>
     );
@@ -157,7 +180,7 @@ export function ChatSidebarContent() {
 
   return (
     <>
-      {roomList.map((room) => {
+      {filteredRoomList.map((room) => {
         const roomId = room._id;
 
         if (!roomId) return null;
