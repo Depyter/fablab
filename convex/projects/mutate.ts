@@ -1,13 +1,13 @@
 import { v, ConvexError } from "convex/values";
 import { authMutation, checkAuthority, claimFiles } from "../helper";
 import { Id } from "../_generated/dataModel";
-import { MutationCtx } from "../_generated/server";
+import { internalMutation, MutationCtx } from "../_generated/server";
 import {
   formatLabDate,
   formatLabTime,
+  getCurrentTimestamp,
   getLabDayStartTimestamp,
 } from "../../src/lib/lab-time";
-
 import {
   BookingWindow,
   ProjectStatus,
@@ -917,5 +917,50 @@ export const updateOwnProjectDetails = authMutation({
     await sendProjectSystemMessage(ctx, args.projectId, [
       `${actorLabel} updated: ${changed.join(", ")}.`,
     ]);
+  },
+});
+
+// ── Scheduled archival ───────────────────────────────────────────────────────
+// Called by ctx.scheduler.runAfter from applyStatusChange when a project reaches
+// a terminal status. Sends a final system message then archives the thread.
+
+export const archiveProjectThread = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    // Don't archive if the project no longer exists or has left the terminal state
+    if (!project) return;
+
+    const isTerminal =
+      project.status === "cancelled" ||
+      project.status === "rejected" ||
+      project.status === "claimed";
+    if (!isTerminal) return;
+
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("projectId", (q) => q.eq("projectId", args.projectId))
+      .first();
+
+    if (!thread || thread.archived === "Archived") return;
+
+    await ctx.db.patch(thread._id, { archived: "Archived" });
+
+    // Send a final system message confirming archival
+    const content = "This thread has been archived.";
+    const now = getCurrentTimestamp();
+    await ctx.db.insert("messages", {
+      room: thread.roomId,
+      threadId: thread._id,
+      content,
+      sender: "System",
+    });
+    await ctx.db.patch(thread._id, {
+      lastMessageText: content,
+      lastMessageAt: now,
+      messageCount: (thread.messageCount ?? 0) + 1,
+    });
   },
 });

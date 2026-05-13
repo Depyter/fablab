@@ -12,6 +12,7 @@ import {
 import {
   FILE_CATEGORIES,
   MaterialStatus,
+  PROJECT_ARCHIVE_STATUSES,
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_TRANSITIONS,
   UserRole,
@@ -841,6 +842,48 @@ export async function applyStatusChange(
     await syncProjectTotalInvoice(ctx, project._id);
   }
 
+  // ── Unschedule / schedule on terminal status transitions ──────────────
+  const wasArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
+    existingProject.status as ProjectStatusType,
+  );
+  const isArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
+    status as ProjectStatusType,
+  );
+
+  if (wasArchiveStatus && !isArchiveStatus) {
+    // Project left a terminal state — clear the scheduled deadline
+    await ctx.db.patch(project._id, { archivalDeadline: undefined });
+  } else if (isArchiveStatus) {
+    // Project entered a terminal state — schedule archival
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("projectId", (q) => q.eq("projectId", project._id))
+      .first();
+
+    if (thread && thread.archived !== "Archived") {
+      const now = getCurrentTimestamp();
+      const deadline = now + 86_400_000;
+
+      const dateStr = formatLabDate(deadline, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      lines.push(`- This thread will be archived on **${dateStr}**`);
+
+      // Store the deadline so the frontend can show when archival happens
+      await ctx.db.patch(project._id, { archivalDeadline: deadline });
+
+      await ctx.scheduler.runAfter(
+        86_400_000,
+        internal.projects.mutate.archiveProjectThread,
+        { projectId: project._id },
+      );
+    }
+  }
+
   return lines;
 }
 
@@ -905,6 +948,51 @@ export async function removeRoomMember(
   }
 }
 
+/**
+ * Check if a maker is still assigned to any other project that shares the
+ * given chat room. Prevents removing a maker from a room they should still
+ * have access to.
+ */
+async function isMakerAssignedToOtherProjectInRoom(
+  ctx: Pick<MutationCtx, "db">,
+  roomId: Id<"rooms">,
+  excludeProjectId: Id<"projects">,
+  makerId: Id<"userProfile">,
+): Promise<boolean> {
+  const threads = await ctx.db
+    .query("threads")
+    .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+    .collect();
+
+  const otherProjectIds = threads
+    .map((t) => t.projectId)
+    .filter(
+      (pid): pid is Id<"projects"> =>
+        pid !== undefined && pid !== excludeProjectId,
+    );
+
+  if (otherProjectIds.length === 0) return false;
+
+  const otherProjects = await Promise.all(
+    otherProjectIds.map((pid) => ctx.db.get(pid)),
+  );
+
+  return otherProjects.some((p) => p?.assignedMaker === makerId);
+}
+
+/**
+ * Assigns or unassigns a maker for a project.
+ *
+ * When **assigning** (`makerId` is a valid user ID): patches the project's
+ * `assignedMaker`, adds the new maker to the project's chat room, and removes
+ * the previous maker (if any) — unless they're still needed for another project
+ * in the same room.
+ *
+ * When **unassigning** (`makerId` is `null`): clears `assignedMaker` and removes
+ * the maker from the chat room (subject to the same multi-project guard).
+ *
+ * Returns change-log lines for the system message.
+ */
 export async function applyMakerAssignment(
   ctx: MutationCtx,
   project: Doc<"projects">,
@@ -919,7 +1007,16 @@ export async function applyMakerAssignment(
 
     const roomId = await findProjectRoom(ctx, project._id);
     if (roomId) {
-      await removeRoomMember(ctx, roomId, project.assignedMaker);
+      // Only remove from room if they aren't assigned to another project in it
+      const stillNeeded = await isMakerAssignedToOtherProjectInRoom(
+        ctx,
+        roomId,
+        project._id,
+        project.assignedMaker,
+      );
+      if (!stillNeeded) {
+        await removeRoomMember(ctx, roomId, project.assignedMaker);
+      }
     }
 
     // Patch with undefined to clear the optional field
@@ -941,11 +1038,20 @@ export async function applyMakerAssignment(
   const roomId = await findProjectRoom(ctx, project._id);
 
   // If there was a previous maker who is being replaced, remove them from the room
+  // but only if they aren't assigned to another project that shares the same room.
   if (project.assignedMaker) {
     if (roomId) {
-      await removeRoomMember(ctx, roomId, project.assignedMaker);
+      const stillNeeded = await isMakerAssignedToOtherProjectInRoom(
+        ctx,
+        roomId,
+        project._id,
+        project.assignedMaker,
+      );
+      if (!stillNeeded) {
+        await removeRoomMember(ctx, roomId, project.assignedMaker);
+        messages.push(`- Previous maker removed from project chat room`);
+      }
     }
-    messages.push(`- Previous maker removed from project chat room`);
   }
 
   // Add the new maker to the project's chat room

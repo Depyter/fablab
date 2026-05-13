@@ -145,7 +145,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
       paginationOpts: { cursor: null, numItems: 10 },
     });
 
-    const names = result.page.map((p: any) => p.name);
+    const names = result.page.map((p) => p.name);
     expect(names).toContain("Project A (assigned)");
     expect(names).toContain("Project B (unassigned)");
   });
@@ -158,7 +158,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
       assignedToMe: true,
     });
 
-    const names = result.page.map((p: any) => p.name);
+    const names = result.page.map((p) => p.name);
     expect(names).toEqual(["Project A (assigned)"]);
     expect(names).not.toContain("Project B (unassigned)");
   });
@@ -181,7 +181,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
       paginationOpts: { cursor: null, numItems: 10 },
     });
 
-    const names = result.page.map((p: any) => p.name);
+    const names = result.page.map((p) => p.name);
     expect(names).toContain("Project A (assigned)");
     expect(names).toContain("Project B (unassigned)");
   });
@@ -285,8 +285,8 @@ describe("Assigned Maker — assignedToMe filter", () => {
     );
 
     const makerAProjectIds = makerABookings
-      .filter((b: any) => b.projectId !== null)
-      .map((b: any) => b.projectId);
+      .filter((b) => b.projectId !== null)
+      .map((b) => b.projectId);
 
     expect(makerAProjectIds).toContain(projectAId);
     expect(makerAProjectIds).not.toContain(projectBId);
@@ -297,9 +297,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
       { startTime, endTime, tab: "services" },
     );
 
-    const makerBVisible = makerBBookings.filter(
-      (b: any) => b.projectId !== null,
-    );
+    const makerBVisible = makerBBookings.filter((b) => b.projectId !== null);
     expect(makerBVisible).toHaveLength(0);
 
     // Admin sees all unmasked
@@ -309,8 +307,8 @@ describe("Assigned Maker — assignedToMe filter", () => {
     );
 
     const adminProjectIds = adminBookings
-      .filter((b: any) => b.projectId !== null)
-      .map((b: any) => b.projectId);
+      .filter((b) => b.projectId !== null)
+      .map((b) => b.projectId);
 
     expect(adminProjectIds).toContain(projectAId);
     expect(adminProjectIds).toContain(projectBId);
@@ -333,7 +331,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
       },
     );
 
-    const pendingNames = pendingAssigned.page.map((p: any) => p.name);
+    const pendingNames = pendingAssigned.page.map((p) => p.name);
     expect(pendingNames).toEqual(["Project A (assigned)"]);
 
     // Change project A to "approved"
@@ -607,7 +605,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
 
     // getRooms should return the room for Maker A
     const makerARooms = await tMakerA.query(api.chat.query.getRooms);
-    const makerARoomIds = makerARooms.map((r: any) => r._id);
+    const makerARoomIds = makerARooms.map((r) => r._id);
     expect(makerARoomIds).toContain(roomId);
 
     // Maker A can retrieve messages from the project thread
@@ -632,7 +630,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
 
     // Maker B should NOT have the room in their room list
     const makerBRooms = await tMakerB.query(api.chat.query.getRooms);
-    const makerBRoomIds = makerBRooms.map((r: any) => r._id);
+    const makerBRoomIds = makerBRooms.map((r) => r._id);
     expect(makerBRoomIds).not.toContain(roomId);
   });
 });

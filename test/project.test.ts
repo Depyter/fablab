@@ -483,8 +483,12 @@ describe("Project and Chat functionality", () => {
         }),
       );
 
-      expect(jobs).toHaveLength(1);
-      expect(jobs[0]?.args[0]).toMatchObject({
+      // Two jobs: the claimed email + the scheduled thread archival
+      expect(jobs).toHaveLength(2);
+
+      // One of them is the email
+      const emailJob = jobs.find((j) => j?.args[0]?.status === "claimed");
+      expect(emailJob?.args[0]).toMatchObject({
         to: "delivered+harley@resend.dev",
         projectName: "test",
         status: "claimed",

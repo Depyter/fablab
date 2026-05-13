@@ -253,6 +253,7 @@ export default defineSchema({
     files: v.optional(v.array(v.string())),
     notes: v.string(),
     searchText: v.string(),
+    archivalDeadline: v.optional(v.number()),
   })
     .index("by_userProfile", ["userId"])
     .index("by_status", ["status"])
