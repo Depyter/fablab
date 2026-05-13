@@ -85,16 +85,29 @@ async function loadCandidateUsages(
 }
 
 async function loadOwnedProjectIds(ctx: CalendarQueryContext) {
-  if (ctx.profile.role !== "client") {
-    return new Set<Id<"projects">>();
+  if (ctx.profile.role === "client") {
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_userProfile", (q) => q.eq("userId", ctx.profile._id))
+      .collect();
+
+    return new Set(projects.map((project) => project._id));
   }
 
-  const projects = await ctx.db
-    .query("projects")
-    .withIndex("by_userProfile", (q) => q.eq("userId", ctx.profile._id))
-    .collect();
+  if (ctx.profile.role === "maker") {
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_assignedMaker", (q) =>
+        q.eq("assignedMaker", ctx.profile._id),
+      )
+      .collect();
 
-  return new Set(projects.map((project) => project._id));
+    return new Set(projects.map((project) => project._id));
+  }
+
+  // Admin sees everything — return empty set so canSeeCalendarUsageDetails
+  // treats all bookings as visible.
+  return new Set<Id<"projects">>();
 }
 
 function collectVisibleProjectIds(args: {
