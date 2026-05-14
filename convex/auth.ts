@@ -22,25 +22,33 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
     triggers: {
       user: {
         onCreate: async (ctx, user) => {
-          // Create user Profile
-          await ctx.runMutation(internal.users.createUserProfile, {
-            userId: user._id,
-            name: user.name,
-            email: user.email,
-          });
+          // Sync the Convex userProfile to match the role that Better Auth
+          // assigned during creation (set by databaseHooks.user.create.before).
+          if (user.role === "admin") {
+            await ctx.runMutation(internal.users.createAdmin, {
+              userId: user._id,
+              name: user.name,
+              email: user.email,
+            });
+          } else {
+            await ctx.runMutation(internal.users.createUserProfile, {
+              userId: user._id,
+              name: user.name,
+              email: user.email,
+            });
+          }
         },
       },
     },
   },
 );
 
-/** Returns `true` in any non-production environment (preview CI deploys
- * or local development). This gates email/password auth which should
- * never be available on the production domain.
+/** Returns `true` when email/password auth should be available.
+ * We use an explicit allow-list to remain safe by default: if
+ * NEXTJS_ENV is unset (production), this returns `false`.
  *
- * The `.dev.vars` file sets `NEXTJS_ENV=development` for local dev,
- * while the CI preview workflow sets it to `preview`.
- * Production does not set this var, so the default fallback is `false`.
+ * - `development` — set by `.dev.vars` for local dev
+ * - `preview`      — set by the CI preview workflow via `bunx convex env set`
  */
 function isPreviewEnvironment(): boolean {
   const env = process.env.NEXTJS_ENV;
@@ -122,6 +130,33 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       convex({ authConfig }),
       admin(),
     ],
+
+    // Database hooks run before/after Better Auth database operations.
+    // The `user.create.before` hook intercepts user creation and assigns
+    // the admin role to the very first user in the deployment.
+    // The trigger above then reads this role to create the matching Convex
+    // userProfile.
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user, context) => {
+            const userCount =
+              await context!.context.internalAdapter.countTotalUsers();
+
+            if (userCount === 0) {
+              return {
+                data: {
+                  ...user,
+                  role: "admin",
+                },
+              };
+            }
+
+            return { data: user };
+          },
+        },
+      },
+    },
   } satisfies BetterAuthOptions;
 };
 
