@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { authClient } from "../lib/auth-client";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { getSafeReturnTo } from "@/lib/auth-redirect";
 import Link from "next/link";
 
@@ -20,7 +20,6 @@ export function SignUpForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = getSafeReturnTo(searchParams.get("redirectTo"));
 
@@ -52,12 +51,6 @@ export function SignUpForm({
         setError(result.error.message ?? "Sign up failed. Please try again.");
         return;
       }
-
-      // autoSignIn is enabled, so Better Auth should redirect automatically.
-      // As a fallback, navigate manually after a short delay.
-      setTimeout(() => {
-        router.replace(redirectTo);
-      }, 3000);
     } catch (err) {
       console.error("Sign up error:", err);
       setError("An unexpected error occurred. Please try again.");
