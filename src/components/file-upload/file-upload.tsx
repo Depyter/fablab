@@ -388,7 +388,7 @@ export function FileUpload({
   return (
     <Card
       className={cn(
-        "w-full rounded-lg border-2 border-black bg-background",
+        "w-full rounded-lg border-2 border-black bg-white",
         className,
       )}
     >
@@ -396,8 +396,14 @@ export function FileUpload({
         <CardTitle className="text-lg font-black uppercase tracking-tighter">
           {title}
         </CardTitle>
-        <CardDescription>
-          Drag and drop or click to upload. Max {maxFileSizeMB}MB per file.
+        <CardDescription className="space-y-2">
+          <p>
+            Drag and drop or click to upload. Max {maxFileSizeMB}MB per file.
+          </p>
+          <p className="text-xs text-amber-600 font-semibold italic">
+            * For larger files, you can send them via a drive link in the chat
+            after booking is completed.
+          </p>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

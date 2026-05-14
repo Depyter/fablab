@@ -86,6 +86,11 @@ export function Step2ProjectDetails({
       return;
     }
 
+    if (!form.state.values.pricing) {
+      toast.error("Please select a pricing tier for your booking.");
+      return;
+    }
+
     const [startH, startM] = dateTime.startTime.split(":");
     const [endH, endM] = dateTime.endTime.split(":");
 
@@ -183,7 +188,7 @@ export function Step2ProjectDetails({
                       htmlFor="name-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                      Project Name
+                     Project Name <span className="text-fab-magenta">*</span>
                     </Label>
                     <Input
                       id="name-1"
@@ -206,7 +211,7 @@ export function Step2ProjectDetails({
                       htmlFor="description-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                      Project Description
+                     Project Description <span className="text-fab-magenta">*</span>
                     </Label>
                     <Textarea
                       id="description-1"
@@ -231,7 +236,7 @@ export function Step2ProjectDetails({
                   htmlFor="notes-1"
                   className="font-black uppercase tracking-[0.2em] text-xs"
                 >
-                  Special Requirements or Notes
+                Special Requirements or Notes
                 </Label>
                 <Textarea
                   id="notes-1"
@@ -254,7 +259,7 @@ export function Step2ProjectDetails({
                     htmlFor="pricing-tier"
                     className="font-black uppercase tracking-[0.2em] text-xs"
                   >
-                    Pricing Tier
+                    Pricing Tier <span className="text-fab-magenta">*</span>
                   </Label>
                   <Select
                     value={field.state.value as string}
@@ -291,7 +296,7 @@ export function Step2ProjectDetails({
                       htmlFor="material-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                      Material Preference
+                     Material Preference <span className="text-fab-magenta">*</span>
                     </Label>
                     <RadioGroupChoiceCard
                       value={field.state.value}

@@ -18,6 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   formatLabClockTime,
   formatLabDateNumeric,
   getCurrentTimestamp,
@@ -125,7 +131,7 @@ export function DateTimePicker({
           htmlFor="date"
           className="font-black uppercase tracking-[0.2em] text-xs"
         >
-          Date (PST)
+          Date (PST) <span className="text-fab-magenta">*</span>
         </FieldLabel>
         <Popover>
           <div className="relative">
@@ -172,48 +178,62 @@ export function DateTimePicker({
           htmlFor="time-from"
           className="font-black uppercase tracking-[0.2em] text-xs"
         >
-          Start Time (PST)
+          Start Time (PST) <span className="text-fab-magenta">*</span>
         </FieldLabel>
         <div className="relative">
-          <Select
-            value={startTime}
-            onValueChange={(val) => {
-              const updates = { ...value, startTime: val };
-              if (value.endTime && val >= value.endTime) {
-                updates.endTime = "";
-              }
-              onChange(updates);
-            }}
-          >
-            <SelectTrigger
-              id="time-from"
-              className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
-            >
-              <SelectValue placeholder="Select start time" />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_SLOTS.map((slot) => {
-                const disabled = isTimeSlotBooked(slot);
-                return (
-                  <SelectItem
-                    key={`start-${slot}`}
-                    value={slot}
-                    disabled={disabled}
+          <TooltipProvider delayDuration={200}>
+            <Tooltip open={!date ? undefined : false} >
+              <TooltipTrigger asChild>
+                <div>
+                  <Select
+                    value={startTime}
+                    onValueChange={(val) => {
+                      const updates = { ...value, startTime: val };
+                      if (value.endTime && val >= value.endTime) {
+                        updates.endTime = "";
+                      }
+                      onChange(updates);
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      <Clock2Icon className="h-4 w-4 opacity-50" />
-                      <span>{formatTimeLabel(slot)}</span>
-                      {disabled && (
-                        <span className="text-[10px] opacity-50 ml-2">
-                          (Unavailable)
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+                    <SelectTrigger
+                      id="time-from"
+                      className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
+                      disabled={!date}
+                    >
+                      <SelectValue placeholder="Select start time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_SLOTS.map((slot) => {
+                        const disabled = isTimeSlotBooked(slot);
+                        return (
+                          <SelectItem
+                            key={`start-${slot}`}
+                            value={slot}
+                            disabled={disabled}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock2Icon className="h-4 w-4 opacity-50" />
+                              <span>{formatTimeLabel(slot)}</span>
+                              {disabled && (
+                                <span className="text-[10px] opacity-50 ml-2">
+                                  (Unavailable)
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              {!date && (
+                <TooltipContent side="right" className="text-sm font-medium">
+                  Please select a date first before setting the start time
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           <input
             type="text"
             required
@@ -229,57 +249,70 @@ export function DateTimePicker({
           htmlFor="time-to"
           className="font-black uppercase tracking-[0.2em] text-xs"
         >
-          End Time (PST)
+          End Time (PST) <span className="text-fab-magenta">*</span>
         </FieldLabel>
         <div className="relative">
-          <Select
-            value={endTime}
-            onValueChange={(val) => onChange({ ...value, endTime: val })}
-            disabled={!startTime}
-          >
-            <SelectTrigger
-              id="time-to"
-              className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
-            >
-              <SelectValue placeholder="Select end time" />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_SLOTS.map((slot) => {
-                const isBeforeOrEqualStart = startTime
-                  ? slot <= startTime
-                  : false;
-
-                let isOverlapping = false;
-                if (startTime && slot > startTime) {
-                  isOverlapping = bookedTimeBlocks.some(
-                    (block) => startTime < block.end && slot > block.start,
-                  );
-                }
-
-                const disabled =
-                  isTimeSlotBooked(slot) ||
-                  isBeforeOrEqualStart ||
-                  isOverlapping;
-                return (
-                  <SelectItem
-                    key={`end-${slot}`}
-                    value={slot}
-                    disabled={disabled}
+          <TooltipProvider delayDuration={200}>
+            <Tooltip open={!startTime ? undefined : false}>
+              <TooltipTrigger asChild>
+                <div>
+                  <Select
+                    value={endTime}
+                    onValueChange={(val) => onChange({ ...value, endTime: val })}
+                    disabled={!startTime}
                   >
-                    <div className="flex items-center gap-2">
-                      <Clock2Icon className="h-4 w-4 opacity-50" />
-                      <span>{formatTimeLabel(slot)}</span>
-                      {disabled && (
-                        <span className="text-[10px] opacity-50 ml-2">
-                          {isBeforeOrEqualStart ? "" : "(Unavailable)"}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+                    <SelectTrigger
+                      id="time-to"
+                      className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
+                    >
+                      <SelectValue placeholder="Select end time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_SLOTS.map((slot) => {
+                        const isBeforeOrEqualStart = startTime
+                          ? slot <= startTime
+                          : false;
+
+                        let isOverlapping = false;
+                        if (startTime && slot > startTime) {
+                          isOverlapping = bookedTimeBlocks.some(
+                            (block) => startTime < block.end && slot > block.start,
+                          );
+                        }
+
+                        const disabled =
+                          isTimeSlotBooked(slot) ||
+                          isBeforeOrEqualStart ||
+                          isOverlapping;
+                        return (
+                          <SelectItem
+                            key={`end-${slot}`}
+                            value={slot}
+                            disabled={disabled}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock2Icon className="h-4 w-4 opacity-50" />
+                              <span>{formatTimeLabel(slot)}</span>
+                              {disabled && (
+                                <span className="text-[10px] opacity-50 ml-2">
+                                  {isBeforeOrEqualStart ? "" : "(Unavailable)"}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              {!startTime && (
+                <TooltipContent side="right" className="text-sm font-medium">
+                  Please select a start time first before setting the end time
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           <input
             type="text"
             required
