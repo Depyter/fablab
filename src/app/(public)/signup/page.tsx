@@ -1,19 +1,21 @@
 import { redirect } from "next/navigation";
-import { LoginForm } from "@/components/login-form";
+import { SignUpForm } from "@/components/signup-form";
 import Image from "next/image";
 import { LoginRedirect } from "@/components/login-redirect";
 
 /**
- * In preview and local dev environments, email/password auth replaces OAuth.
- * Redirect to the signup page which handles both sign-up and sign-in.
- * Production continues to use the Google OAuth flow.
+ * The sign-up page is only available in preview and local dev environments.
+ * In production, email/password auth is disabled server-side, so this page
+ * would show a broken form. We redirect to login instead.
+ *
+ * This check mirrors isPreviewEnvironment() in convex/auth.ts.
  */
-export default function LoginPage() {
+export default function SignUpPage() {
   const env = process.env.NEXTJS_ENV;
   const isPreview = env === "preview" || env === "development";
 
-  if (isPreview) {
-    redirect("/signup");
+  if (!isPreview) {
+    redirect("/login");
   }
 
   return (
@@ -22,7 +24,7 @@ export default function LoginPage() {
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
-            <LoginForm />
+            <SignUpForm />
           </div>
         </div>
       </div>

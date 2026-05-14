@@ -50,6 +50,9 @@
       // during the preview build, so keep them out of Wrangler config.
       "workers_dev": true,
       "preview_urls": true,
+      "vars": {
+        "NEXTJS_ENV": "preview",
+      },
       "assets": {
         "directory": ".open-next/assets",
         "binding": "ASSETS",

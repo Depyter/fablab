@@ -24,7 +24,12 @@ export function getSafeReturnTo(
   }
 
   const returnTo = `${url.pathname}${url.search}${url.hash}`;
-  if (returnTo === "/login" || returnTo.startsWith("/login?")) {
+  if (
+    returnTo === "/login" ||
+    returnTo.startsWith("/login?") ||
+    returnTo === "/signup" ||
+    returnTo.startsWith("/signup?")
+  ) {
     return fallback;
   }
 
