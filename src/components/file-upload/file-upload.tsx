@@ -152,6 +152,7 @@ export function FileUpload({
   variant = "default",
   autoUpload = true,
   value = EMPTY_UPLOADED_FILES,
+  showDriveLinkNote = false,
 }: FileUploadProps) {
   const {
     uploadingFiles,
@@ -400,10 +401,12 @@ export function FileUpload({
           <p>
             Drag and drop or click to upload. Max {maxFileSizeMB}MB per file.
           </p>
-          <p className="text-xs text-amber-600 font-semibold italic">
-            * For larger files, you can send them via a drive link in the chat
-            after booking is completed.
-          </p>
+          {showDriveLinkNote && (
+            <p className="text-xs text-amber-600 font-semibold italic">
+              * For larger files, you can send them via a drive link in the chat
+              after booking is completed.
+            </p>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
