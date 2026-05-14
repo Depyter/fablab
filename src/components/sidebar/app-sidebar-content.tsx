@@ -8,7 +8,7 @@ import {
   FolderIcon,
   WrenchIcon,
   PackageIcon,
-  // BarChart2Icon,
+  BarChart2Icon,
   UsersIcon,
 } from "lucide-react";
 import {
@@ -90,15 +90,15 @@ const allNavItems: NavItem[] = [
     roles: ["admin"],
     group: "manage",
   },
-  // {
-  //   title: "Reports",
-  //   url: "#",
-  //   icon: <BarChart2Icon />,
-  //   iconBackground: "var(--fab-bg-deep)",
-  //   iconColor: "var(--fab-text-muted)",
-  //   roles: ["admin", "maker"],
-  //   group: "reports",
-  // },
+  {
+    title: "Reports",
+    url: "/dashboard/reports",
+    icon: <BarChart2Icon />,
+    iconBackground: "var(--fab-bg-deep)",
+    iconColor: "var(--fab-text-muted)",
+    roles: ["admin", "maker"],
+    group: "reports",
+  },
 ];
 
 function filterNavItems(items: NavItem[], role: Role): NavItem[] {

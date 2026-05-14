@@ -14,7 +14,8 @@ export type DataViewSection =
   | "calendar"
   | "services"
   | "inventory"
-  | "users";
+  | "users"
+  | "reports";
 
 type SearchParamsLike = URLSearchParams | ReadonlyURLSearchParams;
 
@@ -42,6 +43,11 @@ export const DATA_VIEW_SECTION_CONFIG: Record<
     title: "User Management",
     subtitle: "Manage roles and access for all users.",
   },
+  reports: {
+    title: "Reports",
+    subtitle:
+      "Aggregated metrics, revenue, resource usage, and material consumption.",
+  },
 };
 
 export function getDataViewSection(pathname: string): DataViewSection | null {
@@ -50,6 +56,7 @@ export function getDataViewSection(pathname: string): DataViewSection | null {
   if (pathname.startsWith("/dashboard/services")) return "services";
   if (pathname.startsWith("/dashboard/inventory")) return "inventory";
   if (pathname.startsWith("/dashboard/users")) return "users";
+  if (pathname.startsWith("/dashboard/reports")) return "reports";
   return null;
 }
 
