@@ -127,15 +127,11 @@ export function ChatSidebarContent({
     [assignedProjectIds],
   );
 
-  const filteredRoomList = React.useMemo(() => {
-    if (!assignedOnly || assignedIdSet.size === 0) return roomList;
-
-    return roomList.filter((room) =>
-      room.threads?.some((thread) =>
-        thread.projectId ? assignedIdSet.has(thread.projectId) : false,
-      ),
-    );
-  }, [roomList, assignedOnly, assignedIdSet]);
+  const filterProjectThread = React.useCallback(
+    (thread: ChatThreadSummary) =>
+      !thread.projectId || assignedIdSet.has(thread.projectId),
+    [assignedIdSet],
+  );
 
   const [collapsedRooms, setCollapsedRooms] = React.useState<
     Record<string, boolean>
@@ -160,7 +156,7 @@ export function ChatSidebarContent({
     return <ChatSidebarRoomsLoading />;
   }
 
-  if (filteredRoomList.length === 0) {
+  if (roomList.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
         <p
@@ -170,9 +166,7 @@ export function ChatSidebarContent({
             fontFamily: "var(--font-body)",
           }}
         >
-          {assignedOnly
-            ? "No assigned conversations"
-            : "No conversations found"}
+          No conversations found
         </p>
       </div>
     );
@@ -180,17 +174,17 @@ export function ChatSidebarContent({
 
   return (
     <>
-      {filteredRoomList.map((room) => {
+      {roomList.map((room) => {
         const roomId = room._id;
 
         if (!roomId) return null;
 
-        const activeThreads =
-          room.threads?.filter((thread) => thread.archived !== "Archived") ??
-          [];
-        const archivedThreads =
-          room.threads?.filter((thread) => thread.archived === "Archived") ??
-          [];
+        const activeThreads = (room.threads ?? [])
+          .filter((thread) => thread.archived !== "Archived")
+          .filter((thread) => !assignedOnly || filterProjectThread(thread));
+        const archivedThreads = (room.threads ?? [])
+          .filter((thread) => thread.archived === "Archived")
+          .filter((thread) => !assignedOnly || filterProjectThread(thread));
 
         return (
           <div key={roomId} className="flex flex-col">
@@ -238,8 +232,7 @@ export function ChatSidebarContent({
               </div>
             </div>
 
-            {room.threads &&
-            room.threads.length > 0 &&
+            {activeThreads.length + archivedThreads.length > 0 &&
             !collapsedRooms[roomId] ? (
               <div className="relative flex flex-col pb-2">
                 {activeThreads.map((thread) => (

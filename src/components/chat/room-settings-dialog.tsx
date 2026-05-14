@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { UserRole } from "@convex/constants";
 import { toast } from "sonner";
 import { UserPlus, UserMinus, Search, Settings } from "lucide-react";
 
@@ -16,8 +17,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { useProfile } from "@/components/sidebar/profile-context";
 
 interface RoomSettingsDialogProps {
   roomId: Id<"rooms">;
@@ -33,6 +36,9 @@ export function RoomSettingsDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [newRoomName, setNewRoomName] = useState(roomName);
+  const profile = useProfile();
+  const canManageMembers =
+    profile?.role === UserRole.ADMIN || profile?.role === UserRole.MAKER;
 
   const members = useQuery(api.chat.query.getRoomMembers, { roomId });
   const addableUsers = useQuery(api.chat.query.getAddableUsers, { roomId });
@@ -104,9 +110,16 @@ export function RoomSettingsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="settings" className="w-full mt-2">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList
+            className={cn(
+              "grid w-full mb-4",
+              canManageMembers ? "grid-cols-2" : "grid-cols-1",
+            )}
+          >
             <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="members">Members</TabsTrigger>
+            {canManageMembers && (
+              <TabsTrigger value="members">Members</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="members" className="mt-0">
