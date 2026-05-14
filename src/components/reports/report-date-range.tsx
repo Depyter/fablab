@@ -32,10 +32,10 @@ function getPresetTimestamp(daysAgo: number) {
   return d.getTime();
 }
 
-function getActivePresetLabel(dateFrom: number) {
+function getPresetLabelForDate(dateFrom: number) {
   for (const preset of PRESETS) {
     const expected = getPresetTimestamp(preset.days);
-    if (Math.abs(dateFrom - expected) < 60000) {
+    if (Math.abs(dateFrom - expected) < 86400000) {
       return preset.label;
     }
   }
@@ -51,12 +51,10 @@ function formatDate(timestamp: number) {
 }
 
 function PresetList({
-  onDateFromChange,
-  onDateToChange,
+  applyPreset,
   onSelect,
 }: {
-  onDateFromChange: (value: number) => void;
-  onDateToChange: (value: number) => void;
+  applyPreset: (days: number, label: string) => void;
   onSelect: () => void;
 }) {
   return (
@@ -68,9 +66,7 @@ function PresetList({
           size="sm"
           className="h-9 justify-start text-sm px-3 font-normal"
           onClick={() => {
-            const from = getPresetTimestamp(preset.days);
-            onDateFromChange(from);
-            onDateToChange(Date.now());
+            applyPreset(preset.days, preset.label);
             onSelect();
           }}
         >
@@ -91,7 +87,22 @@ export function ReportDateRange({
   const isMobile = useIsMobile();
   const close = React.useCallback(() => setOpen(false), []);
 
-  const activeLabel = getActivePresetLabel(dateFrom);
+  // Track the selected preset label explicitly so it survives day boundaries
+  const [selectedPreset, setSelectedPreset] = React.useState<string | null>(
+    () => getPresetLabelForDate(dateFrom),
+  );
+
+  const applyPreset = React.useCallback(
+    (days: number, label: string) => {
+      const from = getPresetTimestamp(days);
+      onDateFromChange(from);
+      onDateToChange(Date.now());
+      setSelectedPreset(label);
+    },
+    [onDateFromChange, onDateToChange],
+  );
+
+  const activeLabel = selectedPreset;
 
   const trigger = (
     <Button variant="default" size="sm" className="h-8 shrink-0 gap-1.5">
@@ -110,13 +121,7 @@ export function ReportDateRange({
     </Button>
   );
 
-  const presets = (
-    <PresetList
-      onDateFromChange={onDateFromChange}
-      onDateToChange={onDateToChange}
-      onSelect={close}
-    />
-  );
+  const presets = <PresetList applyPreset={applyPreset} onSelect={close} />;
 
   const dateRangeText = `${formatDate(dateFrom)} – ${formatDate(dateTo)}`;
 
