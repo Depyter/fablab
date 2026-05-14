@@ -380,3 +380,100 @@ export const getResourceDowntime = authQuery({
     return downtime;
   },
 });
+
+// ---------------------------------------------------------------------------
+// getDailyActivity
+// Returns per-day activity counts (projects created + resource usage) for
+// a calendar heatmap visualization.
+// ---------------------------------------------------------------------------
+
+export const getDailyActivity = authQuery({
+  role: ["admin", "maker"],
+  args: {
+    dateFrom: v.number(),
+    dateTo: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { dateFrom, dateTo } = args;
+
+    // Build a map of day keys (YYYY-MM-DD) → aggregated counts
+    const dayMap = new Map<
+      string,
+      {
+        weekday: number;
+        projectCount: number;
+        usageCount: number;
+        totalCount: number;
+      }
+    >();
+
+    // Helper: ensure a day entry exists
+    function ensureDay(ts: number) {
+      const d = new Date(ts);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const weekday = d.getDay(); // 0=Sun, 6=Sat
+      if (!dayMap.has(key)) {
+        dayMap.set(key, {
+          weekday,
+          projectCount: 0,
+          usageCount: 0,
+          totalCount: 0,
+        });
+      }
+      return key;
+    }
+
+    // Count projects created per day (_creationTime)
+    for await (const project of ctx.db.query("projects").order("desc")) {
+      if (project._creationTime < dateFrom) break;
+      if (project._creationTime > dateTo) continue;
+      const key = ensureDay(project._creationTime);
+      const entry = dayMap.get(key)!;
+      entry.projectCount++;
+      entry.totalCount++;
+    }
+
+    // Count resource usage started per day
+    for await (const usage of ctx.db
+      .query("resourceUsage")
+      .withIndex("by_startTime", (q) =>
+        q.gte("startTime", dateFrom).lt("startTime", dateTo + 1),
+      )
+      .order("asc")) {
+      const key = ensureDay(usage.startTime);
+      const entry = dayMap.get(key)!;
+      entry.usageCount++;
+      entry.totalCount++;
+    }
+
+    // Fill in days with zero activity for the full range so the heatmap
+    // renders every cell.
+    const result: Array<{
+      dateKey: string;
+      weekday: number;
+      projectCount: number;
+      usageCount: number;
+      totalCount: number;
+    }> = [];
+
+    const cursor = new Date(dateFrom);
+    cursor.setHours(0, 0, 0, 0);
+    const end = new Date(dateTo);
+    end.setHours(23, 59, 59, 999);
+
+    while (cursor <= end) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+      const existing = dayMap.get(key);
+      result.push({
+        dateKey: key,
+        weekday: existing?.weekday ?? cursor.getDay(),
+        projectCount: existing?.projectCount ?? 0,
+        usageCount: existing?.usageCount ?? 0,
+        totalCount: existing?.totalCount ?? 0,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return result;
+  },
+});

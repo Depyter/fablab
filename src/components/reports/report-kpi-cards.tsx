@@ -1,39 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface KpiCardProps {
   label: string;
   value: string | number | null;
-  subtitle?: string;
-  icon?: React.ReactNode;
   isLoading?: boolean;
 }
 
-function KpiCard({ label, value, subtitle, icon, isLoading }: KpiCardProps) {
+function KpiCard({ label, value, isLoading }: KpiCardProps) {
   return (
-    <Card className="flex-1 min-w-40">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {label}
-        </CardTitle>
-        {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-7 w-20" />
-        ) : (
-          <>
-            <div className="text-2xl font-bold">{value ?? "—"}</div>
-            {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex items-baseline gap-2 rounded-lg border bg-background px-3 py-2 min-w-0">
+      <span className="text-xs text-muted-foreground whitespace-nowrap">
+        {label}
+      </span>
+      {isLoading ? (
+        <Skeleton className="h-5 w-16 inline-block" />
+      ) : (
+        <span className="text-sm font-semibold tabular-nums">
+          {value ?? "—"}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -78,17 +67,15 @@ export function ReportKpiCards({ metrics, isLoading }: ReportKpiCardsProps) {
     }).format(amount);
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-2">
       <KpiCard
-        label="Total Projects"
+        label="Projects"
         value={metrics?.projectCount ?? null}
-        subtitle="In selected range"
         isLoading={isLoading}
       />
       <KpiCard
         label="Workshops"
         value={metrics?.workshopCount ?? null}
-        subtitle="Held in range"
         isLoading={isLoading}
       />
       <KpiCard
@@ -98,19 +85,16 @@ export function ReportKpiCards({ metrics, isLoading }: ReportKpiCardsProps) {
             ? formatCurrency(metrics.totalRevenue)
             : null
         }
-        subtitle="From paid projects"
         isLoading={isLoading}
       />
       <KpiCard
-        label="Resource Hours"
+        label="Hours"
         value={metrics ? `${Math.round(totalBookedMinutes / 60)}h` : null}
-        subtitle="Total booked"
         isLoading={isLoading}
       />
       <KpiCard
-        label="Material Used"
-        value={metrics ? `${Math.round(totalMaterialUsed)} units` : null}
-        subtitle="Across all usages"
+        label="Materials"
+        value={metrics ? `${Math.round(totalMaterialUsed)}u` : null}
         isLoading={isLoading}
       />
     </div>
