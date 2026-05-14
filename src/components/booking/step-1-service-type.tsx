@@ -40,7 +40,7 @@ export function Step1ServiceType({
       </DialogHeader>
       <div className="grid grid-cols-1 gap-4 py-8 md:grid-cols-2">
         <Card
-          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-teal/10"
+          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-teal/10"
           onClick={() => trackAndNext("self-service")}
         >
           <h3 className="mb-2 text-lg font-black uppercase tracking-tight">
@@ -51,7 +51,7 @@ export function Step1ServiceType({
           </p>
         </Card>
         <Card
-          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-magenta/10"
+          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-magenta/10"
           onClick={() => trackAndNext("full-service")}
         >
           <h3 className="mb-2 text-lg font-black uppercase tracking-tight">

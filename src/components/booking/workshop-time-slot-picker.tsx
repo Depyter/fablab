@@ -93,7 +93,7 @@ export function WorkshopTimeSlotPicker({
                         originalEndTime: slot.endTime,
                       });
                     }}
-                    className={`rounded-lg border-2 p-4 shadow-[4px_4px_0_0_#000] transition-all ${
+                    className={`rounded-lg border-2 p-4 shadow-[2px_2px_0_0_#000] transition-all ${
                       isFull
                         ? "cursor-not-allowed border-black/20 bg-gray-200 opacity-60"
                         : isSelected

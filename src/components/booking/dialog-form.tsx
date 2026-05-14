@@ -289,7 +289,7 @@ export function BookingDialog({
         type="button"
         variant="outline"
         onClick={handleCreateBookingClick}
-        className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.35em] text-white shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-amber hover:text-black sm:px-10"
+        className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.35em] text-white shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-amber hover:text-black sm:px-10"
       >
         Create Booking
       </Button>
