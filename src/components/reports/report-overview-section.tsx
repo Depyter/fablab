@@ -1,6 +1,13 @@
 "use client";
 
 import * as React from "react";
+const currencyFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReportRevenueByServiceCard } from "@/components/reports/charts/report-revenue-by-service-card";
 import { ReportResourceDowntimeCard } from "@/components/reports/charts/report-resource-downtime-card";
@@ -100,13 +107,7 @@ export function ReportOverviewSection({
     [revenue?.byService],
   );
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (amount: number) => currencyFormatter.format(amount);
 
   if (isLoading) {
     return (

@@ -8,7 +8,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -20,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChartTooltip } from "./utils";
+import { ChartTooltip, ChartContainer } from "./utils";
 
 const MONTH_NAMES = [
   "Jan",
@@ -47,17 +46,18 @@ interface ReportMonthlyRevenueCardProps {
   isLoading: boolean;
 }
 
+const currencyFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 export function ReportMonthlyRevenueCard({
   monthly,
   isLoading,
 }: ReportMonthlyRevenueCardProps) {
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (amount: number) => currencyFormatter.format(amount);
 
   const chartData = React.useMemo(
     () =>
@@ -98,32 +98,30 @@ export function ReportMonthlyRevenueCard({
       <CardContent className="space-y-4">
         {chartData.length > 0 ? (
           <>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="shortLabel"
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                    tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="var(--chart-1, #2563eb)"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer className="h-56">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  dataKey="shortLabel"
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                />
+                <YAxis
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="var(--chart-1, #2563eb)"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ChartContainer>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Total</span>
               <span className="font-semibold">

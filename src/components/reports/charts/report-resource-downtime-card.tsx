@@ -36,7 +36,10 @@ function formatDowntime(minutes: number) {
   return `${mins}m`;
 }
 
-export function ReportResourceDowntimeCard({ downtime, isLoading }: ReportResourceDowntimeCardProps) {
+export function ReportResourceDowntimeCard({
+  downtime,
+  isLoading,
+}: ReportResourceDowntimeCardProps) {
   if (isLoading) {
     return (
       <Card>
@@ -53,7 +56,9 @@ export function ReportResourceDowntimeCard({ downtime, isLoading }: ReportResour
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium">Resource Status & Downtime</CardTitle>
+        <CardTitle className="text-sm font-medium">
+          Resource Status & Downtime
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {downtime && downtime.length > 0 ? (
@@ -92,7 +97,9 @@ export function ReportResourceDowntimeCard({ downtime, isLoading }: ReportResour
             </TableBody>
           </Table>
         ) : (
-          <p className="text-sm text-muted-foreground">No downtime data for this period.</p>
+          <p className="text-sm text-muted-foreground">
+            No downtime data for this period.
+          </p>
         )}
       </CardContent>
     </Card>

@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -20,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CHART_COLORS, ChartTooltip } from "./utils";
+import { CHART_COLORS, ChartTooltip, ChartContainer } from "./utils";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Review",
@@ -98,27 +90,25 @@ export function ReportProjectStatusCard({
       <CardContent className="space-y-4">
         {chartData.length > 0 ? (
           <>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    type="number"
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="status"
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                    width={90}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer className="h-48">
+              <BarChart data={chartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  type="number"
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="status"
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  width={90}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ChartContainer>
             <Table>
               <TableHeader>
                 <TableRow>

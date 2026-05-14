@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -21,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Id } from "@convex/_generated/dataModel";
-import { CHART_COLORS, ChartTooltip } from "./utils";
+import { CHART_COLORS, ChartTooltip, ChartContainer } from "./utils";
 
 interface ReportMaterialUsageCardProps {
   materialUsage: Array<{
@@ -35,17 +27,18 @@ interface ReportMaterialUsageCardProps {
   isLoading: boolean;
 }
 
+const currencyFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 export function ReportMaterialUsageCard({
   materialUsage,
   isLoading,
 }: ReportMaterialUsageCardProps) {
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (amount: number) => currencyFormatter.format(amount);
 
   const chartData = React.useMemo(
     () =>
@@ -82,24 +75,22 @@ export function ReportMaterialUsageCard({
       <CardContent className="space-y-4">
         {chartData.length > 0 ? (
           <>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                    angle={-20}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="used" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer className="h-56">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  dataKey="name"
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  angle={-20}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis stroke="var(--muted-foreground)" fontSize={12} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="used" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
             <Table>
               <TableHeader>
                 <TableRow>

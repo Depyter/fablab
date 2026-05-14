@@ -48,6 +48,59 @@ export function ChartTooltip({
   );
 }
 
+/**
+ * Wraps a chart in a debounced ResizeObserver, replacing recharts'
+ * ResponsiveContainer. Uses requestAnimationFrame to coalesce
+ * multiple resize events into a single paint-cycle update, preventing
+ * all charts from re-rendering independently on every resize frame.
+ */
+export function ChartContainer({
+  children,
+  className,
+}: {
+  children: React.ReactElement<{ width?: number; height?: number }>;
+  className?: string;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let rafId: number | undefined;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      // Debounce via requestAnimationFrame — coalesces into paint cycle
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        setSize({
+          width: Math.floor(entry.contentRect.width),
+          height: Math.floor(entry.contentRect.height),
+        });
+      });
+    });
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={className} style={{ contain: "content" }}>
+      {size.width > 0 && size.height > 0
+        ? React.cloneElement(children, {
+            width: size.width,
+            height: size.height,
+          })
+        : null}
+    </div>
+  );
+}
+
 export function PieTooltip({
   active,
   payload,

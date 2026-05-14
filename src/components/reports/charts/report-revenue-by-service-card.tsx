@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Id } from "@convex/_generated/dataModel";
-import { PIE_COLORS, PieTooltip } from "./utils";
+import { PIE_COLORS, PieTooltip, ChartContainer } from "./utils";
 
 interface ReportRevenueByServiceCardProps {
   byService: Array<{
@@ -25,17 +25,18 @@ interface ReportRevenueByServiceCardProps {
   isLoading: boolean;
 }
 
+const currencyFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 export function ReportRevenueByServiceCard({
   byService,
   isLoading,
 }: ReportRevenueByServiceCardProps) {
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (amount: number) => currencyFormatter.format(amount);
 
   const chartData = React.useMemo(
     () =>
@@ -73,26 +74,24 @@ export function ReportRevenueByServiceCard({
       <CardContent className="space-y-4">
         {chartData.length > 0 ? (
           <>
-            <div className="h-56 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    dataKey="value"
-                    paddingAngle={2}
-                  >
-                    {chartData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<PieTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer className="h-56 flex items-center justify-center">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  dataKey="value"
+                  paddingAngle={2}
+                >
+                  {chartData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip content={<PieTooltip />} />
+              </PieChart>
+            </ChartContainer>
             <Table>
               <TableHeader>
                 <TableRow>
