@@ -142,13 +142,6 @@ export function validateBookingTiming(
   }
 }
 
-function serviceUsesDiscreteResources(service: ServiceDoc) {
-  return (
-    service.serviceCategory.type === "FABRICATION" &&
-    (service.resources?.length ?? 0) > 0
-  );
-}
-
 export async function validateFabricationAvailability(
   ctx: MutationCtx,
   serviceId: Id<"services">,
@@ -180,12 +173,10 @@ export async function validateFabricationAvailability(
           q.eq("resource", options.resourceId!),
         )
         .collect()
-    : serviceUsesDiscreteResources(service)
-      ? []
-      : await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", serviceId))
-          .collect();
+    : await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_service", (q) => q.eq("service", serviceId))
+        .collect();
 
   for (const usage of existingUsages) {
     if (options?.excludeUsageId && usage._id === options.excludeUsageId) {

@@ -809,22 +809,13 @@ export const cancelOwnProject = authMutation({
 
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
-    const service = await ctx.db.get(project.service);
-    if (!service) throw new ConvexError("Service not found.");
 
     if (project.userId !== userProfile._id) {
       throw new ConvexError("You do not own this project.");
     }
 
-    if (
-      ["completed", "paid", "claimed", "rejected", "cancelled"].includes(
-        project.status,
-      )
-    ) {
-      throw new ConvexError("Cannot cancel a project in its current status.");
-    }
-
-    // applyStatusChange handles the patch, workshop slot release, and returns log lines
+    // applyStatusChange validates the transition through PROJECT_STATUS_TRANSITIONS,
+    // handles the patch, workshop slot release, and returns log lines.
     const lines = await applyStatusChange(ctx, project, project, "cancelled");
     await scheduleProjectUpdateEmail(ctx, args.projectId);
     await sendProjectSystemMessage(ctx, args.projectId, lines);
