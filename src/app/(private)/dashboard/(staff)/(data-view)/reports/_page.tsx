@@ -1,22 +1,79 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { ViewHeaderMain } from "@/components/ui/view-header";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import { ReportExportButton } from "@/components/reports/report-export";
+import type { Id } from "@convex/_generated/dataModel";
 import { getCurrentTimestamp } from "@/lib/lab-time";
 import { ReportsClient } from "./_client";
+
+interface HeaderData {
+  metrics: {
+    projectCount: number;
+    projectCountByStatus: Record<string, number> | null;
+    workshopCount: number;
+    totalRevenue: number;
+    totalMaterialCost: number;
+    topServices: Array<{
+      serviceId: Id<"services">;
+      serviceName: string;
+      projectCount: number;
+    }> | null;
+    resourceUtilization: Array<{
+      resourceId: Id<"resources"> | null;
+      name: string;
+      totalBookedMinutes: number;
+    }> | null;
+    materialUsage: Array<{
+      materialId: Id<"materials">;
+      name: string;
+      unit: string;
+      totalUsed: number;
+      totalCost: number;
+      currentStock: number;
+    }> | null;
+  } | null;
+  revenue: {
+    monthly: Array<{
+      year: number;
+      month: number;
+      revenue: number;
+      count: number;
+    }> | null;
+    byService: Array<{
+      serviceId: Id<"services">;
+      serviceName: string;
+      revenue: number;
+      count: number;
+    }> | null;
+  } | null;
+  downtime: Array<{
+    resourceId: Id<"resources">;
+    name: string;
+    category: string;
+    currentStatus: string;
+    isUnderMaintenance: boolean;
+    totalDowntimeMinutes: number;
+    bookingCount: number;
+  }> | null;
+}
 
 function ReportsPageHeader({
   dateFrom,
   dateTo,
   onDateFromChange,
   onDateToChange,
+  exportData,
 }: {
   dateFrom: number;
   dateTo: number;
   onDateFromChange: (value: number) => void;
   onDateToChange: (value: number) => void;
+  exportData: HeaderData | null;
 }) {
   return (
     <DataViewPageHeader>
@@ -29,6 +86,15 @@ function ReportsPageHeader({
             onDateFromChange={onDateFromChange}
             onDateToChange={onDateToChange}
           />
+          {exportData && (
+            <ReportExportButton
+              data={{
+                ...exportData,
+                dateFrom,
+                dateTo,
+              }}
+            />
+          )}
         </div>
       </ViewHeaderMain>
     </DataViewPageHeader>
@@ -55,6 +121,29 @@ function useMonthRange() {
 export function ReportsPageContent() {
   const { dateFrom, dateTo, setDateFrom, setDateTo } = useMonthRange();
 
+  const metrics = useQuery(api.reports.query.getReportMetrics, {
+    dateFrom,
+    dateTo,
+  });
+  const revenue = useQuery(api.reports.query.getRevenueBreakdown, {
+    dateFrom,
+    dateTo,
+  });
+  const downtime = useQuery(api.reports.query.getResourceDowntime, {
+    dateFrom,
+    dateTo,
+  });
+
+  const dataLoaded =
+    metrics !== undefined && revenue !== undefined && downtime !== undefined;
+  const exportData: HeaderData | null = dataLoaded
+    ? {
+        metrics: metrics as HeaderData["metrics"],
+        revenue: revenue as HeaderData["revenue"],
+        downtime: downtime as HeaderData["downtime"],
+      }
+    : null;
+
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
       <ReportsPageHeader
@@ -62,8 +151,15 @@ export function ReportsPageContent() {
         dateTo={dateTo}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
+        exportData={exportData}
       />
-      <ReportsClient dateFrom={dateFrom} dateTo={dateTo} />
+      <ReportsClient
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        metrics={metrics}
+        revenue={revenue}
+        downtime={downtime}
+      />
     </div>
   );
 }
