@@ -110,7 +110,7 @@ export function EstimateProjectDetails({
       </DialogHeader>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-1 no-scrollbar">
-        <Card className="rounded-none border-4 border-black bg-background py-4">
+        <Card className="rounded-lg border-2 border-black bg-background py-4">
           <div className="divide-y">
             {/* Service Summary */}
             <div className="px-4 pb-4">
@@ -333,7 +333,7 @@ export function EstimateProjectDetails({
       <div className="shrink-0 mt-4 flex items-center justify-end gap-2 pt-4">
         <Button
           variant="outline"
-          className="rounded-none border-2 border-black bg-background shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+          className="rounded-none border-2 border-black bg-background shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           onClick={onBack}
           disabled={isSubmitting}
         >
@@ -341,7 +341,7 @@ export function EstimateProjectDetails({
         </Button>
         <Button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber hover:text-black"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber hover:text-black"
           disabled={isSubmitting || canSubmit === false || !isChecked}
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}

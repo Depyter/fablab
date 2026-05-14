@@ -61,7 +61,7 @@ function UploadingThumb({
   if (previewUrl) {
     return (
       <div
-        className={`${dim} rounded-md overflow-hidden bg-muted shrink-0 relative`}
+        className={`${dim} rounded-md overflow-hidden bg-white shrink-0 relative`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -388,7 +388,7 @@ export function FileUpload({
   return (
     <Card
       className={cn(
-        "w-full rounded-lg border-4 border-black bg-background shadow-[8px_8px_0_0_#000]",
+        "w-full rounded-lg border-2 border-black bg-background",
         className,
       )}
     >
@@ -407,10 +407,10 @@ export function FileUpload({
           onDrop={handleDrop}
           onClick={triggerFileSelect}
           className={cn(
-            "cursor-pointer border-dashed p-8 text-center shadow-[4px_4px_0_0_#000] transition-all",
+            "cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center shadow-[2px_2px_0_0_#000] transition-all",
             isDragging && !disabled
               ? "-translate-x-0.5 -translate-y-0.5 bg-fab-teal/15"
-              : "hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-magenta/10",
+              : "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none hover:bg-fab-magenta/10",
             disabled && "cursor-not-allowed opacity-50",
           )}
         >

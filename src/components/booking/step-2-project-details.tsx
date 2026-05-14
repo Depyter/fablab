@@ -135,7 +135,7 @@ export function Step2ProjectDetails({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[4px_4px_0_0_#000] text-gray-500">
+      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[2px_2px_0_0_#000] text-gray-500">
         <p className="font-black uppercase tracking-[0.25em] text-gray-900">
           File Guidelines
         </p>
@@ -191,7 +191,7 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0"
+                      className="rounded-lg focus-visible:ring-0"
                       placeholder="e.g. Custom Cup"
                     />
                   </Field>
@@ -214,7 +214,7 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="min-h-20 resize-none rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0 md:min-h-32"
+                      className="min-h-20 resize-none rounded-lg focus-visible:ring-0 md:min-h-32"
                       placeholder="Describe your project, intended use, or specific details..."
                     />
                   </Field>
@@ -238,7 +238,7 @@ export function Step2ProjectDetails({
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="min-h-12 resize-none rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0 md:min-h-24"
+                  className="min-h-12 resize-none rounded-lg focus-visible:ring-0 md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
@@ -263,7 +263,7 @@ export function Step2ProjectDetails({
                   >
                     <SelectTrigger
                       id="pricing-tier"
-                      className="w-full rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000]"
+                      className="w-full rounded-lg"
                     >
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
@@ -323,7 +323,7 @@ export function Step2ProjectDetails({
                             >
                               Select Lab Materials
                             </Label>
-                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[4px_4px_0_0_#000]">
+                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
                               {serviceMaterials.map((m) => {
                                 const isChecked = selected.includes(m._id);
                                 return (
@@ -461,14 +461,14 @@ export function Step2ProjectDetails({
             type="button"
             variant="outline"
             onClick={onPrev}
-            className="rounded-none border-2 border-black bg-background pl-3 shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="rounded-none border-2 border-black bg-background pl-3 shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           >
             <ChevronLeft className="h-4 w-4 mr-1" /> Back
           </Button>
         )}
         <Button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
           disabled={isUploading}
         >
           {isUploading ? "Uploading..." : "Review & Estimate"}

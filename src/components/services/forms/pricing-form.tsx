@@ -175,7 +175,7 @@ export const PricingForm = withForm({
                         <FieldLabel htmlFor="fixedAmount">
                           Default Amount
                         </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                        <InputGroup className="flex items-center border-2 border-black transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
                           <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                             <InputGroupText>₱</InputGroupText>
                           </InputGroupAddon>
@@ -218,7 +218,7 @@ export const PricingForm = withForm({
                               </Field>
                               <Field>
                                 <FieldLabel>Amount</FieldLabel>
-                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                <InputGroup className="flex items-center border-2 border-black transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
                                   <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                                     <InputGroupText>₱</InputGroupText>
                                   </InputGroupAddon>

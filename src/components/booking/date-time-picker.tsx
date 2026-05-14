@@ -133,7 +133,7 @@ export function DateTimePicker({
               <Button
                 id="date"
                 variant={"outline"}
-                className={`w-full justify-start rounded-lg border-2 border-black bg-background text-left font-black uppercase shadow-[4px_4px_0_0_#000] ${!date && "text-muted-foreground"}`}
+                className={`w-full justify-start rounded-lg border-2 border-black bg-background text-left font-black uppercase shadow-[2px_2px_0_0_#000] ${!date && "text-muted-foreground"}`}
               >
                 {date ? formatLabDateNumeric(date) : <span>MM/DD/YYYY</span>}
                 <CalendarIcon className="ml-auto h-4 w-4" />
@@ -187,7 +187,7 @@ export function DateTimePicker({
           >
             <SelectTrigger
               id="time-from"
-              className="w-full bg-background rounded-lg border-2 border-black shadow-[4px_4px_0_0_#000] h-10 focus-visible:ring-0"
+              className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
             >
               <SelectValue placeholder="Select start time" />
             </SelectTrigger>
@@ -239,7 +239,7 @@ export function DateTimePicker({
           >
             <SelectTrigger
               id="time-to"
-              className="w-full bg-background rounded-lg border-2 border-black shadow-[4px_4px_0_0_#000] h-10 focus-visible:ring-0"
+              className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
             >
               <SelectValue placeholder="Select end time" />
             </SelectTrigger>
