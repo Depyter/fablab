@@ -51,10 +51,11 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
 
-      - name: Set preview site URL in Convex preview deployment
+      - name: Set preview environment variables in Convex
         run: |
           PREVIEW_URL="https://pr-${{ github.event.pull_request.number }}-fablab-preview.acabalharleyvan.workers.dev"
           bunx convex env set --preview-name "${{ github.head_ref }}" CURRENT_SITE_URL "$PREVIEW_URL"
+          bunx convex env set --preview-name "${{ github.head_ref }}" NEXTJS_ENV "preview"
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
 

@@ -18,6 +18,9 @@ const RATE_LIMITS = {
   },
   // 5 project bookings/min per user (fixed window — no burst allowance)
   createProject: { kind: "fixed window" as const, rate: 5, period: MINUTE },
+  // Note: Email/password rate limiting is handled by Better Auth's built-in
+  // rate limiter configured in auth.ts (customRules for "/sign-in/email"
+  // and "/sign-up/email"). Convex-level rate limits are not needed here.
 };
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

@@ -11,67 +11,41 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const redirectTo = getSafeReturnTo(searchParams.get("redirectTo"));
 
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      await authClient.signIn.email({
-        email,
-        password,
-        callbackURL: redirectTo,
-      });
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Sign in error:", error);
-      setIsLoading(false);
-    }
-  };
-
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      await authClient.signIn.social({
+      const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: new URL(redirectTo, window.location.origin).toString(),
       });
-    } catch (error) {
-      console.error("Google sign in error:", error);
+      if (result?.error) {
+        setError(result.error.message ?? "Google sign in failed.");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Google sign in error:", err);
+      setError("An unexpected error occurred. Please try again.");
       setIsLoading(false);
     }
   };
 
-  // const handleGithubSignIn = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     await authClient.signIn.social({
-  //       provider: "github",
-  //       callbackURL: "/dashboard/chat", // Redirect after successful login
-  //     });
-  //   } catch (error) {
-  //     console.error("GitHub sign in error:", error);
-  //     setIsLoading(false);
-  //   }
-  // };
-
   return (
-    <form
-      className={cn("flex flex-col gap-6", className)}
-      onSubmit={handleEmailSignIn}
-      {...props}
-    >
+    <form className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">
             Login to your account. No need to sign up!
           </h1>
         </div>
+        {error && (
+          <p className="text-destructive text-sm text-center">{error}</p>
+        )}
         <Field>
           <Button
             variant="outline"

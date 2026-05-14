@@ -34,6 +34,19 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
   },
 );
 
+/** Returns `true` in any non-production environment (preview CI deploys
+ * or local development). This gates email/password auth which should
+ * never be available on the production domain.
+ *
+ * The `.dev.vars` file sets `NEXTJS_ENV=development` for local dev,
+ * while the CI preview workflow sets it to `preview`.
+ * Production does not set this var, so the default fallback is `false`.
+ */
+function isPreviewEnvironment(): boolean {
+  const env = process.env.NEXTJS_ENV;
+  return env === "preview" || env === "development";
+}
+
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
   const betterAuthUrl = process.env.BETTER_AUTH_URL ?? "";
   const trustedOrigins =
@@ -41,20 +54,27 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       .map((s) => s.trim())
       .filter(Boolean) ?? [];
 
+  const currentSiteUrl = process.env.CURRENT_SITE_URL;
+  if (currentSiteUrl && !trustedOrigins.includes(currentSiteUrl)) {
+    trustedOrigins.push(currentSiteUrl);
+  }
+
+  const isPreview = isPreviewEnvironment();
+
   return {
-    // baseURL: process.env.CURRENT_SITE_URL,
     secret: process.env.BETTER_AUTH_SECRET as string,
     rateLimit: {
       enabled: true,
       customRules: {
-        "/sign-in/social": {
-          window: 60,
-          max: 10,
-        },
-        "/callback/*": {
-          window: 60,
-          max: 10,
-        },
+        ...(isPreview
+          ? {
+              "/sign-in/email": { window: 60, max: 5 },
+              "/sign-up/email": { window: 60, max: 3 },
+            }
+          : {
+              "/sign-in/social": { window: 60, max: 10 },
+            }),
+        "/callback/*": { window: 60, max: 10 },
       },
     },
     trustedOrigins,
@@ -65,21 +85,39 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       trustedProxyHeaders: true,
     },
     database: authComponent.adapter(ctx),
-    socialProviders: {
-      // github: {
-      //   clientId: process.env.GITHUB_CLIENT_ID as string,
-      //   clientSecret: process.env.GITHUB_CLIENT_KEY as string,
-      // },
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID as string,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      },
+
+    // Email/password auth is only enabled in preview environments.
+    // In production we rely on OAuth (Google), keeping the surface area small.
+    emailAndPassword: {
+      enabled: isPreview,
+      requireEmailVerification: false,
+      autoSignIn: true,
+      minPasswordLength: 8,
     },
+
+    // Social providers are disabled in preview because OAuth redirect URIs
+    // cannot be registered for ephemeral preview deployment URLs.
+    socialProviders: isPreview
+      ? {}
+      : {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID as string,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+          },
+        },
+
     plugins: [
-      oAuthProxy({
-        productionURL: betterAuthUrl,
-        currentURL: process.env.CURRENT_SITE_URL,
-      }),
+      // The oAuthProxy plugin is only needed when social OAuth is active.
+      // In preview, including it would produce warnings since the necessary
+      // env vars (BETTER_AUTH_URL) may not be set.
+      ...(isPreview
+        ? []
+        : [
+            oAuthProxy({
+              productionURL: betterAuthUrl,
+              currentURL: process.env.CURRENT_SITE_URL,
+            }),
+          ]),
       // The Convex plugin is required for Convex compatibility
       convex({ authConfig }),
       admin(),
