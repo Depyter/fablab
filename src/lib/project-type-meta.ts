@@ -82,7 +82,9 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
     },
 
     // Workshop attendees pay to confirm their spot (before the session).
-    payableStatuses: ["approved", "paid"],
+    // "completed" and "claimed" are also allowed so payment details
+    // can be updated when moving backward in the workflow.
+    payableStatuses: ["approved", "paid", "completed", "claimed"],
 
     approvalRequiresMaker: false,
   },
@@ -124,7 +126,8 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
     },
 
     // Fabrication projects pay after the work is done.
-    payableStatuses: ["completed", "paid"],
+    // "claimed" is also allowed so payment details can be updated later.
+    payableStatuses: ["completed", "paid", "claimed"],
 
     approvalRequiresMaker: true,
   },

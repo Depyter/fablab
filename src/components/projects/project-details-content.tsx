@@ -222,14 +222,7 @@ export function ProjectDetailsContent({
     }
 
     if (status === "paid") {
-      // Show payment dialog only when no receipt exists yet (first-time
-      // payment). When moving backward from claimed/completed, the receipt
-      // already exists — just update the status directly.
-      if (!project.receipt) {
-        onMarkPaid();
-        return;
-      }
-      onUpdateStatus(status);
+      onMarkPaid();
       return;
     }
 
@@ -410,6 +403,7 @@ export function ProjectDetailsContent({
               <ReceiptCard
                 receipt={project.receipt}
                 status={project.status}
+                projectType={project.type}
                 onMarkPaid={onMarkPaid}
               />
             )}

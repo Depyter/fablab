@@ -9,6 +9,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "convex/react";
 import { toast } from "sonner";
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload";
-import { Skeleton } from "@/components/ui/skeleton";
 import posthog from "posthog-js";
 
 import {
@@ -335,7 +335,9 @@ export function ProjectDetails({
         project_name: project?.name,
         payment_mode: paymentMode,
       });
-      toast.success("Payment recorded. Project moved to claim.");
+      const nextLabel =
+        project?.type === "WORKSHOP" ? "workshop confirmed" : "claim";
+      toast.success(`Payment recorded. Project moved to ${nextLabel}.`);
       setPaymentDialogOpen(false);
       setReceiptNumber("");
       setProof("");
@@ -504,7 +506,7 @@ export function ProjectDetails({
               timelineSteps={timelineSteps}
               onOpenAssignView={handleOpenAssignView}
               onUpdateStatus={handleUpdateStatus}
-              onMarkPaid={() => handleOpenPaymentDialog()}
+              onMarkPaid={handleOpenPaymentDialog}
               isClient={isClient}
               onUpdateDetails={
                 isClient || isAdminOrMaker ? handleUpdateDetails : undefined
@@ -521,7 +523,9 @@ export function ProjectDetails({
                   <DialogTitle>
                     {project?.receipt
                       ? "Update Payment Details"
-                      : "Record Payment and Move to Claim"}
+                      : project?.type === "WORKSHOP"
+                        ? "Record Payment and Confirm Workshop"
+                        : "Record Payment and Move to Claim"}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
@@ -589,10 +593,17 @@ export function ProjectDetails({
                 <DialogFooter>
                   <Button
                     variant="outline"
-                    onClick={() => setPaymentDialogOpen(false)}
+                    onClick={() => {
+                      setPaymentDialogOpen(false);
+                      // When going backward to paid with an existing receipt,
+                      // cancel means "just move back without changing payment."
+                      if (project?.receipt) {
+                        handleUpdateStatus("paid");
+                      }
+                    }}
                     disabled={isPaying}
                   >
-                    Cancel
+                    {project?.receipt ? "Skip, Just Update Status" : "Cancel"}
                   </Button>
                   <Button
                     onClick={handleMarkPaid}

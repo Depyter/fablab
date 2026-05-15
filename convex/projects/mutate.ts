@@ -46,8 +46,8 @@ import {
  * Defines which statuses allow payment via markProjectPaid for each type.
  */
 const PAYABLE_STATUSES: Record<string, readonly string[]> = {
-  WORKSHOP: ["approved", "paid"],
-  FABRICATION: ["completed", "paid"],
+  WORKSHOP: ["approved", "paid", "completed", "claimed"],
+  FABRICATION: ["completed", "paid", "claimed"],
 };
 
 // ============================================================================

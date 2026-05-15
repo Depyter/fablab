@@ -41,13 +41,18 @@ describe("getConfig", () => {
   test("returns workshop config for WORKSHOP", () => {
     const config = getConfig("WORKSHOP");
     expect(config.approvalRequiresMaker).toBe(false);
-    expect(config.payableStatuses).toEqual(["approved", "paid"]);
+    expect(config.payableStatuses).toEqual([
+      "approved",
+      "paid",
+      "completed",
+      "claimed",
+    ]);
   });
 
   test("returns fabrication config for FABRICATION", () => {
     const config = getConfig("FABRICATION");
     expect(config.approvalRequiresMaker).toBe(true);
-    expect(config.payableStatuses).toEqual(["completed", "paid"]);
+    expect(config.payableStatuses).toEqual(["completed", "paid", "claimed"]);
   });
 
   test("returns fabrication config for unknown types (safe default)", () => {
@@ -392,8 +397,8 @@ describe("behavioral rules", () => {
     expect(getConfig("WORKSHOP").payableStatuses).toContain("approved");
   });
 
-  test("workshop payableStatuses does not include completed", () => {
-    expect(getConfig("WORKSHOP").payableStatuses).not.toContain("completed");
+  test("workshop payableStatuses includes completed (backward navigation)", () => {
+    expect(getConfig("WORKSHOP").payableStatuses).toContain("completed");
   });
 
   test("fabrication payableStatuses includes completed (post-pay)", () => {
