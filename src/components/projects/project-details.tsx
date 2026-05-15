@@ -40,6 +40,7 @@ import {
   FulfillmentModeType,
   FILE_CATEGORIES,
 } from "@convex/constants";
+import { getConfig, isKnownType } from "@/lib/project-type-meta";
 
 interface ProjectDetailsProps {
   projectId?: Id<"projects"> | null;
@@ -54,8 +55,9 @@ interface ProjectDetailsProps {
 
 const PROJECT_DETAILS_TIMELINE_LOADING_STEPS = Array.from(
   { length: 5 },
-  () => ({
+  (_, i) => ({
     titleWidth: "w-20",
+    isLast: i === 4,
   }),
 );
 
@@ -346,102 +348,46 @@ export function ProjectDetails({
     }
   };
 
-  const timelineSteps = project
-    ? [
-        {
-          title: "Submission",
-          statusLabel: "Completed",
-          byLabel: project.client?.name ?? "Client",
-          completed: true,
-        },
-        {
-          title: "Review",
-          statusLabel:
-            project.status === "rejected"
-              ? "Rejected"
-              : project.status === "cancelled"
+  const timelineSteps =
+    project && isKnownType(project.type)
+      ? (() => {
+          const config = getConfig(project.type);
+          const { timeline } = config;
+          const currentStepIndex = timeline.findIndex(
+            (step) => step.status === project.status,
+          );
+          // Map the current status to the step that should be highlighted
+          // as "In progress". The step whose status matches the project is
+          // already completed — the NEXT step is the one being waited on.
+          // e.g. "pending" means Booking is done, Review is active.
+          const effectiveIndex =
+            currentStepIndex >= 0
+              ? Math.min(currentStepIndex + 1, timeline.length)
+              : timeline.length;
+
+          return timeline.map((stepDef, index) => {
+            const isPast = index < effectiveIndex;
+            const isCurrent = index === effectiveIndex;
+            const isRejected =
+              project.status === "rejected" || project.status === "cancelled";
+
+            return {
+              title: stepDef.title,
+              statusLabel: isRejected
                 ? "Cancelled"
-                : project.status === "pending"
+                : isCurrent
                   ? "In progress"
-                  : "Completed",
-          byLabel:
-            project.status === "pending" ? "FabLab Staff" : "FabLab Staff",
-          active: project.status === "pending",
-          completed:
-            project.status === "approved" ||
-            project.status === "completed" ||
-            project.status === "paid" ||
-            project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-        {
-          title: "Fabrication",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "approved"
-                ? "In progress"
-                : project.status === "completed" ||
-                    project.status === "paid" ||
-                    project.status === "claimed"
-                  ? "Completed"
-                  : "Pending",
-          byLabel: project.assignedMaker
-            ? project.assignedMaker.name
-            : "Waiting",
-          active: project.status === "approved",
-          completed:
-            project.status === "completed" ||
-            project.status === "paid" ||
-            project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-        {
-          title: "Payment",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "completed"
-                ? "In progress"
-                : project.status === "paid" || project.status === "claimed"
-                  ? "Completed"
-                  : "Pending",
-          byLabel:
-            project.status === "paid" || project.status === "claimed"
-              ? "FabLab Staff"
-              : project.status === "completed"
-                ? "Waiting"
-                : "—",
-          active: project.status === "completed",
-          completed: project.status === "paid" || project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-        {
-          title: "Claim",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "paid"
-                ? "In progress"
-                : project.status === "claimed"
-                  ? "Completed"
-                  : "Pending",
-          byLabel:
-            project.status === "claimed"
-              ? "Client"
-              : project.status === "paid"
-                ? "Waiting"
-                : "—",
-          active: project.status === "paid",
-          completed: project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-      ]
-    : [];
+                  : isPast
+                    ? "Completed"
+                    : "Pending",
+              byLabel: stepDef.getByLabel(project),
+              active: isCurrent && !isRejected,
+              completed: isPast && !isRejected,
+              rejected: isRejected,
+            };
+          });
+        })()
+      : [];
 
   const makerOptions: OptionRadioGroupItem[] = makers
     ? makers.map((m) => ({

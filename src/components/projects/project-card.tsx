@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
-import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import { ProjectStatusType } from "@convex/constants";
 import { ManageCard } from "@/components/manage/manage-card";
 import { STATUS_STYLES } from "@/lib/project-status-styles";
+import { getStatusLabel } from "@/lib/project-type-meta";
 
 export { STATUS_STYLES } from "@/lib/project-status-styles";
 
@@ -11,6 +12,7 @@ interface ProjectCardProps {
   clientName: string;
   serviceName: string;
   usageCount: number;
+  type: "WORKSHOP" | "FABRICATION";
   bookingDate: number | null;
   bookingStartTime: number | null;
   bookingEndTime: number | null;
@@ -27,6 +29,7 @@ export function ProjectCard({
   clientName,
   serviceName,
   usageCount,
+  type,
   bookingDate,
   bookingStartTime,
   bookingEndTime,
@@ -68,10 +71,7 @@ export function ProjectCard({
       coverFallback={
         <div className={cn("h-full w-full bg-linear-to-br", styles.cover)} />
       }
-      badgeText={
-        PROJECT_STATUS_LABELS[status as keyof typeof PROJECT_STATUS_LABELS] ??
-        status
-      }
+      badgeText={getStatusLabel(status as ProjectStatusType, type)}
       badgeClassName={styles.badge}
       footer={
         <>

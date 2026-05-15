@@ -38,6 +38,19 @@ import {
 } from "./helper";
 
 // ============================================================================
+// Type-aware business rules
+// ============================================================================
+
+/**
+ * Mirrors the frontend ProjectTypeConfig.payableStatuses.
+ * Defines which statuses allow payment via markProjectPaid for each type.
+ */
+const PAYABLE_STATUSES: Record<string, readonly string[]> = {
+  WORKSHOP: ["approved", "paid"],
+  FABRICATION: ["completed", "paid"],
+};
+
+// ============================================================================
 // Mutations
 // ============================================================================
 
@@ -747,14 +760,12 @@ export const markProjectPaid = authMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
-    if (
-      project.status !== "completed" &&
-      project.status !== "paid" &&
-      project.status !== "claimed"
-    ) {
-      throw new ConvexError(
-        "Only completed or paid projects can have payment details set.",
-      );
+
+    const allowedStatuses =
+      PAYABLE_STATUSES[project.type] ?? PAYABLE_STATUSES.FABRICATION;
+
+    if (!allowedStatuses.includes(project.status)) {
+      throw new ConvexError("Project is not currently payable.");
     }
 
     let receiptId: Id<"receipts">;
@@ -783,8 +794,11 @@ export const markProjectPaid = authMutation({
 
     await scheduleProjectUpdateEmail(ctx, args.projectId);
 
+    const nextLabel =
+      project.type === "WORKSHOP" ? "workshop confirmed" : "claim";
+
     const lines: string[] = [
-      `Payment recorded. Project moved to **claim**.`,
+      `Payment recorded. Project moved to **${nextLabel}**.`,
       `- Receipt #: ${args.receiptString}`,
       `- Payment mode: ${args.paymentMode}`,
       ...(args.proof ? [`- Proof: ${args.proof}`] : []),

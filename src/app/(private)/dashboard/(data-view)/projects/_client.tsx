@@ -18,7 +18,8 @@ import { ProjectDetails } from "@/components/projects/project-details";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import { ProjectStatusType } from "@convex/constants";
+import { getStatusLabel } from "@/lib/project-type-meta";
 import posthog from "posthog-js";
 
 type StatusFilter =
@@ -37,6 +38,7 @@ type EnrichedProject = {
   _id: Id<"projects">;
   name: string;
   description: string;
+  type: "WORKSHOP" | "FABRICATION";
   clientName: string;
   serviceName: string;
   usageCount: number;
@@ -157,9 +159,7 @@ function ProjectListRow({
                 STATUS_DOT[project.status] ?? "bg-muted-foreground",
               )}
             />
-            {PROJECT_STATUS_LABELS[
-              project.status as keyof typeof PROJECT_STATUS_LABELS
-            ] ?? project.status}
+            {getStatusLabel(project.status as ProjectStatusType, project.type)}
           </span>
         </div>
       </div>
@@ -247,6 +247,7 @@ export function ProjectsListClient() {
             key={project._id}
             title={project.name}
             description={project.description}
+            type={project.type}
             clientName={project.clientName}
             serviceName={project.serviceName}
             usageCount={project.usageCount}

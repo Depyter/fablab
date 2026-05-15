@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatLabDate } from "@/lib/lab-time";
-import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import { getStatusLabel } from "@/lib/project-type-meta";
 import { FileUpload } from "@/components/file-upload";
 import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
 import { useChat } from "./use-chat";
@@ -89,9 +89,10 @@ function ArchivalBanner({ threadId }: { threadId: Id<"threads"> }) {
 
   if (!info) return null;
 
-  const statusLabel =
-    PROJECT_STATUS_LABELS[info.status as keyof typeof PROJECT_STATUS_LABELS] ??
-    info.status;
+  const statusLabel = getStatusLabel(
+    info.status as Parameters<typeof getStatusLabel>[0],
+    info.type,
+  );
 
   const deadlineDate =
     info.archivalDeadline !== null

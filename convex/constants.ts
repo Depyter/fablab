@@ -284,6 +284,7 @@ export const PROJECT_STATUS_TRANSITIONS: Record<
   approved: [
     ProjectStatus.PENDING,
     ProjectStatus.COMPLETED,
+    ProjectStatus.PAID,
     ProjectStatus.CANCELLED,
   ],
   completed: [ProjectStatus.APPROVED, ProjectStatus.PAID],

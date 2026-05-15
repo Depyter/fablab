@@ -29,12 +29,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/../convex/_generated/api";
 import {
-  PROJECT_STATUS_LABELS,
   PROJECT_STATUS_TRANSITIONS,
   ProjectStatusType,
   ProjectMaterialType,
   FulfillmentModeType,
 } from "@convex/constants";
+import { getConfig, getStatusLabel } from "@/lib/project-type-meta";
 
 export type ProjectData = NonNullable<
   (typeof api.projects.query.getProject)["_returnType"]
@@ -181,7 +181,18 @@ export function ProjectDetailsContent({
       : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
-  const statusOrder = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatusType[];
+  const config = getConfig(project.type);
+  const workflowStatuses = config.timeline.map((s) => s.status);
+  // Derive status order from the type-aware timeline config.
+  // Workflow statuses come first in timeline order, then the
+  // remaining canonical statuses (rejected, cancelled, claimed
+  // when not already present).
+  const statusOrder: ProjectStatusType[] = [
+    ...workflowStatuses,
+    ...(["rejected", "cancelled", "claimed"] as ProjectStatusType[]).filter(
+      (s) => !workflowStatuses.includes(s),
+    ),
+  ];
   const currentIndex = statusOrder.indexOf(project.status);
   const allowedTransitions = PROJECT_STATUS_TRANSITIONS[project.status].filter(
     (status) => status !== "cancelled",
@@ -196,18 +207,29 @@ export function ProjectDetailsContent({
     .sort((a, b) => statusOrder.indexOf(a) - statusOrder.indexOf(b))[0];
 
   const previousStepLabel = previousStep
-    ? PROJECT_STATUS_LABELS[previousStep]
+    ? getStatusLabel(previousStep, project.type)
     : "";
-  const nextStepLabel = nextStep ? PROJECT_STATUS_LABELS[nextStep] : "";
+  const nextStepLabel = nextStep ? getStatusLabel(nextStep, project.type) : "";
 
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
-      onOpenAssignView();
+      if (config.approvalRequiresMaker) {
+        onOpenAssignView();
+        return;
+      }
+      onUpdateStatus(status);
       return;
     }
 
-    if (status === "paid" && !project.receipt) {
-      onMarkPaid();
+    if (status === "paid") {
+      // Show payment dialog only when no receipt exists yet (first-time
+      // payment). When moving backward from claimed/completed, the receipt
+      // already exists — just update the status directly.
+      if (!project.receipt) {
+        onMarkPaid();
+        return;
+      }
+      onUpdateStatus(status);
       return;
     }
 
@@ -262,7 +284,7 @@ export function ProjectDetailsContent({
                             className="text-xs"
                             onClick={() => handleStatusChange(status)}
                           >
-                            {PROJECT_STATUS_LABELS[status]}
+                            {getStatusLabel(status, project.type)}
                           </DropdownMenuItem>
                         ),
                       )}
@@ -301,7 +323,7 @@ export function ProjectDetailsContent({
                       }}
                       onClick={() => {}}
                     >
-                      {PROJECT_STATUS_LABELS[project.status]}
+                      {getStatusLabel(project.status, project.type)}
                     </Button>
                     <Button
                       size="sm"

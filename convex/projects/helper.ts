@@ -794,9 +794,18 @@ export async function applyStatusChange(
 
   await ctx.db.patch(project._id, { status });
 
-  const lines: string[] = [
-    `Status updated to: **${PROJECT_STATUS_LABELS[status]}**`,
-  ];
+  const typeLabels: Record<string, Record<string, string>> = {
+    WORKSHOP: { approved: "Confirmed", paid: "Paid", completed: "Attended" },
+    FABRICATION: {
+      approved: "Fabrication",
+      completed: "Payment",
+      paid: "Claim",
+    },
+  };
+  const label =
+    typeLabels[project.type]?.[status] ?? PROJECT_STATUS_LABELS[status];
+
+  const lines: string[] = [`Status updated to: **${label}**`];
 
   // Release bookings, workshop slots, and any reserved materials on
   // cancellation / rejection so the project no longer holds resources.

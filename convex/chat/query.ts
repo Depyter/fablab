@@ -242,6 +242,7 @@ export const getThreadProjectStatus = authQuery({
 
     return {
       status: project.status,
+      type: project.type,
       archivalDeadline: project.archivalDeadline ?? null,
     };
   },
