@@ -16,9 +16,7 @@ export function ReportWorkshopsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium">
-          Workshop Summary
-        </CardTitle>
+        <CardTitle className="text-sm font-medium">Workshop Summary</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -27,9 +25,7 @@ export function ReportWorkshopsSection({
           </div>
         ) : (
           <div>
-            <div className="text-3xl font-bold">
-              {workshopCount ?? 0}
-            </div>
+            <div className="text-3xl font-bold">{workshopCount ?? 0}</div>
             <p className="text-sm text-muted-foreground mt-1">
               Workshops held in this period
             </p>
