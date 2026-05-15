@@ -1,8 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Download } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import * as XLSX from "xlsx";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -453,13 +460,16 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
 
 interface ReportExportButtonProps {
   data: ExportData;
+  onPrint: () => void;
 }
 
-export function ReportExportButton({ data }: ReportExportButtonProps) {
+export function ReportExportButton({ data, onPrint }: ReportExportButtonProps) {
+  const [open, setOpen] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
 
-  const handleExport = React.useCallback(() => {
+  const handleExcel = React.useCallback(() => {
     setExporting(true);
+    setOpen(false);
     try {
       const wb = buildWorkbook(data);
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
@@ -479,20 +489,55 @@ export function ReportExportButton({ data }: ReportExportButtonProps) {
     }
   }, [data]);
 
-  const disabled = !data.metrics || exporting;
+  const handlePdf = React.useCallback(() => {
+    setOpen(false);
+    onPrint();
+  }, [onPrint]);
+
+  const disabled = !data.metrics;
 
   return (
-    <Button
-      variant="default"
-      size="sm"
-      className="h-8 shrink-0 gap-1.5"
-      onClick={handleExport}
-      disabled={disabled}
-    >
-      <Download className="h-4 w-4" />
-      <span className="hidden sm:inline">
-        {exporting ? "Exporting…" : "Export"}
-      </span>
-    </Button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="default"
+          size="sm"
+          className="h-8 shrink-0 gap-1.5"
+          disabled={disabled}
+        >
+          <Download className="h-4 w-4" />
+          <span className="hidden sm:inline">Export</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-48 max-w-[calc(100vw-1rem)] gap-4 p-4"
+      >
+        <PopoverHeader className="gap-1">
+          <PopoverTitle>Export report</PopoverTitle>
+        </PopoverHeader>
+        <div className="flex flex-col gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 justify-start text-sm px-3 font-normal"
+            onClick={handlePdf}
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Save as PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 justify-start text-sm px-3 font-normal"
+            onClick={handleExcel}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {exporting ? "Generating…" : "Download Excel"}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
