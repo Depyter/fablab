@@ -4,15 +4,15 @@ import { setupUsers } from "./helper";
 
 describe("Room membership authorization", () => {
   test("only admins can add and remove people in a room", async () => {
-    const { t, tAera: tAdmin, tHarley: tClient } = await setupUsers();
+    const {
+      t,
+      tAera: tAdmin,
+      tHarley: tClient,
+      tMaker,
+      makerId,
+    } = await setupUsers();
 
-    // Create a Maker
-    await tAdmin.mutation(internal.users.createMaker, {
-      userId: "3",
-      email: "maker@example.com",
-      name: "Maker",
-    });
-    const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
+    // Maker already created by setupUsers() — use the returned identity
 
     // Get profile IDs directly from DB to avoid BetterAuth component calls in getUserProfile
     const adminProfile = await t.run(async (ctx) =>

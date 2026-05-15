@@ -459,11 +459,12 @@ describe("Project and Chat functionality", () => {
     });
 
     test("Moving a paid project to claimed schedules a claimed email", async () => {
-      const { t, tAera, projectId } = await setupProject();
+      const { t, tAera, projectId, makerId } = await setupProject();
 
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
@@ -546,7 +547,7 @@ describe("Project and Chat functionality", () => {
     });
 
     test("System messages increase client unread counts after the client marks the room as read", async () => {
-      const { t, tAera, tHarley, roomId, threadId, projectId } =
+      const { t, tAera, tHarley, roomId, threadId, projectId, makerId } =
         await setupProject();
 
       const generalThreadId = await t.run(async (ctx) => {
@@ -576,6 +577,7 @@ describe("Project and Chat functionality", () => {
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
 
       const roomsAfter = await tHarley.query(api.chat.query.getRooms, {});
@@ -960,18 +962,14 @@ describe("Project and Chat functionality", () => {
     });
 
     test("Admin and maker can update project details after review has started", async () => {
-      const { t, tAera, projectId } = await setupProject();
+      const { t, tAera, projectId, makerId } = await setupProject();
 
-      await t.mutation(internal.users.createMaker, {
-        userId: "3",
-        email: "maker@gmail.com",
-        name: "Maker",
-      });
       const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
 
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
 
       await tAera.mutation(api.projects.mutate.updateOwnProjectDetails, {
@@ -2802,7 +2800,7 @@ describe("Project and Chat functionality", () => {
 
   describe("Project completion and cleanup", () => {
     test("Marking a project completed preserves usage pricing, materials, and stock", async () => {
-      const { t, tAera, tHarley } = await setupUsers();
+      const { t, tAera, tHarley, makerId } = await setupUsers();
 
       await tAera.mutation(api.materials.mutate.addMaterial, {
         name: "Acrylic",
@@ -2881,6 +2879,7 @@ describe("Project and Chat functionality", () => {
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
@@ -2930,7 +2929,7 @@ describe("Project and Chat functionality", () => {
     });
 
     test("Marking a multi-usage project completed preserves allocated usage pricing without double counting", async () => {
-      const { t, tAera, tHarley } = await setupUsers();
+      const { t, tAera, tHarley, makerId } = await setupUsers();
 
       await tAera.mutation(api.services.mutate.addService, {
         name: "laser cutting",
@@ -3008,6 +3007,7 @@ describe("Project and Chat functionality", () => {
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAera.mutation(api.projects.mutate.updateProject, {
         projectId,

@@ -112,11 +112,16 @@ async function setupReportFixture() {
     )!;
     const resource = await ctx.db.query("resources").first()!;
     const material = await ctx.db.query("materials").first()!;
+    const maker = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", "3"))
+      .first();
     return {
       fabricationServiceId: fabricationSvc._id,
       workshopServiceId: workshopSvc._id,
       resourceId: resource!._id,
       materialId: material!._id,
+      makerId: maker!._id,
     };
   });
 
@@ -201,6 +206,7 @@ describe("Reports — getReportMetrics", () => {
     await tAera.mutation(api.projects.mutate.updateProject, {
       projectId: p1.projectId,
       status: "approved",
+      makerId: ids.makerId,
     });
 
     const metrics = await tAera.query(api.reports.query.getReportMetrics, {
@@ -243,6 +249,7 @@ describe("Reports — getReportMetrics", () => {
     await tAera.mutation(api.projects.mutate.updateProject, {
       projectId,
       status: "approved",
+      makerId: ids.makerId,
     });
 
     await tAera.mutation(api.projects.mutate.updateProject, {
@@ -271,9 +278,11 @@ describe("Reports — getReportMetrics", () => {
     });
 
     // Mark as paid
-    await tAera.mutation(api.projects.mutate.updateProject, {
+    await tAera.mutation(api.projects.mutate.markProjectPaid, {
       projectId,
-      status: "paid",
+      receiptString: "REP-002",
+      paymentMode: "cash",
+      proof: "Revenue test payment",
     });
 
     const metrics = await tAera.query(api.reports.query.getReportMetrics, {
@@ -583,6 +592,7 @@ describe("Reports — getRevenueBreakdown", () => {
     await tAera.mutation(api.projects.mutate.updateProject, {
       projectId,
       status: "approved",
+      makerId: ids.makerId,
     });
 
     await tAera.mutation(api.projects.mutate.updateProject, {
@@ -612,9 +622,11 @@ describe("Reports — getRevenueBreakdown", () => {
       unitName: "hour",
     });
 
-    await tAera.mutation(api.projects.mutate.updateProject, {
+    await tAera.mutation(api.projects.mutate.markProjectPaid, {
       projectId,
-      status: "paid",
+      receiptString: "REP-003",
+      paymentMode: "gcash",
+      proof: "Revenue breakdown test payment",
     });
 
     const revenue = await tAera.query(api.reports.query.getRevenueBreakdown, {

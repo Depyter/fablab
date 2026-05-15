@@ -131,6 +131,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
       projectAId,
       projectBId,
       serviceId,
+      makerAId: makerAProfile._id,
     };
   }
 
@@ -319,7 +320,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   test("assignedToMe stacks with status filter", async () => {
-    const { t, tAera, tMakerA, projectAId } = await setup();
+    const { t, tAera, tMakerA, projectAId, makerAId } = await setup();
 
     // Both projects start as "pending"
     const pendingAssigned = await tMakerA.query(
@@ -338,6 +339,7 @@ describe("Assigned Maker — assignedToMe filter", () => {
     await tAera.mutation(api.projects.mutate.updateProject, {
       projectId: projectAId,
       status: "approved",
+      makerId: makerAId,
     });
     await flushScheduledFunctions(t);
 
