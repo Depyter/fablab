@@ -29,12 +29,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/../convex/_generated/api";
 import {
-  PROJECT_STATUS_TRANSITIONS,
   ProjectStatusType,
   ProjectMaterialType,
   FulfillmentModeType,
 } from "@convex/constants";
-import { getConfig, getStatusLabel } from "@/lib/project-type-meta";
+import { getWorkflow, getStatusLabel } from "@/lib/project-type-meta";
 
 export type ProjectData = NonNullable<
   (typeof api.projects.query.getProject)["_returnType"]
@@ -181,9 +180,9 @@ export function ProjectDetailsContent({
       : "Not specified";
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
-  const config = getConfig(project.type);
-  const workflowStatuses = config.timeline.map((s) => s.status);
-  // Derive status order from the type-aware timeline config.
+  const workflow = getWorkflow(project.type);
+  const workflowStatuses = workflow.steps;
+  // Derive status order from the type-aware workflow.
   // Workflow statuses come first in timeline order, then the
   // remaining canonical statuses (rejected, cancelled, claimed
   // when not already present).
@@ -194,8 +193,13 @@ export function ProjectDetailsContent({
     ),
   ];
   const currentIndex = statusOrder.indexOf(project.status);
-  const allowedTransitions = PROJECT_STATUS_TRANSITIONS[project.status].filter(
-    (status) => status !== "cancelled",
+  // Exclude "cancelled" (has its own UI) and statuses not valid for this
+  // project type — "rejected" is allowed for all types; "claimed" is only
+  // valid if it appears in the type's workflow (i.e. fabrication, not workshop).
+  const allowedTransitions = workflow.transitions[project.status].filter(
+    (status) =>
+      status !== "cancelled" &&
+      (workflowStatuses.includes(status) || status === "rejected"),
   );
 
   const previousStep = allowedTransitions
@@ -213,7 +217,7 @@ export function ProjectDetailsContent({
 
   function handleStatusChange(status: ProjectStatusType) {
     if (status === "approved" && project.status === "pending") {
-      if (config.approvalRequiresMaker) {
+      if (workflow.approvalRequiresMaker) {
         onOpenAssignView();
         return;
       }
@@ -222,6 +226,11 @@ export function ProjectDetailsContent({
     }
 
     if (status === "paid") {
+      if (project.receipt) {
+        // Already has a receipt — just update status without payment dialog
+        onUpdateStatus(status);
+        return;
+      }
       onMarkPaid();
       return;
     }
@@ -270,17 +279,15 @@ export function ProjectDetailsContent({
                         Override Status
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      {PROJECT_STATUS_TRANSITIONS[project.status].map(
-                        (status) => (
-                          <DropdownMenuItem
-                            key={status}
-                            className="text-xs"
-                            onClick={() => handleStatusChange(status)}
-                          >
-                            {getStatusLabel(status, project.type)}
-                          </DropdownMenuItem>
-                        ),
-                      )}
+                      {workflow.transitions[project.status].map((status) => (
+                        <DropdownMenuItem
+                          key={status}
+                          className="text-xs"
+                          onClick={() => handleStatusChange(status)}
+                        >
+                          {getStatusLabel(status, project.type)}
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}

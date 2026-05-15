@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   getConfig,
   getStatusLabel,
+  getWorkflow,
   isKnownType,
   PROJECT_TYPE_CONFIG,
   type ProjectType,
@@ -38,27 +39,32 @@ describe("isKnownType", () => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe("getConfig", () => {
-  test("returns workshop config for WORKSHOP", () => {
+  test("returns workshop timeline for WORKSHOP", () => {
     const config = getConfig("WORKSHOP");
-    expect(config.approvalRequiresMaker).toBe(false);
-    expect(config.payableStatuses).toEqual([
+    expect(config.timeline).toHaveLength(4);
+    expect(config.timeline.map((s) => s.status)).toEqual([
+      "pending",
       "approved",
       "paid",
       "completed",
+    ]);
+  });
+
+  test("returns fabrication timeline for FABRICATION", () => {
+    const config = getConfig("FABRICATION");
+    expect(config.timeline).toHaveLength(5);
+    expect(config.timeline.map((s) => s.status)).toEqual([
+      "pending",
+      "approved",
+      "completed",
+      "paid",
       "claimed",
     ]);
   });
 
-  test("returns fabrication config for FABRICATION", () => {
-    const config = getConfig("FABRICATION");
-    expect(config.approvalRequiresMaker).toBe(true);
-    expect(config.payableStatuses).toEqual(["completed", "paid", "claimed"]);
-  });
-
-  test("returns fabrication config for unknown types (safe default)", () => {
+  test("returns fabrication timeline for unknown types (safe default)", () => {
     const config = getConfig("RENTALS");
-    expect(config).toBe(PROJECT_TYPE_CONFIG.FABRICATION);
-    expect(config.approvalRequiresMaker).toBe(true);
+    expect(config.timeline).toEqual(PROJECT_TYPE_CONFIG.FABRICATION.timeline);
   });
 });
 
@@ -179,13 +185,13 @@ describe("timeline structure", () => {
     expect(label).toMatch(/[A-Z][a-z]{2}/);
   });
 
-  test("workshop step 3 shows 'Scheduled' when no booking time", () => {
+  test("workshop step 3 shows 'Completed' when no booking time", () => {
     expect(
       getConfig("WORKSHOP").timeline[3].getByLabel({
         ...project,
         bookingStartTime: null,
       }),
-    ).toBe("Scheduled");
+    ).toBe("Completed");
   });
 
   test("fabrication step 2 shows maker name / 'Waiting'", () => {
@@ -394,31 +400,33 @@ describe("timeline phase mapping", () => {
 
 describe("behavioral rules", () => {
   test("workshop payableStatuses includes approved (pre-pay)", () => {
-    expect(getConfig("WORKSHOP").payableStatuses).toContain("approved");
+    expect(getWorkflow("WORKSHOP").payableStatuses).toContain("approved");
   });
 
   test("workshop payableStatuses includes completed (backward navigation)", () => {
-    expect(getConfig("WORKSHOP").payableStatuses).toContain("completed");
+    expect(getWorkflow("WORKSHOP").payableStatuses).toContain("completed");
   });
 
   test("fabrication payableStatuses includes completed (post-pay)", () => {
-    expect(getConfig("FABRICATION").payableStatuses).toContain("completed");
+    expect(getWorkflow("FABRICATION").payableStatuses).toContain("completed");
   });
 
   test("fabrication payableStatuses does not include approved", () => {
-    expect(getConfig("FABRICATION").payableStatuses).not.toContain("approved");
+    expect(getWorkflow("FABRICATION").payableStatuses).not.toContain(
+      "approved",
+    );
   });
 
   test("both types include 'paid' in payableStatuses", () => {
-    expect(getConfig("WORKSHOP").payableStatuses).toContain("paid");
-    expect(getConfig("FABRICATION").payableStatuses).toContain("paid");
+    expect(getWorkflow("WORKSHOP").payableStatuses).toContain("paid");
+    expect(getWorkflow("FABRICATION").payableStatuses).toContain("paid");
   });
 
   test("workshop approval does not require maker assignment", () => {
-    expect(getConfig("WORKSHOP").approvalRequiresMaker).toBe(false);
+    expect(getWorkflow("WORKSHOP").approvalRequiresMaker).toBe(false);
   });
 
   test("fabrication approval requires maker assignment", () => {
-    expect(getConfig("FABRICATION").approvalRequiresMaker).toBe(true);
+    expect(getWorkflow("FABRICATION").approvalRequiresMaker).toBe(true);
   });
 });

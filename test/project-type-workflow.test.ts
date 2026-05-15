@@ -101,6 +101,12 @@ describe("Type-aware project workflows", () => {
       name: "Admin",
     });
 
+    await t.mutation(internal.users.createMaker, {
+      userId: "3",
+      email: "delivered+maker@resend.dev",
+      name: "Maker",
+    });
+
     const tClient = t.withIdentity({ subject: "1", name: "Client" });
     const tAdmin = t.withIdentity({ subject: "2", name: "Admin" });
 
@@ -148,7 +154,25 @@ describe("Type-aware project workflows", () => {
 
     await flushScheduledFunctions(t);
 
-    return { t, tClient, tAdmin, serviceId, projectId, roomId, threadId };
+    // Find the maker to pass when transitioning to approved
+    const makerId = await t.run(async (ctx) => {
+      const maker = await ctx.db
+        .query("userProfile")
+        .withIndex("by_role", (q) => q.eq("role", "maker"))
+        .first();
+      return maker!._id;
+    });
+
+    return {
+      t,
+      tClient,
+      tAdmin,
+      serviceId,
+      projectId,
+      roomId,
+      threadId,
+      makerId,
+    };
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -218,11 +242,12 @@ describe("Type-aware project workflows", () => {
     );
 
     test("fabrication project cannot be marked paid from approved status", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
 
       await expect(
@@ -236,11 +261,12 @@ describe("Type-aware project workflows", () => {
     });
 
     test("fabrication project can be marked paid from completed status", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
@@ -345,12 +371,13 @@ describe("Type-aware project workflows", () => {
     });
 
     test("fabrication payment produces 'claim' system message", async () => {
-      const { t, tAdmin, projectId, roomId, threadId } =
+      const { t, tAdmin, projectId, roomId, threadId, makerId } =
         await setupFabricationProject();
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
@@ -477,11 +504,12 @@ describe("Type-aware project workflows", () => {
     // ── Fabrication backward moves ──────────────────────────────────────────
 
     test("fabrication: approved can go back to pending", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await t.run(async (ctx) => {
         expect((await ctx.db.get(projectId))!.status).toBe("approved");
@@ -497,11 +525,12 @@ describe("Type-aware project workflows", () => {
     });
 
     test("fabrication: completed can go back to approved", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
@@ -521,12 +550,13 @@ describe("Type-aware project workflows", () => {
     });
 
     test("fabrication: paid can go back to completed", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
 
       // Forward: pending → approved → completed → paid
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
@@ -553,12 +583,13 @@ describe("Type-aware project workflows", () => {
     });
 
     test("fabrication: claimed can go back to paid", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
 
       // Forward: pending → approved → completed → paid → claimed
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
@@ -664,13 +695,14 @@ describe("Type-aware project workflows", () => {
     });
 
     test("forward and backward cycle does not corrupt project data", async () => {
-      const { t, tAdmin, projectId } = await setupFabricationProject();
+      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
       const originalName = "fabrication project";
 
       // Cycle: pending → approved → completed → approved → completed → paid → completed → paid
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,
         status: "approved",
+        makerId,
       });
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,

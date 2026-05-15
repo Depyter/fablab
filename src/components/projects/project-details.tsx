@@ -358,20 +358,25 @@ export function ProjectDetails({
           const currentStepIndex = timeline.findIndex(
             (step) => step.status === project.status,
           );
+          const isRejected =
+            project.status === "rejected" || project.status === "cancelled";
+          // When the project has a status not in the timeline (e.g., workshop at "claimed"),
+          // and it's not a rejected/cancelled state, treat all timeline steps as completed
+          // since the project has already progressed beyond the visible workflow.
+          const isPastEndState = currentStepIndex < 0 && !isRejected;
           // Map the current status to the step that should be highlighted
           // as "In progress". The step whose status matches the project is
           // already completed — the NEXT step is the one being waited on.
           // e.g. "pending" means Booking is done, Review is active.
-          const effectiveIndex =
-            currentStepIndex >= 0
+          const effectiveIndex = isPastEndState
+            ? timeline.length
+            : currentStepIndex >= 0
               ? Math.min(currentStepIndex + 1, timeline.length)
               : timeline.length;
 
           return timeline.map((stepDef, index) => {
-            const isPast = index < effectiveIndex;
-            const isCurrent = index === effectiveIndex;
-            const isRejected =
-              project.status === "rejected" || project.status === "cancelled";
+            const isPast = index < effectiveIndex || isPastEndState;
+            const isCurrent = index === effectiveIndex && !isPastEndState;
 
             return {
               title: stepDef.title,

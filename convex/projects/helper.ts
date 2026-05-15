@@ -14,11 +14,11 @@ import {
   MaterialStatus,
   PROJECT_ARCHIVE_STATUSES,
   PROJECT_STATUS_LABELS,
-  PROJECT_STATUS_TRANSITIONS,
   UserRole,
   type MaterialStatusType,
   type ProjectStatusType,
 } from "../constants";
+import { getWorkflow, getStatusLabel } from "../../src/lib/project-workflow";
 
 /**
  * Builds the denormalized search text for a project.
@@ -781,29 +781,28 @@ export async function sendProjectSystemMessage(
 export async function applyStatusChange(
   ctx: MutationCtx,
   project: Doc<"projects">,
-  existingProject: Doc<"projects">,
   status: ProjectStatus,
 ): Promise<string[]> {
   if (project.status === status) return [];
 
-  if (!PROJECT_STATUS_TRANSITIONS[project.status].includes(status)) {
+  const workflow = getWorkflow(project.type);
+  if (!workflow.transitions[project.status]?.includes(status)) {
     throw new ConvexError(
       `Cannot change project status from ${project.status} to ${status}.`,
     );
   }
 
+  // Enforce that transitioning to "paid" requires an existing receipt.
+  // First-time payment must go through markProjectPaid which creates the receipt.
+  if (status === "paid" && !project.receipt) {
+    throw new ConvexError(
+      "Cannot set status to paid without a receipt. Use markProjectPaid instead.",
+    );
+  }
+
   await ctx.db.patch(project._id, { status });
 
-  const typeLabels: Record<string, Record<string, string>> = {
-    WORKSHOP: { approved: "Confirmed", paid: "Paid", completed: "Attended" },
-    FABRICATION: {
-      approved: "Fabrication",
-      completed: "Payment",
-      paid: "Claim",
-    },
-  };
-  const label =
-    typeLabels[project.type]?.[status] ?? PROJECT_STATUS_LABELS[status];
+  const label = getStatusLabel(workflow, status);
 
   const lines: string[] = [`Status updated to: **${label}**`];
 
@@ -811,8 +810,8 @@ export async function applyStatusChange(
   // cancellation / rejection so the project no longer holds resources.
   if (
     (status === "cancelled" || status === "rejected") &&
-    existingProject.status !== "cancelled" &&
-    existingProject.status !== "rejected"
+    project.status !== "cancelled" &&
+    project.status !== "rejected"
   ) {
     const service = await ctx.db.get(project.service);
     const usages = await ctx.db
@@ -844,7 +843,7 @@ export async function applyStatusChange(
 
   // ── Unschedule / schedule on terminal status transitions ──────────────
   const wasArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
-    existingProject.status as ProjectStatusType,
+    project.status as ProjectStatusType,
   );
   const isArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
     status as ProjectStatusType,

@@ -1,11 +1,14 @@
-import { ProjectStatusType, PROJECT_STATUS_LABELS } from "@convex/constants";
+import { ProjectStatusType } from "@convex/constants";
 import { formatLabDate } from "@/lib/lab-time";
+import {
+  getWorkflow,
+  getStatusLabel as getWorkflowStatusLabel,
+  isKnownType,
+} from "./project-workflow";
 
 // ═══════════════════════════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════════════════════════
-
-export type ProjectType = "WORKSHOP" | "FABRICATION";
 
 export interface TimelineStepDef {
   /** Canonical status this step represents. */
@@ -26,22 +29,13 @@ export interface TimelineStepDef {
 export interface ProjectTypeConfig {
   /** Timeline steps in display order. Order is derived from this array. */
   timeline: TimelineStepDef[];
-
-  /** Overrides for PROJECT_STATUS_LABELS. Falls back to shared labels. */
-  statusLabels: Partial<Record<ProjectStatusType, string>>;
-
-  /** Which canonical statuses allow payment via markProjectPaid. */
-  payableStatuses: ProjectStatusType[];
-
-  /** Whether pending → approved requires assigning a maker first. */
-  approvalRequiresMaker: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // Configurations
 // ═══════════════════════════════════════════════════════════════════════
 
-export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
+export const PROJECT_TYPE_CONFIG: Record<string, ProjectTypeConfig> = {
   WORKSHOP: {
     // Payment confirms the spot → session happens → complete.
     // "claimed" is omitted — for workshops, "completed" is the end.
@@ -71,22 +65,9 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
                 month: "short",
                 day: "numeric",
               })
-            : "Scheduled",
+            : "Completed",
       },
     ],
-
-    statusLabels: {
-      approved: "Confirmed",
-      paid: "Paid",
-      completed: "Attended",
-    },
-
-    // Workshop attendees pay to confirm their spot (before the session).
-    // "completed" and "claimed" are also allowed so payment details
-    // can be updated when moving backward in the workflow.
-    payableStatuses: ["approved", "paid", "completed", "claimed"],
-
-    approvalRequiresMaker: false,
   },
 
   FABRICATION: {
@@ -118,18 +99,6 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
         getByLabel: () => "Client",
       },
     ],
-
-    statusLabels: {
-      approved: "Fabrication",
-      completed: "Payment",
-      paid: "Claim",
-    },
-
-    // Fabrication projects pay after the work is done.
-    // "claimed" is also allowed so payment details can be updated later.
-    payableStatuses: ["completed", "paid", "claimed"],
-
-    approvalRequiresMaker: true,
   },
 };
 
@@ -137,31 +106,29 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════
 
-/** Type guard — ensures a string is a known project type. */
-export function isKnownType(type: string): type is ProjectType {
-  return type === "WORKSHOP" || type === "FABRICATION";
-}
-
-/** Safe config access. Returns FABRICATION config for unknown types. */
-export function getConfig(type: string): ProjectTypeConfig {
-  if (isKnownType(type)) return PROJECT_TYPE_CONFIG[type];
-  return PROJECT_TYPE_CONFIG.FABRICATION;
+/** Safe config access. Returns FABRICATION timeline for unknown types. */
+export function getConfig(type: string): { timeline: TimelineStepDef[] } {
+  if (isKnownType(type))
+    return { timeline: PROJECT_TYPE_CONFIG[type].timeline };
+  return { timeline: PROJECT_TYPE_CONFIG.FABRICATION.timeline };
 }
 
 /**
  * Returns the context-appropriate status display label.
- * Falls back to the shared PROJECT_STATUS_LABELS when no type-specific
- * override exists, or when the type is unknown.
+ * Backward-compatible wrapper around project-workflow's getStatusLabel.
+ * Falls back to FABRICATION workflow when no type is given.
  */
 export function getStatusLabel(
   status: ProjectStatusType,
   type?: string | null,
 ): string {
-  if (type && isKnownType(type)) {
-    return (
-      PROJECT_TYPE_CONFIG[type].statusLabels[status] ??
-      PROJECT_STATUS_LABELS[status]
-    );
-  }
-  return PROJECT_STATUS_LABELS[status];
+  return getWorkflowStatusLabel(getWorkflow(type ?? "FABRICATION"), status);
 }
+
+// Re-export workflow helpers so consumers can import from @/lib/project-type-meta
+export {
+  getWorkflow,
+  isKnownType,
+  isValidTransition,
+} from "./project-workflow";
+export type { ProjectType, ProjectWorkflow } from "./project-workflow";

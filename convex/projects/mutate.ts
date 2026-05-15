@@ -8,6 +8,8 @@ import {
   getCurrentTimestamp,
   getLabDayStartTimestamp,
 } from "../../src/lib/lab-time";
+import { PROJECT_ARCHIVE_STATUSES, type ProjectStatusType } from "../constants";
+import { getWorkflow } from "../../src/lib/project-workflow";
 import {
   BookingWindow,
   ProjectStatus,
@@ -40,15 +42,6 @@ import {
 // ============================================================================
 // Type-aware business rules
 // ============================================================================
-
-/**
- * Mirrors the frontend ProjectTypeConfig.payableStatuses.
- * Defines which statuses allow payment via markProjectPaid for each type.
- */
-const PAYABLE_STATUSES: Record<string, readonly string[]> = {
-  WORKSHOP: ["approved", "paid", "completed", "claimed"],
-  FABRICATION: ["completed", "paid", "claimed"],
-};
 
 // ============================================================================
 // Mutations
@@ -273,8 +266,8 @@ export const updateProject = authMutation({
         v.literal("approved"),
         v.literal("rejected"),
         v.literal("completed"),
-        v.literal("cancelled"),
         v.literal("paid"),
+        v.literal("cancelled"),
         v.literal("claimed"),
       ),
     ),
@@ -292,9 +285,21 @@ export const updateProject = authMutation({
 
     // ── Status change ────────────────────────────────────────────────────────
     if (args.status !== undefined) {
+      // Enforce maker assignment for fabrication pending→approved (Bug 3)
+      const workflow = getWorkflow(existingProject.type);
+      if (
+        args.status === "approved" &&
+        existingProject.status === "pending" &&
+        workflow.approvalRequiresMaker &&
+        args.makerId === undefined
+      ) {
+        throw new ConvexError(
+          "Maker must be assigned before approving a fabrication project.",
+        );
+      }
+
       const lines = await applyStatusChange(
         ctx,
-        existingProject,
         existingProject,
         args.status as ProjectStatus,
       );
@@ -761,11 +766,15 @@ export const markProjectPaid = authMutation({
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
 
-    const allowedStatuses =
-      PAYABLE_STATUSES[project.type] ?? PAYABLE_STATUSES.FABRICATION;
-
-    if (!allowedStatuses.includes(project.status)) {
+    const workflow = getWorkflow(project.type);
+    if (!workflow.payableStatuses.includes(project.status)) {
       throw new ConvexError("Project is not currently payable.");
+    }
+
+    if (project.status !== "paid") {
+      if (!workflow.transitions[project.status]?.includes("paid")) {
+        throw new ConvexError("Project is not currently payable.");
+      }
     }
 
     let receiptId: Id<"receipts">;
@@ -791,6 +800,14 @@ export const markProjectPaid = authMutation({
       status: "paid",
       receipt: receiptId,
     });
+
+    // Clean up archive deadline if leaving a terminal status (Bug 1)
+    const wasArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
+      project.status as ProjectStatusType,
+    );
+    if (wasArchiveStatus) {
+      await ctx.db.patch(args.projectId, { archivalDeadline: undefined });
+    }
 
     await scheduleProjectUpdateEmail(ctx, args.projectId);
 
@@ -830,7 +847,7 @@ export const cancelOwnProject = authMutation({
 
     // applyStatusChange validates the transition through PROJECT_STATUS_TRANSITIONS,
     // handles the patch, workshop slot release, and returns log lines.
-    const lines = await applyStatusChange(ctx, project, project, "cancelled");
+    const lines = await applyStatusChange(ctx, project, "cancelled");
     await scheduleProjectUpdateEmail(ctx, args.projectId);
     await sendProjectSystemMessage(ctx, args.projectId, lines);
   },

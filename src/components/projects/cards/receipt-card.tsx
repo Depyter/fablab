@@ -2,7 +2,8 @@
 
 import { DetailCard, DetailChip } from "./detail-card";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
-import { getConfig } from "@/lib/project-type-meta";
+import { getWorkflow } from "@/lib/project-type-meta";
+import { ProjectStatusType } from "@convex/constants";
 
 interface ReceiptFile {
   storageId: string;
@@ -20,7 +21,7 @@ interface Receipt {
 
 interface ReceiptCardProps {
   receipt?: Receipt | null;
-  status: string;
+  status: ProjectStatusType;
   projectType: string;
   onMarkPaid: () => void;
 }
@@ -31,8 +32,8 @@ export function ReceiptCard({
   projectType,
   onMarkPaid,
 }: ReceiptCardProps) {
-  const config = getConfig(projectType);
-  const visible = receipt || config.payableStatuses.includes(status as any);
+  const workflow = getWorkflow(projectType);
+  const visible = receipt || workflow.payableStatuses.includes(status);
 
   if (!visible) return null;
 
