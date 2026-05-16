@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { ProjectDetails } from "@/components/projects/project-details";
 import { CalendarContentLoadingState } from "./calendar-loading";
 import { useBookingCalendarController } from "./use-booking-calendar-controller";
@@ -19,6 +20,7 @@ const BookingCalendarClient = dynamic(
 );
 
 export function BookingCalendarShell() {
+  const router = useRouter();
   const controller = useBookingCalendarController();
 
   return (
@@ -38,6 +40,11 @@ export function BookingCalendarShell() {
             visibleRange={controller.visibleRange}
             onSelectDay={controller.handleOpenDay}
             onOpenProjectDetails={controller.handleOpenProjectDetails}
+            onOpenWorkshopEvent={(serviceId, startTime) => {
+              router.push(
+                `/dashboard/workshops?service=${serviceId}&startTime=${startTime}`,
+              );
+            }}
             activeTab={controller.activeTab}
             isAdminOrMaker={controller.isAdminOrMaker}
             bookingsLoading={controller.bookingsLoading}

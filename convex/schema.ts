@@ -258,6 +258,7 @@ export default defineSchema({
     .index("by_userProfile", ["userId"])
     .index("by_status", ["status"])
     .index("by_bookingStartTime", ["bookingStartTime"])
+    .index("by_type_bookingStartTime", ["type", "bookingStartTime"])
     .index("by_assignedMaker", ["assignedMaker"])
     .searchIndex("search_body", {
       searchField: "searchText",

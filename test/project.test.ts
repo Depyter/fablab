@@ -9,6 +9,7 @@ import {
   endOfLabMonth,
   endOfLabWeek,
   getLabDayStart,
+  getLabDayStartTimestamp,
   startOfLabMonth,
   startOfLabWeek,
 } from "../src/lib/lab-time";
@@ -3085,6 +3086,397 @@ describe("Project and Chat functionality", () => {
         expect(usage).toBeNull();
         expect(project!.totalInvoice).toBeUndefined();
       });
+    });
+  });
+
+  // ── getWorkshopEvents ───────────────────────────────────────────────────
+  describe("getWorkshopEvents", () => {
+    /**
+     * Creates a workshop service and attendee profiles for testing.
+     */
+    async function setupWorkshopData() {
+      const { t, tAera } = await setupUsers();
+
+      // Create additional attendee profiles
+      await t.mutation(internal.users.createUserProfile, {
+        userId: "4",
+        name: "Alice",
+        email: "alice@test.com",
+      });
+      await t.mutation(internal.users.createUserProfile, {
+        userId: "5",
+        name: "Bob",
+        email: "bob@test.com",
+      });
+      await t.mutation(internal.users.createUserProfile, {
+        userId: "6",
+        name: "Charlie",
+        email: "charlie@test.com",
+      });
+
+      // Resolve profile IDs
+      const { aliceId, bobId, charlieId } = await t.run(async (ctx) => {
+        const alice = await ctx.db
+          .query("userProfile")
+          .withIndex("by_userId", (q) => q.eq("userId", "4"))
+          .first();
+        const bob = await ctx.db
+          .query("userProfile")
+          .withIndex("by_userId", (q) => q.eq("userId", "5"))
+          .first();
+        const charlie = await ctx.db
+          .query("userProfile")
+          .withIndex("by_userId", (q) => q.eq("userId", "6"))
+          .first();
+        return {
+          aliceId: alice!._id,
+          bobId: bob!._id,
+          charlieId: charlie!._id,
+        };
+      });
+
+      const now = Date.now();
+      const futureDate = getLabDayStartTimestamp(
+        now + 14 * 24 * 60 * 60 * 1000,
+      );
+      const futureStartTime = futureDate + 9 * HOUR_MS;
+      const futureEndTime = futureStartTime + 2 * HOUR_MS;
+
+      const futureDate2 = getLabDayStartTimestamp(
+        now + 15 * 24 * 60 * 60 * 1000,
+      );
+      const futureStartTime2 = futureDate2 + 14 * HOUR_MS;
+      const futureEndTime2 = futureStartTime2 + 1 * HOUR_MS;
+
+      const pastDate = getLabDayStartTimestamp(now - 7 * 24 * 60 * 60 * 1000);
+      const pastStartTime = pastDate + 9 * HOUR_MS;
+      const pastEndTime = pastStartTime + 2 * HOUR_MS;
+
+      // Create workshop service with three schedules
+      await tAera.mutation(api.services.mutate.addService, {
+        name: "Test Workshop",
+        images: [],
+        samples: [],
+        serviceCategory: {
+          type: "WORKSHOP",
+          amount: 500,
+          schedules: [
+            {
+              date: futureDate,
+              timeSlots: [
+                {
+                  startTime: futureStartTime,
+                  endTime: futureEndTime,
+                  maxSlots: 10,
+                },
+              ],
+            },
+            {
+              date: futureDate2,
+              timeSlots: [
+                {
+                  startTime: futureStartTime2,
+                  endTime: futureEndTime2,
+                  maxSlots: 5,
+                },
+              ],
+            },
+            {
+              date: pastDate,
+              timeSlots: [
+                {
+                  startTime: pastStartTime,
+                  endTime: pastEndTime,
+                  maxSlots: 3,
+                },
+              ],
+            },
+          ],
+        },
+        requirements: [],
+        fileTypes: [],
+        description: "A workshop for testing",
+        status: "Available",
+      });
+
+      // Query for the service ID (addService doesn't return it)
+      const serviceId = await t.run(async (ctx) => {
+        const service = await ctx.db
+          .query("services")
+          .withIndex("by_slug", (q) => q.eq("slug", "test-workshop"))
+          .first();
+        if (!service) throw new Error("Service not found after creation");
+        return service._id;
+      });
+
+      // Authenticated contexts for each attendee
+      const tAlice = t.withIdentity({
+        subject: "4",
+        name: "Alice",
+      });
+      const tBob = t.withIdentity({
+        subject: "5",
+        name: "Bob",
+      });
+      const tCharlie = t.withIdentity({
+        subject: "6",
+        name: "Charlie",
+      });
+
+      // Create projects for Event 1 (future): 3 attendees
+      const p1 = await tAlice.mutation(api.projects.mutate.createProject, {
+        name: "Alice Workshop",
+        pricing: "Default",
+        description: "alice reg",
+        fulfillmentMode: "full-service",
+        material: "provide-own",
+        files: [],
+        service: serviceId,
+        notes: "",
+        booking: {
+          startTime: futureStartTime,
+          endTime: futureEndTime,
+          date: futureDate,
+        },
+      });
+      const p2 = await tBob.mutation(api.projects.mutate.createProject, {
+        name: "Bob Workshop",
+        pricing: "Default",
+        description: "bob reg",
+        fulfillmentMode: "full-service",
+        material: "provide-own",
+        files: [],
+        service: serviceId,
+        notes: "",
+        booking: {
+          startTime: futureStartTime,
+          endTime: futureEndTime,
+          date: futureDate,
+        },
+      });
+      const p3 = await tCharlie.mutation(api.projects.mutate.createProject, {
+        name: "Charlie Workshop",
+        pricing: "Default",
+        description: "charlie reg",
+        fulfillmentMode: "full-service",
+        material: "provide-own",
+        files: [],
+        service: serviceId,
+        notes: "",
+        booking: {
+          startTime: futureStartTime,
+          endTime: futureEndTime,
+          date: futureDate,
+        },
+      });
+
+      // Create project for Event 2 (future): 1 attendee (Harley)
+      const tHarley = t.withIdentity({
+        subject: "1",
+        name: "Harley",
+      });
+      const p4 = await tHarley.mutation(api.projects.mutate.createProject, {
+        name: "Harley Workshop",
+        pricing: "Default",
+        description: "harley reg",
+        fulfillmentMode: "full-service",
+        material: "provide-own",
+        files: [],
+        service: serviceId,
+        notes: "",
+        booking: {
+          startTime: futureStartTime2,
+          endTime: futureEndTime2,
+          date: futureDate2,
+        },
+      });
+
+      // Create project for Event 3 (past): 1 attendee (Alice)
+      // First create with a future time, then move to the past via admin
+      const { projectId: p5 } = await tAlice.mutation(
+        api.projects.mutate.createProject,
+        {
+          name: "Past Workshop",
+          pricing: "Default",
+          description: "past reg",
+          fulfillmentMode: "full-service",
+          material: "provide-own",
+          files: [],
+          service: serviceId,
+          notes: "",
+          booking: {
+            startTime: futureStartTime2,
+            endTime: futureEndTime2,
+            date: futureDate2,
+          },
+        },
+      );
+
+      // Move the project's schedule to the past
+      await tAera.mutation(api.projects.mutate.updateProjectSchedule, {
+        projectId: p5,
+        startTime: pastStartTime,
+        endTime: pastEndTime,
+        allowPastBooking: true,
+      });
+
+      await flushScheduledFunctions(t);
+
+      // Change statuses for Event 1 attendees:
+      // Bob → approved, Charlie → approved → paid
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId: p2.projectId,
+        status: "approved",
+      });
+
+      await tAera.mutation(api.projects.mutate.updateProject, {
+        projectId: p3.projectId,
+        status: "approved",
+      });
+
+      await tAera.mutation(api.projects.mutate.markProjectPaid, {
+        projectId: p3.projectId,
+        receiptString: "R-001",
+        paymentMode: "cash",
+        proof: "paid at desk",
+      });
+
+      return {
+        t,
+        tAera,
+        serviceId,
+        futureStartTime,
+        futureEndTime,
+        futureStartTime2,
+        futureEndTime2,
+        pastStartTime,
+        pastEndTime,
+        aliceId,
+        bobId,
+        charlieId,
+        event1ProjectIds: [p1.projectId, p2.projectId, p3.projectId],
+        event2ProjectIds: [p4.projectId],
+        event3ProjectIds: [p5],
+      };
+    }
+
+    test("returns upcoming workshop events correctly grouped", async () => {
+      const { tAera, serviceId } = await setupWorkshopData();
+
+      const result = await tAera.query(
+        api.projects.query.getWorkshopEvents,
+        {},
+      );
+
+      expect(result.upcoming.length).toBeGreaterThanOrEqual(1);
+
+      // Find the event with 3 attendees (Event 1)
+      const event1 = result.upcoming.find((e) => e.attendees.length === 3);
+      expect(event1).toBeDefined();
+      expect(event1!.serviceId).toBe(serviceId);
+      expect(event1!.registrationCount).toBe(3);
+      expect(event1!.attendees).toHaveLength(3);
+    });
+
+    test("returns correct attendee lists per event", async () => {
+      const { tAera } = await setupWorkshopData();
+
+      const result = await tAera.query(
+        api.projects.query.getWorkshopEvents,
+        {},
+      );
+
+      const event1 = result.upcoming.find((e) => e.attendees.length === 3);
+      const event2 = result.upcoming.find((e) => e.attendees.length === 1);
+
+      expect(event1).toBeDefined();
+      expect(event2).toBeDefined();
+
+      // Event 1 has Alice, Bob, Charlie
+      const names1 = event1!.attendees.map((a) => a.name).sort();
+      expect(names1).toEqual(["Alice", "Bob", "Charlie"]);
+
+      // Event 2 has Harley
+      expect(event2!.attendees[0].name).toBe("Harley");
+    });
+
+    test("shows correct status breakdown counts", async () => {
+      const { tAera } = await setupWorkshopData();
+
+      const result = await tAera.query(
+        api.projects.query.getWorkshopEvents,
+        {},
+      );
+
+      const event1 = result.upcoming.find((e) => e.attendees.length === 3);
+      expect(event1).toBeDefined();
+
+      expect(event1!.statusBreakdown).toEqual({
+        pending: 1,
+        approved: 1,
+        paid: 1,
+      });
+    });
+
+    test("filters by serviceId and startTime", async () => {
+      const { tAera, serviceId, futureStartTime, futureStartTime2 } =
+        await setupWorkshopData();
+
+      // Filter for Event 1
+      const result = await tAera.query(api.projects.query.getWorkshopEvents, {
+        serviceId,
+        startTime: futureStartTime,
+      });
+
+      expect(result.upcoming).toHaveLength(1);
+      expect(result.upcoming[0].attendees).toHaveLength(3);
+      expect(result.upcoming[0].startTime).toBe(futureStartTime);
+
+      // Filter for Event 2
+      const result2 = await tAera.query(api.projects.query.getWorkshopEvents, {
+        serviceId,
+        startTime: futureStartTime2,
+      });
+
+      expect(result2.upcoming).toHaveLength(1);
+      expect(result2.upcoming[0].attendees).toHaveLength(1);
+      expect(result2.upcoming[0].startTime).toBe(futureStartTime2);
+    });
+
+    test("past events don't appear in upcoming", async () => {
+      const { tAera } = await setupWorkshopData();
+
+      // Use status: "all" to get both upcoming and past events
+      const result = await tAera.query(api.projects.query.getWorkshopEvents, {
+        status: "all",
+      });
+
+      // The past event (single attendee, Alice) should not be in upcoming
+      const pastInUpcoming = result.upcoming.find(
+        (e) => e.attendees[0]?.name === "Alice" && e.attendees.length === 1,
+      );
+      expect(pastInUpcoming).toBeUndefined();
+
+      // Past event should appear in past array
+      expect(result.past.length).toBeGreaterThanOrEqual(1);
+      const pastEvent = result.past.find((e) => e.attendees.length === 1);
+      expect(pastEvent).toBeDefined();
+      expect(pastEvent!.attendees[0].name).toBe("Alice");
+      expect(pastEvent!.startTime).toBeLessThan(
+        getLabDayStartTimestamp(Date.now()),
+      );
+    });
+
+    test("handles empty state when no workshops exist", async () => {
+      const { tAera } = await setupUsers();
+
+      const result = await tAera.query(
+        api.projects.query.getWorkshopEvents,
+        {},
+      );
+
+      expect(result.upcoming).toEqual([]);
+      expect(result.past).toEqual([]);
     });
   });
 });

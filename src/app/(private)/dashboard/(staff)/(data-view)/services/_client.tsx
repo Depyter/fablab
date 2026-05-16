@@ -80,6 +80,7 @@ export function ServicesListClient() {
           imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
           title={service.name}
           description={service.description}
+          showBadge={false}
           pricing={
             service.serviceCategory.type === "WORKSHOP"
               ? {

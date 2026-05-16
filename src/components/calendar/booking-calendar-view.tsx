@@ -19,6 +19,7 @@ export function BookingCalendarView({
   visibleRange,
   onSelectDay,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
   activeTab,
   isAdminOrMaker,
   bookingsLoading,
@@ -33,6 +34,7 @@ export function BookingCalendarView({
   visibleRange: CalendarVisibleRange;
   onSelectDay?: (date: Date) => void;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
   activeTab: CalendarTab;
   isAdminOrMaker: boolean;
   bookingsLoading: boolean;
@@ -51,6 +53,7 @@ export function BookingCalendarView({
               machines={serviceMachines}
               usages={serviceUsages}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
               leadingColumnLabel="SERVICES"
             />
           ) : (
@@ -70,6 +73,7 @@ export function BookingCalendarView({
               machines={resourceMachines}
               usages={resourceUsages}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
               leadingColumnLabel="RESOURCES"
             />
           ) : (

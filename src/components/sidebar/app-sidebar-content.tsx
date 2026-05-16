@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePostHogIdentify } from "@/hooks/use-posthog-identify";
 import {
+  CalendarCheckIcon,
   CalendarIcon,
   MessageSquareIcon,
   FolderIcon,
@@ -61,6 +62,15 @@ const allNavItems: NavItem[] = [
     iconBackground: "var(--fab-teal-light)",
     iconColor: "var(--fab-teal)",
     roles: ["admin", "maker", "client"],
+    group: "main",
+  },
+  {
+    title: "Workshops",
+    url: "/dashboard/workshops",
+    icon: <CalendarCheckIcon />,
+    iconBackground: "var(--fab-amber-light)",
+    iconColor: "var(--fab-amber)",
+    roles: ["admin", "maker"],
     group: "main",
   },
   {

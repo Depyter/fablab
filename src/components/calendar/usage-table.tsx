@@ -41,6 +41,7 @@ interface UsageTableProps {
   machines: Machine[];
   usages: MachineUsage[];
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
   leadingColumnLabel?: string;
 }
 
@@ -113,11 +114,13 @@ function WorkshopSlotCard({
   position,
   compact = false,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   entry: Extract<CalendarDayTrackEntry, { kind: "workshop" }>;
   position: { left: string; width: string };
   compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const visibleMembers = entry.members.slice(0, compact ? 2 : 4);
   const hiddenMemberCount = entry.members.length - visibleMembers.length;
@@ -138,7 +141,16 @@ function WorkshopSlotCard({
           compact ? "gap-1 px-1.5 py-1" : "gap-1.5 px-2.5 py-2",
         )}
       >
-        <div className="flex items-start justify-between gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            onOpenWorkshopEvent?.(entry.machineId, entry.startTime)
+          }
+          className={cn(
+            "flex items-start justify-between gap-2 text-left",
+            onOpenWorkshopEvent && "cursor-pointer hover:opacity-80",
+          )}
+        >
           <div className="min-w-0">
             <div
               className={cn(
@@ -166,7 +178,7 @@ function WorkshopSlotCard({
           >
             {formatShortTime(entry.startTime)}-{formatShortTime(entry.endTime)}
           </div>
-        </div>
+        </button>
 
         <div className="grid min-h-0 gap-1 overflow-hidden">
           {visibleMembers.map((member) => (
@@ -289,6 +301,7 @@ export function UsageTable({
   machines,
   usages,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
   leadingColumnLabel = "RESOURCES",
 }: UsageTableProps) {
   const isMobile = useIsMobile();
@@ -610,6 +623,7 @@ export function UsageTable({
                             position={position}
                             compact={isMobile}
                             onOpenProjectDetails={onOpenProjectDetails}
+                            onOpenWorkshopEvent={onOpenWorkshopEvent}
                           />
                         ) : (
                           <StandardUsageCard
