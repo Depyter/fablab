@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronUp, Users, Calendar, Clock } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Users,
+  Calendar,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +28,7 @@ export type WorkshopEvent = {
   maxSlots: number;
   usedSlots: number;
   registrationCount: number;
+  cancelledCount: number;
   statusBreakdown: Record<string, number>;
   attendees: Array<{
     projectId: string;
@@ -137,10 +145,12 @@ export function WorkshopEventCard({
   event,
   highlight = false,
   readOnly = false,
+  onOpenProjectDetails,
 }: {
   event: WorkshopEvent;
   highlight?: boolean;
   readOnly?: boolean;
+  onOpenProjectDetails?: (projectId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = React.useState(highlight);
   const cardRef = React.useRef<HTMLDivElement>(null);
@@ -190,6 +200,13 @@ export function WorkshopEventCard({
               {event.registrationCount}{" "}
               {event.registrationCount === 1 ? "attendee" : "attendees"}
             </span>
+            {event.cancelledCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-red-500">
+                <XCircle className="h-3 w-3" />
+                {event.cancelledCount}{" "}
+                {event.cancelledCount === 1 ? "cancellation" : "cancellations"}
+              </span>
+            )}
           </div>
         </div>
         <div className="shrink-0 text-amber-500 transition-transform duration-200">
@@ -248,6 +265,7 @@ export function WorkshopEventCard({
                     key={attendee.projectId}
                     attendee={attendee as AttendeeInfo}
                     readOnly={readOnly}
+                    onOpenProjectDetails={onOpenProjectDetails}
                   />
                 ))}
               </div>

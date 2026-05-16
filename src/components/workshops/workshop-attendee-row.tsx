@@ -2,11 +2,23 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { MessageSquare, ExternalLink, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import {
+  PROJECT_STATUS_LABELS,
+  type ProjectStatusType,
+} from "@convex/constants";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { Id } from "@convex/_generated/dataModel";
+import { toast } from "sonner";
 
 export type AttendeeInfo = {
   projectId: string;
@@ -16,6 +28,8 @@ export type AttendeeInfo = {
   status: string;
   pfpUrl: string | null;
   createdAt: number;
+  roomId: string | null;
+  threadId: string | null;
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
@@ -57,6 +71,17 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
     },
   };
 
+/** Valid workshop workflow transitions keyed by current status. */
+const WORKSHOP_TRANSITIONS: Record<string, ProjectStatusType[]> = {
+  pending: ["approved", "rejected", "cancelled"],
+  approved: ["paid", "completed", "cancelled"],
+  paid: ["completed", "cancelled"],
+  completed: [],
+  rejected: [],
+  cancelled: [],
+  claimed: [],
+};
+
 function AttendeeAvatar({
   name,
   pfpUrl,
@@ -91,13 +116,29 @@ function AttendeeAvatar({
 export function WorkshopAttendeeRow({
   attendee,
   readOnly = false,
-  roomId,
+  onOpenProjectDetails,
 }: {
   attendee: AttendeeInfo;
   readOnly?: boolean;
-  roomId?: string;
+  onOpenProjectDetails?: (projectId: string) => void;
 }) {
   const colors = STATUS_COLORS[attendee.status] ?? STATUS_COLORS.pending;
+  const updateProject = useMutation(api.projects.mutate.updateProject);
+  const transitions = WORKSHOP_TRANSITIONS[attendee.status] ?? [];
+
+  const handleStatusChange = async (newStatus: ProjectStatusType) => {
+    try {
+      await updateProject({
+        projectId: attendee.projectId as Id<"projects">,
+        status: newStatus,
+      });
+      toast.success(
+        `${attendee.name} → ${PROJECT_STATUS_LABELS[newStatus] ?? newStatus}`,
+      );
+    } catch {
+      toast.error("Failed to update status.");
+    }
+  };
 
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-amber-50/50">
@@ -110,51 +151,81 @@ export function WorkshopAttendeeRow({
           {attendee.email}
         </span>
       </div>
-      <Badge
-        variant="outline"
-        className={cn(
-          "shrink-0 border-0 text-[10px] font-bold uppercase tracking-wider",
-          colors.bg,
-          colors.text,
-        )}
-      >
-        <span className={cn("mr-1 h-1.5 w-1.5 rounded-full", colors.dot)} />
-        {PROJECT_STATUS_LABELS[attendee.status as keyof typeof PROJECT_STATUS_LABELS] ?? attendee.status}
-      </Badge>
-      <div className="flex shrink-0 items-center gap-1">
-        {roomId ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            asChild
-          >
-            <Link href={`/dashboard/chat/${roomId}/${attendee.projectId}`}>
-              <MessageCircle className="h-3.5 w-3.5" />
-              Message
-            </Link>
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            disabled
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            Message
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs gap-1"
-          disabled={readOnly}
+
+      {/* Status — dropdown if there are transitions available */}
+      {transitions.length > 0 && !readOnly ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-7 gap-1 border-0 text-[10px] font-bold uppercase tracking-wider",
+                colors.bg,
+                colors.text,
+              )}
+            >
+              <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
+              {PROJECT_STATUS_LABELS[
+                attendee.status as keyof typeof PROJECT_STATUS_LABELS
+              ] ?? attendee.status}
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[140px]">
+            {transitions.map((transition) => {
+              const tColors =
+                STATUS_COLORS[transition] ?? STATUS_COLORS.pending;
+              return (
+                <DropdownMenuItem
+                  key={transition}
+                  className="gap-2 text-xs"
+                  onClick={() => handleStatusChange(transition)}
+                >
+                  <span className={cn("h-2 w-2 rounded-full", tColors.dot)} />
+                  {PROJECT_STATUS_LABELS[transition] ?? transition}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <div
+          className={cn(
+            "inline-flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-bold uppercase tracking-wider",
+            colors.bg,
+            colors.text,
+          )}
         >
-          {attendee.status === "completed" || attendee.status === "paid"
-            ? "✓ Attended"
-            : "Check In"}
+          <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
+          {PROJECT_STATUS_LABELS[
+            attendee.status as keyof typeof PROJECT_STATUS_LABELS
+          ] ?? attendee.status}
+        </div>
+      )}
+
+      <div className="flex shrink-0 items-center gap-1">
+        {/* Chat — opens the conversation thread */}
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+          <Link
+            href={`/dashboard/chat/${attendee.roomId}/${attendee.threadId}`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+          </Link>
         </Button>
+
+        {/* More — opens the workshop attendee details dialog */}
+        {onOpenProjectDetails && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs"
+            onClick={() => onOpenProjectDetails(attendee.projectId)}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            More
+          </Button>
+        )}
       </div>
     </div>
   );

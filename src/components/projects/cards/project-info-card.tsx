@@ -1,6 +1,7 @@
 "use client";
 
 import { FulfillmentModeType, ProjectMaterialType } from "@convex/constants";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -50,6 +51,9 @@ interface ProjectInfoCardProps {
   setEditMaterial: (v: ProjectMaterialType) => void;
   editServiceType: FulfillmentModeType;
   setEditServiceType: (v: FulfillmentModeType) => void;
+
+  /** When true, hides the Service Type field (used for workshops which are always full-service). */
+  hideServiceType?: boolean;
 }
 
 export function ProjectInfoCard({
@@ -78,6 +82,7 @@ export function ProjectInfoCard({
   setEditMaterial,
   editServiceType,
   setEditServiceType,
+  hideServiceType = false,
 }: ProjectInfoCardProps) {
   return (
     <DetailCard
@@ -118,38 +123,45 @@ export function ProjectInfoCard({
       <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
 
       {/* Service type + material */}
-      <div className="grid min-w-0 grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Service Type
-          </p>
-          {isEditing ? (
-            <Select
-              value={editServiceType}
-              onValueChange={(v) =>
-                setEditServiceType(v as FulfillmentModeType)
-              }
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="self-service">Self Service</SelectItem>
-                <SelectItem value="full-service">Full Service</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
+      <div
+        className={cn(
+          "grid min-w-0 gap-4",
+          hideServiceType ? "grid-cols-1" : "grid-cols-2",
+        )}
+      >
+        {!hideServiceType && (
+          <div className="space-y-1">
             <p
-              className="text-sm capitalize"
-              style={{ color: "var(--fab-text-primary)" }}
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
             >
-              {serviceType}
+              Service Type
             </p>
-          )}
-        </div>
+            {isEditing ? (
+              <Select
+                value={editServiceType}
+                onValueChange={(v) =>
+                  setEditServiceType(v as FulfillmentModeType)
+                }
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="self-service">Self Service</SelectItem>
+                  <SelectItem value="full-service">Full Service</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <p
+                className="text-sm capitalize"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                {serviceType}
+              </p>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <p
             className="text-[10px] font-bold uppercase tracking-[0.12em]"

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -26,6 +27,7 @@ import {
   WorkshopEventCard,
   type WorkshopEvent,
 } from "@/components/workshops/workshop-event-card";
+import { ProjectDetails } from "@/components/projects/project-details";
 import { Calendar, PackageOpen } from "lucide-react";
 
 const STATUS_FILTERS = ["upcoming", "past", "all"] as const;
@@ -145,6 +147,22 @@ export function WorkshopsPage() {
 
   const hasResults = upcoming.length > 0 || past.length > 0;
 
+  const [selectedProjectId, setSelectedProjectId] =
+    useState<Id<"projects"> | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  const handleOpenProjectDetails = React.useCallback((projectId: string) => {
+    setSelectedProjectId(projectId as Id<"projects">);
+    setIsDetailsOpen(true);
+  }, []);
+
+  const handleDetailsOpenChange = React.useCallback((open: boolean) => {
+    setIsDetailsOpen(open);
+    if (!open) {
+      setSelectedProjectId(null);
+    }
+  }, []);
+
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
       <WorkshopsPageHeader />
@@ -191,6 +209,7 @@ export function WorkshopsPage() {
                           serviceId === event.serviceId &&
                           startTime === event.startTime
                         }
+                        onOpenProjectDetails={handleOpenProjectDetails}
                       />
                     ))}
                   </div>
@@ -212,6 +231,7 @@ export function WorkshopsPage() {
                         key={`${event.serviceId}-${event.startTime}`}
                         event={event}
                         readOnly
+                        onOpenProjectDetails={handleOpenProjectDetails}
                       />
                     ))}
                   </div>
@@ -221,6 +241,13 @@ export function WorkshopsPage() {
           )}
         </div>
       </div>
+
+      <ProjectDetails
+        projectId={selectedProjectId}
+        open={isDetailsOpen}
+        onOpenChange={handleDetailsOpenChange}
+        hideTrigger
+      />
     </div>
   );
 }

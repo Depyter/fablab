@@ -642,6 +642,7 @@ export const getWorkshopEvents = authQuery({
       maxSlots: number;
       usedSlots: number;
       registrationCount: number;
+      cancelledCount: number;
       statusBreakdown: Record<string, number>;
       attendees: Array<{
         projectId: Id<"projects">;
@@ -651,6 +652,8 @@ export const getWorkshopEvents = authQuery({
         status: string;
         pfpUrl: string | null;
         createdAt: number;
+        roomId: string | null;
+        threadId: string | null;
       }>;
     }> = [];
 
@@ -688,9 +691,30 @@ export const getWorkshopEvents = authQuery({
         endTime = groupProjects[0].bookingEndTime;
       }
 
-      // Load attendee profiles
+      // Separate active vs cancelled/rejected projects
+      // Active projects drive the headline count and attendee list
+      const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+      const activeProjects = groupProjects.filter(
+        (p) => !TERMINAL_STATUSES.has(p.status),
+      );
+
+      // Load attendee profiles (only for active projects)
+      // Load threads for all active projects to resolve chat links
+      const threadPromises = activeProjects.map((project) =>
+        ctx.db
+          .query("threads")
+          .withIndex("projectId", (q) => q.eq("projectId", project._id))
+          .first(),
+      );
+      const threads = await Promise.all(threadPromises);
+      const threadByProjectId = new Map(
+        threads
+          .filter((t): t is NonNullable<typeof t> => t !== null)
+          .map((t) => [t.projectId as string, t]),
+      );
+
       const attendees = await Promise.all(
-        groupProjects.map(async (project) => {
+        activeProjects.map(async (project) => {
           const profile = await getUserProfile(project.userId);
           let pfpUrl: string | null = null;
           if (profile.profilePic) {
@@ -700,6 +724,7 @@ export const getWorkshopEvents = authQuery({
               // Gracefully handle inaccessible storage
             }
           }
+          const thread = threadByProjectId.get(project._id as string);
           return {
             projectId: project._id,
             userId: project.userId,
@@ -708,6 +733,8 @@ export const getWorkshopEvents = authQuery({
             status: project.status,
             pfpUrl,
             createdAt: project._creationTime,
+            roomId: thread?.roomId ?? null,
+            threadId: thread?._id ?? null,
           };
         }),
       );
@@ -727,7 +754,8 @@ export const getWorkshopEvents = authQuery({
         endTime,
         maxSlots,
         usedSlots,
-        registrationCount: groupProjects.length,
+        registrationCount: activeProjects.length,
+        cancelledCount: groupProjects.length - activeProjects.length,
         statusBreakdown,
         attendees,
       });
