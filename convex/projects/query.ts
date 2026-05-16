@@ -5,6 +5,11 @@ import { QueryCtx } from "../_generated/server";
 import { UserRole } from "../constants";
 import { authQuery } from "../helper";
 import {
+  buildProjectGroups,
+  buildEventsFromGroups,
+  splitUpcomingPast,
+} from "./helper";
+import {
   addLabDays,
   endOfLabMonth,
   endOfLabWeek,
@@ -594,77 +599,94 @@ export const getWorkshopEvents = authQuery({
     }
     // "all" → no time filter
 
-    // ── Query projects using the new composite index ───────────────────────
-    const projects = await ctx.db
-      .query("projects")
-      .withIndex("by_type_bookingStartTime", (q) => {
-        if (minTime !== undefined) {
-          return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
-        }
-        if (maxTime !== undefined) {
-          return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
-        }
-        return q.eq("type", "WORKSHOP");
-      })
-      .collect();
-
-    // ── Filter by ownership for clients ────────────────────────────────────
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === UserRole.ADMIN || role === UserRole.MAKER;
-    const userFiltered = isPrivileged
-      ? projects
-      : projects.filter((p) => p.userId === callerId);
 
-    // ── Filter (skip null bookingStartTime, apply serviceId / startTime) ───
-    let filtered = userFiltered.filter((p) => p.bookingStartTime != null);
+    // ── For clients: query their own workshop projects only ────────────────
+    if (!isPrivileged) {
+      // Use the same indexed query but filtered to the caller's userId
+      const myProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_type_bookingStartTime", (q) => {
+          if (minTime !== undefined) {
+            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
+          }
+          if (maxTime !== undefined) {
+            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
+          }
+          return q.eq("type", "WORKSHOP");
+        })
+        .filter((q) => q.eq(q.field("userId"), callerId))
+        .collect();
 
+      const groups = buildProjectGroups(
+        myProjects,
+        args.serviceId,
+        args.startTime,
+      );
+      const events = await buildEventsFromGroups(ctx, groups);
+      return splitUpcomingPast(events, todayStart);
+    }
+
+    // ── For staff: start from workshop service schedules ─────────────────
+    // Load all services and filter to workshops in memory
+    const allServices = await ctx.db.query("services").collect();
+    let workshopServices = allServices.filter(
+      (s): s is Doc<"services"> & { serviceCategory: { type: "WORKSHOP" } } =>
+        s.serviceCategory.type === "WORKSHOP",
+    );
+
+    // Filter by serviceId if provided (calendar click-through)
     if (args.serviceId) {
-      filtered = filtered.filter((p) => p.service === args.serviceId);
-    }
-    if (args.startTime) {
-      filtered = filtered.filter((p) => p.bookingStartTime === args.startTime);
+      workshopServices = workshopServices.filter(
+        (s) => s._id === args.serviceId,
+      );
     }
 
-    // ── Group by (service, bookingStartTime) ───────────────────────────────
-    const groups = new Map<string, Doc<"projects">[]>();
-    for (const project of filtered) {
-      const key = `${project.service}:${project.bookingStartTime}`;
-      const existing = groups.get(key);
-      if (existing) {
-        existing.push(project);
-      } else {
-        groups.set(key, [project]);
+    if (workshopServices.length === 0) {
+      return { upcoming: [], past: [] };
+    }
+
+    // Load all workshop projects in time range for batch matching
+    let allProjects: Doc<"projects">[] = [];
+    if (status !== "upcoming" || true) {
+      // Always load projects to enrich slots that have registrations
+      allProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_type_bookingStartTime", (q) => {
+          if (minTime !== undefined) {
+            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
+          }
+          if (maxTime !== undefined) {
+            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
+          }
+          return q.eq("type", "WORKSHOP");
+        })
+        .collect();
+
+      // Also filter by serviceId / startTime on the project side
+      if (args.serviceId) {
+        allProjects = allProjects.filter((p) => p.service === args.serviceId);
+      }
+      if (args.startTime) {
+        allProjects = allProjects.filter(
+          (p) => p.bookingStartTime === args.startTime,
+        );
       }
     }
 
-    // ── Caches for service and userProfile lookups ────────────────────────
-    const serviceCache = new Map<string, Doc<"services">>();
-    const userProfileCache = new Map<string, Doc<"userProfile">>();
-
-    async function getService(id: Id<"services">): Promise<Doc<"services">> {
-      const key = id as string;
-      const cached = serviceCache.get(key);
-      if (cached) return cached;
-      const doc = await ctx.db.get(id);
-      if (!doc) throw new ConvexError("Service not found");
-      serviceCache.set(key, doc);
-      return doc;
+    // Build a map from (serviceId:bookingStartTime) → projects
+    const projectsByKey = new Map<string, Doc<"projects">[]>();
+    for (const p of allProjects) {
+      if (p.bookingStartTime == null) continue;
+      const key = `${p.service}:${p.bookingStartTime}`;
+      const existing = projectsByKey.get(key);
+      if (existing) existing.push(p);
+      else projectsByKey.set(key, [p]);
     }
 
-    async function getUserProfile(
-      id: Id<"userProfile">,
-    ): Promise<Doc<"userProfile">> {
-      const key = id as string;
-      const cached = userProfileCache.get(key);
-      if (cached) return cached;
-      const doc = await ctx.db.get(id);
-      if (!doc) throw new ConvexError("User profile not found");
-      userProfileCache.set(key, doc);
-      return doc;
-    }
-
-    // ── Build events from groups ──────────────────────────────────────────
-    const events: Array<{
+    // ── Iterate through all service schedules + time slots ──────────────
+    const scheduleEvents: Array<{
       serviceId: Id<"services">;
       serviceName: string;
       serviceSlug: string;
@@ -689,117 +711,116 @@ export const getWorkshopEvents = authQuery({
       }>;
     }> = [];
 
-    for (const [key, groupProjects] of groups.entries()) {
-      const [serviceIdStr, startTimeStr] = key.split(":");
-      const serviceId = serviceIdStr as unknown as Id<"services">;
-      const bookingStartTime = Number(startTimeStr);
+    for (const service of workshopServices) {
+      const cat = service.serviceCategory;
 
-      const service = await getService(serviceId);
+      for (const schedule of cat.schedules) {
+        // Filter schedule by date range
+        if (minTime !== undefined && schedule.date + 86_400_000 < minTime)
+          continue;
+        if (maxTime !== undefined && schedule.date >= maxTime) continue;
 
-      // Resolve schedule details
-      let endTime = bookingStartTime;
-      let maxSlots = 0;
-      let usedSlots = 0;
+        for (const timeSlot of schedule.timeSlots) {
+          // Filter time slot by time range
+          if (minTime !== undefined && timeSlot.startTime < minTime) continue;
+          if (maxTime !== undefined && timeSlot.startTime >= maxTime) continue;
 
-      if (service.serviceCategory.type === "WORKSHOP") {
-        const projectDate = getLabDayStartTimestamp(bookingStartTime);
-        const schedule = service.serviceCategory.schedules.find(
-          (s) => s.date === projectDate,
-        );
-        if (schedule) {
-          const timeSlot = schedule.timeSlots.find(
-            (ts) => ts.startTime === bookingStartTime,
+          // Filter by args.startTime if provided (calendar click-through)
+          if (args.startTime && timeSlot.startTime !== args.startTime) continue;
+
+          const key = `${service._id}:${timeSlot.startTime}`;
+          const groupProjects = projectsByKey.get(key) ?? [];
+
+          // Separate active vs cancelled/rejected projects
+          const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+          const activeProjects = groupProjects.filter(
+            (p) => !TERMINAL_STATUSES.has(p.status),
           );
-          if (timeSlot) {
-            endTime = timeSlot.endTime;
-            maxSlots = timeSlot.maxSlots;
-            usedSlots = timeSlot.usedUpSlots ?? 0;
+
+          // Build status breakdown (from all projects, including cancelled)
+          const statusBreakdown: Record<string, number> = {};
+          for (const p of groupProjects) {
+            statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
           }
+
+          // Load attendee profiles + threads for active projects
+          const threadPromises = activeProjects.map((project) =>
+            ctx.db
+              .query("threads")
+              .withIndex("projectId", (q) => q.eq("projectId", project._id))
+              .first(),
+          );
+          const threads = await Promise.all(threadPromises);
+          const threadByProjectId = new Map(
+            threads
+              .filter((t): t is NonNullable<typeof t> => t !== null)
+              .map((t) => [t.projectId as string, t]),
+          );
+
+          const userProfileCache = new Map<string, Doc<"userProfile">>();
+          async function getUserProfile(
+            id: Id<"userProfile">,
+          ): Promise<Doc<"userProfile">> {
+            const key = id as string;
+            const cached = userProfileCache.get(key);
+            if (cached) return cached;
+            const doc = await ctx.db.get(id);
+            if (!doc) throw new ConvexError("User profile not found");
+            userProfileCache.set(key, doc);
+            return doc;
+          }
+
+          const attendees = await Promise.all(
+            activeProjects.map(async (project) => {
+              const profile = await getUserProfile(project.userId);
+              let pfpUrl: string | null = null;
+              if (profile.profilePic) {
+                try {
+                  pfpUrl = await ctx.storage.getUrl(profile.profilePic);
+                } catch {
+                  // Gracefully handle inaccessible storage
+                }
+              }
+              const thread = threadByProjectId.get(project._id as string);
+              return {
+                projectId: project._id,
+                userId: project.userId,
+                name: profile.name,
+                email: profile.email,
+                status: project.status,
+                pfpUrl,
+                createdAt: project._creationTime,
+                roomId: thread?.roomId ?? null,
+                threadId: thread?._id ?? null,
+              };
+            }),
+          );
+
+          scheduleEvents.push({
+            serviceId: service._id,
+            serviceName: service.name,
+            serviceSlug: service.slug,
+            date: getLabDayStartTimestamp(timeSlot.startTime),
+            startTime: timeSlot.startTime,
+            endTime: timeSlot.endTime,
+            maxSlots: timeSlot.maxSlots,
+            usedSlots: timeSlot.usedUpSlots ?? 0,
+            registrationCount: activeProjects.length,
+            cancelledCount: groupProjects.length - activeProjects.length,
+            statusBreakdown,
+            attendees,
+          });
         }
       }
-
-      // Use the first project's bookingEndTime as fallback
-      if (groupProjects[0].bookingEndTime != null) {
-        endTime = groupProjects[0].bookingEndTime;
-      }
-
-      // Separate active vs cancelled/rejected projects
-      // Active projects drive the headline count and attendee list
-      const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
-      const activeProjects = groupProjects.filter(
-        (p) => !TERMINAL_STATUSES.has(p.status),
-      );
-
-      // Load attendee profiles (only for active projects)
-      // Load threads for all active projects to resolve chat links
-      const threadPromises = activeProjects.map((project) =>
-        ctx.db
-          .query("threads")
-          .withIndex("projectId", (q) => q.eq("projectId", project._id))
-          .first(),
-      );
-      const threads = await Promise.all(threadPromises);
-      const threadByProjectId = new Map(
-        threads
-          .filter((t): t is NonNullable<typeof t> => t !== null)
-          .map((t) => [t.projectId as string, t]),
-      );
-
-      const attendees = await Promise.all(
-        activeProjects.map(async (project) => {
-          const profile = await getUserProfile(project.userId);
-          let pfpUrl: string | null = null;
-          if (profile.profilePic) {
-            try {
-              pfpUrl = await ctx.storage.getUrl(profile.profilePic);
-            } catch {
-              // Gracefully handle inaccessible storage
-            }
-          }
-          const thread = threadByProjectId.get(project._id as string);
-          return {
-            projectId: project._id,
-            userId: project.userId,
-            name: profile.name,
-            email: profile.email,
-            status: project.status,
-            pfpUrl,
-            createdAt: project._creationTime,
-            roomId: thread?.roomId ?? null,
-            threadId: thread?._id ?? null,
-          };
-        }),
-      );
-
-      // Build status breakdown
-      const statusBreakdown: Record<string, number> = {};
-      for (const p of groupProjects) {
-        statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
-      }
-
-      events.push({
-        serviceId,
-        serviceName: service.name,
-        serviceSlug: service.slug,
-        date: getLabDayStartTimestamp(bookingStartTime),
-        startTime: bookingStartTime,
-        endTime,
-        maxSlots,
-        usedSlots,
-        registrationCount: activeProjects.length,
-        cancelledCount: groupProjects.length - activeProjects.length,
-        statusBreakdown,
-        attendees,
-      });
     }
 
     // ── Sort and split into upcoming / past ──────────────────────────────
-    const upcoming = events
+    const upcoming = scheduleEvents
       .filter((e) => e.startTime >= todayStart)
       .sort((a, b) => a.startTime - b.startTime)
       .slice(0, 50);
 
-    const past = events
+    const past = scheduleEvents
       .filter((e) => e.startTime < todayStart)
       .sort((a, b) => b.startTime - a.startTime)
       .slice(0, 50);

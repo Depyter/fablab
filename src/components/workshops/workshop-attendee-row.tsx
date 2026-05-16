@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import {
   PROJECT_STATUS_LABELS,
@@ -35,39 +36,39 @@ export type AttendeeInfo = {
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
   {
     pending: {
-      bg: "bg-amber-100 dark:bg-amber-900/30",
-      text: "text-amber-700 dark:text-amber-300",
-      dot: "bg-amber-400",
+      bg: "bg-amber-100",
+      text: "text-amber-800",
+      dot: "bg-amber-500",
     },
     paid: {
-      bg: "bg-teal-100 dark:bg-teal-900/30",
-      text: "text-teal-700 dark:text-teal-300",
-      dot: "bg-teal-400",
+      bg: "bg-fab-teal/20",
+      text: "text-fab-teal",
+      dot: "bg-fab-teal",
     },
     completed: {
-      bg: "bg-emerald-100 dark:bg-emerald-900/30",
-      text: "text-emerald-700 dark:text-emerald-300",
-      dot: "bg-emerald-400",
+      bg: "bg-emerald-100",
+      text: "text-emerald-800",
+      dot: "bg-emerald-500",
     },
     approved: {
-      bg: "bg-blue-100 dark:bg-blue-900/30",
-      text: "text-blue-700 dark:text-blue-300",
-      dot: "bg-blue-400",
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      dot: "bg-blue-500",
     },
     claimed: {
-      bg: "bg-slate-100 dark:bg-slate-800/30",
-      text: "text-slate-700 dark:text-slate-300",
-      dot: "bg-slate-400",
+      bg: "bg-slate-100",
+      text: "text-slate-700",
+      dot: "bg-slate-500",
     },
     rejected: {
-      bg: "bg-red-100 dark:bg-red-900/30",
-      text: "text-red-700 dark:text-red-300",
-      dot: "bg-red-400",
+      bg: "bg-red-100",
+      text: "text-red-800",
+      dot: "bg-red-500",
     },
     cancelled: {
-      bg: "bg-red-100 dark:bg-red-900/30",
-      text: "text-red-700 dark:text-red-300",
-      dot: "bg-red-400",
+      bg: "bg-red-100",
+      text: "text-red-800",
+      dot: "bg-red-500",
     },
   };
 
@@ -81,37 +82,6 @@ const WORKSHOP_TRANSITIONS: Record<string, ProjectStatusType[]> = {
   cancelled: [],
   claimed: [],
 };
-
-function AttendeeAvatar({
-  name,
-  pfpUrl,
-}: {
-  name: string;
-  pfpUrl: string | null;
-}) {
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  if (pfpUrl) {
-    return (
-      <img
-        src={pfpUrl}
-        alt={name}
-        className="h-7 w-7 shrink-0 rounded-full object-cover"
-      />
-    );
-  }
-
-  return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
-      {initials}
-    </div>
-  );
-}
 
 export function WorkshopAttendeeRow({
   attendee,
@@ -140,9 +110,25 @@ export function WorkshopAttendeeRow({
     }
   };
 
+  const initials = attendee.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-amber-50/50">
-      <AttendeeAvatar name={attendee.name} pfpUrl={attendee.pfpUrl} />
+      <Avatar size="sm">
+        {attendee.pfpUrl ? (
+          <AvatarImage src={attendee.pfpUrl} alt={attendee.name} />
+        ) : (
+          <AvatarFallback className="bg-amber-100 text-amber-700 text-[10px] font-bold">
+            {initials}
+          </AvatarFallback>
+        )}
+      </Avatar>
+
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium text-foreground">
           {attendee.name}
@@ -156,33 +142,35 @@ export function WorkshopAttendeeRow({
       {transitions.length > 0 && !readOnly ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               className={cn(
-                "h-7 gap-1 border-0 text-[10px] font-bold uppercase tracking-wider",
+                "inline-flex h-7 items-center gap-1 border-2 border-black px-2.5 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]",
                 colors.bg,
                 colors.text,
               )}
             >
-              <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
+              <span className={cn("h-2 w-2", colors.dot)} />
               {PROJECT_STATUS_LABELS[
                 attendee.status as keyof typeof PROJECT_STATUS_LABELS
               ] ?? attendee.status}
-              <ChevronDown className="h-3 w-3" />
-            </Button>
+              <ChevronDown className="h-3 w-3" strokeWidth={3} />
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[140px]">
+          <DropdownMenuContent
+            align="end"
+            className="min-w-36 border-2 border-black shadow-[4px_4px_0_0_#000]"
+          >
             {transitions.map((transition) => {
               const tColors =
                 STATUS_COLORS[transition] ?? STATUS_COLORS.pending;
               return (
                 <DropdownMenuItem
                   key={transition}
-                  className="gap-2 text-xs"
+                  className="gap-2 text-[10px] font-black uppercase tracking-wider"
                   onClick={() => handleStatusChange(transition)}
                 >
-                  <span className={cn("h-2 w-2 rounded-full", tColors.dot)} />
+                  <span className={cn("h-2 w-2", tColors.dot)} />
                   {PROJECT_STATUS_LABELS[transition] ?? transition}
                 </DropdownMenuItem>
               );
@@ -192,12 +180,12 @@ export function WorkshopAttendeeRow({
       ) : (
         <div
           className={cn(
-            "inline-flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-bold uppercase tracking-wider",
+            "inline-flex h-7 items-center gap-1.5 border-2 border-black px-2.5 text-[10px] font-black uppercase tracking-wider",
             colors.bg,
             colors.text,
           )}
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
+          <span className={cn("h-2 w-2", colors.dot)} />
           {PROJECT_STATUS_LABELS[
             attendee.status as keyof typeof PROJECT_STATUS_LABELS
           ] ?? attendee.status}

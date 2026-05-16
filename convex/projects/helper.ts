@@ -1,6 +1,6 @@
 import { ConvexError } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
-import { MutationCtx } from "../_generated/server";
+import { MutationCtx, QueryCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
@@ -1075,4 +1075,211 @@ export async function scheduleProjectUpdateEmail(
       total: pricingResult.total,
     },
   });
+}
+
+// ── Workshop event helpers ───────────────────────────────────────────────────
+// Shared between the workshops page query and any other code that needs to
+// aggregate workshop projects into event records.
+
+export function buildProjectGroups(
+  projects: Doc<"projects">[],
+  serviceId?: Id<"services">,
+  startTime?: number,
+): Map<string, Doc<"projects">[]> {
+  let filtered = projects.filter((p) => p.bookingStartTime != null);
+
+  if (serviceId) {
+    filtered = filtered.filter((p) => p.service === serviceId);
+  }
+  if (startTime) {
+    filtered = filtered.filter((p) => p.bookingStartTime === startTime);
+  }
+
+  const groups = new Map<string, Doc<"projects">[]>();
+  for (const project of filtered) {
+    const key = `${project.service}:${project.bookingStartTime}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(project);
+    } else {
+      groups.set(key, [project]);
+    }
+  }
+  return groups;
+}
+
+export async function buildEventsFromGroups(
+  ctx: QueryCtx,
+  groups: Map<string, Doc<"projects">[]>,
+) {
+  const serviceCache = new Map<string, Doc<"services">>();
+  const userProfileCache = new Map<string, Doc<"userProfile">>();
+
+  async function getService(id: Id<"services">): Promise<Doc<"services">> {
+    const key = id as string;
+    const cached = serviceCache.get(key);
+    if (cached) return cached;
+    const doc = await ctx.db.get(id);
+    if (!doc) throw new ConvexError("Service not found");
+    serviceCache.set(key, doc);
+    return doc;
+  }
+
+  async function getUserProfile(
+    id: Id<"userProfile">,
+  ): Promise<Doc<"userProfile">> {
+    const key = id as string;
+    const cached = userProfileCache.get(key);
+    if (cached) return cached;
+    const doc = await ctx.db.get(id);
+    if (!doc) throw new ConvexError("User profile not found");
+    userProfileCache.set(key, doc);
+    return doc;
+  }
+
+  const events: Array<{
+    serviceId: Id<"services">;
+    serviceName: string;
+    serviceSlug: string;
+    date: number;
+    startTime: number;
+    endTime: number;
+    maxSlots: number;
+    usedSlots: number;
+    registrationCount: number;
+    cancelledCount: number;
+    statusBreakdown: Record<string, number>;
+    attendees: Array<{
+      projectId: Id<"projects">;
+      userId: Id<"userProfile">;
+      name: string;
+      email: string;
+      status: string;
+      pfpUrl: string | null;
+      createdAt: number;
+      roomId: string | null;
+      threadId: string | null;
+    }>;
+  }> = [];
+
+  for (const [key, groupProjects] of groups.entries()) {
+    const [serviceIdStr, startTimeStr] = key.split(":");
+    const serviceId = serviceIdStr as unknown as Id<"services">;
+    const bookingStartTime = Number(startTimeStr);
+
+    const service = await getService(serviceId);
+
+    // Resolve schedule details
+    let endTime = bookingStartTime;
+    let maxSlots = 0;
+    let usedSlots = 0;
+
+    if (service.serviceCategory.type === "WORKSHOP") {
+      const projectDate = getLabDayStartTimestamp(bookingStartTime);
+      const schedule = service.serviceCategory.schedules.find(
+        (s) => s.date === projectDate,
+      );
+      if (schedule) {
+        const timeSlot = schedule.timeSlots.find(
+          (ts) => ts.startTime === bookingStartTime,
+        );
+        if (timeSlot) {
+          endTime = timeSlot.endTime;
+          maxSlots = timeSlot.maxSlots;
+          usedSlots = timeSlot.usedUpSlots ?? 0;
+        }
+      }
+    }
+
+    // Use the first project's bookingEndTime as fallback
+    if (groupProjects[0].bookingEndTime != null) {
+      endTime = groupProjects[0].bookingEndTime;
+    }
+
+    // Separate active vs cancelled/rejected projects
+    const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+    const activeProjects = groupProjects.filter(
+      (p) => !TERMINAL_STATUSES.has(p.status),
+    );
+
+    // Load attendee profiles + threads
+    const threadPromises = activeProjects.map((project) =>
+      ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", project._id))
+        .first(),
+    );
+    const threads = await Promise.all(threadPromises);
+    const threadByProjectId = new Map(
+      threads
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+        .map((t) => [t.projectId as string, t]),
+    );
+
+    const attendees = await Promise.all(
+      activeProjects.map(async (project) => {
+        const profile = await getUserProfile(project.userId);
+        let pfpUrl: string | null = null;
+        if (profile.profilePic) {
+          try {
+            pfpUrl = await ctx.storage.getUrl(profile.profilePic);
+          } catch {
+            // Gracefully handle inaccessible storage
+          }
+        }
+        const thread = threadByProjectId.get(project._id as string);
+        return {
+          projectId: project._id,
+          userId: project.userId,
+          name: profile.name,
+          email: profile.email,
+          status: project.status,
+          pfpUrl,
+          createdAt: project._creationTime,
+          roomId: thread?.roomId ?? null,
+          threadId: thread?._id ?? null,
+        };
+      }),
+    );
+
+    // Build status breakdown
+    const statusBreakdown: Record<string, number> = {};
+    for (const p of groupProjects) {
+      statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
+    }
+
+    events.push({
+      serviceId,
+      serviceName: service.name,
+      serviceSlug: service.slug,
+      date: getLabDayStartTimestamp(bookingStartTime),
+      startTime: bookingStartTime,
+      endTime,
+      maxSlots,
+      usedSlots,
+      registrationCount: activeProjects.length,
+      cancelledCount: groupProjects.length - activeProjects.length,
+      statusBreakdown,
+      attendees,
+    });
+  }
+
+  return events;
+}
+
+export function splitUpcomingPast(
+  events: Array<{ startTime: number }>,
+  todayStart: number,
+) {
+  const upcoming = events
+    .filter((e) => e.startTime >= todayStart)
+    .sort((a, b) => a.startTime - b.startTime)
+    .slice(0, 50);
+
+  const past = events
+    .filter((e) => e.startTime < todayStart)
+    .sort((a, b) => b.startTime - a.startTime)
+    .slice(0, 50);
+
+  return { upcoming, past };
 }

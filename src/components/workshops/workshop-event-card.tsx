@@ -9,8 +9,6 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatLabDate, formatLabTime } from "@/lib/lab-time";
 import {
@@ -44,39 +42,39 @@ export type WorkshopEvent = {
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
   {
     pending: {
-      bg: "bg-amber-100 dark:bg-amber-900/30",
-      text: "text-amber-700 dark:text-amber-300",
-      dot: "bg-amber-400",
+      bg: "bg-amber-100",
+      text: "text-amber-800",
+      dot: "bg-amber-500",
     },
     paid: {
-      bg: "bg-teal-100 dark:bg-teal-900/30",
-      text: "text-teal-700 dark:text-teal-300",
-      dot: "bg-teal-400",
+      bg: "bg-fab-teal/20",
+      text: "text-fab-teal",
+      dot: "bg-fab-teal",
     },
     completed: {
-      bg: "bg-emerald-100 dark:bg-emerald-900/30",
-      text: "text-emerald-700 dark:text-emerald-300",
-      dot: "bg-emerald-400",
+      bg: "bg-emerald-100",
+      text: "text-emerald-800",
+      dot: "bg-emerald-500",
     },
     approved: {
-      bg: "bg-blue-100 dark:bg-blue-900/30",
-      text: "text-blue-700 dark:text-blue-300",
-      dot: "bg-blue-400",
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      dot: "bg-blue-500",
     },
     claimed: {
-      bg: "bg-slate-100 dark:bg-slate-800/30",
-      text: "text-slate-700 dark:text-slate-300",
-      dot: "bg-slate-400",
+      bg: "bg-slate-100",
+      text: "text-slate-700",
+      dot: "bg-slate-500",
     },
     rejected: {
-      bg: "bg-red-100 dark:bg-red-900/30",
-      text: "text-red-700 dark:text-red-300",
-      dot: "bg-red-400",
+      bg: "bg-red-100",
+      text: "text-red-800",
+      dot: "bg-red-500",
     },
     cancelled: {
-      bg: "bg-red-100 dark:bg-red-900/30",
-      text: "text-red-700 dark:text-red-300",
-      dot: "bg-red-400",
+      bg: "bg-red-100",
+      text: "text-red-800",
+      dot: "bg-red-500",
     },
   };
 
@@ -103,16 +101,16 @@ function CapacityBar({
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-amber-100/60">
+      <div className="flex h-3 flex-1 overflow-hidden border-2 border-black bg-white">
         <div
           className={cn(
-            "h-full rounded-full transition-all duration-500",
-            isFull ? "bg-amber-500" : "bg-amber-400",
+            "h-full transition-all duration-500",
+            isFull ? "bg-fab-amber" : "bg-fab-teal",
           )}
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <span className="shrink-0 text-xs font-semibold text-amber-700">
+      <span className="shrink-0 text-sm font-black text-black">
         {usedSlots}/{maxSlots}
       </span>
     </div>
@@ -129,14 +127,14 @@ function StatusBadge({ status, count }: { status: string; count: number }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center gap-1.5 border-2 border-black px-2.5 py-1 text-[10px] font-black uppercase tracking-wider",
         colors.bg,
         colors.text,
       )}
     >
-      <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
+      <span className={cn("h-2 w-2", colors.dot)} />
       {STATUS_LABELS[status] ?? status}
-      <span className="ml-0.5 opacity-70">{count}</span>
+      <span className="ml-1">{count}</span>
     </span>
   );
 }
@@ -165,114 +163,124 @@ export function WorkshopEventCard({
     <div
       ref={cardRef}
       className={cn(
-        "overflow-hidden rounded-xl border transition-shadow",
-        highlight
-          ? "border-amber-400 shadow-lg shadow-amber-200/50 ring-2 ring-amber-400/30"
-          : "border-amber-200/60 shadow-sm hover:shadow-md",
+        "overflow-hidden border-4 border-black bg-white transition-all duration-200",
+        "shadow-[6px_6px_0_0_#000]",
+        highlight && "border-fab-amber shadow-[6px_6px_0_0_#d97706]",
       )}
     >
       {/* Header — clickable to expand/collapse */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-4 bg-gradient-to-r from-amber-50 to-amber-50/60 px-4 py-3 text-left transition-colors hover:from-amber-100/80 hover:to-amber-50/80"
-      >
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h3 className="truncate text-sm font-bold text-amber-900">
-            {event.serviceName}
-          </h3>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-amber-700/80">
-            <span className="inline-flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {formatLabDate(event.date, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {formatLabTime(event.startTime)} – {formatLabTime(event.endTime)}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" />
-              {event.registrationCount}{" "}
-              {event.registrationCount === 1 ? "attendee" : "attendees"}
-            </span>
-            {event.cancelledCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-red-500">
-                <XCircle className="h-3 w-3" />
-                {event.cancelledCount}{" "}
-                {event.cancelledCount === 1 ? "cancellation" : "cancellations"}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="shrink-0 text-amber-500 transition-transform duration-200">
-          {isExpanded ? (
-            <ChevronUp className="h-5 w-5" />
-          ) : (
-            <ChevronDown className="h-5 w-5" />
-          )}
-        </div>
-      </button>
-
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="space-y-4 border-t border-amber-200/50 px-4 py-3">
-          {/* Capacity bar */}
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/70">
-              Capacity
-            </p>
-            <CapacityBar
-              usedSlots={event.usedSlots}
-              maxSlots={event.maxSlots}
-            />
-          </div>
-
-          {/* Status breakdown */}
-          {Object.keys(event.statusBreakdown).length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/70">
-                Status Breakdown
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(event.statusBreakdown).map(
-                  ([status, count]) =>
-                    count > 0 && (
-                      <StatusBadge key={status} status={status} count={count} />
-                    ),
+      <div className="flex flex-col">
+        <button
+          type="button"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="w-full text-left"
+        >
+          <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6 sm:py-5">
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-2xl font-black uppercase tracking-tighter text-black sm:text-3xl">
+                {event.serviceName}
+              </h3>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <span className="inline-flex items-center gap-1.5 text-sm font-bold text-black/70">
+                  <Calendar className="h-4 w-4 text-fab-amber" />
+                  {formatLabDate(event.date, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm font-bold text-black/70">
+                  <Clock className="h-4 w-4 text-fab-teal" />
+                  {formatLabTime(event.startTime)} –{" "}
+                  {formatLabTime(event.endTime)}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm font-bold text-black/70">
+                  <Users className="h-4 w-4 text-fab-magenta" />
+                  {event.registrationCount}{" "}
+                  {event.registrationCount === 1 ? "attendee" : "attendees"}
+                </span>
+                {event.cancelledCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-bold text-red-600">
+                    <XCircle className="h-4 w-4" />
+                    {event.cancelledCount}{" "}
+                    {event.cancelledCount === 1
+                      ? "cancellation"
+                      : "cancellations"}
+                  </span>
                 )}
               </div>
             </div>
-          )}
+            <div className="shrink-0 text-black/40 transition-transform duration-200">
+              {isExpanded ? (
+                <ChevronUp className="h-6 w-6" strokeWidth={3} />
+              ) : (
+                <ChevronDown className="h-6 w-6" strokeWidth={3} />
+              )}
+            </div>
+          </div>
+        </button>
 
-          {/* Attendee list */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/70">
-              Attendees ({event.attendees.length})
-            </p>
-            {event.attendees.length === 0 ? (
-              <p className="py-2 text-center text-xs text-muted-foreground">
-                No attendees yet
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="space-y-5 border-t-4 border-black px-5 py-5 sm:px-6 sm:py-6">
+            {/* Capacity bar */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Capacity
               </p>
-            ) : (
-              <div className="divide-y divide-amber-100 rounded-lg border border-amber-200/60">
-                {event.attendees.map((attendee) => (
-                  <WorkshopAttendeeRow
-                    key={attendee.projectId}
-                    attendee={attendee as AttendeeInfo}
-                    readOnly={readOnly}
-                    onOpenProjectDetails={onOpenProjectDetails}
-                  />
-                ))}
+              <CapacityBar
+                usedSlots={event.usedSlots}
+                maxSlots={event.maxSlots}
+              />
+            </div>
+
+            {/* Status breakdown */}
+            {Object.keys(event.statusBreakdown).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Status Breakdown
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(event.statusBreakdown).map(
+                    ([status, count]) =>
+                      count > 0 && (
+                        <StatusBadge
+                          key={status}
+                          status={status}
+                          count={count}
+                        />
+                      ),
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Attendee list */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Attendees ({event.attendees.length})
+              </p>
+              {event.attendees.length === 0 ? (
+                <p className="border-2 border-dashed border-black/20 py-4 text-center text-sm font-bold text-black/40">
+                  No attendees yet
+                </p>
+              ) : (
+                <div className="divide-y-2 divide-black border-2 border-black">
+                  {event.attendees.map((attendee) => (
+                    <WorkshopAttendeeRow
+                      key={attendee.projectId}
+                      attendee={attendee as AttendeeInfo}
+                      readOnly={readOnly}
+                      onOpenProjectDetails={onOpenProjectDetails}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

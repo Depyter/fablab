@@ -1,8 +1,8 @@
 "use client";
 
-import { DetailCard } from "./detail-card";
 import { formatLabDate, formatLabTime } from "@/lib/lab-time";
 import type { ProjectData } from "../project-details-content";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 
 interface WorkshopPricingSummaryProps {
   project: ProjectData;
@@ -45,60 +45,42 @@ export function WorkshopPricingSummary({
       : "—";
 
   return (
-    <DetailCard
-      title="Pricing"
-      titleColor="var(--fab-teal)"
-      bodyClassName="space-y-3"
-    >
-      {/* Workshop info */}
-      <div className="space-y-1">
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: "var(--fab-text-dim)" }}
-        >
-          Workshop
-        </p>
-        <p
-          className="text-sm font-medium"
-          style={{ color: "var(--fab-text-primary)" }}
-        >
-          {service.name}
-        </p>
-        <p className="text-xs" style={{ color: "var(--fab-text-muted)" }}>
-          {dateStr} · {timeStr}
-        </p>
-      </div>
-
-      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
-
-      {/* Variant + Amount */}
-      <div className="grid min-w-0 grid-cols-2 gap-4">
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>Pricing</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Workshop info */}
         <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Variant
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Workshop
           </p>
-          <p
-            className="text-sm capitalize"
-            style={{ color: "var(--fab-text-primary)" }}
-          >
-            {project.pricing}
+          <p className="text-sm font-medium">{service.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {dateStr} · {timeStr}
           </p>
         </div>
-        <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Amount
-          </p>
-          <p className="text-lg font-bold" style={{ color: "var(--fab-teal)" }}>
-            ₱{amount.toFixed(2)}
-          </p>
+
+        <div className="h-px bg-border" />
+
+        {/* Variant + Amount */}
+        <div className="grid min-w-0 grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Variant
+            </p>
+            <p className="text-sm capitalize">{project.pricing}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Amount
+            </p>
+            <p className="text-lg font-bold text-emerald-600">
+              ₱{amount.toFixed(2)}
+            </p>
+          </div>
         </div>
-      </div>
-    </DetailCard>
+      </CardContent>
+    </Card>
   );
 }

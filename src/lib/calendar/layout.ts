@@ -275,6 +275,8 @@ export function buildCalendarDayScheduleRows(args: {
   const usagesByMachine = groupCalendarUsagesByMachine(args.usages);
 
   for (const section of sections) {
+    const sectionStartIndex = rows.length;
+
     if (section.label) {
       rows.push({
         id: `section-${section.label}`,
@@ -283,6 +285,8 @@ export function buildCalendarDayScheduleRows(args: {
         rowHeight: CALENDAR_DAY_SECTION_HEIGHT,
       });
     }
+
+    let sectionHasRows = false;
 
     for (const machine of section.machines) {
       const machineUsages = usagesByMachine.get(machine.id) ?? [];
@@ -300,6 +304,17 @@ export function buildCalendarDayScheduleRows(args: {
         machine.serviceCategoryType === "WORKSHOP"
           ? CALENDAR_DAY_WORKSHOP_ROW_HEIGHT
           : CALENDAR_DAY_ROW_HEIGHT;
+
+      // Skip workshop machines with no bookings — no need to show empty
+      // workshop rows, there's nothing to see on that day.
+      if (
+        machine.serviceCategoryType === "WORKSHOP" &&
+        packedEntries.length === 0
+      ) {
+        continue;
+      }
+
+      sectionHasRows = true;
 
       if (packedEntries.length === 0) {
         rows.push({
@@ -339,6 +354,11 @@ export function buildCalendarDayScheduleRows(args: {
           rowHeight,
         });
       }
+    }
+
+    // Remove the section header when none of its machines produced rows
+    if (!sectionHasRows && section.label) {
+      rows.splice(sectionStartIndex, 1);
     }
   }
 
