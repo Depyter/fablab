@@ -49,10 +49,6 @@ export function WorkshopTimeSlotPicker({
         <Label className="text-lg font-black uppercase tracking-tighter">
           Select Workshop Time Slot (PST)
         </Label>
-        <p className="text-sm text-muted-foreground">
-          Choose an available slot for this workshop. All dates and times are in
-          Philippine Standard Time (PST).
-        </p>
       </div>
       <div className="flex flex-col gap-6">
         {schedules.map((schedule) => (

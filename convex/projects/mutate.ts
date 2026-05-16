@@ -512,7 +512,30 @@ export const updateUsage = authMutation({
       updates.resource = nextResourceId;
     }
 
-    await ctx.db.patch(usage._id, updates);
+    // ── Workshop slot tracking ────────────────────────────────────────────
+    if (service.serviceCategory.type === "WORKSHOP" && bookingChanged) {
+      // Decrement the old time slot before updating the record
+      await decrementWorkshopSlot(ctx, service, usage);
+
+      // Re-fetch the service — decrementWorkshopSlot patched the document
+      const refreshedService = await ctx.db.get(project.service);
+      if (!refreshedService) throw new ConvexError("Service not found.");
+
+      // Update usage time
+      await ctx.db.patch(usage._id, updates);
+
+      // Increment the new time slot
+      await incrementWorkshopSlot(ctx, refreshedService, booking);
+
+      // Keep project-level booking times in sync with the single workshop usage
+      await ctx.db.patch(project._id, {
+        bookingStartTime: nextStartTime,
+        bookingEndTime: nextEndTime,
+      });
+    } else {
+      await ctx.db.patch(usage._id, updates);
+    }
+
     await syncProjectTotalInvoice(ctx, project._id);
     await scheduleProjectUpdateEmail(ctx, project._id);
 
@@ -734,6 +757,35 @@ export const updateProjectSchedule = authMutation({
       project.bookingEndTime === args.endTime
     ) {
       return;
+    }
+
+    // ── Workshop slot + usage sync ──────────────────────────────────────────
+    const service = await ctx.db.get(project.service);
+    if (service && service.serviceCategory.type === "WORKSHOP") {
+      const usageDocs = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", project._id))
+        .collect();
+
+      // Workshops have a single usage record — keep it in sync with schedule
+      const usage = usageDocs[0];
+      if (usage) {
+        // Decrement old slot
+        await decrementWorkshopSlot(ctx, service, usage);
+
+        // Re-fetch service — decrementWorkshopSlot patched the document
+        const refreshedService = await ctx.db.get(project.service);
+        if (!refreshedService) throw new ConvexError("Service not found.");
+
+        // Update usage time to match new schedule
+        await ctx.db.patch(usage._id, {
+          startTime: args.startTime,
+          endTime: args.endTime,
+        });
+
+        // Increment new slot
+        await incrementWorkshopSlot(ctx, refreshedService, booking);
+      }
     }
 
     await ctx.db.patch(project._id, {
