@@ -7,7 +7,6 @@ import { ViewHeaderMain } from "@/components/ui/view-header";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportExportButton } from "@/components/reports/report-export";
-import { ReportPrintView } from "@/components/reports/report-print-view";
 import type { Id } from "@convex/_generated/dataModel";
 import { getCurrentTimestamp } from "@/lib/lab-time";
 import { ReportsClient } from "./_client";
@@ -69,26 +68,18 @@ function ReportsPageHeader({
   onDateFromChange,
   onDateToChange,
   exportData,
-  onPrint,
 }: {
   dateFrom: number;
   dateTo: number;
   onDateFromChange: (value: number) => void;
   onDateToChange: (value: number) => void;
   exportData: HeaderData | null;
-  onPrint: () => void;
 }) {
   return (
     <DataViewPageHeader>
       <ViewHeaderMain>
         <h1 className="text-lg font-semibold shrink-0">Reports</h1>
         <div className="flex shrink-0 items-center gap-2 ml-auto">
-          <ReportDateRange
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            onDateFromChange={onDateFromChange}
-            onDateToChange={onDateToChange}
-          />
           {exportData && (
             <ReportExportButton
               data={{
@@ -96,9 +87,14 @@ function ReportsPageHeader({
                 dateFrom,
                 dateTo,
               }}
-              onPrint={onPrint}
             />
           )}
+          <ReportDateRange
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDateFromChange={onDateFromChange}
+            onDateToChange={onDateToChange}
+          />
         </div>
       </ViewHeaderMain>
     </DataViewPageHeader>
@@ -148,10 +144,6 @@ export function ReportsPageContent() {
       }
     : null;
 
-  const handlePrint = React.useCallback(() => {
-    window.print();
-  }, []);
-
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
       <ReportsPageHeader
@@ -160,7 +152,6 @@ export function ReportsPageContent() {
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         exportData={exportData}
-        onPrint={handlePrint}
       />
       <ReportsClient
         dateFrom={dateFrom}
@@ -169,15 +160,6 @@ export function ReportsPageContent() {
         revenue={revenue}
         downtime={downtime}
       />
-      {exportData && (
-        <ReportPrintView
-          data={{
-            ...exportData,
-            dateFrom,
-            dateTo,
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Download, Printer } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -460,10 +460,9 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
 
 interface ReportExportButtonProps {
   data: ExportData;
-  onPrint: () => void;
 }
 
-export function ReportExportButton({ data, onPrint }: ReportExportButtonProps) {
+export function ReportExportButton({ data }: ReportExportButtonProps) {
   const [open, setOpen] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
 
@@ -489,11 +488,6 @@ export function ReportExportButton({ data, onPrint }: ReportExportButtonProps) {
     }
   }, [data]);
 
-  const handlePdf = React.useCallback(() => {
-    setOpen(false);
-    onPrint();
-  }, [onPrint]);
-
   const disabled = !data.metrics;
 
   return (
@@ -518,15 +512,6 @@ export function ReportExportButton({ data, onPrint }: ReportExportButtonProps) {
           <PopoverTitle>Export report</PopoverTitle>
         </PopoverHeader>
         <div className="flex flex-col gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 justify-start text-sm px-3 font-normal"
-            onClick={handlePdf}
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Save as PDF
-          </Button>
           <Button
             variant="outline"
             size="sm"
