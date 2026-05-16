@@ -11,7 +11,6 @@ import { UploadedFile } from "@/components/file-upload/types";
 import { ProjectInfoCard } from "./cards/project-info-card";
 import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
-import { WorkshopQuickActions } from "./cards/workshop-quick-actions";
 import { WorkshopPricingSummary } from "./cards/workshop-pricing-summary";
 import {
   MessageSquare,
@@ -380,64 +379,51 @@ export function ProjectDetailsContent({
 
         {/* ── Workshop layout ──────────────────────────────────────────── */}
         {project.type === "WORKSHOP" ? (
-          <div className="space-y-5">
-            <WorkshopQuickActions
-              projectId={project._id}
-              projectStatus={project.status}
-              projectType={project.type}
-              roomId={project.roomId}
-              threadId={project.threadId}
-              clientName={project.client?.name ?? ""}
-              onUpdateStatus={onUpdateStatus}
-              onMarkPaid={onMarkPaid}
-              isClient={isClient}
-            />
+          <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
+            {/* ── Left column ──────────────────────────────────────── */}
+            <div className="min-w-0 space-y-4 lg:col-span-7">
+              <ProjectInfoCard
+                description={project.description}
+                serviceType={project.fulfillmentMode}
+                material={project.material}
+                bookingDateStr={bookingDateStr}
+                bookingTimeRange={bookingTimeRange}
+                resolvedFiles={project.resolvedFiles}
+                submittedBy={project.client?.name}
+                submittedAt={project.requestedDate}
+                canEdit={canEdit}
+                isEditing={isEditing}
+                isSaving={isSaving}
+                onEdit={openEdit}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+                editDescription={editDescription}
+                setEditDescription={setEditDescription}
+                editNotes={editNotes}
+                setEditNotes={setEditNotes}
+                editFiles={editFiles}
+                setEditFiles={setEditFiles}
+                editMaterial={editMaterial}
+                setEditMaterial={setEditMaterial}
+                editServiceType={editServiceType}
+                setEditServiceType={setEditServiceType}
+                hideServiceType
+                workshop
+              />
 
-            <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
-              {/* ── Left column ──────────────────────────────────────── */}
-              <div className="min-w-0 space-y-4 lg:col-span-7">
-                <ProjectInfoCard
-                  description={project.description}
-                  serviceType={project.fulfillmentMode}
-                  material={project.material}
-                  bookingDateStr={bookingDateStr}
-                  bookingTimeRange={bookingTimeRange}
-                  resolvedFiles={project.resolvedFiles}
-                  submittedBy={project.client?.name}
-                  submittedAt={project.requestedDate}
-                  canEdit={canEdit}
-                  isEditing={isEditing}
-                  isSaving={isSaving}
-                  onEdit={openEdit}
-                  onSave={saveEdit}
-                  onCancel={cancelEdit}
-                  editDescription={editDescription}
-                  setEditDescription={setEditDescription}
-                  editNotes={editNotes}
-                  setEditNotes={setEditNotes}
-                  editFiles={editFiles}
-                  setEditFiles={setEditFiles}
-                  editMaterial={editMaterial}
-                  setEditMaterial={setEditMaterial}
-                  editServiceType={editServiceType}
-                  setEditServiceType={setEditServiceType}
-                  hideServiceType
+              {!isClient && (
+                <ReceiptCard
+                  receipt={project.receipt}
+                  status={project.status}
+                  projectType={project.type}
+                  onMarkPaid={onMarkPaid}
                 />
+              )}
+            </div>
 
-                {!isClient && (
-                  <ReceiptCard
-                    receipt={project.receipt}
-                    status={project.status}
-                    projectType={project.type}
-                    onMarkPaid={onMarkPaid}
-                  />
-                )}
-              </div>
-
-              {/* ── Right column ─────────────────────────────────────── */}
-              <div className="min-w-0 space-y-4 lg:col-span-5">
-                <WorkshopPricingSummary project={project} />
-              </div>
+            {/* ── Right column ─────────────────────────────────────── */}
+            <div className="min-w-0 space-y-4 lg:col-span-5">
+              <WorkshopPricingSummary project={project} />
             </div>
           </div>
         ) : (

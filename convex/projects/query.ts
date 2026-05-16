@@ -109,6 +109,7 @@ function paginateProjects<T>(
 export const getProjects = authQuery({
   args: {
     paginationOpts: paginationOptsValidator,
+    type: v.optional(v.union(v.literal("WORKSHOP"), v.literal("FABRICATION"))),
     statusFilter: v.optional(v.string()),
     dateFilter: v.optional(v.string()),
     sortBy: v.optional(v.string()),
@@ -147,6 +148,12 @@ export const getProjects = authQuery({
         );
       }
 
+      if (args.type) {
+        searchQuery = searchQuery.filter((q) =>
+          q.eq(q.field("type"), args.type!),
+        );
+      }
+
       const result = await searchQuery.paginate(args.paginationOpts);
       const enrichedPage = await enrichProjects(ctx, result.page);
       return { ...result, page: enrichedPage };
@@ -177,6 +184,10 @@ export const getProjects = authQuery({
             hasStatusFilter &&
             project.status !== (args.statusFilter as StatusUnion)
           ) {
+            return false;
+          }
+
+          if (args.type && project.type !== args.type) {
             return false;
           }
 
@@ -222,6 +233,11 @@ export const getProjects = authQuery({
                 q.eq("status", args.statusFilter as StatusUnion),
               )
               .order("asc");
+          } else if (args.type) {
+            orderedQuery = ctx.db
+              .query("projects")
+              .withIndex("by_type", (q) => q.eq("type", args.type!))
+              .order("asc");
           } else {
             orderedQuery = baseQuery.order("asc");
           }
@@ -233,6 +249,11 @@ export const getProjects = authQuery({
               .withIndex("by_status", (q) =>
                 q.eq("status", args.statusFilter as StatusUnion),
               )
+              .order("desc");
+          } else if (args.type) {
+            orderedQuery = ctx.db
+              .query("projects")
+              .withIndex("by_type", (q) => q.eq("type", args.type!))
               .order("desc");
           } else {
             orderedQuery = baseQuery.order("desc");
@@ -260,6 +281,10 @@ export const getProjects = authQuery({
       query = query.filter((q) =>
         q.eq(q.field("status"), args.statusFilter as StatusUnion),
       );
+    }
+
+    if (args.type) {
+      query = query.filter((q) => q.eq(q.field("type"), args.type!));
     }
 
     const result = await query.paginate(args.paginationOpts);
@@ -344,13 +369,13 @@ export const getProject = authQuery({
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
 
-    // Access control: admin sees all; maker sees assigned projects;
+    // Access control: admin and maker see all projects;
     // client sees only their own.
     const { role, _id: callerId } = ctx.profile;
 
     const canView =
       role === UserRole.ADMIN ||
-      (role === UserRole.MAKER && project.assignedMaker === callerId) ||
+      role === UserRole.MAKER ||
       project.userId === callerId;
 
     if (!canView) {
@@ -583,8 +608,15 @@ export const getWorkshopEvents = authQuery({
       })
       .collect();
 
+    // ── Filter by ownership for clients ────────────────────────────────────
+    const { role, _id: callerId } = ctx.profile;
+    const isPrivileged = role === UserRole.ADMIN || role === UserRole.MAKER;
+    const userFiltered = isPrivileged
+      ? projects
+      : projects.filter((p) => p.userId === callerId);
+
     // ── Filter (skip null bookingStartTime, apply serviceId / startTime) ───
-    let filtered = projects.filter((p) => p.bookingStartTime != null);
+    let filtered = userFiltered.filter((p) => p.bookingStartTime != null);
 
     if (args.serviceId) {
       filtered = filtered.filter((p) => p.service === args.serviceId);

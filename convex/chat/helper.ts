@@ -1,19 +1,21 @@
-import { UserIdentity } from "convex/server";
+import { Doc } from "../_generated/dataModel";
 import { MutationCtx, QueryCtx } from "../_generated/server";
 import { ConvexError } from "convex/values";
 import { Id } from "../_generated/dataModel";
 
+/**
+ * Check whether a user has access to a room.
+ *
+ * Admins and makers have **implicit** access to all rooms.
+ * Only client users require an explicit roomMembers record.
+ */
 export async function checkRoomMembership(
   roomId: Id<"rooms">,
   ctx: QueryCtx | MutationCtx,
-  user: UserIdentity,
+  profile: Doc<"userProfile">,
 ) {
-  const profile = await ctx.db
-    .query("userProfile")
-    .withIndex("by_userId", (q) => q.eq("userId", user.subject))
-    .first();
-
-  if (!profile) throw new ConvexError("User exist but no profile is created!");
+  // Admins and makers have implicit access to all rooms
+  if (profile.role === "admin" || profile.role === "maker") return;
 
   const membership = await ctx.db
     .query("roomMembers")
@@ -23,6 +25,4 @@ export async function checkRoomMembership(
     .first();
 
   if (!membership) throw new ConvexError("Unauthorized access to a room.");
-
-  return;
 }

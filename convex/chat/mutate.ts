@@ -116,7 +116,7 @@ export const updateRoomName = authMutation({
 });
 
 export const addNewMember = authMutation({
-  role: ["admin"],
+  role: ["admin", "maker"],
   args: {
     roomId: v.id("rooms"),
     userId: v.id("userProfile"),
@@ -124,14 +124,6 @@ export const addNewMember = authMutation({
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
     if (!room) throw new ConvexError("Room not found");
-
-    // if (
-    //   ctx.profile.role !== "admin" &&
-    //   ctx.profile.role !== "maker" &&
-    //   room.creator !== ctx.profile._id
-    // ) {
-    //   throw new ConvexError("Unauthorized to update room settings");
-    // }
 
     const existing = await ctx.db
       .query("roomMembers")
@@ -152,7 +144,7 @@ export const addNewMember = authMutation({
 });
 
 export const removeMember = authMutation({
-  role: ["admin"],
+  role: ["admin", "maker"],
   args: {
     roomId: v.id("rooms"),
     userId: v.id("userProfile"),
@@ -160,14 +152,6 @@ export const removeMember = authMutation({
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
     if (!room) throw new ConvexError("Room not found");
-
-    // if (
-    //   ctx.profile.role !== "admin" &&
-    //   ctx.profile.role !== "maker" &&
-    //   room.creator !== ctx.profile._id
-    // ) {
-    //   throw new ConvexError("Unauthorized to update room settings");
-    // }
 
     const existing = await ctx.db
       .query("roomMembers")

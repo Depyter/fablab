@@ -54,6 +54,10 @@ interface ProjectInfoCardProps {
 
   /** When true, hides the Service Type field (used for workshops which are always full-service). */
   hideServiceType?: boolean;
+
+  /** When true, hides description, material, notes, and booking date/time.
+   *  Used for workshops where the pricing card already shows booking info. */
+  workshop?: boolean;
 }
 
 export function ProjectInfoCard({
@@ -83,6 +87,7 @@ export function ProjectInfoCard({
   editServiceType,
   setEditServiceType,
   hideServiceType = false,
+  workshop = false,
 }: ProjectInfoCardProps) {
   return (
     <DetailCard
@@ -95,107 +100,121 @@ export function ProjectInfoCard({
       bodyClassName="space-y-4"
     >
       {/* Description */}
-      <div className="space-y-1">
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: "var(--fab-text-dim)" }}
-        >
-          Description
-        </p>
-        {isEditing ? (
-          <Textarea
-            value={editDescription}
-            onChange={(e) => setEditDescription(e.target.value)}
-            rows={3}
-            className="text-sm"
-            placeholder="Project description…"
-          />
-        ) : (
-          <p
-            className="wrap-break-word whitespace-pre-line text-sm"
-            style={{ color: "var(--fab-text-primary)" }}
-          >
-            {description}
-          </p>
-        )}
-      </div>
-
-      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
-
-      {/* Service type + material */}
-      <div
-        className={cn(
-          "grid min-w-0 gap-4",
-          hideServiceType ? "grid-cols-1" : "grid-cols-2",
-        )}
-      >
-        {!hideServiceType && (
-          <div className="space-y-1">
-            <p
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Service Type
-            </p>
-            {isEditing ? (
-              <Select
-                value={editServiceType}
-                onValueChange={(v) =>
-                  setEditServiceType(v as FulfillmentModeType)
-                }
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="self-service">Self Service</SelectItem>
-                  <SelectItem value="full-service">Full Service</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <p
-                className="text-sm capitalize"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {serviceType}
-              </p>
-            )}
-          </div>
-        )}
+      {!workshop && (
         <div className="space-y-1">
           <p
             className="text-[10px] font-bold uppercase tracking-[0.12em]"
             style={{ color: "var(--fab-text-dim)" }}
           >
-            Material
+            Description
           </p>
           {isEditing ? (
-            <Select
-              value={editMaterial}
-              onValueChange={(v) =>
-                setEditMaterial(v as "provide-own" | "buy-from-lab")
-              }
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="provide-own">Provide Own</SelectItem>
-                <SelectItem value="buy-from-lab">Buy from Lab</SelectItem>
-              </SelectContent>
-            </Select>
+            <Textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={3}
+              className="text-sm"
+              placeholder="Project description…"
+            />
           ) : (
             <p
-              className="text-sm capitalize"
+              className="wrap-break-word whitespace-pre-line text-sm"
               style={{ color: "var(--fab-text-primary)" }}
             >
-              {material}
+              {description}
             </p>
           )}
         </div>
-      </div>
+      )}
 
-      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
+      {!workshop && (
+        <div
+          className="h-px"
+          style={{ background: "var(--fab-border-soft)" }}
+        />
+      )}
+
+      {/* Service type + material — both hidden for workshops */}
+      {!workshop && (
+        <>
+          <div
+            className={cn(
+              "grid min-w-0 gap-4",
+              hideServiceType ? "grid-cols-1" : "grid-cols-2",
+            )}
+          >
+            {!hideServiceType && (
+              <div className="space-y-1">
+                <p
+                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--fab-text-dim)" }}
+                >
+                  Service Type
+                </p>
+                {isEditing ? (
+                  <Select
+                    value={editServiceType}
+                    onValueChange={(v) =>
+                      setEditServiceType(v as FulfillmentModeType)
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="self-service">Self Service</SelectItem>
+                      <SelectItem value="full-service">Full Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p
+                    className="text-sm capitalize"
+                    style={{ color: "var(--fab-text-primary)" }}
+                  >
+                    {serviceType}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="space-y-1">
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Material
+              </p>
+              {isEditing ? (
+                <Select
+                  value={editMaterial}
+                  onValueChange={(v) =>
+                    setEditMaterial(v as "provide-own" | "buy-from-lab")
+                  }
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="provide-own">Provide Own</SelectItem>
+                    <SelectItem value="buy-from-lab">Buy from Lab</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p
+                  className="text-sm capitalize"
+                  style={{ color: "var(--fab-text-primary)" }}
+                >
+                  {material}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div
+            className="h-px"
+            style={{ background: "var(--fab-border-soft)" }}
+          />
+        </>
+      )}
 
       {/* Attachments */}
       <div className="space-y-1">
@@ -226,63 +245,85 @@ export function ProjectInfoCard({
         )}
       </div>
 
-      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
-
-      {/* Booking date + time */}
-      <div className="grid min-w-0 grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Booking Date
-          </p>
-          <p className="text-sm" style={{ color: "var(--fab-text-primary)" }}>
-            {bookingDateStr}
-          </p>
-        </div>
-        <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
-            Time Range
-          </p>
-          <p className="text-sm" style={{ color: "var(--fab-text-primary)" }}>
-            {bookingTimeRange}
-          </p>
-        </div>
-      </div>
-
-      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
-
-      {/* Notes */}
-      <div className="space-y-1">
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: "var(--fab-text-dim)" }}
-        >
-          Notes
-        </p>
-        {isEditing ? (
-          <Textarea
-            value={editNotes}
-            onChange={(e) => setEditNotes(e.target.value)}
-            rows={2}
-            className="text-sm"
-            placeholder="Additional notes…"
+      {/* Booking date + time — hidden for workshops (shown in pricing card) */}
+      {!workshop && (
+        <>
+          <div
+            className="h-px"
+            style={{ background: "var(--fab-border-soft)" }}
           />
-        ) : (
-          <p
-            className="text-sm"
-            style={{
-              color: notes ? "var(--fab-text-muted)" : "var(--fab-text-dim)",
-            }}
-          >
-            {notes || "No notes provided"}
-          </p>
-        )}
-      </div>
+
+          <div className="grid min-w-0 grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Booking Date
+              </p>
+              <p
+                className="text-sm"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                {bookingDateStr}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--fab-text-dim)" }}
+              >
+                Time Range
+              </p>
+              <p
+                className="text-sm"
+                style={{ color: "var(--fab-text-primary)" }}
+              >
+                {bookingTimeRange}
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Notes — hidden for workshops */}
+      {!workshop && (
+        <>
+          <div
+            className="h-px"
+            style={{ background: "var(--fab-border-soft)" }}
+          />
+
+          <div className="space-y-1">
+            <p
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: "var(--fab-text-dim)" }}
+            >
+              Notes
+            </p>
+            {isEditing ? (
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+                placeholder="Additional notes…"
+              />
+            ) : (
+              <p
+                className="text-sm"
+                style={{
+                  color: notes
+                    ? "var(--fab-text-muted)"
+                    : "var(--fab-text-dim)",
+                }}
+              >
+                {notes || "No notes provided"}
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
 

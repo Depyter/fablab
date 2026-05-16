@@ -7,6 +7,7 @@ import {
   formatLabDate,
   formatLabTime,
   getCurrentTimestamp,
+  getLabDayStartTimestamp,
   getLabWeekday,
 } from "../../src/lib/lab-time";
 import {
@@ -551,19 +552,9 @@ export async function ensureProjectRoom(
     participantId: userProfile._id,
   });
 
-  const admins = await ctx.db
-    .query("userProfile")
-    .withIndex("by_role", (q) => q.eq("role", "admin"))
-    .collect();
-
-  for (const admin of admins) {
-    if (admin._id !== userProfile._id) {
-      await ctx.db.insert("roomMembers", {
-        roomId,
-        participantId: admin._id,
-      });
-    }
-  }
+  // Admins and makers have implicit access to all rooms — they don't need
+  // explicit roomMembers records. Only the client (project owner) is added
+  // so the client-facing query gate works correctly.
 
   const welcomeContent = `Welcome to ${workspaceName}! This is your main room for general inquiries.`;
   const generalThreadId = await ctx.db.insert("threads", {
@@ -841,6 +832,41 @@ export async function applyStatusChange(
     await syncProjectTotalInvoice(ctx, project._id);
   }
 
+  // Re-acquire workshop slot & re-create usage when reactivating from
+  // cancelled/rejected — check capacity before allowing the transition.
+  if (
+    (project.status === "cancelled" || project.status === "rejected") &&
+    status !== "cancelled" &&
+    status !== "rejected" &&
+    project.bookingStartTime != null
+  ) {
+    const service = await ctx.db.get(project.service);
+    if (service && service.serviceCategory.type === "WORKSHOP") {
+      const schedule = service.serviceCategory.schedules.find(
+        (s) => s.date === getLabDayStartTimestamp(project.bookingStartTime!),
+      );
+      const timeSlot = schedule?.timeSlots.find(
+        (t) => t.startTime === project.bookingStartTime!,
+      );
+
+      if (
+        timeSlot &&
+        timeSlot.maxSlots > 0 &&
+        (timeSlot.usedUpSlots ?? 0) >= timeSlot.maxSlots
+      ) {
+        throw new ConvexError(
+          "Cannot reactivate — this workshop timeslot is fully booked.",
+        );
+      }
+
+      await incrementWorkshopSlot(ctx, service, {
+        startTime: project.bookingStartTime!,
+        endTime: project.bookingEndTime ?? project.bookingStartTime!,
+        date: getLabDayStartTimestamp(project.bookingStartTime!),
+      });
+    }
+  }
+
   // ── Unschedule / schedule on terminal status transitions ──────────────
   const wasArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
     project.status as ProjectStatusType,
@@ -887,108 +913,15 @@ export async function applyStatusChange(
 }
 
 /**
- * Assigns a maker to the project record and its resource usage record.
- * Returns change-log lines for the system message.
- */
-// ── Chat room membership helpers ────────────────────────────────────────────
-
-/**
- * Find the chat room associated with a project, if any.
- * Projects link to rooms via the threads table (threads.projectId → threads.roomId).
- */
-async function findProjectRoom(
-  ctx: Pick<MutationCtx, "db">,
-  projectId: Id<"projects">,
-): Promise<Id<"rooms"> | null> {
-  const thread = await ctx.db
-    .query("threads")
-    .withIndex("projectId", (q) => q.eq("projectId", projectId))
-    .first();
-  return thread?.roomId ?? null;
-}
-
-/**
- * Add a user to a room if they aren't already a member.
- */
-export async function addRoomMember(
-  ctx: Pick<MutationCtx, "db">,
-  roomId: Id<"rooms">,
-  participantId: Id<"userProfile">,
-): Promise<void> {
-  const existing = await ctx.db
-    .query("roomMembers")
-    .withIndex("by_roomId_participantId", (q) =>
-      q.eq("roomId", roomId).eq("participantId", participantId),
-    )
-    .first();
-
-  if (!existing) {
-    await ctx.db.insert("roomMembers", { roomId, participantId });
-  }
-}
-
-/**
- * Remove a user from a room if they are a member.
- */
-export async function removeRoomMember(
-  ctx: Pick<MutationCtx, "db">,
-  roomId: Id<"rooms">,
-  participantId: Id<"userProfile">,
-): Promise<void> {
-  const existing = await ctx.db
-    .query("roomMembers")
-    .withIndex("by_roomId_participantId", (q) =>
-      q.eq("roomId", roomId).eq("participantId", participantId),
-    )
-    .first();
-
-  if (existing) {
-    await ctx.db.delete(existing._id);
-  }
-}
-
-/**
- * Check if a maker is still assigned to any other project that shares the
- * given chat room. Prevents removing a maker from a room they should still
- * have access to.
- */
-async function isMakerAssignedToOtherProjectInRoom(
-  ctx: Pick<MutationCtx, "db">,
-  roomId: Id<"rooms">,
-  excludeProjectId: Id<"projects">,
-  makerId: Id<"userProfile">,
-): Promise<boolean> {
-  const threads = await ctx.db
-    .query("threads")
-    .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-    .collect();
-
-  const otherProjectIds = threads
-    .map((t) => t.projectId)
-    .filter(
-      (pid): pid is Id<"projects"> =>
-        pid !== undefined && pid !== excludeProjectId,
-    );
-
-  if (otherProjectIds.length === 0) return false;
-
-  const otherProjects = await Promise.all(
-    otherProjectIds.map((pid) => ctx.db.get(pid)),
-  );
-
-  return otherProjects.some((p) => p?.assignedMaker === makerId);
-}
-
-/**
  * Assigns or unassigns a maker for a project.
  *
- * When **assigning** (`makerId` is a valid user ID): patches the project's
- * `assignedMaker`, adds the new maker to the project's chat room, and removes
- * the previous maker (if any) — unless they're still needed for another project
- * in the same room.
+ * Maker assignment/unassignment is purely a business-domain concern.
+ * Chat room access is handled implicitly — makers have access to all rooms.
  *
- * When **unassigning** (`makerId` is `null`): clears `assignedMaker` and removes
- * the maker from the chat room (subject to the same multi-project guard).
+ * When **assigning** (`makerId` is a valid user ID): patches the project's
+ * `assignedMaker`. Clears the previous maker (if any).
+ *
+ * When **unassigning** (`makerId` is `null`): clears `assignedMaker`.
  *
  * Returns change-log lines for the system message.
  */
@@ -1004,21 +937,6 @@ export async function applyMakerAssignment(
     // Already unassigned — nothing to do
     if (!project.assignedMaker) return [];
 
-    const roomId = await findProjectRoom(ctx, project._id);
-    if (roomId) {
-      // Only remove from room if they aren't assigned to another project in it
-      const stillNeeded = await isMakerAssignedToOtherProjectInRoom(
-        ctx,
-        roomId,
-        project._id,
-        project.assignedMaker,
-      );
-      if (!stillNeeded) {
-        await removeRoomMember(ctx, roomId, project.assignedMaker);
-      }
-    }
-
-    // Patch with undefined to clear the optional field
     await ctx.db.patch(project._id, { assignedMaker: undefined });
 
     messages.push(`- Maker unassigned from project`);
@@ -1032,31 +950,6 @@ export async function applyMakerAssignment(
   }
 
   if (project.assignedMaker === makerId) return [];
-
-  // Find the project room once — both removal and addition use the same room
-  const roomId = await findProjectRoom(ctx, project._id);
-
-  // If there was a previous maker who is being replaced, remove them from the room
-  // but only if they aren't assigned to another project that shares the same room.
-  if (project.assignedMaker) {
-    if (roomId) {
-      const stillNeeded = await isMakerAssignedToOtherProjectInRoom(
-        ctx,
-        roomId,
-        project._id,
-        project.assignedMaker,
-      );
-      if (!stillNeeded) {
-        await removeRoomMember(ctx, roomId, project.assignedMaker);
-        messages.push(`- Previous maker removed from project chat room`);
-      }
-    }
-  }
-
-  // Add the new maker to the project's chat room
-  if (roomId) {
-    await addRoomMember(ctx, roomId, makerId);
-  }
 
   await ctx.db.patch(project._id, { assignedMaker: makerId });
 

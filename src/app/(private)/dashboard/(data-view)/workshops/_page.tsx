@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useProfile } from "@/components/sidebar/profile-context";
 import {
   Select,
   SelectContent,
@@ -97,6 +98,8 @@ function WorkshopsPageHeader() {
 
 export function WorkshopsPage() {
   const { searchParams } = useDataViewRouteState();
+  const profile = useProfile();
+  const isClient = profile?.role === "client";
   const statusRaw = getSearchParam(searchParams, "status", "upcoming");
   const serviceIdRaw = getSearchParam(searchParams, "service") || undefined;
   const startTimeRaw = getSearchParam(searchParams, "startTime") || undefined;
@@ -165,7 +168,7 @@ export function WorkshopsPage() {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
-      <WorkshopsPageHeader />
+      {!isClient && <WorkshopsPageHeader />}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl space-y-8 px-4 py-6 sm:px-6 lg:px-8">
           {isLoading ? (
@@ -205,6 +208,7 @@ export function WorkshopsPage() {
                       <WorkshopEventCard
                         key={`${event.serviceId}-${event.startTime}`}
                         event={event}
+                        readOnly={isClient}
                         highlight={
                           serviceId === event.serviceId &&
                           startTime === event.startTime

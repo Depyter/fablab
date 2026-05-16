@@ -220,6 +220,7 @@ export function ProjectsListClient() {
   } = usePaginatedQuery(
     api.projects.query.getProjects,
     {
+      type: "FABRICATION",
       statusFilter,
       dateFilter: isSearching ? "all" : dateFilter,
       sortBy: isSearching ? "newest" : sortBy,

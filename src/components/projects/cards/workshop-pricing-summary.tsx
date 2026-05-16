@@ -25,9 +25,7 @@ export function WorkshopPricingSummary({
   // Resolve the chosen variant's amount, or fall back to the default amount
   const variantAmount =
     project.pricing && serviceCategory.variants
-      ? serviceCategory.variants.find(
-          (v) => v.name === project.pricing,
-        )?.amount
+      ? serviceCategory.variants.find((v) => v.name === project.pricing)?.amount
       : undefined;
   const amount = variantAmount ?? serviceCategory.amount;
 
@@ -66,10 +64,7 @@ export function WorkshopPricingSummary({
         >
           {service.name}
         </p>
-        <p
-          className="text-xs"
-          style={{ color: "var(--fab-text-muted)" }}
-        >
+        <p className="text-xs" style={{ color: "var(--fab-text-muted)" }}>
           {dateStr} · {timeStr}
         </p>
       </div>
@@ -99,43 +94,11 @@ export function WorkshopPricingSummary({
           >
             Amount
           </p>
-          <p
-            className="text-lg font-bold"
-            style={{ color: "var(--fab-teal)" }}
-          >
+          <p className="text-lg font-bold" style={{ color: "var(--fab-teal)" }}>
             ₱{amount.toFixed(2)}
           </p>
         </div>
       </div>
-
-      {/* Receipt info — shown when payment is recorded */}
-      {project.receipt && (
-        <>
-          <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
-
-          <div className="space-y-1">
-            <p
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
-              Payment
-            </p>
-            <div className="space-y-0.5 text-sm">
-              <p style={{ color: "var(--fab-text-primary)" }}>
-                {project.receipt.paymentMode} · {project.receipt.receiptString}
-              </p>
-              {project.receipt.proof && (
-                <p
-                  className="wrap-break-word text-xs"
-                  style={{ color: "var(--fab-text-muted)" }}
-                >
-                  {project.receipt.proof}
-                </p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
     </DetailCard>
   );
 }

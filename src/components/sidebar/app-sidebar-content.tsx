@@ -70,7 +70,7 @@ const allNavItems: NavItem[] = [
     icon: <CalendarCheckIcon />,
     iconBackground: "var(--fab-amber-light)",
     iconColor: "var(--fab-amber)",
-    roles: ["admin", "maker"],
+    roles: ["admin", "maker", "client"],
     group: "main",
   },
   {

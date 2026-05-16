@@ -33,7 +33,6 @@ import {
   sendProjectSystemMessage,
   applyStatusChange,
   applyMakerAssignment,
-  addRoomMember,
   syncMaterialUsageStock,
   buildMaterialSnapshot,
   scheduleProjectUpdateEmail,
@@ -238,12 +237,7 @@ export const createProject = authMutation({
       now,
     );
 
-    // ── 10. If a maker was pre-assigned, add them to the chat room ────────────
-    if (args.assignedMaker) {
-      await addRoomMember(ctx, roomId, args.assignedMaker);
-    }
-
-    // ── 11. Claim uploaded files ──────────────────────────────────────────────
+    // ── 10. Claim uploaded files ──────────────────────────────────────────────
     if (args.files && args.files.length > 0) {
       claimFiles(ctx, args.files);
     }
