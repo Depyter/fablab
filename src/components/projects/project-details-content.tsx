@@ -12,6 +12,7 @@ import { ProjectInfoCard } from "./cards/project-info-card";
 import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
 import { WorkshopPricingSummary } from "./cards/workshop-pricing-summary";
+import { AttendeeInfoCard } from "./cards/attendee-info-card";
 import {
   MessageSquare,
   ChevronLeft,
@@ -53,47 +54,47 @@ interface ProjectDetailsContentProps {
     material?: ProjectMaterialType;
     fulfillmentMode?: FulfillmentModeType;
     files?: string[];
-  }) => Promise<boolean>;
+  }) => void;
 }
 
 const STATUS_PILL: Record<
-  ProjectStatusType,
+  string,
   { bg: string; color: string; border: string }
 > = {
   pending: {
-    bg: "var(--fab-amber-light)",
-    color: "var(--fab-amber)",
-    border: "rgba(235,170,87,0.35)",
+    bg: "#fef3dc",
+    color: "#9b6d00",
+    border: "#f5d999",
   },
   approved: {
-    bg: "rgba(59,130,246,0.1)",
-    color: "#1d4ed8",
-    border: "rgba(59,130,246,0.1)",
+    bg: "#dbeafe",
+    color: "#1e40af",
+    border: "#a9cbfb",
   },
   completed: {
-    bg: "rgba(16,185,129,0.1)",
-    color: "#059669",
-    border: "rgba(16,185,129,0.25)",
+    bg: "#d1fae5",
+    color: "#065f46",
+    border: "#a7f3d0",
   },
   paid: {
-    bg: "color-mix(in srgb, var(--fab-teal) 12%, white)",
-    color: "var(--fab-teal)",
-    border: "color-mix(in srgb, var(--fab-teal) 30%, transparent)",
+    bg: "#ccfbf1",
+    color: "#115e59",
+    border: "#99f6e4",
   },
   claimed: {
-    bg: "rgba(15,23,42,0.08)",
-    color: "#0f172a",
-    border: "rgba(15,23,42,0.18)",
+    bg: "#f1f5f9",
+    color: "#475569",
+    border: "#cbd5e1",
   },
   rejected: {
-    bg: "var(--fab-magenta-light)",
-    color: "var(--fab-magenta)",
-    border: "rgba(157,26,88,0.25)",
+    bg: "#fee2e2",
+    color: "#991b1b",
+    border: "#fecaca",
   },
   cancelled: {
-    bg: "rgba(239,68,68,0.08)",
-    color: "#dc2626",
-    border: "rgba(239,68,68,0.2)",
+    bg: "#fee2e2",
+    color: "#991b1b",
+    border: "#fecaca",
   },
 };
 
@@ -106,278 +107,171 @@ export function ProjectDetailsContent({
   isClient,
   onUpdateDetails,
 }: ProjectDetailsContentProps) {
-  // ── Edit state (review stage) ───────────────────────────────────────────
+  // ── Editable fields ──────────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
-  const [editDescription, setEditDescription] = useState("");
-  const [editNotes, setEditNotes] = useState("");
-  const [editMaterial, setEditMaterial] =
-    useState<ProjectMaterialType>("provide-own");
-  const [editServiceType, setEditServiceType] =
-    useState<FulfillmentModeType>("self-service");
+  const [editDescription, setEditDescription] = useState(
+    project.description ?? "",
+  );
+  const [editNotes, setEditNotes] = useState(project.notes ?? "");
+  const [editMaterial, setEditMaterial] = useState(project.material);
+  const [editServiceType, setEditServiceType] = useState(
+    project.fulfillmentMode,
+  );
   const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-
-  const canEdit =
-    !!onUpdateDetails && (!isClient || project.status === "pending");
+  const canEdit = !isClient || project.status === "pending";
 
   function openEdit() {
+    setIsEditing(true);
     setEditDescription(project.description ?? "");
     setEditNotes(project.notes ?? "");
-    setEditMaterial(project.material as ProjectMaterialType);
-    setEditServiceType(project.fulfillmentMode as FulfillmentModeType);
+    setEditMaterial(project.material);
+    setEditServiceType(project.fulfillmentMode);
     setEditFiles(
-      (project.resolvedFiles ?? [])
-        .filter((f) => !!f.url)
-        .map((f) => ({
-          storageId: f.storageId as string,
-          url: f.url ?? undefined,
-          fileName: f.originalName ?? "file",
-          fileType: f.type ?? "",
-          fileSize: 0,
-          uploadedAt: new Date(),
-        })),
+      (project.resolvedFiles ?? []).map((f: Record<string, unknown>) => ({
+        storageId: f.storageId ?? "",
+        url: f.url ?? "",
+        fileName: f.originalName ?? "file",
+        fileType: f.type ?? "unknown",
+        fileSize: f.fileSize ?? 0,
+        uploadedAt: f.uploadedAt ?? Date.now(),
+      })),
     );
-    setIsEditing(true);
   }
 
   function cancelEdit() {
     setIsEditing(false);
+    setEditFiles([]);
   }
 
   async function saveEdit() {
     if (!onUpdateDetails) return;
     setIsSaving(true);
-    const didUpdate = await onUpdateDetails({
-      description: editDescription,
-      notes: editNotes,
-      material: editMaterial,
-      fulfillmentMode: editServiceType,
-      files: editFiles.map((f) => f.storageId),
-    });
-    if (didUpdate) {
+    try {
+      const didUpdate: {
+        description?: string;
+        notes?: string;
+        material?: ProjectMaterialType;
+        fulfillmentMode?: FulfillmentModeType;
+        files?: string[];
+      } = {};
+      if (editDescription !== (project.description ?? ""))
+        didUpdate.description = editDescription;
+      if (editNotes !== (project.notes ?? "")) didUpdate.notes = editNotes;
+      if (editMaterial !== project.material) didUpdate.material = editMaterial;
+      if (editServiceType !== project.fulfillmentMode)
+        didUpdate.fulfillmentMode = editServiceType;
+      if (editFiles.length > 0)
+        didUpdate.files = editFiles.map((f) => f.storageId);
+      await onUpdateDetails(didUpdate);
+    } finally {
+      setIsSaving(false);
       setIsEditing(false);
     }
-    setIsSaving(false);
   }
 
-  const bookingDateStr = project.bookingStartTime
-    ? new Date(project.bookingStartTime).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "Not specified";
+  // ── Derived display values ───────────────────────────────────────────────
+  const bookingDateStr = (() => {
+    if (project.bookingStartTime == null) return "—";
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(project.bookingStartTime));
+  })();
 
-  const bookingTimeRange =
-    project.bookingStartTime && project.bookingEndTime
-      ? `${new Date(project.bookingStartTime).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })} - ${new Date(project.bookingEndTime).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`
-      : "Not specified";
+  const bookingTimeRange = (() => {
+    if (project.bookingStartTime == null) return "—";
+    const fmt = (ts: number) =>
+      new Intl.DateTimeFormat("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(ts));
+    const start = fmt(project.bookingStartTime);
+    const end = project.bookingEndTime ? fmt(project.bookingEndTime) : start;
+    return `${start} – ${end}`;
+  })();
 
   const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
+
+  // ── Status workflow ──────────────────────────────────────────────────────
   const workflow = getWorkflow(project.type);
   const workflowStatuses = workflow.steps;
-  // Derive status order from the type-aware workflow.
-  // Workflow statuses come first in timeline order, then the
-  // remaining canonical statuses (rejected, cancelled, claimed
-  // when not already present).
-  const statusOrder: ProjectStatusType[] = [
+  const statusOrder = [
     ...workflowStatuses,
     ...(["rejected", "cancelled", "claimed"] as ProjectStatusType[]).filter(
-      (s) => !workflowStatuses.includes(s),
+      (s: ProjectStatusType) => !workflowStatuses.includes(s),
     ),
   ];
   const currentIndex = statusOrder.indexOf(project.status);
-  // Exclude "cancelled" (has its own UI) and statuses not valid for this
-  // project type — "rejected" is allowed for all types; "claimed" is only
-  // valid if it appears in the type's workflow (i.e. fabrication, not workshop).
-  const allowedTransitions = workflow.transitions[project.status].filter(
-    (status) =>
-      status !== "cancelled" &&
-      (workflowStatuses.includes(status) || status === "rejected"),
-  );
-
-  const previousStep = allowedTransitions
-    .filter((status) => statusOrder.indexOf(status) < currentIndex)
-    .sort((a, b) => statusOrder.indexOf(b) - statusOrder.indexOf(a))[0];
-
-  const nextStep = allowedTransitions
-    .filter((status) => statusOrder.indexOf(status) > currentIndex)
-    .sort((a, b) => statusOrder.indexOf(a) - statusOrder.indexOf(b))[0];
-
+  const allowedTransitions = workflow.transitions[project.status] ?? [];
+  const previousStep =
+    currentIndex > 0 ? workflowStatuses[currentIndex - 1] : null;
+  const nextStep =
+    currentIndex < workflowStatuses.length - 1
+      ? workflowStatuses[currentIndex + 1]
+      : null;
   const previousStepLabel = previousStep
-    ? getStatusLabel(previousStep, project.type)
-    : "";
-  const nextStepLabel = nextStep ? getStatusLabel(nextStep, project.type) : "";
+    ? getStatusLabel(previousStep.status as ProjectStatusType, project.type)
+    : null;
+  const nextStepLabel = nextStep
+    ? getStatusLabel(nextStep.status as ProjectStatusType, project.type)
+    : null;
 
-  function handleStatusChange(status: ProjectStatusType) {
-    if (status === "approved" && project.status === "pending") {
-      if (workflow.approvalRequiresMaker) {
-        onOpenAssignView();
-        return;
-      }
-      onUpdateStatus(status);
-      return;
-    }
-
-    if (status === "paid") {
-      if (project.receipt) {
-        // Already has a receipt — just update status without payment dialog
-        onUpdateStatus(status);
-        return;
-      }
-      onMarkPaid();
-      return;
-    }
-
-    onUpdateStatus(status);
+  async function handleStatusChange(newStatus: ProjectStatusType) {
+    onUpdateStatus(newStatus);
   }
 
   return (
-    <div className="min-w-0 space-y-0">
-      <div className="space-y-5 pt-5">
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <DialogHeader className="space-y-0 mb-0">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            {/* Title + meta chips */}
-            <div className="min-w-0 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <DialogTitle
-                  className="text-xl font-bold leading-tight tracking-tight"
-                  style={{
-                    fontFamily: "Syne, sans-serif",
-                    color: "var(--fab-text-primary)",
-                  }}
+    <div className="flex flex-col gap-4 sm:gap-6">
+      {/* ── Status timeline ──────────────────────────────────────────────── */}
+      <ProjectTimeline steps={timelineSteps} />
+
+      {/* ── Status actions ───────────────────────────────────────────────── */}
+      {!isClient && allowedTransitions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {allowedTransitions.map((status: ProjectStatusType) => {
+            const label = getStatusLabel(status, project.type);
+            const isDestructive =
+              status === "rejected" || status === "cancelled";
+            const isPrimary = status === "approved" || status === "completed";
+
+            if (status === "paid") {
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={onMarkPaid}
+                  className="inline-flex h-8 items-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
                 >
-                  {project.name}
-                </DialogTitle>
-                {/* Override status — next to project name, admin/maker only */}
-                {!isClient && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[10px] font-bold uppercase tracking-[0.08em] gap-1 rounded-[5px] cursor-pointer"
-                        style={{
-                          background: "var(--fab-magenta-light)",
-                          color: "var(--fab-magenta)",
-                          border: "1px solid rgba(157,26,88,0.25)",
-                        }}
-                      >
-                        Override
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuLabel className="text-xs font-semibold">
-                        Override Status
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {workflow.transitions[project.status].map((status) => (
-                        <DropdownMenuItem
-                          key={status}
-                          className="text-xs"
-                          onClick={() => handleStatusChange(status)}
-                        >
-                          {getStatusLabel(status, project.type)}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </div>
+                  {label}
+                </button>
+              );
+            }
 
-            {/* Action buttons */}
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {!isClient && (
-                <>
-                  {/* Back · Current state · Next */}
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 text-xs font-semibold cursor-pointer"
-                      onClick={() =>
-                        previousStep && handleStatusChange(previousStep)
-                      }
-                      disabled={!previousStep}
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      {previousStep ? `Back: ${previousStepLabel}` : "Back"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 text-xs font-semibold"
-                      style={{
-                        background: "var(--fab-teal)",
-                        color: "white",
-                        border: `1px solid ${pill.border}`,
-                      }}
-                      onClick={() => {}}
-                    >
-                      {getStatusLabel(project.status, project.type)}
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-8 px-3 text-xs font-semibold cursor-pointer"
-                      style={{
-                        background: pill.bg,
-                        color: pill.color,
-                        border: `1px solid ${pill.border}`,
-                      }}
-                      onClick={() => nextStep && handleStatusChange(nextStep)}
-                      disabled={!nextStep}
-                    >
-                      {nextStep ? `Next: ${nextStepLabel}` : "Completed"}
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </>
-              )}
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => handleStatusChange(status)}
+                className={`inline-flex h-8 items-center border-2 border-black px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] ${
+                  isPrimary
+                    ? "bg-fab-teal text-white"
+                    : isDestructive
+                      ? "bg-red-100 text-red-800"
+                      : "bg-white text-black"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-              {project.roomId && project.threadId ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                  asChild
-                >
-                  <Link
-                    href={`/dashboard/chat/${project.roomId}/${project.threadId}`}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    {isClient ? "Message Staff" : "Message Client"}
-                  </Link>
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                  disabled
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  {isClient ? "Message Staff" : "Message Client"}
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogHeader>
-
-        <FieldSeparator className="my-0" />
-
-        <ProjectTimeline steps={timelineSteps} />
-
-        {/* ── Workshop layout ──────────────────────────────────────────── */}
+      {/* ── Main content ─────────────────────────────────────────────────── */}
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         {project.type === "WORKSHOP" ? (
           <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
             {/* ── Left column ──────────────────────────────────────── */}
@@ -423,13 +317,12 @@ export function ProjectDetailsContent({
 
             {/* ── Right column ─────────────────────────────────────── */}
             <div className="min-w-0 space-y-4 lg:col-span-5">
+              <AttendeeInfoCard project={project} />
               <WorkshopPricingSummary project={project} />
             </div>
           </div>
         ) : (
-          /* ── Fabrication layout (unchanged) ──────────────────────────── */
           <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
-            {/* ── Left column ───────────────────────────────────────────── */}
             <div className="min-w-0 space-y-4 lg:col-span-7">
               <ProjectInfoCard
                 description={project.description}
@@ -468,7 +361,6 @@ export function ProjectDetailsContent({
               )}
             </div>
 
-            {/* ── Right column ──────────────────────────────────────────── */}
             <div className="min-w-0 space-y-4 lg:col-span-5">
               <PricingEstimateCard
                 projectId={project._id}
