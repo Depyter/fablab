@@ -553,6 +553,7 @@ export const getProject = authQuery({
       client: {
         _id: clientProfile?._id ?? null,
         name: clientProfile?.name ?? "Unknown Client",
+        email: clientProfile?.email ?? null,
         pfpUrl: clientPfpUrl,
       },
       assignedMaker: assignedMakerProfile

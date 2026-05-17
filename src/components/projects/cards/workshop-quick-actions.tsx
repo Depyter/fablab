@@ -1,12 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  CheckCheck,
-  CreditCard,
-  XCircle,
-  MessageSquare,
-} from "lucide-react";
+import { CheckCheck, CreditCard, XCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ProjectStatusType } from "@convex/constants";
@@ -66,9 +61,7 @@ export function WorkshopQuickActions({
           size="sm"
           className={cn(
             "h-8 gap-1.5 px-3 text-xs font-semibold",
-            canCheckIn
-              ? "cursor-pointer"
-              : "cursor-not-allowed opacity-40",
+            canCheckIn ? "cursor-pointer" : "cursor-not-allowed opacity-40",
           )}
           style={
             canCheckIn
@@ -118,7 +111,12 @@ export function WorkshopQuickActions({
 
         {/* Message */}
         {roomId && threadId ? (
-          <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3 text-xs font-semibold" asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 px-3 text-xs font-semibold"
+            asChild
+          >
             <Link href={`/dashboard/chat/${roomId}/${threadId}`}>
               <MessageSquare className="h-3.5 w-3.5" />
               Message

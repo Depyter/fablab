@@ -1,20 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { api, internal } from "../convex/_generated/api";
+import { api } from "../convex/_generated/api";
 import { setupUsers } from "./helper";
 
 describe("Room membership authorization", () => {
   test("admins and makers can add and remove members; clients cannot", async () => {
-    const {
-      t,
-      tAera: tAdmin,
-      tHarley: tClient,
-      tMaker,
-      makerId,
-    } = await setupUsers();
+    const { t, tAera: tAdmin, tHarley: tClient, tMaker } = await setupUsers();
 
     // Maker already created by setupUsers() — use the returned identity
 
     // Get profile IDs directly from DB to avoid BetterAuth component calls in getUserProfile
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const adminProfile = await t.run(async (ctx) =>
       ctx.db
         .query("userProfile")

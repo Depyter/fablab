@@ -25,7 +25,7 @@ export function ServiceDetailClient({
   const router = useRouter();
   const deleteService = useMutation(api.services.mutate.deleteService);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {

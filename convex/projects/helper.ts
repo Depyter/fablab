@@ -14,7 +14,6 @@ import {
   FILE_CATEGORIES,
   MaterialStatus,
   PROJECT_ARCHIVE_STATUSES,
-  PROJECT_STATUS_LABELS,
   UserRole,
   type MaterialStatusType,
   type ProjectStatusType,
@@ -1267,10 +1266,10 @@ export async function buildEventsFromGroups(
   return events;
 }
 
-export function splitUpcomingPast(
-  events: Array<{ startTime: number }>,
+export function splitUpcomingPast<T extends { startTime: number }>(
+  events: T[],
   todayStart: number,
-) {
+): { upcoming: T[]; past: T[] } {
   const upcoming = events
     .filter((e) => e.startTime >= todayStart)
     .sort((a, b) => a.startTime - b.startTime)

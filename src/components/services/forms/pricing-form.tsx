@@ -103,20 +103,6 @@ export const PricingForm = withForm({
             const pricing = field.state.value;
             const pricingType = pricing.type;
 
-            const handleTypeChange = (newType: string) => {
-              if (newType === "FIXED") {
-                field.handleChange({ type: "FIXED", amount: 0, variants: [] });
-              } else if (newType === "FABRICATION") {
-                field.handleChange({
-                  type: "FABRICATION",
-                  setupFee: 0,
-                  unitName: "hour" as TimeUnit,
-                  timeRate: 0,
-                  variants: [],
-                });
-              }
-            };
-
             const addVariant = () => {
               setVariantKeys((prev) => [...prev, createVariantKey()]);
               if (pricing.type === "FIXED") {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { flushScheduledFunctions, setupProject, setupUsers } from "./helper";
+import { flushScheduledFunctions, setupUsers } from "./helper";
 import { api, internal } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 
@@ -37,15 +37,6 @@ describe("Assigned Maker — assignedToMe filter", () => {
         const p = await ctx.db
           .query("userProfile")
           .withIndex("by_userId", (q) => q.eq("userId", "3"))
-          .first();
-        return { _id: p!._id };
-      },
-    );
-    const makerBProfile: { _id: Id<"userProfile"> } = await t.run(
-      async (ctx) => {
-        const p = await ctx.db
-          .query("userProfile")
-          .withIndex("by_userId", (q) => q.eq("userId", "4"))
           .first();
         return { _id: p!._id };
       },

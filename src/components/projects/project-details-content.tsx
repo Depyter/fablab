@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { FieldSeparator } from "@/components/ui/field";
 import {
   ProjectTimeline,
   ProjectTimelineStep,
@@ -13,22 +11,6 @@ import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
 import { WorkshopPricingSummary } from "./cards/workshop-pricing-summary";
 import { AttendeeInfoCard } from "./cards/attendee-info-card";
-import {
-  MessageSquare,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-} from "lucide-react";
-import Link from "next/link";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { api } from "@/../convex/_generated/api";
 import {
   ProjectStatusType,
@@ -57,51 +39,11 @@ interface ProjectDetailsContentProps {
   }) => void;
 }
 
-const STATUS_PILL: Record<
-  string,
-  { bg: string; color: string; border: string }
-> = {
-  pending: {
-    bg: "#fef3dc",
-    color: "#9b6d00",
-    border: "#f5d999",
-  },
-  approved: {
-    bg: "#dbeafe",
-    color: "#1e40af",
-    border: "#a9cbfb",
-  },
-  completed: {
-    bg: "#d1fae5",
-    color: "#065f46",
-    border: "#a7f3d0",
-  },
-  paid: {
-    bg: "#ccfbf1",
-    color: "#115e59",
-    border: "#99f6e4",
-  },
-  claimed: {
-    bg: "#f1f5f9",
-    color: "#475569",
-    border: "#cbd5e1",
-  },
-  rejected: {
-    bg: "#fee2e2",
-    color: "#991b1b",
-    border: "#fecaca",
-  },
-  cancelled: {
-    bg: "#fee2e2",
-    color: "#991b1b",
-    border: "#fecaca",
-  },
-};
-
+// ── Status workflow ──────────────────────────────────────────────────────
 export function ProjectDetailsContent({
   project,
   timelineSteps,
-  onOpenAssignView,
+  onOpenAssignView: _onOpenAssignView, // eslint-disable-line @typescript-eslint/no-unused-vars
   onUpdateStatus,
   onMarkPaid,
   isClient,
@@ -128,13 +70,15 @@ export function ProjectDetailsContent({
     setEditMaterial(project.material);
     setEditServiceType(project.fulfillmentMode);
     setEditFiles(
-      (project.resolvedFiles ?? []).map((f: Record<string, unknown>) => ({
-        storageId: f.storageId ?? "",
-        url: f.url ?? "",
-        fileName: f.originalName ?? "file",
-        fileType: f.type ?? "unknown",
-        fileSize: f.fileSize ?? 0,
-        uploadedAt: f.uploadedAt ?? Date.now(),
+      (project.resolvedFiles ?? []).map((f) => ({
+        storageId: (f as { storageId?: string }).storageId ?? "",
+        url: (f as { url?: string }).url ?? "",
+        fileName: (f as { originalName?: string }).originalName ?? "file",
+        fileType: (f as { type?: string }).type ?? "unknown",
+        fileSize: (f as { fileSize?: number }).fileSize ?? 0,
+        uploadedAt: new Date(
+          (f as { uploadedAt?: number }).uploadedAt ?? Date.now(),
+        ),
       })),
     );
   }
@@ -193,31 +137,9 @@ export function ProjectDetailsContent({
     return `${start} – ${end}`;
   })();
 
-  const pill = STATUS_PILL[project.status] ?? STATUS_PILL.pending;
-
   // ── Status workflow ──────────────────────────────────────────────────────
   const workflow = getWorkflow(project.type);
-  const workflowStatuses = workflow.steps;
-  const statusOrder = [
-    ...workflowStatuses,
-    ...(["rejected", "cancelled", "claimed"] as ProjectStatusType[]).filter(
-      (s: ProjectStatusType) => !workflowStatuses.includes(s),
-    ),
-  ];
-  const currentIndex = statusOrder.indexOf(project.status);
   const allowedTransitions = workflow.transitions[project.status] ?? [];
-  const previousStep =
-    currentIndex > 0 ? workflowStatuses[currentIndex - 1] : null;
-  const nextStep =
-    currentIndex < workflowStatuses.length - 1
-      ? workflowStatuses[currentIndex + 1]
-      : null;
-  const previousStepLabel = previousStep
-    ? getStatusLabel(previousStep.status as ProjectStatusType, project.type)
-    : null;
-  const nextStepLabel = nextStep
-    ? getStatusLabel(nextStep.status as ProjectStatusType, project.type)
-    : null;
 
   async function handleStatusChange(newStatus: ProjectStatusType) {
     onUpdateStatus(newStatus);

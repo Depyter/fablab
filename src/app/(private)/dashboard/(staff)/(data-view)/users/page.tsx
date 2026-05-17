@@ -7,7 +7,6 @@ import {
   DataViewContent,
   DataViewLoadMore,
 } from "@/components/manage/data-view";
-import { ManageFilterClear } from "@/components/manage/manage-primitives";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import {
   getSearchParam,
@@ -275,7 +274,7 @@ export default function UsersPage() {
             </div>
           ),
         }}
-        renderItem={(user) => null} // Handled by list viewSlot
+        renderItem={() => null} // Handled by list viewSlot
       />
 
       <DataViewLoadMore

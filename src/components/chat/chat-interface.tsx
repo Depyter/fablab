@@ -269,7 +269,6 @@ export function ChatInterface({
               const isCurrentUser = message.sender === currentUserName;
 
               const prevMessage = messages[index - 1];
-              const nextMessage = messages[index + 1];
               const showSeparator =
                 prevMessage &&
                 message._creationTime - prevMessage._creationTime >
@@ -279,12 +278,6 @@ export function ChatInterface({
                 !prevMessage ||
                 prevMessage.sender !== message.sender ||
                 message._creationTime - prevMessage._creationTime >
-                  5 * 60 * 1000;
-
-              const isLastInGroup =
-                !nextMessage ||
-                nextMessage.sender !== message.sender ||
-                nextMessage._creationTime - message._creationTime >
                   5 * 60 * 1000;
 
               const messageFiles: MessageFile[] =

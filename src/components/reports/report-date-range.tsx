@@ -3,12 +3,9 @@
 import * as React from "react";
 import { CalendarDays, ArrowLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import {
   Popover,
   PopoverContent,
-  PopoverHeader,
-  PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
@@ -67,7 +64,7 @@ function PresetList({
   onCustomRange,
   dateRangeText,
 }: {
-  applyPreset: (days: number, label: string) => void;
+  applyPreset: (days: number) => void;
   onCustomRange: () => void;
   dateRangeText: string;
 }) {
@@ -82,7 +79,7 @@ function PresetList({
           type="button"
           className="flex h-9 w-full items-center justify-start border-b-2 border-black/10 px-3 text-[10px] font-black uppercase tracking-wider text-black/60 transition-colors hover:text-black"
           onClick={() => {
-            applyPreset(preset.days, preset.label);
+            applyPreset(preset.days);
           }}
         >
           {preset.label}
@@ -111,26 +108,18 @@ export function ReportDateRange({
   const isMobile = useIsMobile();
   const close = React.useCallback(() => setOpen(false), []);
 
-  const [selectedPreset, setSelectedPreset] = React.useState<string | null>(
-    () => getPresetLabelForTimestamp(dateFrom),
-  );
+  const selectedPreset = getPresetLabelForTimestamp(dateFrom);
 
   // View tracking: presets list or custom calendar
   const [view, setView] = React.useState<"presets" | "custom">(
     getPresetLabelForTimestamp(dateFrom) ? "presets" : "custom",
   );
 
-  // Sync selectedPreset when dateFrom changes externally
-  React.useEffect(() => {
-    setSelectedPreset(getPresetLabelForTimestamp(dateFrom));
-  }, [dateFrom]);
-
   const applyPreset = React.useCallback(
-    (days: number, label: string) => {
+    (days: number) => {
       const from = getPresetTimestamp(days);
       onDateFromChange(from);
       onDateToChange(Date.now());
-      setSelectedPreset(label);
       setView("presets");
       close();
     },
@@ -144,7 +133,6 @@ export function ReportDateRange({
       if (!range?.from || !range?.to) return;
       onDateFromChange(range.from.getTime());
       onDateToChange(range.to.getTime());
-      setSelectedPreset(null);
     },
     [onDateFromChange, onDateToChange],
   );

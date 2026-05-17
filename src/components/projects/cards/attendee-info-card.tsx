@@ -31,7 +31,9 @@ export function AttendeeInfoCard({ project }: AttendeeInfoCardProps) {
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Email
             </p>
-            <p className="text-sm font-bold text-black break-all">{client.email}</p>
+            <p className="text-sm font-bold text-black break-all">
+              {client.email}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">

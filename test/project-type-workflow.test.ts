@@ -242,7 +242,7 @@ describe("Type-aware project workflows", () => {
     );
 
     test("fabrication project cannot be marked paid from approved status", async () => {
-      const { t, tAdmin, projectId, makerId } = await setupFabricationProject();
+      const { tAdmin, projectId, makerId } = await setupFabricationProject();
 
       await tAdmin.mutation(api.projects.mutate.updateProject, {
         projectId,

@@ -49,7 +49,6 @@ function ProjectsFilterBar() {
   const sort = getSearchParam(searchParams, "sort", "newest");
   const search = getSearchParam(searchParams, "search");
   const assignedToMe = getSearchParam(searchParams, "assignedToMe") === "true";
-  const view = getProjectsView(searchParams);
   const activeFilterCount = [
     status !== "all",
     date !== "all",
