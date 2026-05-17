@@ -77,13 +77,13 @@ export function ProjectCard({
         <>
           <div className="flex flex-col items-center justify-between w-full">
             <div className="flex flex-row items-center justify-between w-full mb-1">
-              <span className="text-muted-foreground text-xs">
+              <span className="text-xs font-bold text-black/60">
                 {bookingDateStr}
                 {bookingTimeStr && (
-                  <span className="ml-1 opacity-70">· {bookingTimeStr}</span>
+                  <span className="ml-1">· {bookingTimeStr}</span>
                 )}
               </span>
-              <span className="font-semibold text-foreground">
+              <span className="font-black text-black">
                 ₱{estimatedPrice.toFixed(2)}
               </span>
             </div>
@@ -92,7 +92,7 @@ export function ProjectCard({
               <button
                 type="button"
                 onClick={onOpenDetails}
-                className="inline-flex h-8 w-full items-center justify-center rounded-full border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 cursor-pointer"
+                className="inline-flex h-8 w-full items-center justify-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white"
               >
                 View Details
               </button>

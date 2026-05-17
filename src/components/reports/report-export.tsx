@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -80,7 +79,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
   const r = data.revenue;
   const d = data.downtime;
 
-  // ── Helper: format currency for display ─────────────────────────────────
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -89,7 +87,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
       maximumFractionDigits: 0,
     }).format(n);
 
-  // ── Computed aggregates ─────────────────────────────────────────────────
   const totalHours = m?.resourceUtilization
     ? Math.round(
         m.resourceUtilization.reduce((s, r) => s + r.totalBookedMinutes, 0) /
@@ -111,7 +108,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
       ? Math.round(m.totalRevenue / totalProjects)
       : 0;
 
-  // Count completed stages
   const completedStages = (() => {
     const byStatus = m?.projectCountByStatus ?? {};
     return (
@@ -123,13 +119,12 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
 
   const totalRevenue = m?.totalRevenue ?? 0;
 
-  // ── Summary Dashboard sheet ─────────────────────────────────────────────
   const summaryRows: unknown[][] = [
     ["FabLab Report", ""],
     ["Period", `${formatDate(data.dateFrom)} – ${formatDate(data.dateTo)}`],
     ["Generated", new Date().toLocaleString()],
     [],
-    ["─── KEY METRICS ───", ""],
+    ["KEY METRICS", ""],
     ["Total Projects", totalProjects],
     ["   Workshops", m?.workshopCount ?? 0],
     ["   Regular Projects", totalProjects - (m?.workshopCount ?? 0)],
@@ -162,11 +157,9 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     ],
   ];
   const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
-  // Set column widths for readability
   summarySheet["!cols"] = [{ wch: 30 }, { wch: 25 }];
   XLSX.utils.book_append_sheet(wb, summarySheet, "Dashboard");
 
-  // ── Projects sheet ──────────────────────────────────────────────────────
   const byStatus = m?.projectCountByStatus;
   if (byStatus) {
     const entries = Object.entries(byStatus);
@@ -188,7 +181,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, projectsSheet, "Projects");
   }
 
-  // ── Workshops sheet ────────────────────────────────────────────────────
   if (m) {
     const workshopCount = m.workshopCount ?? 0;
     const projectsWithoutWorkshops = totalProjects - workshopCount;
@@ -209,7 +201,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, workshopsSheet, "Workshops");
   }
 
-  // ── Top Services sheet ──────────────────────────────────────────────────
   if (m?.topServices?.length) {
     const totalSvc = m.topServices.reduce((s, svc) => s + svc.projectCount, 0);
     const servicesRows: unknown[][] = [
@@ -237,7 +228,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, servicesSheet, "Top Services");
   }
 
-  // ── Resource Utilization sheet ──────────────────────────────────────────
   if (m?.resourceUtilization?.length) {
     const maxHours = Math.max(
       ...m.resourceUtilization.map((r) => r.totalBookedMinutes / 60),
@@ -278,7 +268,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, resourceSheet, "Resources");
   }
 
-  // ── Material Usage sheet ────────────────────────────────────────────────
   if (m?.materialUsage?.length) {
     const totalMatCost = m.materialUsage.reduce(
       (s, mat) => s + mat.totalCost,
@@ -331,7 +320,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, materialSheet, "Materials");
   }
 
-  // ── Monthly Revenue sheet ───────────────────────────────────────────────
   if (r?.monthly?.length) {
     const monthlyData = r.monthly;
     const MONTH_NAMES = [
@@ -381,7 +369,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, revenueSheet, "Revenue");
   }
 
-  // ── Revenue by Service sheet ────────────────────────────────────────────
   if (r?.byService?.length) {
     const totalByServiceRev = r.byService.reduce(
       (s, svc) => s + svc.revenue,
@@ -416,7 +403,6 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
     XLSX.utils.book_append_sheet(wb, byServiceSheet, "Revenue by Service");
   }
 
-  // ── Resource Downtime sheet ─────────────────────────────────────────────
   if (d?.length) {
     const maintenanceCount = d.filter((r) => r.isUnderMaintenance).length;
     const downtimeRows: unknown[][] = [
@@ -493,35 +479,34 @@ export function ReportExportButton({ data }: ReportExportButtonProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="default"
-          size="sm"
-          className="h-8 shrink-0 gap-1.5"
+        <button
+          type="button"
           disabled={disabled}
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Download className="h-4 w-4" />
+          <Download className="size-4" strokeWidth={3} />
           <span className="hidden sm:inline">Export</span>
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-48 max-w-[calc(100vw-1rem)] gap-4 p-4"
+        className="w-56 border-2 border-black bg-white p-3 shadow-[4px_4px_0_0_#000]"
       >
-        <PopoverHeader className="gap-1">
-          <PopoverTitle>Export report</PopoverTitle>
+        <PopoverHeader className="mb-2 gap-1">
+          <PopoverTitle className="text-xs font-black uppercase tracking-tighter">
+            Export report
+          </PopoverTitle>
         </PopoverHeader>
-        <div className="flex flex-col gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 justify-start text-sm px-3 font-normal"
-            onClick={handleExcel}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {exporting ? "Generating…" : "Download Excel"}
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={handleExcel}
+          disabled={exporting}
+          className="inline-flex h-9 w-full items-center gap-2 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
+        >
+          <Download className="size-4" strokeWidth={3} />
+          {exporting ? "Generating…" : "Download Excel"}
+        </button>
       </PopoverContent>
     </Popover>
   );

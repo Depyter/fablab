@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { BrandTabsList, BrandTabsTrigger } from "@/components/brand/primitives";
 import { ReportProjectsSection } from "@/components/reports/report-projects-section";
 import { ReportResourcesSection } from "@/components/reports/report-resources-section";
 import { ReportMaterialsSection } from "@/components/reports/report-materials-section";
@@ -78,17 +79,17 @@ export function ReportsClient({
       defaultValue="overview"
       className="w-full flex flex-col min-h-0 flex-1"
     >
-      <TabsList variant="line" className="pl-5 pt-2 shrink-0">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="projects">Projects</TabsTrigger>
-        <TabsTrigger value="resources">Resources</TabsTrigger>
-        <TabsTrigger value="materials">Materials</TabsTrigger>
-        <TabsTrigger value="revenue">Revenue</TabsTrigger>
-      </TabsList>
+      <BrandTabsList>
+        <BrandTabsTrigger value="overview">Overview</BrandTabsTrigger>
+        <BrandTabsTrigger value="projects">Projects</BrandTabsTrigger>
+        <BrandTabsTrigger value="resources">Resources</BrandTabsTrigger>
+        <BrandTabsTrigger value="materials">Materials</BrandTabsTrigger>
+        <BrandTabsTrigger value="revenue">Revenue</BrandTabsTrigger>
+      </BrandTabsList>
 
       <TabsContent
         value="overview"
-        className="min-h-0 flex-1 overflow-y-auto p-4"
+        className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
       >
         <ReportOverviewSection
           metrics={{
@@ -109,7 +110,7 @@ export function ReportsClient({
 
       <TabsContent
         value="projects"
-        className="min-h-0 flex-1 overflow-y-auto p-4"
+        className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
       >
         <ReportProjectsSection
           projectCountByStatus={metrics?.projectCountByStatus ?? null}
@@ -120,7 +121,7 @@ export function ReportsClient({
 
       <TabsContent
         value="resources"
-        className="min-h-0 flex-1 overflow-y-auto p-4"
+        className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
       >
         <ReportResourcesSection
           resourceUtilization={metrics?.resourceUtilization ?? null}
@@ -131,7 +132,7 @@ export function ReportsClient({
 
       <TabsContent
         value="materials"
-        className="min-h-0 flex-1 overflow-y-auto p-4"
+        className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
       >
         <ReportMaterialsSection
           materialUsage={metrics?.materialUsage ?? null}
@@ -141,7 +142,7 @@ export function ReportsClient({
 
       <TabsContent
         value="revenue"
-        className="min-h-0 flex-1 overflow-y-auto p-4"
+        className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
       >
         <ReportRevenueSection
           monthly={revenue?.monthly ?? null}

@@ -39,7 +39,7 @@ function BookingCalendarPageHeader() {
         onPrevPeriod={controller.handlePrevPeriod}
         onNextPeriod={controller.handleNextPeriod}
         onReset={controller.handleReset}
-        className="rounded-md border bg-background p-0.5"
+        className="border-2 border-black bg-white p-0.5"
       />
       <div className="flex-1" />
       <div className="flex items-center gap-2">

@@ -3,13 +3,21 @@
 import * as React from "react";
 import { CalendarDays, ArrowLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Popover,
   PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
 
@@ -65,31 +73,29 @@ function PresetList({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <p className="px-3 pb-1 text-xs text-muted-foreground border-b">
+      <p className="border-b-2 border-black px-3 pb-1 text-[10px] font-black uppercase tracking-wider text-black/60">
         {dateRangeText}
       </p>
       {PRESETS.map((preset) => (
-        <Button
+        <button
           key={preset.label}
-          variant="ghost"
-          size="sm"
-          className="h-9 justify-start text-sm px-3 font-normal"
+          type="button"
+          className="flex h-9 w-full items-center justify-start border-b-2 border-black/10 px-3 text-[10px] font-black uppercase tracking-wider text-black/60 transition-colors hover:text-black"
           onClick={() => {
             applyPreset(preset.days, preset.label);
           }}
         >
           {preset.label}
-        </Button>
+        </button>
       ))}
-      <div className="border-t mt-1 pt-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 justify-start text-sm px-3 font-normal w-full"
+      <div className="mt-1 pt-1">
+        <button
+          type="button"
+          className="flex h-9 w-full items-center justify-start px-3 text-[10px] font-black uppercase tracking-wider text-fab-teal transition-colors hover:text-black"
           onClick={onCustomRange}
         >
           Custom Range…
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -147,20 +153,13 @@ export function ReportDateRange({
   const dateRangeText = `${formatDate(dateFrom)} – ${formatDate(dateTo)}`;
 
   const trigger = (
-    <Button variant="default" size="sm" className="h-8 shrink-0 gap-1.5">
-      <CalendarDays className="h-4 w-4 text-primary-foreground/70" />
-      <span className="text-sm whitespace-nowrap">
-        <span
-          className={
-            activeLabel
-              ? "text-primary-foreground font-medium"
-              : "text-primary-foreground/70"
-          }
-        >
-          {activeLabel ?? (isMobile ? "Custom Range" : dateRangeText)}
-        </span>
-      </span>
-    </Button>
+    <button
+      type="button"
+      className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black"
+    >
+      <CalendarDays className="size-4" strokeWidth={3} />
+      <span>{activeLabel ?? (isMobile ? "Custom Range" : dateRangeText)}</span>
+    </button>
   );
 
   const dialogTitle = (
@@ -187,12 +186,16 @@ export function ReportDateRange({
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="max-h-[85svh] gap-0 rounded-t-2xl p-0"
+          className="border-t-4 border-black bg-white p-0 shadow-[0_-4px_0_0_#000]"
           aria-labelledby={TITLE_ID}
         >
-          {dialogTitle}
+          <SheetHeader className="sr-only">
+            <SheetTitle>Select report date range</SheetTitle>
+          </SheetHeader>
           <div className="space-y-3 px-4 py-3">
-            <p className="text-xs text-muted-foreground">{dateRangeText}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-black/60">
+              {dateRangeText}
+            </p>
             {calendar}
           </div>
         </SheetContent>
@@ -206,12 +209,12 @@ export function ReportDateRange({
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-auto p-0"
+        className="w-auto border-2 border-black bg-white p-0 shadow-[4px_4px_0_0_#000]"
         aria-labelledby={TITLE_ID}
       >
         {dialogTitle}
         {view === "presets" ? (
-          <div className="w-48 p-1.5">
+          <div className="w-48 p-2">
             <PresetList
               applyPreset={applyPreset}
               onCustomRange={() => setView("custom")}
@@ -219,18 +222,17 @@ export function ReportDateRange({
             />
           </div>
         ) : (
-          <div className="p-1.5">
-            <div className="flex items-center gap-2 px-3 pb-1 border-b mb-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 px-0 text-xs font-normal"
+          <div className="p-2">
+            <div className="mb-2 flex items-center gap-2 border-b-2 border-black px-3 pb-2">
+              <button
+                type="button"
+                className="inline-flex h-7 items-center gap-1 text-[10px] font-black uppercase tracking-wider text-black/60 hover:text-black"
                 onClick={() => setView("presets")}
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
+                <ArrowLeft className="size-3.5" strokeWidth={3} />
                 Presets
-              </Button>
-              <span className="text-xs text-muted-foreground">
+              </button>
+              <span className="text-[10px] font-black uppercase tracking-wider text-black/60">
                 {dateRangeText}
               </span>
             </div>

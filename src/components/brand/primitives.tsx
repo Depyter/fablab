@@ -651,3 +651,48 @@ export function BrandSearchField({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// BrandTabs — branded tab list and trigger
+// ---------------------------------------------------------------------------
+
+import {
+  TabsList as ShadcnTabsList,
+  TabsTrigger as ShadcnTabsTrigger,
+} from "@/components/ui/tabs";
+
+type BrandTabsListProps = React.ComponentProps<typeof ShadcnTabsList>;
+
+export function BrandTabsList({ className, ...props }: BrandTabsListProps) {
+  return (
+    <ShadcnTabsList
+      className={cn(
+        "flex h-10 w-full items-center gap-0 bg-transparent p-0 rounded-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type BrandTabsTriggerProps = React.ComponentProps<typeof ShadcnTabsTrigger>;
+
+export function BrandTabsTrigger({
+  className,
+  ...props
+}: BrandTabsTriggerProps) {
+  return (
+    <ShadcnTabsTrigger
+      className={cn(
+        "relative flex-1 inline-flex h-10 items-center justify-center gap-1.5 border-t-4 border-r-4 border-b-4 border-l-0 border-black bg-white px-4 text-[10px] font-black uppercase tracking-wider transition-colors",
+        "data-active:bg-fab-amber data-active:text-black data-active:border-t-0",
+        "text-black/50 hover:text-black",
+        "rounded-none last:border-r-0",
+        "focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
+      {...props}
+    />
+  );
+}

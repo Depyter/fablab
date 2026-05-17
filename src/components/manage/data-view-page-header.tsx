@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 type DataViewPageHeaderProps = {
   children: React.ReactNode;
   className?: string;
+  /** Remove the bottom border so a tab list can sit flush beneath */
+  hideBorder?: boolean;
 };
 
 /**
@@ -20,6 +22,7 @@ type DataViewPageHeaderProps = {
 export function DataViewPageHeader({
   children,
   className,
+  hideBorder,
 }: DataViewPageHeaderProps) {
   const { toggleSidebar, open } = useSidebar();
 
@@ -34,7 +37,8 @@ export function DataViewPageHeader({
       {/* Amber bar */}
       <div
         className={cn(
-          "relative z-10 border-b-4 border-black bg-fab-amber",
+          "relative z-10 bg-fab-amber",
+          !hideBorder && "border-b-4 border-black",
           className,
         )}
       >

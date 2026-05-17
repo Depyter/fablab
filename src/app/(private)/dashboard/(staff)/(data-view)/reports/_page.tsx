@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ViewHeaderMain } from "@/components/ui/view-header";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportExportButton } from "@/components/reports/report-export";
@@ -76,27 +75,23 @@ function ReportsPageHeader({
   exportData: HeaderData | null;
 }) {
   return (
-    <DataViewPageHeader>
-      <ViewHeaderMain>
-        <h1 className="text-lg font-semibold shrink-0">Reports</h1>
-        <div className="flex shrink-0 items-center gap-2 ml-auto">
-          {exportData && (
-            <ReportExportButton
-              data={{
-                ...exportData,
-                dateFrom,
-                dateTo,
-              }}
-            />
-          )}
-          <ReportDateRange
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            onDateFromChange={onDateFromChange}
-            onDateToChange={onDateToChange}
-          />
-        </div>
-      </ViewHeaderMain>
+    <DataViewPageHeader hideBorder>
+      <div className="flex-1" />
+      <ReportDateRange
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={onDateFromChange}
+        onDateToChange={onDateToChange}
+      />
+      {exportData && (
+        <ReportExportButton
+          data={{
+            ...exportData,
+            dateFrom,
+            dateTo,
+          }}
+        />
+      )}
     </DataViewPageHeader>
   );
 }
@@ -145,7 +140,7 @@ export function ReportsPageContent() {
     : null;
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
       <ReportsPageHeader
         dateFrom={dateFrom}
         dateTo={dateTo}

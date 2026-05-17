@@ -79,7 +79,7 @@ function InventoryPageHeader() {
   const activeFilterCount = [sort !== "name-az"].filter(Boolean).length;
 
   return (
-    <DataViewPageHeader>
+    <DataViewPageHeader hideBorder>
       <BrandSearchField
         value={search}
         onChange={(value) => replaceParams({ search: value ? value : null })}
