@@ -1,6 +1,7 @@
+"use client";
+
 import type { ComponentProps } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Sidebar,
   SidebarFooter,
@@ -16,41 +17,22 @@ import {
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar
-      collapsible="icon"
-      className="border-r"
-      style={{
-        background: "var(--fab-bg-sidebar)",
-        borderRight: "1px solid var(--fab-border-md)",
-      }}
-      {...props}
-    >
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-              <Link href="/dashboard/chat" aria-label="IskoLab home">
-                <div
-                  className="flex aspect-square size-8 items-center justify-center rounded-lg shrink-0"
-                  style={{ background: "var(--fab-magenta)" }}
-                >
-                  <Image
-                    src="/fablab-dark.svg"
-                    alt="FabLab logo"
-                    width={16}
-                    height={16}
-                    className="brightness-0 invert"
-                  />
-                </div>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="md:h-10 md:p-0 border-2 border-black rounded-none bg-fab-teal "
+            >
+              <Link href="/" aria-label="IskoLab home">
+                <span className="flex size-8 shrink-0 items-center justify-center text-sm font-black text-white">
+                  i
+                </span>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span
-                    className="truncate font-semibold"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
+                  <span className="truncate font-black uppercase tracking-tighter">
                     IskoLab
-                  </span>
-                  <span className="truncate text-xs opacity-60">
-                    Fablab UP Cebu
                   </span>
                 </div>
               </Link>

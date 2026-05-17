@@ -1,86 +1,61 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ViewHeaderMain } from "@/components/ui/view-header";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import {
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
 import {
-  DataViewFilterField,
-  DataViewFilterPanel,
-  DataViewSearchField,
-} from "@/components/manage/data-view-toolbar";
+  BrandSelect,
+  BrandFilterPanel,
+  BrandButton,
+  BrandSearchField,
+} from "@/components/brand/primitives";
 import { ServicesListClient } from "./_client";
 
-function ServicesFilterControls() {
-  const { searchParams, replaceParams } = useDataViewRouteState();
+function ServicesPageHeader() {
+  const { pathname, searchParams, replaceParams } = useDataViewRouteState();
   const sort = getSearchParam(searchParams, "sort", "name-az");
+  const search = getSearchParam(searchParams, "search");
   const activeFilterCount = [sort !== "name-az"].filter(Boolean).length;
 
   return (
-    <DataViewFilterPanel
-      activeCount={activeFilterCount}
-      title="Service filters"
-      onClear={() => replaceParams({ sort: null })}
-    >
-      <DataViewFilterField label="Sort">
-        <Select
+    <DataViewPageHeader>
+      <BrandSearchField
+        value={search}
+        onChange={(value) => replaceParams({ search: value ? value : null })}
+        placeholder="Search services…"
+        remountKey={`${pathname}:${search}`}
+      />
+
+      <BrandFilterPanel
+        title="Service filters"
+        activeCount={activeFilterCount}
+        onClear={() => replaceParams({ sort: null })}
+      >
+        <BrandSelect
           value={sort}
           onValueChange={(value) =>
             replaceParams({ sort: value === "name-az" ? null : value })
           }
+          placeholder="Sort"
         >
-          <SelectTrigger className="h-9 w-full bg-background text-sm shadow-none">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name-az">Name A → Z</SelectItem>
-            <SelectItem value="price-high">Price: high → low</SelectItem>
-            <SelectItem value="price-low">Price: low → high</SelectItem>
-          </SelectContent>
-        </Select>
-      </DataViewFilterField>
-    </DataViewFilterPanel>
-  );
-}
+          <SelectItem value="name-az">Name A → Z</SelectItem>
+          <SelectItem value="price-high">Price: high → low</SelectItem>
+          <SelectItem value="price-low">Price: low → high</SelectItem>
+        </BrandSelect>
+      </BrandFilterPanel>
 
-function ServicesPageHeader() {
-  const { pathname, searchParams, replaceParams } = useDataViewRouteState();
-  const search = getSearchParam(searchParams, "search");
-
-  return (
-    <DataViewPageHeader>
-      <ViewHeaderMain>
-        <DataViewSearchField
-          key={`${pathname}:${search}`}
-          search={search}
-          onSearchChange={(value) =>
-            replaceParams({ search: value ? value : null })
-          }
-          placeholder="Search services…"
-          className="max-w-sm"
-        />
-        <div className="flex shrink-0 items-center gap-2">
-          <ServicesFilterControls />
-          <Button size="sm" className="h-8 shrink-0 gap-1" asChild>
-            <Link href="/dashboard/services/add-service">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Service</span>
-            </Link>
-          </Button>
-        </div>
-      </ViewHeaderMain>
+      <BrandButton
+        href="/dashboard/services/add-service"
+        className="bg-fab-magenta text-white"
+      >
+        <Plus className="h-4 w-4" />
+        <span className="hidden sm:inline">Add Service</span>
+      </BrandButton>
     </DataViewPageHeader>
   );
 }

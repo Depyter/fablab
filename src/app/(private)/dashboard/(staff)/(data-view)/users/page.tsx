@@ -13,7 +13,6 @@ import {
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
-import { DataViewSearchField } from "@/components/manage/data-view-toolbar";
 import {
   Table,
   TableBody,
@@ -61,32 +60,20 @@ import {
 import { toast } from "sonner";
 import { UserRole, UserRoleType } from "@convex/constants";
 import { format } from "date-fns";
-import { ViewHeaderMain } from "@/components/ui/view-header";
+import { BrandSearchField } from "@/components/brand/primitives";
 
 function UsersPageHeader() {
   const { pathname, searchParams, replaceParams } = useDataViewRouteState();
   const search = getSearchParam(searchParams, "search");
-  const activeFilterCount = search.trim() !== "" ? 1 : 0;
 
   return (
     <DataViewPageHeader>
-      <ViewHeaderMain>
-        <DataViewSearchField
-          key={`${pathname}:${search}`}
-          search={search}
-          onSearchChange={(value) =>
-            replaceParams({ search: value ? value : null })
-          }
-          placeholder="Search users by email…"
-          className="max-w-sm"
-        />
-        <div className="flex shrink-0 items-center gap-2">
-          <ManageFilterClear
-            activeCount={activeFilterCount}
-            onClear={() => replaceParams({ search: null })}
-          />
-        </div>
-      </ViewHeaderMain>
+      <BrandSearchField
+        value={search}
+        onChange={(value) => replaceParams({ search: value ? value : null })}
+        placeholder="Search users by email…"
+        remountKey={`${pathname}:${search}`}
+      />
     </DataViewPageHeader>
   );
 }

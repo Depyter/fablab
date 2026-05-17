@@ -9,12 +9,18 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { formatLabDate, formatLabTime } from "@/lib/lab-time";
 import {
   WorkshopAttendeeRow,
   type AttendeeInfo,
 } from "@/components/workshops/workshop-attendee-row";
+import {
+  BrandCard,
+  SectionLabel,
+  StatusBadge,
+  type StatusColorSet,
+  CapacityBar,
+} from "@/components/brand/primitives";
 
 export type WorkshopEvent = {
   serviceId: string;
@@ -39,44 +45,43 @@ export type WorkshopEvent = {
   }>;
 };
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
-  {
-    pending: {
-      bg: "bg-amber-100",
-      text: "text-amber-800",
-      dot: "bg-amber-500",
-    },
-    paid: {
-      bg: "bg-fab-teal/20",
-      text: "text-fab-teal",
-      dot: "bg-fab-teal",
-    },
-    completed: {
-      bg: "bg-emerald-100",
-      text: "text-emerald-800",
-      dot: "bg-emerald-500",
-    },
-    approved: {
-      bg: "bg-blue-100",
-      text: "text-blue-800",
-      dot: "bg-blue-500",
-    },
-    claimed: {
-      bg: "bg-slate-100",
-      text: "text-slate-700",
-      dot: "bg-slate-500",
-    },
-    rejected: {
-      bg: "bg-red-100",
-      text: "text-red-800",
-      dot: "bg-red-500",
-    },
-    cancelled: {
-      bg: "bg-red-100",
-      text: "text-red-800",
-      dot: "bg-red-500",
-    },
-  };
+const STATUS_COLORS: Record<string, StatusColorSet> = {
+  pending: {
+    bg: "bg-amber-100",
+    text: "text-amber-800",
+    dot: "bg-amber-500",
+  },
+  paid: {
+    bg: "bg-fab-teal/20",
+    text: "text-fab-teal",
+    dot: "bg-fab-teal",
+  },
+  completed: {
+    bg: "bg-emerald-100",
+    text: "text-emerald-800",
+    dot: "bg-emerald-500",
+  },
+  approved: {
+    bg: "bg-blue-100",
+    text: "text-blue-800",
+    dot: "bg-blue-500",
+  },
+  claimed: {
+    bg: "bg-slate-100",
+    text: "text-slate-700",
+    dot: "bg-slate-500",
+  },
+  rejected: {
+    bg: "bg-red-100",
+    text: "text-red-800",
+    dot: "bg-red-500",
+  },
+  cancelled: {
+    bg: "bg-red-100",
+    text: "text-red-800",
+    dot: "bg-red-500",
+  },
+};
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
@@ -88,36 +93,13 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-function CapacityBar({
-  usedSlots,
-  maxSlots,
+function LocalStatusBadge({
+  status,
+  count,
 }: {
-  usedSlots: number;
-  maxSlots: number;
+  status: string;
+  count: number;
 }) {
-  const percentage =
-    maxSlots > 0 ? Math.min((usedSlots / maxSlots) * 100, 100) : 0;
-  const isFull = usedSlots >= maxSlots;
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-3 flex-1 overflow-hidden border-2 border-black bg-white">
-        <div
-          className={cn(
-            "h-full transition-all duration-500",
-            isFull ? "bg-fab-amber" : "bg-fab-teal",
-          )}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-      <span className="shrink-0 text-sm font-black text-black">
-        {usedSlots}/{maxSlots}
-      </span>
-    </div>
-  );
-}
-
-function StatusBadge({ status, count }: { status: string; count: number }) {
   const colors = STATUS_COLORS[status] ?? {
     bg: "bg-muted",
     text: "text-muted-foreground",
@@ -125,17 +107,11 @@ function StatusBadge({ status, count }: { status: string; count: number }) {
   };
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 border-2 border-black px-2.5 py-1 text-[10px] font-black uppercase tracking-wider",
-        colors.bg,
-        colors.text,
-      )}
-    >
-      <span className={cn("h-2 w-2", colors.dot)} />
-      {STATUS_LABELS[status] ?? status}
-      <span className="ml-1">{count}</span>
-    </span>
+    <StatusBadge
+      label={STATUS_LABELS[status] ?? status}
+      colors={colors}
+      count={count}
+    />
   );
 }
 
@@ -160,14 +136,7 @@ export function WorkshopEventCard({
   }, [highlight]);
 
   return (
-    <div
-      ref={cardRef}
-      className={cn(
-        "overflow-hidden border-4 border-black bg-white transition-all duration-200",
-        "shadow-[6px_6px_0_0_#000]",
-        highlight && "border-fab-amber shadow-[6px_6px_0_0_#d97706]",
-      )}
-    >
+    <BrandCard ref={cardRef} highlight={highlight}>
       {/* Header — clickable to expand/collapse */}
       <div className="flex flex-col">
         <button
@@ -226,9 +195,7 @@ export function WorkshopEventCard({
           <div className="space-y-5 border-t-4 border-black px-5 py-5 sm:px-6 sm:py-6">
             {/* Capacity bar */}
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                Capacity
-              </p>
+              <SectionLabel>Capacity</SectionLabel>
               <CapacityBar
                 usedSlots={event.usedSlots}
                 maxSlots={event.maxSlots}
@@ -238,14 +205,12 @@ export function WorkshopEventCard({
             {/* Status breakdown */}
             {Object.keys(event.statusBreakdown).length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Status Breakdown
-                </p>
+                <SectionLabel>Status Breakdown</SectionLabel>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(event.statusBreakdown).map(
                     ([status, count]) =>
                       count > 0 && (
-                        <StatusBadge
+                        <LocalStatusBadge
                           key={status}
                           status={status}
                           count={count}
@@ -258,9 +223,7 @@ export function WorkshopEventCard({
 
             {/* Attendee list */}
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                Attendees ({event.attendees.length})
-              </p>
+              <SectionLabel>Attendees ({event.attendees.length})</SectionLabel>
               {event.attendees.length === 0 ? (
                 <p className="border-2 border-dashed border-black/20 py-4 text-center text-sm font-bold text-black/40">
                   No attendees yet
@@ -281,6 +244,6 @@ export function WorkshopEventCard({
           </div>
         )}
       </div>
-    </div>
+    </BrandCard>
   );
 }

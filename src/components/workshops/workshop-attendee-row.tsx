@@ -20,6 +20,10 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
+import {
+  StatusBadge,
+  type StatusColorSet,
+} from "@/components/brand/primitives";
 
 export type AttendeeInfo = {
   projectId: string;
@@ -33,44 +37,43 @@ export type AttendeeInfo = {
   threadId: string | null;
 };
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
-  {
-    pending: {
-      bg: "bg-amber-100",
-      text: "text-amber-800",
-      dot: "bg-amber-500",
-    },
-    paid: {
-      bg: "bg-fab-teal/20",
-      text: "text-fab-teal",
-      dot: "bg-fab-teal",
-    },
-    completed: {
-      bg: "bg-emerald-100",
-      text: "text-emerald-800",
-      dot: "bg-emerald-500",
-    },
-    approved: {
-      bg: "bg-blue-100",
-      text: "text-blue-800",
-      dot: "bg-blue-500",
-    },
-    claimed: {
-      bg: "bg-slate-100",
-      text: "text-slate-700",
-      dot: "bg-slate-500",
-    },
-    rejected: {
-      bg: "bg-red-100",
-      text: "text-red-800",
-      dot: "bg-red-500",
-    },
-    cancelled: {
-      bg: "bg-red-100",
-      text: "text-red-800",
-      dot: "bg-red-500",
-    },
-  };
+const STATUS_COLORS: Record<string, StatusColorSet> = {
+  pending: {
+    bg: "bg-amber-100",
+    text: "text-amber-800",
+    dot: "bg-amber-500",
+  },
+  paid: {
+    bg: "bg-fab-teal/20",
+    text: "text-fab-teal",
+    dot: "bg-fab-teal",
+  },
+  completed: {
+    bg: "bg-emerald-100",
+    text: "text-emerald-800",
+    dot: "bg-emerald-500",
+  },
+  approved: {
+    bg: "bg-blue-100",
+    text: "text-blue-800",
+    dot: "bg-blue-500",
+  },
+  claimed: {
+    bg: "bg-slate-100",
+    text: "text-slate-700",
+    dot: "bg-slate-500",
+  },
+  rejected: {
+    bg: "bg-red-100",
+    text: "text-red-800",
+    dot: "bg-red-500",
+  },
+  cancelled: {
+    bg: "bg-red-100",
+    text: "text-red-800",
+    dot: "bg-red-500",
+  },
+};
 
 /** Valid workshop workflow transitions keyed by current status. */
 const WORKSHOP_TRANSITIONS: Record<string, ProjectStatusType[]> = {
@@ -178,18 +181,14 @@ export function WorkshopAttendeeRow({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <div
-          className={cn(
-            "inline-flex h-7 items-center gap-1.5 border-2 border-black px-2.5 text-[10px] font-black uppercase tracking-wider",
-            colors.bg,
-            colors.text,
-          )}
-        >
-          <span className={cn("h-2 w-2", colors.dot)} />
-          {PROJECT_STATUS_LABELS[
-            attendee.status as keyof typeof PROJECT_STATUS_LABELS
-          ] ?? attendee.status}
-        </div>
+        <StatusBadge
+          label={
+            PROJECT_STATUS_LABELS[
+              attendee.status as keyof typeof PROJECT_STATUS_LABELS
+            ] ?? attendee.status
+          }
+          colors={colors}
+        />
       )}
 
       <div className="flex shrink-0 items-center gap-1">

@@ -21,6 +21,10 @@ import { Id } from "@convex/_generated/dataModel";
 import { ProjectStatusType } from "@convex/constants";
 import { getStatusLabel } from "@/lib/project-type-meta";
 import posthog from "posthog-js";
+import {
+  StatusBadge,
+  type StatusColorSet,
+} from "@/components/brand/primitives";
 
 type StatusFilter =
   | "all"
@@ -49,24 +53,18 @@ type EnrichedProject = {
   coverUrl?: string | null;
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-700",
-  approved: "bg-blue-100 text-blue-700",
-  completed: "bg-emerald-100 text-emerald-700",
-  paid: "bg-teal-100 text-teal-700",
-  claimed: "bg-slate-100 text-slate-700",
-  rejected: "bg-red-100 text-red-700",
-  cancelled: "bg-red-100 text-red-700",
-};
-
-const STATUS_DOT: Record<string, string> = {
-  pending: "bg-amber-400",
-  approved: "bg-blue-400",
-  completed: "bg-emerald-400",
-  paid: "bg-teal-400",
-  claimed: "bg-slate-400",
-  rejected: "bg-red-400",
-  cancelled: "bg-red-400",
+const STATUS_COLORS: Record<string, StatusColorSet> = {
+  pending: { bg: "bg-amber-100", text: "text-amber-800", dot: "bg-amber-500" },
+  approved: { bg: "bg-blue-100", text: "text-blue-800", dot: "bg-blue-500" },
+  completed: {
+    bg: "bg-emerald-100",
+    text: "text-emerald-800",
+    dot: "bg-emerald-500",
+  },
+  paid: { bg: "bg-fab-teal/20", text: "text-fab-teal", dot: "bg-fab-teal" },
+  claimed: { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-500" },
+  rejected: { bg: "bg-red-100", text: "text-red-800", dot: "bg-red-500" },
+  cancelled: { bg: "bg-red-100", text: "text-red-800", dot: "bg-red-500" },
 };
 
 const STATUS_FILTERS: StatusFilter[] = [
@@ -147,20 +145,13 @@ function ProjectListRow({
             ₱{project.estimatedPrice.toFixed(2)}
           </span>
 
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap",
-              STATUS_STYLES[project.status] ?? "bg-muted text-muted-foreground",
+          <StatusBadge
+            label={getStatusLabel(
+              project.status as ProjectStatusType,
+              project.type,
             )}
-          >
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full shrink-0",
-                STATUS_DOT[project.status] ?? "bg-muted-foreground",
-              )}
-            />
-            {getStatusLabel(project.status as ProjectStatusType, project.type)}
-          </span>
+            colors={STATUS_COLORS[project.status] ?? STATUS_COLORS.pending}
+          />
         </div>
       </div>
     </button>

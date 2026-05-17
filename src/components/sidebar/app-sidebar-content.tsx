@@ -139,7 +139,7 @@ export function SidebarNavigation() {
         <React.Fragment key={group.key}>
           {groupIndex > 0 && (
             <div className="px-3 py-1">
-              <Separator style={{ background: "var(--fab-border-md)" }} />
+              <Separator className="bg-black" />
             </div>
           )}
           <SidebarGroup className="py-0">
