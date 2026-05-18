@@ -26,8 +26,10 @@ import { cn } from "@/lib/utils";
 import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const DAY_SECTION_BG = "rgba(220,215,245,0.55)";
-const DAY_SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
+const DAY_SECTION_BG = "#ffffff";
+const DAY_SECTION_BG_STICKY = "#ffffff";
+const CALENDAR_HEADER_BG = "#f3f4f6";
+const CALENDAR_BORDER = "#9ca3af";
 
 const weekSkeletonDays = Array.from({ length: 7 }, (_, index) => index);
 const monthSkeletonCells = Array.from({ length: 35 }, (_, index) => index);
@@ -239,14 +241,17 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
       <div className="hidden min-h-0 flex-1 md:flex">
         <ScrollArea className="min-h-0 min-w-0 flex-1">
           <div
-            className="grid h-full min-h-full min-w-0 bg-background"
+            className="grid h-full min-h-full min-w-0 bg-white"
             style={{
               width: `max(100%, ${CALENDAR_DAY_MIN_WIDTH}px)`,
               gridTemplateRows: "auto 1fr",
               height: "100%",
             }}
           >
-            <ViewHeader className="border-0 shadow-none">
+            <ViewHeader
+              className="border-0 shadow-none"
+              style={{ background: CALENDAR_HEADER_BG }}
+            >
               <div
                 className="grid"
                 style={{ gridTemplateColumns: CALENDAR_DAY_LAYOUT_TEMPLATE }}
@@ -254,6 +259,10 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                 <ViewHeaderLeading
                   width={CALENDAR_DAY_LEADING_COL_WIDTH}
                   className="h-11 border-b border-r px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+                  style={{
+                    background: CALENDAR_HEADER_BG,
+                    borderColor: CALENDAR_BORDER,
+                  }}
                 >
                   {activeTab === "resources" ? "RESOURCES" : "SERVICES"}
                 </ViewHeaderLeading>
@@ -263,14 +272,19 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                   style={{
                     gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
                     height: 44,
+                    background: CALENDAR_HEADER_BG,
                   }}
                 >
-                  {HEADER_SLOTS.map((slot) => (
+                  {HEADER_SLOTS.map((slot, slotIndex) => (
                     <div
                       key={`calendar-loading-header-${slot}`}
-                      className="flex items-center whitespace-nowrap border-b border-l border-border px-1"
+                      className="flex items-center whitespace-nowrap border-b px-1"
                       style={{
                         height: "100%",
+                        background: CALENDAR_HEADER_BG,
+                        borderBottomColor: CALENDAR_BORDER,
+                        borderLeft:
+                          slotIndex > 0 ? `1px solid ${CALENDAR_BORDER}` : "",
                         color: "var(--fab-text-muted)",
                         fontSize: 10,
                         fontWeight: 500,
@@ -305,9 +319,8 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                         left: 0,
                         zIndex: 12,
                         background: DAY_SECTION_BG_STICKY,
-                        borderTop: "1px solid var(--fab-border-md)",
-                        borderBottom: "1px solid var(--fab-border-md)",
-                        borderRight: "1px solid var(--fab-border-md)",
+                        borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                        borderRight: `1px solid ${CALENDAR_BORDER}`,
                       }}
                     >
                       <span
@@ -322,21 +335,23 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                     </div>
 
                     <div
-                      className="relative grid"
+                      className="relative grid bg-white"
                       style={{
                         gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
                         background: DAY_SECTION_BG,
                       }}
                     >
-                      {HEADER_SLOTS.map((slot) => (
+                      {HEADER_SLOTS.map((slot, slotIndex) => (
                         <div
                           key={`${row.id}-${slot}`}
                           aria-hidden
                           style={{
                             height: "100%",
-                            borderTop: "1px solid var(--fab-border-md)",
-                            borderBottom: "1px solid var(--fab-border-md)",
-                            borderLeft: "1px solid var(--fab-border)",
+                            borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                            borderLeft:
+                              slotIndex > 0
+                                ? `1px solid ${CALENDAR_BORDER}`
+                                : "",
                           }}
                         />
                       ))}
@@ -357,9 +372,9 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                         position: "sticky",
                         left: 0,
                         zIndex: 8,
-                        background: "var(--fab-bg-main)",
-                        borderBottom: "1px solid var(--fab-border-md)",
-                        borderRight: "1px solid var(--fab-border-md)",
+                        background: "#fff",
+                        borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                        borderRight: `1px solid ${CALENDAR_BORDER}`,
                       }}
                     >
                       <div className="flex h-full items-center gap-2 px-3">
@@ -377,13 +392,13 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                     </div>
 
                     <div
-                      className="relative grid"
+                      className="relative grid bg-white"
                       style={{
                         gridTemplateColumns: CALENDAR_DAY_TIMELINE_TEMPLATE,
                         minHeight: row.rowHeight,
                       }}
                     >
-                      {HEADER_SLOTS.map((slot) => {
+                      {HEADER_SLOTS.map((slot, slotIndex) => {
                         const isBoundary = slot >= DAY_END;
 
                         return (
@@ -392,11 +407,14 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                             aria-hidden
                             style={{
                               height: "100%",
-                              borderBottom: "1px solid var(--fab-border-soft)",
-                              borderLeft: "1px solid var(--fab-border)",
+                              borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                              borderLeft:
+                                slotIndex > 0
+                                  ? `1px solid ${CALENDAR_BORDER}`
+                                  : "",
                               background: isBoundary
-                                ? "var(--fab-bg-sidebar)"
-                                : "transparent",
+                                ? "#fff"
+                                : "#fff",
                               pointerEvents: "none",
                             }}
                           />
@@ -437,7 +455,10 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
           )
           .map((row, rowIndex) => (
             <div key={`calendar-mobile-loading-${row.id}-${rowIndex}`}>
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-3 py-1.5 backdrop-blur-sm">
+              <div
+                className="sticky top-0 z-10 flex items-center justify-between border-b bg-[#f3f4f6] px-3 py-1.5"
+                style={{ borderBottomColor: CALENDAR_BORDER }}
+              >
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--fab-text-dim)]/35" />
                   <Skeleton
@@ -452,7 +473,7 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                 </div>
               </div>
 
-              <div className="divide-y">
+              <div className="divide-y divide-[#9ca3af]">
                 {row.slots.map((slot, slotIndex) => (
                   <div
                     key={`calendar-mobile-entry-${row.id}-${slot.start}-${slotIndex}`}
@@ -497,9 +518,9 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
             gridTemplateRows: `auto minmax(${weekMinGridHeight}px, 1fr)`,
           }}
         >
-          <ViewHeader className="border-0 shadow-none">
+          <ViewHeader className="border-0 bg-[#f3f4f6] shadow-none">
             <div
-              className="grid border-b"
+              className="grid border-b border-[#9ca3af]"
               style={{
                 gridTemplateColumns: `${weekTimeColWidth}px repeat(${weekSkeletonDays.length}, minmax(${weekDayMinWidth}px, 1fr))`,
               }}
@@ -507,7 +528,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
               <ViewHeaderLeading
                 width={weekTimeColWidth}
                 className={cn(
-                  "border-r font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  "border-r border-[#9ca3af] bg-[#f3f4f6] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                   isMobile
                     ? "px-1.5 py-1.5 text-[9px]"
                     : "px-3 py-2 text-[10px]",
@@ -520,7 +541,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
                 <div
                   key={`calendar-week-loading-header-${day}`}
                   className={cn(
-                    "border-r bg-muted/10 last:border-r-0",
+                    "border-r border-[#9ca3af] bg-[#f3f4f6] last:border-r-0",
                     isMobile ? "px-1 py-1.5" : "px-3 py-2",
                   )}
                 >
@@ -551,28 +572,36 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
             }}
           >
             <div
-              className="grid border-r bg-background"
-              style={{
-                gridTemplateRows: `repeat(${weekHourSkeletons.length}, minmax(${weekHourRowMinHeight}px, 1fr))`,
-              }}
+              className="relative border-r border-[#9ca3af] bg-white"
+              style={{ minHeight: weekMinGridHeight }}
             >
-              {weekHourSkeletons.map((hour) => (
-                <div
-                  key={`calendar-week-loading-time-${hour}`}
-                  className={cn(
-                    "border-b border-border/60",
-                    isMobile ? "px-1.5" : "px-3",
-                  )}
-                >
-                  <Skeleton className="h-3 w-10 -translate-y-1.5" />
-                </div>
-              ))}
+              {weekHourSkeletons.map((hour, index) => {
+                const top = `${((hour - DAY_START) / CALENDAR_WEEK_TOTAL_HOURS) * 100}%`;
+
+                return (
+                  <div
+                    key={`calendar-week-loading-time-${hour}`}
+                    className="absolute left-0 right-0"
+                    style={{ top }}
+                  >
+                    <div
+                      className={cn(isMobile ? "px-1.5" : "px-3")}
+                      style={{
+                        transform:
+                          index === 0 ? "translateY(0)" : "translateY(-50%)",
+                      }}
+                    >
+                      <Skeleton className="h-3 w-10" />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {weekSkeletonDays.map((day) => (
               <div
                 key={`calendar-week-loading-column-${day}`}
-                className="relative border-r last:border-r-0"
+                className="relative border-r border-[#9ca3af] bg-white last:border-r-0"
                 style={{ minHeight: weekMinGridHeight }}
               >
                 {weekHalfHourMarks.map((mark, index) => (
@@ -581,8 +610,8 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
                     className={cn(
                       "absolute left-0 right-0",
                       index % 2 === 0
-                        ? "border-t border-border/60"
-                        : "border-t border-dashed border-border/40",
+                        ? "border-t border-[#9ca3af]"
+                        : "border-t border-dashed border-[#9ca3af]",
                     )}
                     style={{
                       top: `${(mark / Math.max(weekHalfHourMarks.length - 1, 1)) * 100}%`,
@@ -631,9 +660,9 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
           gridTemplateRows: "auto minmax(0, 1fr)",
         }}
       >
-        <ViewHeader className="border-0 shadow-none">
+        <ViewHeader className="border-0 bg-[#f3f4f6] shadow-none">
           <div
-            className="grid border-b"
+            className="grid border-b border-[#9ca3af]"
             style={{
               gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
             }}
@@ -642,11 +671,11 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
               <div
                 key={`calendar-month-loading-header-${day}`}
                 className={cn(
-                  "font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  "bg-[#f3f4f6] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                   isMobile
                     ? "px-1 py-1.5 text-[9px] text-center"
                     : "px-3 py-2 text-[10px]",
-                  day === 0 ? "" : "border-l",
+                  day === 0 ? "" : "border-l border-[#9ca3af]",
                 )}
               >
                 <Skeleton
@@ -658,7 +687,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
         </ViewHeader>
 
         <div
-          className="grid min-h-0 border-b border-r bg-background"
+          className="grid min-h-0 border-b border-r border-[#9ca3af] bg-white"
           style={{
             gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
             gridTemplateRows: `repeat(5, minmax(${monthCellMinHeight}px, 1fr))`,
@@ -667,11 +696,11 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
           {monthSkeletonCells.map((cell) => (
             <div
               key={`calendar-month-loading-${cell}`}
-              className="flex min-h-0 flex-col border-l border-t bg-background"
+              className="flex min-h-0 flex-col border-l border-t border-[#9ca3af] bg-white"
             >
               <div
                 className={cn(
-                  "flex items-center justify-between gap-2 border-b bg-muted/10",
+                  "flex items-center justify-between gap-2 border-b border-[#9ca3af] bg-[#f3f4f6]",
                   isMobile ? "px-1.5 py-1" : "px-3 py-2",
                 )}
               >
@@ -719,7 +748,7 @@ export function CalendarContentLoadingState({
   activeTab?: CalendarTab;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white">
       {viewMode === "day" ? (
         <DayLoadingState activeTab={activeTab} />
       ) : (
@@ -737,7 +766,7 @@ export function CalendarLoadingState({
   activeTab?: CalendarTab;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white">
       <CalendarContentLoadingState viewMode={viewMode} activeTab={activeTab} />
     </div>
   );

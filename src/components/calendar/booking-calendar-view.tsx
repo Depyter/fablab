@@ -45,7 +45,7 @@ export function BookingCalendarView({
   rangeEvents: CalendarRangeEvent[];
 }) {
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
       <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
         {activeTab === "services" ? (
           viewMode === "day" ? (

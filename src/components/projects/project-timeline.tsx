@@ -53,7 +53,9 @@ export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
       {/* ── Desktop: horizontal dots + line row ── */}
       <div
         className="hidden sm:grid"
-        style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`,
+        }}
       >
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1;
