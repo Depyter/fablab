@@ -1,4 +1,5 @@
 import { internalMutation } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 import {
   authMutation,
@@ -10,6 +11,7 @@ import {
 import { formatLabDateNumeric } from "../../src/lib/lab-time";
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
+type ServicePatch = Partial<Omit<Doc<"services">, "_id" | "_creationTime">>;
 
 function normalizeFabricationCategory<
   T extends {
@@ -225,8 +227,7 @@ export const updateService = authMutation({
     const existingService = await ctx.db.get(args.service);
     if (!existingService) throw new ConvexError("Service not found!");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updates: Record<string, any> = {};
+    const updates: ServicePatch = {};
 
     if (args.name !== undefined) {
       const slug = slugify(args.name);
