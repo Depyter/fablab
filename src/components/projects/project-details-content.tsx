@@ -144,53 +144,53 @@ export function ProjectDetailsContent({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Status + Timeline + Close — all in one row */}
+      {/* Row 1: Timeline + Close */}
       <div className="flex items-center gap-2">
-        {!isClient && allowedTransitions.length > 0 && (
-          <div className="flex shrink-0 flex-wrap items-center gap-1">
-            {allowedTransitions.map((status: ProjectStatusType) => {
-              const label = getStatusLabel(status, project.type);
-              const isDestructive =
-                status === "rejected" || status === "cancelled";
-              const isPrimary = status === "approved" || status === "completed";
+        <ProjectTimeline steps={timelineSteps} className="flex-1" />
+        {headerRight}
+      </div>
 
-              if (status === "paid") {
-                return (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={onMarkPaid}
-                    className="inline-flex h-7 items-center border-2 border-black bg-fab-teal px-2 text-[9px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
-                  >
-                    {label}
-                  </button>
-                );
-              }
+      {/* Row 2: Status action buttons */}
+      {!isClient && allowedTransitions.length > 0 && (
+        <div className="flex shrink-0 flex-wrap items-center gap-1">
+          {allowedTransitions.map((status: ProjectStatusType) => {
+            const label = getStatusLabel(status, project.type);
+            const isDestructive =
+              status === "rejected" || status === "cancelled";
+            const isPrimary = status === "approved" || status === "completed";
 
+            if (status === "paid") {
               return (
                 <button
                   key={status}
                   type="button"
-                  onClick={() => handleStatusChange(status)}
-                  className={`inline-flex h-7 items-center border-2 border-black px-2 text-[9px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] ${
-                    isPrimary
-                      ? "bg-fab-teal text-white"
-                      : isDestructive
-                        ? "bg-red-100 text-red-800"
-                        : "bg-white text-black"
-                  }`}
+                  onClick={onMarkPaid}
+                  className="inline-flex h-8 items-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
                 >
                   {label}
                 </button>
               );
-            })}
-          </div>
-        )}
+            }
 
-        <ProjectTimeline steps={timelineSteps} className="flex-1" />
-
-        {headerRight}
-      </div>
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => handleStatusChange(status)}
+                className={`inline-flex h-8 items-center border-2 border-black px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] ${
+                  isPrimary
+                    ? "bg-fab-teal text-white"
+                    : isDestructive
+                      ? "bg-red-100 text-red-800"
+                      : "bg-white text-black"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="space-y-3">
         {project.type === "WORKSHOP" ? (

@@ -106,34 +106,36 @@ function ProjectTimelineLoading() {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <div className="flex min-w-180 pb-2 lg:min-w-0">
+        <div
+          className="grid min-w-180 pb-2 lg:min-w-0"
+          style={{
+            gridTemplateColumns: `repeat(${PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length}, minmax(0, 1fr))`,
+          }}
+        >
           {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step, index) => {
-            const isFirst = index === 0;
             const isLast =
               index === PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length - 1;
 
             return (
               <div
                 key={`project-timeline-desktop-loading-${index}`}
-                className="flex min-w-0 flex-1 flex-col items-center"
+                className="flex min-w-0 flex-col items-center"
               >
-                <div className="flex w-full items-center">
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]",
-                      isFirst && "invisible",
-                    )}
-                  />
+                <div className="relative flex h-10 w-full items-center justify-center">
+                  {index > 0 && (
+                    <div className="absolute left-0 right-1/2 flex items-center pr-[18px]">
+                      <div className="h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]" />
+                    </div>
+                  )}
                   <ProjectTimelineLoadingDot />
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]",
-                      isLast && "invisible",
-                    )}
-                  />
+                  {!isLast && (
+                    <div className="absolute left-1/2 right-0 flex items-center pl-[18px]">
+                      <div className="h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]" />
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-3 px-1 text-center">
+                <div className="mt-2 px-2.5 text-center">
                   <Skeleton
                     className={cn("mx-auto h-4 rounded-full", step.titleWidth)}
                   />
