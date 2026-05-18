@@ -52,12 +52,11 @@ interface ProjectInfoCardProps {
   editServiceType: FulfillmentModeType;
   setEditServiceType: (v: FulfillmentModeType) => void;
 
-  /** When true, hides the Service Type field (used for workshops which are always full-service). */
   hideServiceType?: boolean;
-
-  /** When true, hides description, material, notes, and booking date/time.
-   *  Used for workshops where the pricing card already shows booking info. */
   workshop?: boolean;
+  attendeeName?: string;
+  attendeeEmail?: string;
+  attendeeStatus?: string;
 }
 
 export function ProjectInfoCard({
@@ -88,10 +87,13 @@ export function ProjectInfoCard({
   setEditServiceType,
   hideServiceType = false,
   workshop = false,
+  attendeeName,
+  attendeeEmail,
+  attendeeStatus,
 }: ProjectInfoCardProps) {
   return (
     <DetailCard
-      title="Project Details"
+      title={workshop ? "Attendee" : "Project Details"}
       onEdit={canEdit ? onEdit : undefined}
       isEditing={isEditing}
       onSave={onSave}
@@ -99,13 +101,47 @@ export function ProjectInfoCard({
       isSaving={isSaving}
       bodyClassName="space-y-4"
     >
+      {/* Attendee info (workshop only) */}
+      {workshop && attendeeName && (
+        <>
+          <div className="grid min-w-0 grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Attendee
+              </p>
+              <p className="text-sm font-bold text-black">{attendeeName}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Status
+              </p>
+              <p className="text-sm font-black uppercase tracking-tighter text-black">
+                {attendeeStatus}
+              </p>
+            </div>
+          </div>
+          <div className="h-px bg-black" />
+        </>
+      )}
+
+      {workshop && attendeeEmail && (
+        <>
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              Email
+            </p>
+            <p className="text-sm font-bold text-black break-all">
+              {attendeeEmail}
+            </p>
+          </div>
+          <div className="h-px bg-black" />
+        </>
+      )}
+
       {/* Description */}
       {!workshop && (
         <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
             Description
           </p>
           {isEditing ? (
@@ -117,24 +153,16 @@ export function ProjectInfoCard({
               placeholder="Project description…"
             />
           ) : (
-            <p
-              className="wrap-break-word whitespace-pre-line text-sm"
-              style={{ color: "var(--fab-text-primary)" }}
-            >
+            <p className="break-words whitespace-pre-line text-sm font-bold text-black">
               {description}
             </p>
           )}
         </div>
       )}
 
-      {!workshop && (
-        <div
-          className="h-px"
-          style={{ background: "var(--fab-border-soft)" }}
-        />
-      )}
+      {!workshop && <div className="h-px bg-black" />}
 
-      {/* Service type + material — both hidden for workshops */}
+      {/* Service type + material */}
       {!workshop && (
         <>
           <div
@@ -145,10 +173,7 @@ export function ProjectInfoCard({
           >
             {!hideServiceType && (
               <div className="space-y-1">
-                <p
-                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                  style={{ color: "var(--fab-text-dim)" }}
-                >
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                   Service Type
                 </p>
                 {isEditing ? (
@@ -167,20 +192,14 @@ export function ProjectInfoCard({
                     </SelectContent>
                   </Select>
                 ) : (
-                  <p
-                    className="text-sm capitalize"
-                    style={{ color: "var(--fab-text-primary)" }}
-                  >
+                  <p className="text-sm font-bold text-black capitalize">
                     {serviceType}
                   </p>
                 )}
               </div>
             )}
             <div className="space-y-1">
-              <p
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 Material
               </p>
               {isEditing ? (
@@ -199,29 +218,20 @@ export function ProjectInfoCard({
                   </SelectContent>
                 </Select>
               ) : (
-                <p
-                  className="text-sm capitalize"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
+                <p className="text-sm font-bold text-black capitalize">
                   {material}
                 </p>
               )}
             </div>
           </div>
 
-          <div
-            className="h-px"
-            style={{ background: "var(--fab-border-soft)" }}
-          />
+          <div className="h-px bg-black" />
         </>
       )}
 
       {/* Attachments */}
       <div className="space-y-1">
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: "var(--fab-text-dim)" }}
-        >
+        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
           Attachments
         </p>
         {isEditing ? (
@@ -245,42 +255,23 @@ export function ProjectInfoCard({
         )}
       </div>
 
-      {/* Booking date + time — hidden for workshops (shown in pricing card) */}
+      {/* Booking date + time — hidden for workshops */}
       {!workshop && (
         <>
-          <div
-            className="h-px"
-            style={{ background: "var(--fab-border-soft)" }}
-          />
+          <div className="h-px bg-black" />
 
           <div className="grid min-w-0 grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 Booking Date
               </p>
-              <p
-                className="text-sm"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {bookingDateStr}
-              </p>
+              <p className="text-sm font-bold text-black">{bookingDateStr}</p>
             </div>
             <div className="space-y-1">
-              <p
-                className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                style={{ color: "var(--fab-text-dim)" }}
-              >
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 Time Range
               </p>
-              <p
-                className="text-sm"
-                style={{ color: "var(--fab-text-primary)" }}
-              >
-                {bookingTimeRange}
-              </p>
+              <p className="text-sm font-bold text-black">{bookingTimeRange}</p>
             </div>
           </div>
         </>
@@ -289,16 +280,10 @@ export function ProjectInfoCard({
       {/* Notes — hidden for workshops */}
       {!workshop && (
         <>
-          <div
-            className="h-px"
-            style={{ background: "var(--fab-border-soft)" }}
-          />
+          <div className="h-px bg-black" />
 
           <div className="space-y-1">
-            <p
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: "var(--fab-text-dim)" }}
-            >
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Notes
             </p>
             {isEditing ? (
@@ -310,14 +295,7 @@ export function ProjectInfoCard({
                 placeholder="Additional notes…"
               />
             ) : (
-              <p
-                className="text-sm"
-                style={{
-                  color: notes
-                    ? "var(--fab-text-muted)"
-                    : "var(--fab-text-dim)",
-                }}
-              >
+              <p className="text-sm font-bold text-black/60">
                 {notes || "No notes provided"}
               </p>
             )}
@@ -325,29 +303,21 @@ export function ProjectInfoCard({
         </>
       )}
 
-      <div className="h-px" style={{ background: "var(--fab-border-soft)" }} />
+      <div className="h-px bg-black" />
 
       {/* Submitted by / at */}
       <div className="grid min-w-0 grid-cols-2 gap-4">
         <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
             Submitted By
           </p>
-          <p className="text-sm" style={{ color: "var(--fab-text-primary)" }}>
-            {submittedBy ?? "—"}
-          </p>
+          <p className="text-sm font-bold text-black">{submittedBy ?? "—"}</p>
         </div>
         <div className="space-y-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: "var(--fab-text-dim)" }}
-          >
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
             Submitted On
           </p>
-          <p className="text-sm" style={{ color: "var(--fab-text-primary)" }}>
+          <p className="text-sm font-bold text-black">
             {submittedAt
               ? new Date(submittedAt).toLocaleDateString("en-US", {
                   month: "short",

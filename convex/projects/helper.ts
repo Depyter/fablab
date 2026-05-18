@@ -810,7 +810,13 @@ export async function applyStatusChange(
       .collect();
 
     for (const usage of usages) {
-      if (service && service.serviceCategory.type === "WORKSHOP") {
+      // Only decrement the main workshop slot usage (no resource).
+      // Resource usages (rooms, machines) should not decrement the slot counter.
+      if (
+        service &&
+        service.serviceCategory.type === "WORKSHOP" &&
+        !usage.resource
+      ) {
         await decrementWorkshopSlot(ctx, service, usage);
       }
 

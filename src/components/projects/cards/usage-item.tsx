@@ -720,44 +720,42 @@ export function UsageDraftItem({
         </div>
       )}
 
-      {isBuyFromLab &&
-        pricingType === "FABRICATION" &&
-        editableMaterialDocs.length > 0 && (
-          <UsageMaterialEditor
-            draft={draft}
-            materialOptions={editableMaterialDocs}
-            onAddMaterial={(materialId) =>
-              onUpdateDraft((currentDraft) => ({
+      {isBuyFromLab && editableMaterialDocs.length > 0 && (
+        <UsageMaterialEditor
+          draft={draft}
+          materialOptions={editableMaterialDocs}
+          onAddMaterial={(materialId) =>
+            onUpdateDraft((currentDraft) => ({
+              ...currentDraft,
+              materialAmounts: {
+                ...currentDraft.materialAmounts,
+                [materialId]: currentDraft.materialAmounts[materialId] ?? 0,
+              },
+            }))
+          }
+          onUpdateAmount={(materialId, amountUsed) =>
+            onUpdateDraft((currentDraft) => ({
+              ...currentDraft,
+              materialAmounts: {
+                ...currentDraft.materialAmounts,
+                [materialId]: amountUsed,
+              },
+            }))
+          }
+          onRemoveMaterial={(materialId) =>
+            onUpdateDraft((currentDraft) => {
+              const nextMaterialAmounts = {
+                ...currentDraft.materialAmounts,
+              };
+              delete nextMaterialAmounts[materialId];
+              return {
                 ...currentDraft,
-                materialAmounts: {
-                  ...currentDraft.materialAmounts,
-                  [materialId]: currentDraft.materialAmounts[materialId] ?? 0,
-                },
-              }))
-            }
-            onUpdateAmount={(materialId, amountUsed) =>
-              onUpdateDraft((currentDraft) => ({
-                ...currentDraft,
-                materialAmounts: {
-                  ...currentDraft.materialAmounts,
-                  [materialId]: amountUsed,
-                },
-              }))
-            }
-            onRemoveMaterial={(materialId) =>
-              onUpdateDraft((currentDraft) => {
-                const nextMaterialAmounts = {
-                  ...currentDraft.materialAmounts,
-                };
-                delete nextMaterialAmounts[materialId];
-                return {
-                  ...currentDraft,
-                  materialAmounts: nextMaterialAmounts,
-                };
-              })
-            }
-          />
-        )}
+                materialAmounts: nextMaterialAmounts,
+              };
+            })
+          }
+        />
+      )}
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="flex items-center justify-between gap-3">
@@ -885,7 +883,7 @@ export function UsageReadOnlyItem({
         </div>
       </div>
 
-      {isBuyFromLab && pricingType === "FABRICATION" && (
+      {isBuyFromLab && (
         <div className="space-y-1">
           <p
             className="text-[9px] font-bold uppercase tracking-[0.12em]"

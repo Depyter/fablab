@@ -197,6 +197,44 @@ export const createProject = authMutation({
         args.materialIds,
       );
       await incrementWorkshopSlot(ctx, service, booking);
+
+      // ── Slot-level resource usages ───────────────────────────────────
+      // Create a resourceUsage record for each resource configured on the
+      // matched time slot. Each project in the slot gets its own set so
+      // that cancellation cleanup works independently per project.
+      const wsCategory = service.serviceCategory;
+      if (wsCategory.type === "WORKSHOP") {
+        const wsSchedule = wsCategory.schedules.find(
+          (s) => s.date === booking.date,
+        );
+        const wsTimeSlot = wsSchedule?.timeSlots.find(
+          (t) => t.startTime === booking.startTime,
+        );
+
+        for (const resourceId of wsTimeSlot?.resources ?? []) {
+          await ctx.db.insert("resourceUsage", {
+            projectId,
+            service: args.service,
+            resource: resourceId,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            snapshot: {
+              name: service.name,
+              costAtTime: 0,
+              unit: "session",
+            },
+            pricingSnapshot: {
+              duration: 0,
+              rate: 0,
+              timeCost: 0,
+              materialCost: 0,
+              setupFeePortion: 0,
+              subtotal: 0,
+              unitName: "session",
+            },
+          });
+        }
+      }
     } else {
       await createFabricationUsage(
         ctx,

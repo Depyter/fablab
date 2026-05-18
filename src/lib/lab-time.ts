@@ -8,15 +8,26 @@ function getFormatter(options: Intl.DateTimeFormatOptions) {
   });
 }
 
+// Memoized formatter for the common getParts() options — avoids creating a new
+// Intl.DateTimeFormat on every call, which is expensive when called ~70 times
+// per calendar render.
+let _cachedPartsFormatter: Intl.DateTimeFormat | null = null;
+function getPartsFormatter() {
+  if (!_cachedPartsFormatter) {
+    _cachedPartsFormatter = getFormatter({
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    });
+  }
+  return _cachedPartsFormatter;
+}
+
 function getParts(date: Date | number) {
-  const parts = getFormatter({
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(date));
+  const parts = getPartsFormatter().formatToParts(new Date(date));
 
   return {
     year: Number(parts.find((part) => part.type === "year")?.value),

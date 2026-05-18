@@ -600,7 +600,7 @@ export function PricingEstimateCard({
             >
               Usages
             </p>
-            {pricingType !== "WORKSHOP" && isEditing && !readOnly && (
+            {isEditing && !readOnly && (
               <Button
                 type="button"
                 size="sm"

@@ -7,7 +7,6 @@ import {
 
 import { useState } from "react";
 
-import { Card } from "@/components/ui/card";
 import { FieldSeparator } from "@/components/ui/field";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { UploadedFile } from "../file-upload/types";
@@ -26,7 +25,7 @@ export type BookingFormValues = {
   notes: string;
   material: string;
   requestedMaterialIds?: string[];
-  pricing: string; // variant name, e.g. "Default", "UP", "Senior"
+  pricing: string;
   dateTime: {
     date: Date | undefined;
     startTime: string;
@@ -100,252 +99,264 @@ export function EstimateProjectDetails({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <DialogHeader className="shrink-0 px-2 pb-4 sm:px-0">
+      <DialogHeader className="shrink-0 border-b-4 border-black px-2 pb-4 sm:px-0">
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
-          Review & Estimate Project
+          Review & Estimate
         </DialogTitle>
-        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
+        <DialogDescription className="max-w-xl text-sm font-bold text-black/60">
           Please review all details before submitting.
         </DialogDescription>
       </DialogHeader>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-1 no-scrollbar">
-        <Card className="rounded-lg border-2 border-black bg-background py-4">
-          <div className="divide-y">
-            {/* Service Summary */}
-            <div className="px-4 pb-4">
-              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                Service Details
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-gray-600 text-sm">Service</p>
-                  <p className="font-medium text-sm">{serviceName}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Type</p>
-                  <p className="font-medium text-sm capitalize">
-                    {data.serviceType?.replace("-", " ")}
-                  </p>
-                </div>
+        <div className="overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[6px_6px_0_0_#000]">
+          {/* Service Summary */}
+          <div className="border-b-4 border-black px-4 pb-4 pt-4">
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              Service Details
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Service
+                </p>
+                <p className="text-sm font-bold text-black">{serviceName}</p>
               </div>
-            </div>
-
-            {/* Project Details */}
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                Project Information
-              </h3>
-              <div className="grid grid-cols-2 gap-2 text-sm mb-2">
-                <div>
-                  <p className="text-gray-600">Date</p>
-                  <p className="font-medium">
-                    {data.dateTime.date
-                      ? formatLabDateNumeric(data.dateTime.date)
-                      : "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Time</p>
-                  <p className="font-medium">
-                    {formatLabClockTime(data.dateTime.startTime)} -{" "}
-                    {formatLabClockTime(data.dateTime.endTime)}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-gray-600">Project Name</p>
-                  <p className="font-medium">{data.name}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-gray-600">Material</p>
-                    <p className="font-medium">
-                      {data.material === "provide-own"
-                        ? "Provide Materials"
-                        : "Buy From Fablab"}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-gray-600">Description</p>
-                  <p className="font-medium">{data.description}</p>
-                </div>
-                {data.notes && (
-                  <div>
-                    <p className="text-gray-600">Notes</p>
-                    <p className="font-medium">{data.notes}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Files */}
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                Uploaded Files
-              </h3>
-              <ProjectAttachments
-                files={data.files.map((f) => ({
-                  url: f.url || "",
-                  type: f.fileType,
-                  originalName: f.fileName,
-                }))}
-              />
-            </div>
-
-            {/* Pricing */}
-            <div className="p-4 bg-gray-50">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Pricing Estimate
-                </h3>
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedVariant && (
-                    <span className="rounded-full bg-chart-4/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-chart-4">
-                      {selectedVariant}
-                    </span>
-                  )}
-                  <span className="rounded-full bg-chart-6/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-chart-6">
-                    {pricingType.replace("_", " ")}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-3 text-sm">
-                {pricingType === "WORKSHOP" && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                      Amount
-                    </span>
-                    <span className="text-[13px] font-medium text-gray-900">
-                      ₱{pricing.setupFee.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {isTimeBased && (
-                  <>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Setup Fee
-                      </span>
-                      <span className="text-[13px] font-medium text-gray-900">
-                        ₱{pricing.setupFee.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Duration ({pricing.unitName}s)
-                      </span>
-                      <span className="text-[13px] font-medium text-gray-900">
-                        {pricing.duration.toFixed(2)} {pricing.unitName}s
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Rate / {pricing.unitName}
-                      </span>
-                      <span className="text-[13px] font-medium text-gray-900">
-                        ₱{pricing.rate.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Time Cost
-                      </span>
-                      <span className="text-[13px] font-medium text-gray-900">
-                        ₱{pricing.timeCost.toFixed(2)}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {isBuyFromLab && (
-                  <>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Materials
-                      </span>
-                      <span className="text-[13px] font-medium text-gray-900 text-right">
-                        {materialNames.length > 0
-                          ? materialNames.join(", ")
-                          : "N/A"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                        Material Cost
-                      </span>
-                      <span className="text-[13px] font-medium text-gray-900">
-                        N/A
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                <FieldSeparator className="my-1" />
-
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                    Estimated Total
-                  </span>
-                  <span className="text-xl font-extrabold text-chart-6">
-                    ₱{pricing.total.toFixed(2)}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-gray-500">
-                  Final price may vary based on actual production time and
-                  materials used.
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Type
+                </p>
+                <p className="text-sm font-bold text-black capitalize">
+                  {data.serviceType?.replace("-", " ")}
                 </p>
               </div>
             </div>
+          </div>
 
-            {/* Terms */}
-            <div className="flex items-start border-t-2 border-black bg-fab-teal/10 p-4">
-              <input
-                type="checkbox"
-                id="terms"
-                required
-                className="mt-1 h-4 w-4 rounded border-black text-fab-magenta"
-                onChange={handleCheckboxChange}
-              />
-              <label
-                htmlFor="terms"
-                className="ml-3 text-sm text-gray-600 leading-relaxed"
-              >
-                I understand that this is a booking request and requires admin
-                approval. I agree to the{" "}
-                <a href="#" className="text-chart-6 hover:underline">
-                  terms and conditions
-                </a>{" "}
-                and the{" "}
-                <a href="#" className="text-chart-6 hover:underline">
-                  cancellation policy
-                </a>
-                .
-              </label>
+          {/* Project Details */}
+          <div className="border-b-4 border-black px-4 pb-4 pt-4">
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              Project Information
+            </h3>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Date
+                </p>
+                <p className="text-sm font-bold text-black">
+                  {data.dateTime.date
+                    ? formatLabDateNumeric(data.dateTime.date)
+                    : "Not specified"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Time
+                </p>
+                <p className="text-sm font-bold text-black">
+                  {formatLabClockTime(data.dateTime.startTime)} -{" "}
+                  {formatLabClockTime(data.dateTime.endTime)}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Project Name
+                </p>
+                <p className="text-sm font-bold text-black">{data.name}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Material
+                </p>
+                <p className="text-sm font-bold text-black">
+                  {data.material === "provide-own"
+                    ? "Provide Materials"
+                    : "Buy From Fablab"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Description
+                </p>
+                <p className="text-sm font-bold text-black">
+                  {data.description}
+                </p>
+              </div>
+              {data.notes && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Notes
+                  </p>
+                  <p className="text-sm font-bold text-black">{data.notes}</p>
+                </div>
+              )}
             </div>
           </div>
-        </Card>
+
+          {/* Files */}
+          <div className="border-b-4 border-black px-4 pb-4 pt-4">
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              Uploaded Files
+            </h3>
+            <ProjectAttachments
+              files={data.files.map((f) => ({
+                url: f.url || "",
+                type: f.fileType,
+                originalName: f.fileName,
+              }))}
+            />
+          </div>
+
+          {/* Pricing */}
+          <div className="border-b-4 border-black bg-fab-amber/10 px-4 pb-4 pt-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Pricing Estimate
+              </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedVariant && (
+                  <span className="inline-flex items-center border-2 border-black bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-black">
+                    {selectedVariant}
+                  </span>
+                )}
+                <span className="inline-flex items-center border-2 border-black bg-fab-teal/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-fab-teal">
+                  {pricingType.replace("_", " ")}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {pricingType === "WORKSHOP" && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Amount
+                  </span>
+                  <span className="text-sm font-bold text-black">
+                    ₱{pricing.setupFee.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {isTimeBased && (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Setup Fee
+                    </span>
+                    <span className="text-sm font-bold text-black">
+                      ₱{pricing.setupFee.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Duration ({pricing.unitName}s)
+                    </span>
+                    <span className="text-sm font-bold text-black">
+                      {pricing.duration.toFixed(2)} {pricing.unitName}s
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Rate / {pricing.unitName}
+                    </span>
+                    <span className="text-sm font-bold text-black">
+                      ₱{pricing.rate.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Time Cost
+                    </span>
+                    <span className="text-sm font-bold text-black">
+                      ₱{pricing.timeCost.toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {isBuyFromLab && (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Materials
+                    </span>
+                    <span className="text-sm font-bold text-black text-right">
+                      {materialNames.length > 0
+                        ? materialNames.join(", ")
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Material Cost
+                    </span>
+                    <span className="text-sm font-bold text-black">N/A</span>
+                  </div>
+                </>
+              )}
+
+              <FieldSeparator className="my-1 bg-black" />
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Estimated Total
+                </span>
+                <span className="text-xl font-black text-fab-teal">
+                  ₱{pricing.total.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-black/60">
+                Final price may vary based on actual production time and
+                materials used.
+              </p>
+            </div>
+          </div>
+
+          {/* Terms */}
+          <div className="flex items-start bg-fab-amber/20 px-4 py-4">
+            <input
+              type="checkbox"
+              id="terms"
+              required
+              className="mt-1 h-4 w-4 border-2 border-black text-fab-magenta accent-fab-magenta"
+              onChange={handleCheckboxChange}
+            />
+            <label
+              htmlFor="terms"
+              className="ml-3 text-xs font-bold text-black/60 leading-relaxed"
+            >
+              I understand that this is a booking request and requires admin
+              approval. I agree to the{" "}
+              <a href="#" className="text-fab-teal underline hover:text-black">
+                terms and conditions
+              </a>{" "}
+              and the{" "}
+              <a href="#" className="text-fab-teal underline hover:text-black">
+                cancellation policy
+              </a>
+              .
+            </label>
+          </div>
+        </div>
       </div>
 
-      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 pt-4">
-        <Button
-          variant="outline"
-          className="rounded-none border-2 border-black bg-background shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 border-t-4 border-black pt-4">
+        <button
+          type="button"
           onClick={onBack}
           disabled={isSubmitting}
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >
           Back
-        </Button>
-        <Button
+        </button>
+        <button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber hover:text-black"
           disabled={isSubmitting || canSubmit === false || !isChecked}
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}
-        </Button>
+        </button>
       </div>
     </div>
   );

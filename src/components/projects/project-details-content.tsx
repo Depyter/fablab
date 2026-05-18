@@ -10,7 +10,6 @@ import { ProjectInfoCard } from "./cards/project-info-card";
 import { ReceiptCard } from "./cards/receipt-card";
 import { PricingEstimateCard } from "./cards/pricing-estimate-card";
 import { WorkshopPricingSummary } from "./cards/workshop-pricing-summary";
-import { AttendeeInfoCard } from "./cards/attendee-info-card";
 import { api } from "@/../convex/_generated/api";
 import {
   ProjectStatusType,
@@ -39,17 +38,15 @@ interface ProjectDetailsContentProps {
   }) => void;
 }
 
-// ── Status workflow ──────────────────────────────────────────────────────
 export function ProjectDetailsContent({
   project,
   timelineSteps,
-  onOpenAssignView: _onOpenAssignView, // eslint-disable-line @typescript-eslint/no-unused-vars
+  onOpenAssignView: _onOpenAssignView,
   onUpdateStatus,
   onMarkPaid,
   isClient,
   onUpdateDetails,
 }: ProjectDetailsContentProps) {
-  // ── Editable fields ──────────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState(
     project.description ?? "",
@@ -114,7 +111,6 @@ export function ProjectDetailsContent({
     }
   }
 
-  // ── Derived display values ───────────────────────────────────────────────
   const bookingDateStr = (() => {
     if (project.bookingStartTime == null) return "—";
     return new Intl.DateTimeFormat("en-US", {
@@ -137,7 +133,6 @@ export function ProjectDetailsContent({
     return `${start} – ${end}`;
   })();
 
-  // ── Status workflow ──────────────────────────────────────────────────────
   const workflow = getWorkflow(project.type);
   const allowedTransitions = workflow.transitions[project.status] ?? [];
 
@@ -146,11 +141,9 @@ export function ProjectDetailsContent({
   }
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      {/* ── Status timeline ──────────────────────────────────────────────── */}
+    <div className="flex flex-col gap-3">
       <ProjectTimeline steps={timelineSteps} />
 
-      {/* ── Status actions ───────────────────────────────────────────────── */}
       {!isClient && allowedTransitions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {allowedTransitions.map((status: ProjectStatusType) => {
@@ -192,12 +185,10 @@ export function ProjectDetailsContent({
         </div>
       )}
 
-      {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="grid min-w-0 grid-cols-1 gap-5">
+      <div className="space-y-3">
         {project.type === "WORKSHOP" ? (
-          <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
-            {/* ── Left column ──────────────────────────────────────── */}
-            <div className="min-w-0 space-y-4 lg:col-span-7">
+          <div className="space-y-3">
+            <div className="min-w-0 space-y-4">
               <ProjectInfoCard
                 description={project.description}
                 serviceType={project.fulfillmentMode}
@@ -225,27 +216,24 @@ export function ProjectDetailsContent({
                 setEditServiceType={setEditServiceType}
                 hideServiceType
                 workshop
+                attendeeName={project.client?.name}
+                attendeeEmail={project.client?.email ?? undefined}
+                attendeeStatus={project.status}
               />
-
-              {!isClient && (
-                <ReceiptCard
-                  receipt={project.receipt}
-                  status={project.status}
-                  projectType={project.type}
-                  onMarkPaid={onMarkPaid}
-                />
-              )}
             </div>
 
-            {/* ── Right column ─────────────────────────────────────── */}
-            <div className="min-w-0 space-y-4 lg:col-span-5">
-              <AttendeeInfoCard project={project} />
-              <WorkshopPricingSummary project={project} />
+            <div className="min-w-0 space-y-4">
+              <WorkshopPricingSummary
+                project={project}
+                receipt={isClient ? undefined : project.receipt}
+                status={project.status}
+                onMarkPaid={isClient ? undefined : onMarkPaid}
+              />
             </div>
           </div>
         ) : (
-          <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
-            <div className="min-w-0 space-y-4 lg:col-span-7">
+          <div className="space-y-3">
+            <div className="min-w-0 space-y-4">
               <ProjectInfoCard
                 description={project.description}
                 serviceType={project.fulfillmentMode}
@@ -283,7 +271,7 @@ export function ProjectDetailsContent({
               )}
             </div>
 
-            <div className="min-w-0 space-y-4 lg:col-span-5">
+            <div className="min-w-0 space-y-4">
               <PricingEstimateCard
                 projectId={project._id}
                 material={project.material}

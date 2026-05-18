@@ -1,45 +1,32 @@
 "use client";
 
-import { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { ReactNode, useState } from "react";
+import { ChevronDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DetailCardProps {
-  /** Small-caps label shown on the left of the header */
   title: string;
-  /** Override the header title color. Defaults to var(--fab-text-dim) */
   titleColor?: string;
-  /** Extra className on the title span */
   titleClassName?: string;
-  /** Override the header background. Defaults to var(--fab-bg-sidebar) */
   headerBg?: string;
-  /** Chips / badges / counts rendered to the right of the title, before the pen */
   headerRight?: ReactNode;
-  /** Card body content */
   children: ReactNode;
-  /** Extra className on the outer wrapper */
   className?: string;
-  /** Extra className / style on the body wrapper */
   bodyClassName?: string;
   bodyStyle?: React.CSSProperties;
-
-  // ── Edit-pen controls ─────────────────────────────────────────────────────
-  /** If provided, a pen icon is shown when not editing */
   onEdit?: () => void;
   isEditing?: boolean;
   onSave?: () => void;
   onCancel?: () => void;
   isSaving?: boolean;
-  /** Pen icon color. Defaults to var(--fab-text-dim) */
   penColor?: string;
 }
 
 export function DetailCard({
   title,
-  titleColor = "var(--fab-text-dim)",
+  titleColor = "text-black/60",
   titleClassName,
-  headerBg = "var(--fab-bg-sidebar)",
+  headerBg = "bg-fab-amber/20",
   headerRight,
   children,
   className,
@@ -50,27 +37,31 @@ export function DetailCard({
   onSave,
   onCancel,
   isSaving,
-  penColor,
+  penColor = "text-black/40",
 }: DetailCardProps) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div
-      className={cn("overflow-hidden rounded-xl", className)}
-      style={{ border: "1px solid var(--fab-border-md)" }}
+      className={cn(
+        "overflow-hidden rounded-2xl border-2 border-black shadow-none transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#000]",
+        className,
+      )}
     >
-      {/* Header */}
-      <div
-        className="flex items-center gap-2 px-4 py-2.5"
-        style={{
-          background: headerBg,
-          borderBottom: "1px solid var(--fab-border-md)",
-        }}
+      <button
+        type="button"
+        onClick={() => setCollapsed((p) => !p)}
+        className={cn(
+          "flex w-full items-center gap-2 border-b-2 border-black px-4 py-2.5 text-left",
+          headerBg,
+        )}
       >
         <span
           className={cn(
-            "flex-1 text-[10px] font-bold uppercase tracking-[0.12em]",
+            "flex-1 text-[10px] font-black uppercase tracking-[0.25em]",
+            titleColor,
             titleClassName,
           )}
-          style={{ color: titleColor }}
         >
           {title}
         </span>
@@ -79,67 +70,63 @@ export function DetailCard({
           <div className="flex items-center gap-1.5">{headerRight}</div>
         )}
 
-        {/* Edit controls */}
         {onEdit && !isEditing && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={onEdit}
-            aria-label={`Edit ${title}`}
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="flex h-6 w-6 shrink-0 items-center justify-center text-black/40 hover:text-black"
           >
-            <Pencil
-              className="h-3.5 w-3.5"
-              style={{ color: penColor ?? "var(--fab-text-dim)" }}
-            />
-          </Button>
+            <Pencil className="h-3.5 w-3.5" />
+          </span>
         )}
-      </div>
 
-      {/* Body */}
-      <div
-        className={cn("px-4 py-4", bodyClassName)}
-        style={{ background: "var(--fab-bg-card)", ...bodyStyle }}
-      >
-        {children}
+        <ChevronDown
+          className={cn(
+            "size-4 text-black/40 transition-transform duration-200",
+            collapsed && "-rotate-90",
+          )}
+          strokeWidth={3}
+        />
+      </button>
 
-        {isEditing && (
-          <div className="mt-4 flex flex-col gap-2">
-            <div
-              className="h-px w-full"
-              style={{ background: "var(--fab-border-soft)" }}
-            />
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs font-semibold"
-                onClick={onCancel}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 text-xs font-semibold text-white"
-                onClick={onSave}
-                disabled={isSaving}
-                style={{ background: "var(--fab-teal)", border: "none" }}
-              >
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
+      {!collapsed && (
+        <div
+          className={cn("bg-white px-4 py-4", bodyClassName)}
+          style={bodyStyle}
+        >
+          {children}
+
+          {isEditing && (
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="h-px w-full bg-black" />
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  disabled={isSaving}
+                  className="inline-flex h-8 items-center border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onSave}
+                  disabled={isSaving}
+                  className="inline-flex h-8 items-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-/** A small inline chip, consistent across all cards */
 export function DetailChip({
   label,
   bg,
@@ -153,11 +140,11 @@ export function DetailChip({
 }) {
   return (
     <span
-      className="inline-flex items-center rounded-[5px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.08em]"
+      className="inline-flex items-center border-2 border-black px-2 py-0.5 text-[9px] font-black uppercase tracking-wider"
       style={{
         background: bg,
         color,
-        border: border ? `1px solid ${border}` : undefined,
+        border: border ? `2px solid ${border}` : undefined,
       }}
     >
       {label}

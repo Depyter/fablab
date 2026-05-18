@@ -209,19 +209,6 @@ export function ServiceForm({
             )}
           />
 
-          <form.Field
-            name="resources"
-            children={(field) => (
-              <MultipleSelectForm
-                options={resourceOptions}
-                title="Resources (Machines, etc.)"
-                placeholder="Select resource..."
-                value={field.state.value || []}
-                onChange={(val) => field.handleChange(val as Id<"resources">[])}
-              />
-            )}
-          />
-
           <form.Subscribe
             selector={(state) => state.values.serviceCategory}
             children={(serviceCategory) =>

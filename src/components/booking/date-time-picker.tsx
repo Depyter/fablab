@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCallback } from "react";
 import {
   formatLabClockTime,
   formatLabDateNumeric,
@@ -70,53 +71,51 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
   const { date, startTime, endTime } = value;
 
-  // Example of how you would handle showing available dates:
-  // 1. Fetch `bookedDates` or `availability` from the backend (e.g. via Convex query).
-  // 2. Disable dates that are fully booked for the requested service.
-  // 3. Highlight available dates using `modifiers`.
-  const bookedDates: Date[] = []; // Replace with actual booked dates array
+  const isDateDisabled = useCallback(
+    (nextDate: Date) => {
+      if (!allowPastSelection && isLabDateBeforeToday(nextDate)) return true;
 
-  const isDateDisabled = (nextDate: Date) => {
-    if (!allowPastSelection && isLabDateBeforeToday(nextDate)) return true;
+      if (
+        availableDays.length > 0 &&
+        !availableDays.includes(getLabWeekday(nextDate))
+      ) {
+        return true;
+      }
 
-    // If availableDays are specified, disable dates that don't fall on those days
-    if (
-      availableDays.length > 0 &&
-      !availableDays.includes(getLabWeekday(nextDate))
-    ) {
-      return true;
-    }
+      return false;
+    },
+    [allowPastSelection, availableDays],
+  );
 
-    // Disable explicitly booked dates
-    return bookedDates.some(
-      (booked) => getLabDayKey(booked) === getLabDayKey(nextDate),
-    );
-  };
+  const isTimeSlotBooked = useCallback(
+    (timeSlot: string) => {
+      if (!date) return true;
 
-  const isTimeSlotBooked = (timeSlot: string) => {
-    if (!date) return true; // Require date selection first
+      if (
+        (!allowPastSelection &&
+          isLabDateBeforeToday(date, getCurrentTimestamp())) ||
+        (!allowPastSelection &&
+          isLabTimeInPast(date, timeSlot, getCurrentTimestamp()))
+      ) {
+        return true;
+      }
 
-    // Disable times that have already passed today
-    if (
-      (!allowPastSelection &&
-        isLabDateBeforeToday(date, getCurrentTimestamp())) ||
-      (!allowPastSelection &&
-        isLabTimeInPast(date, timeSlot, getCurrentTimestamp()))
-    ) {
-      return true;
-    }
+      return bookedTimeBlocks.some(
+        (block) => timeSlot >= block.start && timeSlot < block.end,
+      );
+    },
+    [date, allowPastSelection, bookedTimeBlocks],
+  );
 
-    return bookedTimeBlocks.some(
-      (block) => timeSlot >= block.start && timeSlot < block.end,
-    );
-  };
-
-  const handleDateSelect = (selectedDate: Date | undefined) => {
-    onChange({
-      ...value,
-      date: selectedDate ? getLabDayStart(selectedDate) : undefined,
-    });
-  };
+  const handleDateSelect = useCallback(
+    (selectedDate: Date | undefined) => {
+      onChange({
+        ...value,
+        date: selectedDate ? getLabDayStart(selectedDate) : undefined,
+      });
+    },
+    [onChange, value],
+  );
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -132,8 +131,8 @@ export function DateTimePicker({
             <PopoverTrigger asChild>
               <Button
                 id="date"
-                variant={"outline"}
-                className={`w-full justify-start rounded-lg border-2 border-black bg-background text-left font-black uppercase shadow-[2px_2px_0_0_#000] ${!date && "text-muted-foreground"}`}
+                variant="outline"
+                className="w-full justify-start text-left"
               >
                 {date ? formatLabDateNumeric(date) : <span>MM/DD/YYYY</span>}
                 <CalendarIcon className="ml-auto h-4 w-4" />
@@ -155,14 +154,6 @@ export function DateTimePicker({
               selected={date}
               onSelect={handleDateSelect}
               disabled={isDateDisabled}
-              modifiers={{
-                booked: bookedDates,
-              }}
-              modifiersClassNames={{
-                booked:
-                  "[&>button]:line-through text-muted-foreground opacity-50",
-              }}
-              autoFocus
             />
           </PopoverContent>
         </Popover>
@@ -185,10 +176,7 @@ export function DateTimePicker({
               onChange(updates);
             }}
           >
-            <SelectTrigger
-              id="time-from"
-              className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
-            >
+            <SelectTrigger id="time-from" className="w-full">
               <SelectValue placeholder="Select start time" />
             </SelectTrigger>
             <SelectContent>
@@ -237,10 +225,7 @@ export function DateTimePicker({
             onValueChange={(val) => onChange({ ...value, endTime: val })}
             disabled={!startTime}
           >
-            <SelectTrigger
-              id="time-to"
-              className="w-full bg-background rounded-lg border-2 border-black shadow-[2px_2px_0_0_#000] h-10 focus-visible:ring-0"
-            >
+            <SelectTrigger id="time-to" className="w-full">
               <SelectValue placeholder="Select end time" />
             </SelectTrigger>
             <SelectContent>

@@ -78,10 +78,7 @@ export function CalendarNavigation({
             </span>
           </button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-auto border-0 bg-transparent p-0 shadow-none"
-          align="start"
-        >
+        <PopoverContent className="w-auto" align="start">
           <Calendar
             mode="single"
             timeZone={LAB_TIME_ZONE}

@@ -203,6 +203,75 @@ export function ServiceDetailClient({
                 </div>
               )}
 
+              {service.serviceCategory.type === "WORKSHOP" &&
+                service.serviceCategory.schedules?.length > 0 && (
+                  <div>
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] text-foreground/50">
+                      Available Sessions
+                    </p>
+                    <div className="space-y-3">
+                      {service.serviceCategory.schedules.map((schedule) => (
+                        <div
+                          key={schedule.date}
+                          className="border-2 border-black bg-background p-4"
+                        >
+                          <p className="mb-2 text-xs font-bold uppercase tracking-[0.15em] text-foreground/70">
+                            {new Date(schedule.date).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              },
+                            )}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {schedule.timeSlots.map((slot, i) => (
+                              <div
+                                key={i}
+                                className="inline-flex flex-col gap-1 border border-black bg-sidebar-accent/30 px-3 py-2 text-[10px]"
+                              >
+                                <span className="font-bold uppercase tracking-[0.1em]">
+                                  {new Date(slot.startTime).toLocaleTimeString(
+                                    "en-US",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      timeZone: "Asia/Manila",
+                                    },
+                                  )}{" "}
+                                  –{" "}
+                                  {new Date(slot.endTime).toLocaleTimeString(
+                                    "en-US",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      timeZone: "Asia/Manila",
+                                    },
+                                  )}
+                                </span>
+                                <span className="text-foreground/50">
+                                  {slot.maxSlots} slot
+                                  {slot.maxSlots !== 1 ? "s" : ""}
+                                  {slot.resources &&
+                                    slot.resources.length > 0 && (
+                                      <>
+                                        {" "}
+                                        · {slot.resources.length} resource
+                                        {slot.resources.length !== 1 ? "s" : ""}
+                                      </>
+                                    )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="border-2 border-black bg-background p-4 sm:p-5">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/50">

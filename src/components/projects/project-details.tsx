@@ -24,10 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload";
 import posthog from "posthog-js";
@@ -360,14 +363,7 @@ export function ProjectDetails({
           );
           const isRejected =
             project.status === "rejected" || project.status === "cancelled";
-          // When the project has a status not in the timeline (e.g., workshop at "claimed"),
-          // and it's not a rejected/cancelled state, treat all timeline steps as completed
-          // since the project has already progressed beyond the visible workflow.
           const isPastEndState = currentStepIndex < 0 && !isRejected;
-          // Map the current status to the step that should be highlighted
-          // as "In progress". The step whose status matches the project is
-          // already completed — the NEXT step is the one being waited on.
-          // e.g. "pending" means Booking is done, Review is active.
           const effectiveIndex = isPastEndState
             ? timeline.length
             : currentStepIndex >= 0
@@ -426,7 +422,6 @@ export function ProjectDetails({
   };
 
   const handleOpenPaymentDialog = () => {
-    // Pre-populate from existing receipt when updating
     if (project?.receipt) {
       setReceiptNumber(project.receipt.receiptString ?? "");
       setPaymentMode(
@@ -492,7 +487,7 @@ export function ProjectDetails({
         )
       ) : null}
 
-      <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
+      <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-4xl max-w-full overflow-x-hidden overflow-y-auto rounded-none p-3 sm:p-4">
         {!project || role === undefined ? (
           <ProjectDetailsLoadingSkeleton />
         ) : dialogView === "assign-maker" ? (
@@ -518,7 +513,6 @@ export function ProjectDetails({
               }
             />
 
-            {/* ── Mark as Paid dialog ─────────────────────────────────── */}
             <Dialog
               open={paymentDialogOpen}
               onOpenChange={setPaymentDialogOpen}
@@ -555,15 +549,18 @@ export function ProjectDetails({
                       }
                     >
                       <SelectTrigger id="payment-mode" className="w-full">
-                        <SelectValue />
+                        <SelectValue placeholder="Select payment mode" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="gcash">GCash</SelectItem>
-                        <SelectItem value="bank transfer">
-                          Bank Transfer
-                        </SelectItem>
-                        <SelectItem value="others">Others</SelectItem>
+                        <SelectGroup>
+                          <SelectLabel>Payment Methods</SelectLabel>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="gcash">GCash</SelectItem>
+                          <SelectItem value="bank transfer">
+                            Bank Transfer
+                          </SelectItem>
+                          <SelectItem value="others">Others</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
@@ -600,15 +597,13 @@ export function ProjectDetails({
                     variant="outline"
                     onClick={() => {
                       setPaymentDialogOpen(false);
-                      // When going backward to paid with an existing receipt,
-                      // cancel means "just move back without changing payment."
                       if (project?.receipt) {
                         handleUpdateStatus("paid");
                       }
                     }}
                     disabled={isPaying}
                   >
-                    {project?.receipt ? "Skip, Just Update Status" : "Cancel"}
+                    {project?.receipt ? "Skip" : "Cancel"}
                   </Button>
                   <Button
                     onClick={handleMarkPaid}

@@ -210,23 +210,35 @@ function StandardUsageCard({
   position,
   compact = false,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   usage: MachineUsage;
   position: { left: string; width: string };
   compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const canOpenProjectDetails =
     usage.projectId !== null && onOpenProjectDetails !== undefined;
+  const isWorkshopSlot =
+    usage.projectId === null &&
+    usage.serviceCategoryType === "WORKSHOP" &&
+    onOpenWorkshopEvent !== undefined;
 
   return (
     <button
       type="button"
-      disabled={!canOpenProjectDetails}
-      onClick={() => usage.projectId && onOpenProjectDetails?.(usage.projectId)}
+      disabled={!canOpenProjectDetails && !isWorkshopSlot}
+      onClick={() => {
+        if (usage.projectId && onOpenProjectDetails) {
+          onOpenProjectDetails(usage.projectId);
+        } else if (isWorkshopSlot) {
+          onOpenWorkshopEvent!(usage.machineId, usage.startTime);
+        }
+      }}
       className={cn(
         "absolute z-[5] text-left disabled:cursor-default",
-        canOpenProjectDetails &&
+        (canOpenProjectDetails || isWorkshopSlot) &&
           "cursor-pointer transition-shadow hover:shadow-sm",
       )}
       style={{
@@ -632,6 +644,7 @@ export function UsageTable({
                             position={position}
                             compact={isMobile}
                             onOpenProjectDetails={onOpenProjectDetails}
+                            onOpenWorkshopEvent={onOpenWorkshopEvent}
                           />
                         );
                       })}

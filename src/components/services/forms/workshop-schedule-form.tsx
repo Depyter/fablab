@@ -16,6 +16,15 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, X } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const formatTimeForInput = (val: number | undefined) => {
   if (!val) return "";
@@ -52,6 +61,9 @@ const getDefaultTime = (baseDate: number, hours: number, minutes: number) => {
 export const WorkshopScheduleForm = withForm({
   ...addServiceFormOpts,
   render: function WorkshopScheduleRender({ form }) {
+    const resourcesQuery = useQuery(api.resource.query.getResources) || [];
+    const materialsQuery = useQuery(api.materials.query.getMaterials) || [];
+
     const schedules = useMemo(
       () => form.state.values.schedules || [],
       [form.state.values.schedules],
@@ -153,6 +165,8 @@ export const WorkshopScheduleForm = withForm({
                                   startTime: getDefaultTime(now, 9, 0),
                                   endTime: getDefaultTime(now, 10, 0),
                                   maxSlots: 1,
+                                  resources: [],
+                                  availableMaterials: [],
                                 },
                               ],
                             });
@@ -240,6 +254,8 @@ export const WorkshopScheduleForm = withForm({
                                               endTime: number;
                                               maxSlots: number;
                                               usedUpSlots?: number;
+                                              resources?: string[];
+                                              availableMaterials?: string[];
                                             }) => {
                                               const start = new Date(
                                                 slot.startTime,
@@ -343,6 +359,8 @@ export const WorkshopScheduleForm = withForm({
                                             0,
                                           ),
                                           maxSlots: 1,
+                                          resources: [],
+                                          availableMaterials: [],
                                         });
                                       }}
                                     >
@@ -464,6 +482,172 @@ export const WorkshopScheduleForm = withForm({
                                               </div>
                                             )}
                                           />
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <form.Field
+                                              name={`schedules[${scheduleIndex}].timeSlots[${slotIndex}].resources`}
+                                              children={(subField) => {
+                                                const selected =
+                                                  subField.state.value || [];
+                                                return (
+                                                  <div className="space-y-1">
+                                                    <Label className="text-xs">
+                                                      Resources
+                                                    </Label>
+                                                    <div className="flex flex-wrap gap-1 mb-1">
+                                                      {selected.map(
+                                                        (v: string) => {
+                                                          const label =
+                                                            resourcesQuery.find(
+                                                              (r) =>
+                                                                r._id === v,
+                                                            )?.name ?? v;
+                                                          return (
+                                                            <span
+                                                              key={v}
+                                                              className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px]"
+                                                            >
+                                                              {label}
+                                                              <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                  subField.handleChange(
+                                                                    selected.filter(
+                                                                      (
+                                                                        id: string,
+                                                                      ) =>
+                                                                        id !==
+                                                                        v,
+                                                                    ),
+                                                                  )
+                                                                }
+                                                                className="text-muted-foreground hover:text-foreground"
+                                                              >
+                                                                ×
+                                                              </button>
+                                                            </span>
+                                                          );
+                                                        },
+                                                      )}
+                                                    </div>
+                                                    <Select
+                                                      onValueChange={(val) => {
+                                                        if (
+                                                          !selected.includes(
+                                                            val,
+                                                          )
+                                                        ) {
+                                                          subField.handleChange(
+                                                            [...selected, val],
+                                                          );
+                                                        }
+                                                      }}
+                                                    >
+                                                      <SelectTrigger className="h-7 text-xs">
+                                                        <SelectValue placeholder="Add resource..." />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {resourcesQuery.map(
+                                                          (r) => (
+                                                            <SelectItem
+                                                              key={r._id}
+                                                              value={r._id}
+                                                              disabled={selected.includes(
+                                                                r._id,
+                                                              )}
+                                                            >
+                                                              {r.name}
+                                                            </SelectItem>
+                                                          ),
+                                                        )}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </div>
+                                                );
+                                              }}
+                                            />
+                                            <form.Field
+                                              name={`schedules[${scheduleIndex}].timeSlots[${slotIndex}].availableMaterials`}
+                                              children={(subField) => {
+                                                const selected =
+                                                  subField.state.value || [];
+                                                return (
+                                                  <div className="space-y-1">
+                                                    <Label className="text-xs">
+                                                      Available Materials
+                                                    </Label>
+                                                    <div className="flex flex-wrap gap-1 mb-1">
+                                                      {selected.map(
+                                                        (v: string) => {
+                                                          const label =
+                                                            materialsQuery.find(
+                                                              (m) =>
+                                                                m._id === v,
+                                                            )?.name ?? v;
+                                                          return (
+                                                            <span
+                                                              key={v}
+                                                              className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px]"
+                                                            >
+                                                              {label}
+                                                              <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                  subField.handleChange(
+                                                                    selected.filter(
+                                                                      (
+                                                                        id: string,
+                                                                      ) =>
+                                                                        id !==
+                                                                        v,
+                                                                    ),
+                                                                  )
+                                                                }
+                                                                className="text-muted-foreground hover:text-foreground"
+                                                              >
+                                                                ×
+                                                              </button>
+                                                            </span>
+                                                          );
+                                                        },
+                                                      )}
+                                                    </div>
+                                                    <Select
+                                                      onValueChange={(val) => {
+                                                        if (
+                                                          !selected.includes(
+                                                            val,
+                                                          )
+                                                        ) {
+                                                          subField.handleChange(
+                                                            [...selected, val],
+                                                          );
+                                                        }
+                                                      }}
+                                                    >
+                                                      <SelectTrigger className="h-7 text-xs">
+                                                        <SelectValue placeholder="Add material..." />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {materialsQuery.map(
+                                                          (m) => (
+                                                            <SelectItem
+                                                              key={m._id}
+                                                              value={m._id}
+                                                              disabled={selected.includes(
+                                                                m._id,
+                                                              )}
+                                                            >
+                                                              {m.name}
+                                                            </SelectItem>
+                                                          ),
+                                                        )}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </div>
+                                                );
+                                              }}
+                                            />
+                                          </div>
                                         </div>
                                       ),
                                     )}

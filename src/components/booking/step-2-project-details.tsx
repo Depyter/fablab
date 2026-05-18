@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from "@/components/ui/button";
 import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChevronLeft } from "lucide-react";
-import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   Select,
   SelectContent,
@@ -17,14 +12,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroupChoiceCard } from "./select-option-form";
-import { Textarea } from "../ui/textarea";
-import { FileUpload } from "../file-upload";
-import { DateTimePicker } from "./date-time-picker";
+import { DateTimePicker } from "@/components/booking/date-time-picker";
+import { FileUpload } from "@/components/file-upload";
+import { ChevronLeft } from "lucide-react";
+import { useAppForm } from "@/lib/form-context";
 import { toast } from "sonner";
-import { WorkshopSchedule } from "./workshop-time-slot-picker";
-import { getCurrentTimestamp, getLabTimeRangeTimestamps } from "@/lib/lab-time";
 import posthog from "posthog-js";
-import { type UploadedFile } from "../file-upload/types";
+import { getLabTimeRangeTimestamps, getCurrentTimestamp } from "@/lib/lab-time";
+import { UploadedFile } from "../file-upload/types";
+import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import type { WorkshopSchedule } from "./workshop-time-slot-picker";
 
 type PricingVariantOption = { name: string };
 
@@ -48,7 +48,7 @@ export function Step2ProjectDetails({
   schedules,
   bookedTimeBlocks,
 }: {
-  form: any;
+  form: ReturnType<typeof useAppForm>;
   serviceName: string;
   expandedFileTypes: string[];
   is3DPrinting: boolean;
@@ -126,21 +126,21 @@ export function Step2ProjectDetails({
 
   return (
     <form onSubmit={handleNext} className="flex flex-col h-full min-h-0">
-      <DialogHeader className="shrink-0 px-2 pb-4 sm:px-0">
+      <DialogHeader className="shrink-0 border-b-4 border-black px-2 pb-4 sm:px-0">
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Book {serviceName}
         </DialogTitle>
-        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
+        <DialogDescription className="max-w-xl text-sm font-bold text-black/60">
           Provide necessary information for your project request.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[2px_2px_0_0_#000] text-gray-500">
-        <p className="font-black uppercase tracking-[0.25em] text-gray-900">
+      <div className="mb-4 border-4 border-black bg-white p-4 shadow-[4px_4px_0_0_#000]">
+        <p className="font-black uppercase tracking-[0.25em] text-black">
           File Guidelines
         </p>
         {requirements.length > 0 ? (
-          <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+          <ul className="mt-2 list-inside list-disc space-y-1 text-sm font-bold text-black/60">
             {requirements.map((req, i) => (
               <li
                 key={`${req}-${
@@ -152,7 +152,7 @@ export function Step2ProjectDetails({
             ))}
           </ul>
         ) : (
-          <p className="text-gray-400 text-sm">
+          <p className="mt-2 text-sm font-bold text-black/40">
             No strict requirements listed.
           </p>
         )}
@@ -161,16 +161,11 @@ export function Step2ProjectDetails({
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
         <FieldGroup>
           <div className="flex flex-col gap-2 mb-2">
-            <Label className="font-bold text-lg">
+            <Label className="font-black uppercase tracking-tighter text-base">
               {serviceCategory === "WORKSHOP"
                 ? "Booking Details"
                 : "Project Details"}
             </Label>
-            <p className="text-sm text-muted-foreground">
-              {serviceCategory === "WORKSHOP"
-                ? "Tell us more about your booking."
-                : "Tell us about your project."}
-            </p>
           </div>
 
           {serviceCategory !== "WORKSHOP" && (
@@ -181,7 +176,7 @@ export function Step2ProjectDetails({
                   <Field>
                     <Label
                       htmlFor="name-1"
-                      className="font-black uppercase tracking-[0.2em] text-xs"
+                      className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
                     >
                       Project Name
                     </Label>
@@ -191,7 +186,6 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="rounded-lg focus-visible:ring-0"
                       placeholder="e.g. Custom Cup"
                     />
                   </Field>
@@ -204,7 +198,7 @@ export function Step2ProjectDetails({
                   <Field>
                     <Label
                       htmlFor="description-1"
-                      className="font-black uppercase tracking-[0.2em] text-xs"
+                      className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
                     >
                       Project Description
                     </Label>
@@ -214,7 +208,7 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="min-h-20 resize-none rounded-lg focus-visible:ring-0 md:min-h-32"
+                      className="min-h-20 resize-none md:min-h-32"
                       placeholder="Describe your project, intended use, or specific details..."
                     />
                   </Field>
@@ -229,7 +223,7 @@ export function Step2ProjectDetails({
               <Field>
                 <Label
                   htmlFor="notes-1"
-                  className="font-black uppercase tracking-[0.2em] text-xs"
+                  className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
                 >
                   Special Requirements or Notes
                 </Label>
@@ -238,7 +232,7 @@ export function Step2ProjectDetails({
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="min-h-12 resize-none rounded-lg focus-visible:ring-0 md:min-h-24"
+                  className="min-h-12 resize-none md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
@@ -252,7 +246,7 @@ export function Step2ProjectDetails({
                 <Field>
                   <Label
                     htmlFor="pricing-tier"
-                    className="font-black uppercase tracking-[0.2em] text-xs"
+                    className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
                   >
                     Pricing Tier
                   </Label>
@@ -261,10 +255,7 @@ export function Step2ProjectDetails({
                     onValueChange={(val) => field.handleChange(val)}
                     required
                   >
-                    <SelectTrigger
-                      id="pricing-tier"
-                      className="w-full rounded-lg"
-                    >
+                    <SelectTrigger id="pricing-tier" className="w-full">
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
                     <SelectContent>
@@ -281,103 +272,92 @@ export function Step2ProjectDetails({
             />
           )}
 
-          {serviceCategory !== "WORKSHOP" && (
-            <>
-              <form.Field
-                name="material"
-                children={(field: any) => (
-                  <Field>
-                    <Label
-                      htmlFor="material-1"
-                      className="font-black uppercase tracking-[0.2em] text-xs"
-                    >
-                      Material Preference
-                    </Label>
-                    <RadioGroupChoiceCard
-                      value={field.state.value}
-                      disableBuyFromLab={serviceMaterials.length === 0}
-                      onValueChange={(val) =>
-                        field.handleChange(
-                          val as "provide-own" | "buy-from-lab",
-                        )
-                      }
-                    />
-                  </Field>
-                )}
-              />
+          <form.Field
+            name="material"
+            children={(field: any) => (
+              <Field>
+                <Label
+                  htmlFor="material-1"
+                  className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
+                >
+                  Material Preference
+                </Label>
+                <RadioGroupChoiceCard
+                  value={field.state.value}
+                  disableBuyFromLab={serviceMaterials.length === 0}
+                  onValueChange={(val) =>
+                    field.handleChange(val as "provide-own" | "buy-from-lab")
+                  }
+                />
+              </Field>
+            )}
+          />
 
-              <form.Subscribe
-                selector={(state: any) => state.values.material}
-                children={(material: string) =>
-                  material === "buy-from-lab" &&
-                  serviceMaterials.length > 0 && (
-                    <form.Field
-                      name="requestedMaterialIds"
-                      children={(field: any) => {
-                        const selected: string[] = field.state.value ?? [];
-                        return (
-                          <Field>
-                            <Label
-                              htmlFor="requestedMaterialIds"
-                              className="font-black uppercase tracking-[0.2em] text-xs"
-                            >
-                              Select Lab Materials
-                            </Label>
-                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
-                              {serviceMaterials.map((m) => {
-                                const isChecked = selected.includes(m._id);
-                                return (
-                                  <label
-                                    key={m._id}
-                                    className="flex items-center gap-2.5 cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          field.handleChange([
-                                            ...selected,
-                                            m._id,
-                                          ]);
-                                        } else {
-                                          field.handleChange(
-                                            selected.filter(
-                                              (id) => id !== m._id,
-                                            ),
-                                          );
-                                        }
-                                      }}
-                                      className="h-4 w-4 rounded border-input accent-primary"
-                                    />
-                                    <span className="text-sm flex-1">
-                                      {m.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground shrink-0">
-                                      ₱{m.pricePerUnit ?? m.costPerUnit ?? 0}/
-                                      {m.unit}
-                                    </span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            <input
-                              type="text"
-                              required
-                              value={selected.join(",")}
-                              className="absolute opacity-0 pointer-events-none"
-                              tabIndex={-1}
-                              onChange={() => {}}
-                            />
-                          </Field>
-                        );
-                      }}
-                    />
-                  )
-                }
-              />
-            </>
-          )}
+          <form.Subscribe
+            selector={(state: any) => state.values.material}
+            children={(material: string) =>
+              material === "buy-from-lab" &&
+              serviceMaterials.length > 0 && (
+                <form.Field
+                  name="requestedMaterialIds"
+                  children={(field: any) => {
+                    const selected: string[] = field.state.value ?? [];
+                    return (
+                      <Field>
+                        <Label
+                          htmlFor="requestedMaterialIds"
+                          className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
+                        >
+                          Select Lab Materials
+                        </Label>
+                        <div className="flex flex-col gap-2 rounded-none border-4 border-black bg-white p-3 shadow-[4px_4px_0_0_#000]">
+                          {serviceMaterials.map((m) => {
+                            const isChecked = selected.includes(m._id);
+                            return (
+                              <label
+                                key={m._id}
+                                className="flex cursor-pointer items-center gap-2.5"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      field.handleChange([...selected, m._id]);
+                                    } else {
+                                      field.handleChange(
+                                        selected.filter((id) => id !== m._id),
+                                      );
+                                    }
+                                  }}
+                                  className="h-4 w-4 accent-fab-teal"
+                                />
+                                <span className="flex-1 text-sm font-bold text-black">
+                                  {m.name}
+                                </span>
+                                <span className="shrink-0 text-xs font-bold text-black/60">
+                                  ₱{m.pricePerUnit ?? m.costPerUnit ?? 0}/
+                                  {m.unit}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={selected.join(",")}
+                          className="absolute pointer-events-none opacity-0"
+                          tabIndex={-1}
+                          onChange={() => {}}
+                        />
+                      </Field>
+                    );
+                  }}
+                />
+              )
+            }
+          />
 
           <FieldSeparator className="my-2" />
 
@@ -390,13 +370,9 @@ export function Step2ProjectDetails({
                 ) : is3DPrinting ? (
                   <>
                     <div className="flex flex-col gap-1">
-                      <Label className="font-bold text-lg">
+                      <Label className="font-black uppercase tracking-tighter text-base">
                         Deadline (PST)
                       </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Set the deadline of your project. All dates and times
-                        are in Philippine Standard Time (PST).
-                      </p>
                     </div>
                     <DateTimePicker
                       value={field.state.value as any}
@@ -408,13 +384,9 @@ export function Step2ProjectDetails({
                 ) : (
                   <>
                     <div className="flex flex-col gap-1">
-                      <Label className="font-bold text-lg">
+                      <Label className="font-black uppercase tracking-tighter text-base">
                         Booking Date & Time (PST)
                       </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Set the date and time for your booking. All dates and
-                        times are in Philippine Standard Time (PST).
-                      </p>
                     </div>
                     <DateTimePicker
                       value={field.state.value as any}
@@ -455,24 +427,24 @@ export function Step2ProjectDetails({
         </FieldGroup>
       </div>
 
-      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 border-t-4 border-black pt-6">
+      <div className="mt-4 flex shrink-0 items-center justify-end gap-2 border-t-4 border-black pt-4">
         {serviceCategory !== "WORKSHOP" && (
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={onPrev}
-            className="rounded-none border-2 border-black bg-background pl-3 shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
+            <ChevronLeft className="size-4" strokeWidth={3} />
+            Back
+          </button>
         )}
-        <Button
+        <button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
           disabled={isUploading}
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >
-          {isUploading ? "Uploading..." : "Review & Estimate"}
-        </Button>
+          Review & Estimate
+        </button>
       </div>
     </form>
   );

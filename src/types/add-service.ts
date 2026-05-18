@@ -32,7 +32,13 @@ export interface AddServiceFormValues {
   availableDays: number[];
   schedules?: {
     date: number;
-    timeSlots: { startTime: number; endTime: number; maxSlots: number }[];
+    timeSlots: {
+      startTime: number;
+      endTime: number;
+      maxSlots: number;
+      resources?: string[];
+      availableMaterials?: string[];
+    }[];
   }[];
 }
 

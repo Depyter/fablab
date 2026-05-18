@@ -1,9 +1,4 @@
-import {
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Card } from "@/components/ui/card";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import posthog from "posthog-js";
 
 export function Step1ServiceType({
@@ -34,33 +29,30 @@ export function Step1ServiceType({
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Choose Service Type
         </DialogTitle>
-        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
-          Select how you&apos;d like to use this service.
-        </DialogDescription>
       </DialogHeader>
       <div className="grid grid-cols-1 gap-4 py-8 md:grid-cols-2">
-        <Card
-          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-teal/10"
+        <div
+          className="cursor-pointer rounded-none border-4 border-black bg-white p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000] hover:bg-fab-teal/5"
           onClick={() => trackAndNext("self-service")}
         >
-          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">
+          <h3 className="mb-2 text-lg font-black uppercase tracking-tighter">
             Self-Service
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-bold text-black/60">
             I will operate the machine myself.
           </p>
-        </Card>
-        <Card
-          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-magenta/10"
+        </div>
+        <div
+          className="cursor-pointer rounded-none border-4 border-black bg-white p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000] hover:bg-fab-magenta/5"
           onClick={() => trackAndNext("full-service")}
         >
-          <h3 className="mb-2 text-lg font-black uppercase tracking-tight">
+          <h3 className="mb-2 text-lg font-black uppercase tracking-tighter">
             Full-Service Request
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-bold text-black/60">
             I need a maker to execute the project for me.
           </p>
-        </Card>
+        </div>
       </div>
     </>
   );

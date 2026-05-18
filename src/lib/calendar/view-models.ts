@@ -135,21 +135,22 @@ export function buildBookingCalendarViewModels(args: {
   const resourceMachines = buildResourceMachines(resources);
   const serviceMachines = buildServiceMachines(services);
 
+  // ── Resource usages (day view) ─────────────────────────────────────────
+  // Cluster workshop resource usages by (resourceId, startTime, endTime) so
+  // the calendar shows one block per slot rather than one per project.
   const resourceUsages =
     args.viewMode !== "day"
       ? []
-      : args.bookings
-          .filter(
-            (
-              booking,
-            ): booking is CalendarBookingItem & {
-              resourceId: NonNullable<CalendarBookingItem["resourceId"]>;
-            } => booking.resourceId !== null,
-          )
-          .flatMap((booking) => {
-            const service = servicesById.get(booking.serviceId);
+      : (() => {
+          const workshopClusters = new Map<string, CalendarMachineUsage[]>();
+          const clusterServiceNames = new Map<string, string>();
+          const regular: CalendarMachineUsage[] = [];
 
-            if (!service) return [];
+          for (const booking of args.bookings) {
+            if (!booking.resourceId) continue;
+
+            const service = servicesById.get(booking.serviceId);
+            if (!service) continue;
 
             const usage = buildCalendarUsage(
               booking,
@@ -157,9 +158,39 @@ export function buildBookingCalendarViewModels(args: {
               service.serviceCategoryType,
               args.dayRange,
             );
+            if (!usage) continue;
 
-            return usage ? [usage] : [];
-          });
+            if (service.serviceCategoryType === "WORKSHOP") {
+              const key = `${booking.resourceId}:${usage.startTime}:${usage.endTime}`;
+              const cluster = workshopClusters.get(key);
+              if (cluster) {
+                cluster.push(usage);
+              } else {
+                workshopClusters.set(key, [usage]);
+                clusterServiceNames.set(key, service.name);
+              }
+            } else {
+              regular.push(usage);
+            }
+          }
+
+          // Convert each workshop cluster to a single aggregated entry
+          for (const [key, cluster] of workshopClusters) {
+            const first = cluster[0]!;
+            const serviceName = clusterServiceNames.get(key) ?? "Workshop";
+            regular.push({
+              ...first,
+              id: `ws-res-${first.machineId}-${first.startTime}`,
+              projectId: null,
+              projectAlias: serviceName,
+              projectStatus: "approved",
+              clientName: `${cluster.length} booked`,
+              isPendingReview: false,
+            });
+          }
+
+          return regular;
+        })();
 
   const serviceUsages =
     args.viewMode !== "day"

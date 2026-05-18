@@ -59,6 +59,10 @@ export default defineSchema({
                 endTime: v.number(),
                 maxSlots: v.number(),
                 usedUpSlots: v.optional(v.number()),
+                // Resources this time slot consumes (rooms, machines)
+                resources: v.optional(v.array(v.id("resources"))),
+                // Materials available for participants to select
+                availableMaterials: v.optional(v.array(v.id("materials"))),
               }),
             ),
           }),
