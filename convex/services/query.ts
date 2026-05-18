@@ -147,10 +147,6 @@ export const getBookedTimeSlots = publicQuery({
     const service = await ctx.db.get(args.serviceId);
     if (!service) return [];
 
-    const usesDiscreteResources =
-      service.serviceCategory.type === "FABRICATION" &&
-      (service.resources?.length ?? 0) > 0;
-
     const usages = args.resourceId
       ? await ctx.db
           .query("resourceUsage")
@@ -164,23 +160,36 @@ export const getBookedTimeSlots = publicQuery({
             ),
           )
           .collect()
-      : usesDiscreteResources
-        ? []
-        : await ctx.db
-            .query("resourceUsage")
-            .withIndex("by_service", (q) => q.eq("service", args.serviceId))
-            .filter((q) =>
-              q.and(
-                q.lt(q.field("startTime"), dayBounds.endTime),
-                q.gt(q.field("endTime"), dayBounds.startTime),
-              ),
-            )
-            .collect();
+      : await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_service", (q) => q.eq("service", args.serviceId))
+          .filter((q) =>
+            q.and(
+              q.lt(q.field("startTime"), dayBounds.endTime),
+              q.gt(q.field("endTime"), dayBounds.startTime),
+            ),
+          )
+          .collect();
 
-    return usages.map((u) => ({
-      usageId: u._id,
-      startTime: u.startTime,
-      endTime: u.endTime,
-    }));
+    // Deduplicate by time range — a single booked time slot should only
+    // appear once even if multiple resourceUsage records exist with the
+    // same bounds (e.g., workshop main usage + per-resource usages).
+    const seen = new Set<string>();
+    const unique: Array<{
+      usageId: (typeof usages)[number]["_id"];
+      startTime: number;
+      endTime: number;
+    }> = [];
+    for (const u of usages) {
+      const key = `${u.startTime}:${u.endTime}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push({
+        usageId: u._id,
+        startTime: u.startTime,
+        endTime: u.endTime,
+      });
+    }
+    return unique;
   },
 });

@@ -15,20 +15,46 @@ import { RadioGroupChoiceCard } from "./select-option-form";
 import { DateTimePicker } from "@/components/booking/date-time-picker";
 import { FileUpload } from "@/components/file-upload";
 import { ChevronLeft } from "lucide-react";
-import { useAppForm } from "@/lib/form-context";
+import type { AppFormApi } from "@/lib/form-context";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import { getLabTimeRangeTimestamps, getCurrentTimestamp } from "@/lib/lab-time";
-import { UploadedFile } from "../file-upload/types";
+import type { UploadedFile } from "../file-upload/types";
 import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import type { WorkshopSchedule } from "./workshop-time-slot-picker";
+import {
+  ProjectMaterial,
+  type FulfillmentModeType,
+  type ProjectMaterialType,
+} from "@convex/constants";
+
+export interface BookingDetailsFormValues {
+  dateTime: {
+    date: Date | undefined;
+    startTime: string;
+    endTime: string;
+    originalDate?: number;
+    originalStartTime?: number;
+    originalEndTime?: number;
+  };
+  files: UploadedFile[];
+  name: string;
+  description: string;
+  notes: string;
+  pricing: string;
+  material: ProjectMaterialType;
+  requestedMaterialIds: string[];
+  serviceType: FulfillmentModeType;
+}
 
 type PricingVariantOption = { name: string };
 
 const EMPTY_PRICING_VARIANTS: PricingVariantOption[] = [];
+
+const isProjectMaterial = (value: string): value is ProjectMaterialType =>
+  value === ProjectMaterial.PROVIDE_OWN ||
+  value === ProjectMaterial.BUY_FROM_LAB;
 
 export function Step2ProjectDetails({
   form,
@@ -48,7 +74,7 @@ export function Step2ProjectDetails({
   schedules,
   bookedTimeBlocks,
 }: {
-  form: ReturnType<typeof useAppForm>;
+  form: AppFormApi<BookingDetailsFormValues>;
   serviceName: string;
   expandedFileTypes: string[];
   is3DPrinting: boolean;
@@ -74,7 +100,8 @@ export function Step2ProjectDetails({
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const dateTime = form.state.values.dateTime;
+    const formValues = form.state.values;
+    const dateTime = formValues.dateTime;
 
     if (!dateTime || !dateTime.date) {
       toast.error("Please select a valid date for your booking.");
@@ -118,7 +145,7 @@ export function Step2ProjectDetails({
     posthog.capture("booking_details_completed", {
       service_name: serviceName,
       service_category: serviceCategory,
-      file_count: (form.state.values.files as UploadedFile[]).length,
+      file_count: formValues.files.length,
     });
 
     onNext(e);
@@ -170,79 +197,46 @@ export function Step2ProjectDetails({
 
           {serviceCategory !== "WORKSHOP" && (
             <>
-              <form.Field
+              <form.AppField
                 name="name"
-                children={(field: any) => (
-                  <Field>
-                    <Label
-                      htmlFor="name-1"
-                      className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
-                    >
-                      Project Name
-                    </Label>
-                    <Input
-                      id="name-1"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      required
-                      placeholder="e.g. Custom Cup"
-                    />
-                  </Field>
+                children={(field) => (
+                  <field.TextInput
+                    label="Project Name"
+                    placeholder="Enter project name"
+                    required
+                  />
                 )}
               />
 
-              <form.Field
+              <form.AppField
                 name="description"
-                children={(field: any) => (
-                  <Field>
-                    <Label
-                      htmlFor="description-1"
-                      className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
-                    >
-                      Project Description
-                    </Label>
-                    <Textarea
-                      id="description-1"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      required
-                      className="min-h-20 resize-none md:min-h-32"
-                      placeholder="Describe your project, intended use, or specific details..."
-                    />
-                  </Field>
+                children={(field) => (
+                  <field.TextareaInput
+                    label="Project Description"
+                    placeholder="Describe your project, intended use, or specific details..."
+                    required
+                    className="min-h-20 resize-none md:min-h-32"
+                  />
                 )}
               />
             </>
           )}
 
-          <form.Field
+          <form.AppField
             name="notes"
-            children={(field: any) => (
-              <Field>
-                <Label
-                  htmlFor="notes-1"
-                  className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
-                >
-                  Special Requirements or Notes
-                </Label>
-                <Textarea
-                  id="notes-1"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="min-h-12 resize-none md:min-h-24"
-                  placeholder="Color preferences, dimensional tolerances..."
-                />
-              </Field>
+            children={(field) => (
+              <field.TextareaInput
+                label="Notes (optional)"
+                placeholder="Any additional notes..."
+                className="min-h-20 resize-none"
+              />
             )}
           />
 
           {hasUpPricing && pricingVariants.length > 0 && (
             <form.Field
               name="pricing"
-              children={(field: any) => (
+              children={(field) => (
                 <Field>
                   <Label
                     htmlFor="pricing-tier"
@@ -251,7 +245,7 @@ export function Step2ProjectDetails({
                     Pricing Tier
                   </Label>
                   <Select
-                    value={field.state.value as string}
+                    value={field.state.value}
                     onValueChange={(val) => field.handleChange(val)}
                     required
                   >
@@ -274,7 +268,7 @@ export function Step2ProjectDetails({
 
           <form.Field
             name="material"
-            children={(field: any) => (
+            children={(field) => (
               <Field>
                 <Label
                   htmlFor="material-1"
@@ -285,23 +279,25 @@ export function Step2ProjectDetails({
                 <RadioGroupChoiceCard
                   value={field.state.value}
                   disableBuyFromLab={serviceMaterials.length === 0}
-                  onValueChange={(val) =>
-                    field.handleChange(val as "provide-own" | "buy-from-lab")
-                  }
+                  onValueChange={(val) => {
+                    if (isProjectMaterial(val)) {
+                      field.handleChange(val);
+                    }
+                  }}
                 />
               </Field>
             )}
           />
 
           <form.Subscribe
-            selector={(state: any) => state.values.material}
-            children={(material: string) =>
+            selector={(state) => state.values.material}
+            children={(material) =>
               material === "buy-from-lab" &&
               serviceMaterials.length > 0 && (
                 <form.Field
                   name="requestedMaterialIds"
-                  children={(field: any) => {
-                    const selected: string[] = field.state.value ?? [];
+                  children={(field) => {
+                    const selected = field.state.value;
                     return (
                       <Field>
                         <Label
@@ -363,66 +359,92 @@ export function Step2ProjectDetails({
 
           <form.AppField
             name="dateTime"
-            children={(field: any) => (
-              <>
-                {serviceCategory === "WORKSHOP" ? (
-                  <field.WorkshopTimeSlotPicker schedules={schedules} />
-                ) : is3DPrinting ? (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <Label className="font-black uppercase tracking-tighter text-base">
-                        Deadline (PST)
-                      </Label>
-                    </div>
-                    <DateTimePicker
-                      value={field.state.value as any}
-                      onChange={field.handleChange as any}
-                      availableDays={availableDays}
-                      bookedTimeBlocks={bookedTimeBlocks}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <Label className="font-black uppercase tracking-tighter text-base">
-                        Booking Date & Time (PST)
-                      </Label>
-                    </div>
-                    <DateTimePicker
-                      value={field.state.value as any}
-                      onChange={field.handleChange as any}
-                      availableDays={availableDays}
-                      bookedTimeBlocks={bookedTimeBlocks}
-                    />
-                  </>
-                )}
-              </>
-            )}
+            children={(field) => {
+              const dateTimeValue = field.state.value;
+              return (
+                <>
+                  {serviceCategory === "WORKSHOP" ? (
+                    <field.WorkshopTimeSlotPicker schedules={schedules} />
+                  ) : is3DPrinting ? (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-black uppercase tracking-tighter text-base">
+                          Deadline (PST)
+                        </Label>
+                      </div>
+                      <DateTimePicker
+                        value={{
+                          date: dateTimeValue.date,
+                          startTime: dateTimeValue.startTime,
+                          endTime: dateTimeValue.endTime,
+                        }}
+                        onChange={(val) => {
+                          field.handleChange({
+                            ...dateTimeValue,
+                            ...val,
+                          });
+                        }}
+                        availableDays={availableDays}
+                        bookedTimeBlocks={bookedTimeBlocks}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-black uppercase tracking-tighter text-base">
+                          Booking Date & Time (PST)
+                        </Label>
+                      </div>
+                      <DateTimePicker
+                        value={{
+                          date: dateTimeValue.date,
+                          startTime: dateTimeValue.startTime,
+                          endTime: dateTimeValue.endTime,
+                        }}
+                        onChange={(val) => {
+                          field.handleChange({
+                            ...dateTimeValue,
+                            ...val,
+                          });
+                        }}
+                        availableDays={availableDays}
+                        bookedTimeBlocks={bookedTimeBlocks}
+                      />
+                    </>
+                  )}
+                </>
+              );
+            }}
           />
 
           <FieldSeparator className="my-2" />
 
           <form.Field
             name="files"
-            children={(field: any) => (
-              <FileUpload
-                title="Upload Your Files"
-                value={field.state.value as any}
-                onFilesChange={field.handleChange as any}
-                onUploadingChange={onUploadingChange}
-                onUploadComplete={(file: UploadedFile) => {
-                  posthog.capture("booking_file_uploaded", {
-                    service_name: serviceName,
-                    service_category: serviceCategory,
-                    file_name: file.fileName,
-                    file_type: file.fileType,
-                    file_size_bytes: file.fileSize,
-                  });
-                }}
-                accept="*/*"
-                allowedTypes={expandedFileTypes as any}
-              />
-            )}
+            children={(field) => {
+              const filesValue = field.state.value;
+              return (
+                <FileUpload
+                  title="Upload Your Files"
+                  value={filesValue}
+                  onFilesChange={(val) => {
+                    field.handleChange(val);
+                  }}
+                  onUploadingChange={onUploadingChange}
+                  onUploadComplete={(file: UploadedFile) => {
+                    posthog.capture("booking_file_uploaded", {
+                      service_name: serviceName,
+                      service_category: serviceCategory,
+                      file_name: file.fileName,
+                      file_type: file.fileType,
+                      file_size_bytes: file.fileSize,
+                    });
+                  }}
+                  accept="*/*"
+                  allowedTypes={expandedFileTypes}
+                />
+              );
+            }}
           />
         </FieldGroup>
       </div>

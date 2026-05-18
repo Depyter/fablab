@@ -3,12 +3,14 @@ import React, { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { XIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "convex/react";
@@ -487,7 +489,10 @@ export function ProjectDetails({
         )
       ) : null}
 
-      <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-4xl max-w-full overflow-x-hidden overflow-y-auto rounded-none p-3 sm:p-4">
+      <DialogContent
+        showCloseButton={false}
+        className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-4xl max-w-full overflow-x-hidden overflow-y-auto rounded-none p-3 sm:p-4"
+      >
         {!project || role === undefined ? (
           <ProjectDetailsLoadingSkeleton />
         ) : dialogView === "assign-maker" ? (
@@ -510,6 +515,17 @@ export function ProjectDetails({
               isClient={isClient}
               onUpdateDetails={
                 isClient || isAdminOrMaker ? handleUpdateDetails : undefined
+              }
+              headerRight={
+                <DialogClose asChild>
+                  <button
+                    type="button"
+                    className="flex size-8 shrink-0 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
+                  >
+                    <XIcon className="size-4" strokeWidth={4} />
+                    <span className="sr-only">Close</span>
+                  </button>
+                </DialogClose>
               }
             />
 

@@ -221,9 +221,7 @@ export function ServiceForm({
                       title="Allowed Materials"
                       placeholder="Select materials..."
                       value={field.state.value || []}
-                      onChange={(val) =>
-                        field.handleChange(val as Id<"materials">[])
-                      }
+                      onChange={field.handleChange}
                     />
                   )}
                 />

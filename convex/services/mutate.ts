@@ -376,6 +376,18 @@ export const deleteService = authMutation({
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new ConvexError("Service not found!");
+
+    // Prevent deletion if any active projects reference this service.
+    const activeProject = await ctx.db
+      .query("projects")
+      .filter((q) => q.eq(q.field("service"), args.service))
+      .first();
+    if (activeProject) {
+      throw new ConvexError(
+        "Cannot delete a service that has active projects. Archive or reassign them first.",
+      );
+    }
+
     await deleteFiles(ctx, service.images);
     await deleteFiles(ctx, service.samples);
     await ctx.db.delete("services", args.service);

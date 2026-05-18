@@ -864,11 +864,138 @@ export async function applyStatusChange(
         );
       }
 
+      // ── Re-create resourceUsage records ──────────────────────────────
+      // The original usage records were deleted on cancellation. Re-create
+      // them so the project appears in the calendar, has a valid invoice,
+      // and retains accurate pricing snapshots. We create the usages BEFORE
+      // incrementing the slot so createWorkshopUsage's internal capacity
+      // check (which reads usedUpSlots) sees the current, un-incremented value.
+      const booking: BookingWindow = {
+        startTime: project.bookingStartTime!,
+        endTime: project.bookingEndTime ?? project.bookingStartTime!,
+        date: getLabDayStartTimestamp(project.bookingStartTime!),
+      };
+
+      const bookingDurationMs = booking.endTime - booking.startTime;
+      const provisional = computeProvisionalCostBreakdown(
+        service,
+        project.pricing,
+        project.fulfillmentMode,
+        bookingDurationMs,
+      );
+
+      const usageSnapshot = {
+        name: service.name,
+        costAtTime: provisional.total,
+        unit: "session",
+      };
+
+      const usagePricingSnapshot = buildUsagePricingSnapshot({
+        duration: provisional.duration,
+        rate: provisional.rate,
+        timeCost: provisional.timeCost,
+        materialCost: provisional.materialCost,
+        setupFeePortion: provisional.setupFee,
+        unitName: provisional.unitName,
+        pricingVariant: project.pricing,
+      });
+
+      // Re-create the main workshop usage (no resource)
+      await createWorkshopUsage(
+        ctx,
+        project.service,
+        service,
+        booking,
+        project._id,
+        usageSnapshot,
+        usagePricingSnapshot,
+      );
+
+      // Re-create slot-level resource usages (rooms, machines)
+      for (const resourceId of timeSlot?.resources ?? []) {
+        await ctx.db.insert("resourceUsage", {
+          projectId: project._id,
+          service: project.service,
+          resource: resourceId,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          snapshot: {
+            name: service.name,
+            costAtTime: 0,
+            unit: "session",
+          },
+          pricingSnapshot: {
+            duration: 0,
+            rate: 0,
+            timeCost: 0,
+            materialCost: 0,
+            setupFeePortion: 0,
+            subtotal: 0,
+            unitName: "session",
+          },
+        });
+      }
+
+      // Increment the slot AFTER re-creating usages so the capacity check
+      // inside createWorkshopUsage sees the pre-increment value.
       await incrementWorkshopSlot(ctx, service, {
         startTime: project.bookingStartTime!,
         endTime: project.bookingEndTime ?? project.bookingStartTime!,
         date: getLabDayStartTimestamp(project.bookingStartTime!),
       });
+
+      await syncProjectTotalInvoice(ctx, project._id, {
+        fallbackTotal: provisional.total,
+      });
+    } else if (service && service.serviceCategory.type === "FABRICATION") {
+      // Re-create fabrication resource usage that was deleted on cancellation.
+      const booking: BookingWindow = {
+        startTime: project.bookingStartTime!,
+        endTime: project.bookingEndTime ?? project.bookingStartTime!,
+        date: getLabDayStartTimestamp(project.bookingStartTime!),
+      };
+
+      // Validate that the time slot and resource are still available.
+      // Another project may have booked this slot while this one was cancelled.
+      await validateFabricationAvailability(
+        ctx,
+        project.service,
+        service,
+        booking,
+      );
+
+      const bookingDurationMs = booking.endTime - booking.startTime;
+      const provisional = computeProvisionalCostBreakdown(
+        service,
+        project.pricing,
+        project.fulfillmentMode,
+        bookingDurationMs,
+      );
+
+      const usageSnapshot = {
+        name: service.name,
+        costAtTime: provisional.total,
+        unit: service.serviceCategory.unitName,
+      };
+
+      const usagePricingSnapshot = buildUsagePricingSnapshot({
+        duration: provisional.duration,
+        rate: provisional.rate,
+        timeCost: provisional.timeCost,
+        materialCost: provisional.materialCost,
+        setupFeePortion: provisional.setupFee,
+        unitName: provisional.unitName,
+        pricingVariant: project.pricing,
+      });
+
+      await createFabricationUsage(
+        ctx,
+        project.service,
+        booking,
+        project._id,
+        usageSnapshot,
+        usagePricingSnapshot,
+      );
     }
   }
 
@@ -1154,6 +1281,8 @@ export async function buildEventsFromGroups(
     registrationCount: number;
     cancelledCount: number;
     statusBreakdown: Record<string, number>;
+    resources?: Id<"resources">[];
+    availableMaterials?: Id<"materials">[];
     attendees: Array<{
       projectId: Id<"projects">;
       userId: Id<"userProfile">;
@@ -1178,6 +1307,8 @@ export async function buildEventsFromGroups(
     let endTime = bookingStartTime;
     let maxSlots = 0;
     let usedSlots = 0;
+    let resources: Id<"resources">[] | undefined;
+    let availableMaterials: Id<"materials">[] | undefined;
 
     if (service.serviceCategory.type === "WORKSHOP") {
       const projectDate = getLabDayStartTimestamp(bookingStartTime);
@@ -1192,6 +1323,8 @@ export async function buildEventsFromGroups(
           endTime = timeSlot.endTime;
           maxSlots = timeSlot.maxSlots;
           usedSlots = timeSlot.usedUpSlots ?? 0;
+          resources = timeSlot.resources;
+          availableMaterials = timeSlot.availableMaterials;
         }
       }
     }
@@ -1265,6 +1398,8 @@ export async function buildEventsFromGroups(
       registrationCount: activeProjects.length,
       cancelledCount: groupProjects.length - activeProjects.length,
       statusBreakdown,
+      resources,
+      availableMaterials,
       attendees,
     });
   }

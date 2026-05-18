@@ -1,5 +1,8 @@
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { AppFormApi } from "@/lib/form-context";
+import { FulfillmentMode, type FulfillmentModeType } from "@convex/constants";
 import posthog from "posthog-js";
+import type { BookingDetailsFormValues } from "./step-2-project-details";
 
 export function Step1ServiceType({
   form,
@@ -7,13 +10,12 @@ export function Step1ServiceType({
   serviceCategory,
   onNext,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  form: any;
+  form: AppFormApi<BookingDetailsFormValues>;
   serviceName?: string;
   serviceCategory?: string;
   onNext: () => void;
 }) {
-  const trackAndNext = (serviceType: string) => {
+  const trackAndNext = (serviceType: FulfillmentModeType) => {
     form.setFieldValue("serviceType", serviceType);
     posthog.capture("booking_service_type_selected", {
       service_name: serviceName,
@@ -33,7 +35,7 @@ export function Step1ServiceType({
       <div className="grid grid-cols-1 gap-4 py-8 md:grid-cols-2">
         <div
           className="cursor-pointer rounded-none border-4 border-black bg-white p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000] hover:bg-fab-teal/5"
-          onClick={() => trackAndNext("self-service")}
+          onClick={() => trackAndNext(FulfillmentMode.SELF_SERVICE)}
         >
           <h3 className="mb-2 text-lg font-black uppercase tracking-tighter">
             Self-Service
@@ -44,7 +46,7 @@ export function Step1ServiceType({
         </div>
         <div
           className="cursor-pointer rounded-none border-4 border-black bg-white p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000] hover:bg-fab-magenta/5"
-          onClick={() => trackAndNext("full-service")}
+          onClick={() => trackAndNext(FulfillmentMode.FULL_SERVICE)}
         >
           <h3 className="mb-2 text-lg font-black uppercase tracking-tighter">
             Full-Service Request

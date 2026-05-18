@@ -2,13 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
+import { EstimateProjectDetails } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
-import { Step2ProjectDetails } from "./step-2-project-details";
+import {
+  Step2ProjectDetails,
+  type BookingDetailsFormValues,
+} from "./step-2-project-details";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { useStore } from "@tanstack/react-form";
-import { UploadedFile } from "../file-upload/types";
 import { useMutation, useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
@@ -53,17 +55,6 @@ interface BookingDialog {
 }
 
 type Step = 1 | 2 | 3;
-
-interface LocalBookingFormValues extends Omit<
-  BookingFormValues,
-  "files" | "material"
-> {
-  files: UploadedFile[];
-  material:
-    | typeof ProjectMaterial.PROVIDE_OWN
-    | typeof ProjectMaterial.BUY_FROM_LAB;
-  requestedMaterialIds: string[];
-}
 
 const EMPTY_FILE_TYPES: string[] = [];
 const EMPTY_AVAILABLE_DAYS: number[] = [];
@@ -116,8 +107,7 @@ export function BookingDialog({
   }, []);
 
   const handleFormSubmit = useCallback(
-    async ({ value: rawValue }: { value: LocalBookingFormValues }) => {
-      const value = rawValue as LocalBookingFormValues;
+    async ({ value }: { value: BookingDetailsFormValues }) => {
       if (!value.dateTime.date) {
         toast.error("Please select a date.");
         return;
@@ -196,34 +186,36 @@ export function BookingDialog({
     [serviceCategory, serviceId, serviceName, createProject, loginHref, router],
   );
 
+  const defaultFormValues: BookingDetailsFormValues = {
+    serviceType:
+      serviceCategory === "WORKSHOP"
+        ? FulfillmentMode.FULL_SERVICE
+        : FulfillmentMode.SELF_SERVICE,
+    name: "",
+    description: "",
+    notes: "",
+    material: ProjectMaterial.PROVIDE_OWN,
+    pricing: "Default",
+    requestedMaterialIds: [],
+    dateTime: {
+      date: undefined,
+      startTime: "",
+      endTime: "",
+      originalDate: undefined,
+      originalStartTime: undefined,
+      originalEndTime: undefined,
+    },
+    files: [],
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      serviceType:
-        serviceCategory === "WORKSHOP"
-          ? FulfillmentMode.FULL_SERVICE
-          : FulfillmentMode.SELF_SERVICE,
-      name: "",
-      description: "",
-      notes: "",
-      material: ProjectMaterial.PROVIDE_OWN,
-      pricing: "Default",
-      requestedMaterialIds: [],
-      dateTime: {
-        date: undefined,
-        startTime: "",
-        endTime: "",
-        originalDate: undefined,
-        originalStartTime: undefined,
-        originalEndTime: undefined,
-      },
-      files: [],
-    } as LocalBookingFormValues,
+    defaultValues: defaultFormValues,
     onSubmit: handleFormSubmit,
   });
 
   const selectedDateRaw = useStore(
     form.store,
-    (state: { values: LocalBookingFormValues }) => state.values.dateTime.date,
+    (state) => state.values.dateTime.date,
   );
   let queryDateTs: number | undefined;
   if (selectedDateRaw) {
@@ -354,14 +346,15 @@ export function BookingDialog({
             }}
           >
             <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, formIsSubmitting]) => (
+              selector={(state) => ({
+                canSubmit: state.canSubmit,
+                formIsSubmitting: state.isSubmitting,
+                values: state.values,
+              })}
+              children={({ canSubmit, formIsSubmitting, values }) => (
                 <EstimateProjectDetails
                   serviceName={serviceName}
-                  data={{
-                    ...form.state.values,
-                    files: form.state.values.files,
-                  }}
+                  data={values}
                   servicePricing={servicePricing}
                   serviceMaterials={serviceMaterials}
                   isSubmitting={isSubmitting || formIsSubmitting || isSuccess}

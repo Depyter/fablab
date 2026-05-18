@@ -138,12 +138,11 @@ describe("Project and Chat functionality", () => {
         expect(room[0].color).toBe("yellow");
         expect(room[0].name).toBe("Harley");
 
-        // check room members
+        // check room members — admins/makers have implicit access, so only the client is stored
         const members = await ctx.db.query("roomMembers").collect();
-        expect(members.length).toBe(2);
+        expect(members.length).toBe(1);
         expect(members[0].roomId).toBe(room[0]._id);
         expect(members[0].participantId).toBe(userHarley!._id);
-        expect(members[1].participantId).toBe(userAera!._id);
 
         // check thread
         const thread = await ctx.db.query("threads").collect();
@@ -370,10 +369,10 @@ describe("Project and Chat functionality", () => {
         expect(room[0].color).toBe("yellow");
         expect(room[0].name).toBe("Harley");
 
-        expect(members.length).toBe(2);
+        // Only the client is added — admins/makers have implicit access
+        expect(members.length).toBe(1);
         expect(members[0].roomId).toBe(room[0]._id);
         expect(members[0].participantId).toBe(userHarley!._id);
-        expect(members[1].participantId).toBe(userAera!._id);
 
         expect(thread.length).toBe(2);
         expect(thread[0].roomId).toBe(room[0]._id);

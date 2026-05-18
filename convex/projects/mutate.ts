@@ -323,7 +323,8 @@ export const updateProject = authMutation({
         args.status === "approved" &&
         existingProject.status === "pending" &&
         workflow.approvalRequiresMaker &&
-        args.makerId === undefined
+        (args.makerId === undefined || args.makerId === null) &&
+        !existingProject.assignedMaker
       ) {
         throw new ConvexError(
           "Maker must be assigned before approving a fabrication project.",
@@ -435,7 +436,9 @@ export const createUsage = authMutation({
             usagePricingSnapshot,
           );
 
-    if (service.serviceCategory.type === "WORKSHOP") {
+    // Only the main workshop usage (no resource) increments the slot counter.
+    // Resource-level usages (rooms, machines) should not affect attendee capacity.
+    if (service.serviceCategory.type === "WORKSHOP" && !resource) {
       await incrementWorkshopSlot(ctx, service, booking);
     }
 
@@ -546,24 +549,31 @@ export const updateUsage = authMutation({
 
     // ── Workshop slot tracking ────────────────────────────────────────────
     if (service.serviceCategory.type === "WORKSHOP" && bookingChanged) {
-      // Decrement the old time slot before updating the record
-      await decrementWorkshopSlot(ctx, service, usage);
+      if (!usage.resource) {
+        // Only the main workshop usage (no resource) affects the slot counter.
+        // Resource-level usages (rooms, machines) should not increment/decrement
+        // the attendee slot counter.
+        await decrementWorkshopSlot(ctx, service, usage);
 
-      // Re-fetch the service — decrementWorkshopSlot patched the document
-      const refreshedService = await ctx.db.get(project.service);
-      if (!refreshedService) throw new ConvexError("Service not found.");
+        // Re-fetch the service — decrementWorkshopSlot patched the document
+        const refreshedService = await ctx.db.get(project.service);
+        if (!refreshedService) throw new ConvexError("Service not found.");
 
-      // Update usage time
-      await ctx.db.patch(usage._id, updates);
+        // Update usage time
+        await ctx.db.patch(usage._id, updates);
 
-      // Increment the new time slot
-      await incrementWorkshopSlot(ctx, refreshedService, booking);
+        // Increment the new time slot
+        await incrementWorkshopSlot(ctx, refreshedService, booking);
 
-      // Keep project-level booking times in sync with the single workshop usage
-      await ctx.db.patch(project._id, {
-        bookingStartTime: nextStartTime,
-        bookingEndTime: nextEndTime,
-      });
+        // Keep project-level booking times in sync with the main workshop usage
+        await ctx.db.patch(project._id, {
+          bookingStartTime: nextStartTime,
+          bookingEndTime: nextEndTime,
+        });
+      } else {
+        // Resource-level usage update — just patch the usage, no slot impact
+        await ctx.db.patch(usage._id, updates);
+      }
     } else {
       await ctx.db.patch(usage._id, updates);
     }
@@ -668,6 +678,21 @@ export const updateUsagePricing = authMutation({
         ]),
       );
 
+      // Validate stock availability before deducting.
+      for (const { materialId, amountUsed } of args.materialsUsed) {
+        const material = await ctx.db.get(materialId);
+        if (!material) {
+          throw new ConvexError(`Material with id ${materialId} not found.`);
+        }
+        const previousAmount = previousAmounts.get(materialId) ?? 0;
+        const availableStock = material.currentStock + previousAmount;
+        if (amountUsed > availableStock) {
+          throw new ConvexError(
+            `Insufficient stock for "${material.name}". Available: ${availableStock} ${material.unit}, requested: ${amountUsed} ${material.unit}.`,
+          );
+        }
+      }
+
       for (const existing of usage.materialsUsed ?? []) {
         if (
           !args.materialsUsed.some((m) => m.materialId === existing.materialId)
@@ -744,7 +769,9 @@ export const deleteUsage = authMutation({
     const service = await ctx.db.get(project.service);
     if (!service) throw new ConvexError("Service not found.");
 
-    if (service.serviceCategory.type === "WORKSHOP") {
+    // Only the main workshop usage (no resource) decrements the slot counter.
+    // Resource-level usages (rooms, machines) should not affect attendee capacity.
+    if (service.serviceCategory.type === "WORKSHOP" && !usage.resource) {
       await decrementWorkshopSlot(ctx, service, usage);
     }
 
@@ -799,8 +826,10 @@ export const updateProjectSchedule = authMutation({
         .withIndex("by_project", (q) => q.eq("projectId", project._id))
         .collect();
 
-      // Workshops have a single usage record — keep it in sync with schedule
-      const usage = usageDocs[0];
+      // Find the main workshop usage (no resource). Resource-level usages
+      // (rooms, machines) should not drive slot counter changes. Fall back
+      // to the first usage if no main usage is found (defensive).
+      const usage = usageDocs.find((u) => !u.resource) ?? usageDocs[0];
       if (usage) {
         // Decrement old slot
         await decrementWorkshopSlot(ctx, service, usage);

@@ -34,6 +34,8 @@ export type WorkshopEvent = {
   registrationCount: number;
   cancelledCount: number;
   statusBreakdown: Record<string, number>;
+  resources?: string[];
+  availableMaterials?: string[];
   attendees: Array<{
     projectId: string;
     userId: string;
@@ -217,6 +219,52 @@ export function WorkshopEventCard({
                         />
                       ),
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Resources & Materials per slot */}
+            {((event.resources && event.resources.length > 0) ||
+              (event.availableMaterials &&
+                event.availableMaterials.length > 0)) && (
+              <div className="space-y-1.5">
+                <SectionLabel>Slot Resources & Materials</SectionLabel>
+                <div className="flex flex-wrap gap-3">
+                  {event.resources && event.resources.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/50">
+                        Resources:
+                      </span>
+                      <span className="inline-flex flex-wrap gap-1">
+                        {event.resources.map((rid) => (
+                          <span
+                            key={rid}
+                            className="inline-flex items-center border border-black bg-fab-teal/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
+                          >
+                            {rid.slice(0, 8)}…
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                  {event.availableMaterials &&
+                    event.availableMaterials.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/50">
+                          Materials:
+                        </span>
+                        <span className="inline-flex flex-wrap gap-1">
+                          {event.availableMaterials.map((mid) => (
+                            <span
+                              key={mid}
+                              className="inline-flex items-center border border-black bg-fab-amber/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
+                            >
+                              {mid.slice(0, 8)}…
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                    )}
                 </div>
               </div>
             )}

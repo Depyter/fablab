@@ -2,19 +2,43 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MessageSquare, ExternalLink, ChevronDown } from "lucide-react";
+import { MessageSquare, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select as PaymentModeSelect,
+  SelectContent as PaymentModeSelectContent,
+  SelectGroup as PaymentModeSelectGroup,
+  SelectItem as PaymentModeSelectItem,
+  SelectLabel as PaymentModeSelectLabel,
+  SelectTrigger as PaymentModeSelectTrigger,
+  SelectValue as PaymentModeSelectValue,
+} from "@/components/ui/select";
+import { FileUpload } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/file-upload";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import {
   PROJECT_STATUS_LABELS,
   type ProjectStatusType,
+  type PaymentModeType,
+  FILE_CATEGORIES,
 } from "@convex/constants";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -97,9 +121,25 @@ export function WorkshopAttendeeRow({
 }) {
   const colors = STATUS_COLORS[attendee.status] ?? STATUS_COLORS.pending;
   const updateProject = useMutation(api.projects.mutate.updateProject);
+  const markProjectPaid = useMutation(api.projects.mutate.markProjectPaid);
   const transitions = WORKSHOP_TRANSITIONS[attendee.status] ?? [];
 
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = React.useState(false);
+  const [receiptNumber, setReceiptNumber] = React.useState("");
+  const [paymentMode, setPaymentMode] = React.useState<PaymentModeType>("cash");
+  const [proof, setProof] = React.useState("");
+  const [proofFiles, setProofFiles] = React.useState<UploadedFile[]>([]);
+  const [isPaying, setIsPaying] = React.useState(false);
+  const [isUploadingProof, setIsUploadingProof] = React.useState(false);
+
   const handleStatusChange = async (newStatus: ProjectStatusType) => {
+    if (newStatus === "paid") {
+      // Open the payment dialog instead of transitioning directly
+      setPaymentDialogOpen(true);
+      return;
+    }
+
     try {
       await updateProject({
         projectId: attendee.projectId as Id<"projects">,
@@ -113,12 +153,52 @@ export function WorkshopAttendeeRow({
     }
   };
 
+  const handleMarkPaid = async () => {
+    if (!receiptNumber.trim()) {
+      toast.error("Please enter a receipt number.");
+      return;
+    }
+    if (!proof.trim()) {
+      toast.error("Please describe the proof of payment.");
+      return;
+    }
+    setIsPaying(true);
+    try {
+      await markProjectPaid({
+        projectId: attendee.projectId as Id<"projects">,
+        receiptString: receiptNumber.trim(),
+        paymentMode,
+        proof: proof.trim(),
+        proofFiles: proofFiles.map((f) => f.storageId as Id<"_storage">),
+      });
+      toast.success(`${attendee.name} → Payment recorded. Workshop confirmed.`);
+      setPaymentDialogOpen(false);
+      setReceiptNumber("");
+      setProof("");
+      setPaymentMode("cash");
+      setProofFiles([]);
+    } catch {
+      toast.error("Failed to record payment.");
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handleValueChange = (value: string) => {
+    handleStatusChange(value as ProjectStatusType);
+  };
+
   const initials = attendee.name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  const currentLabel =
+    PROJECT_STATUS_LABELS[
+      attendee.status as keyof typeof PROJECT_STATUS_LABELS
+    ] ?? attendee.status;
 
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-amber-50/50">
@@ -141,54 +221,46 @@ export function WorkshopAttendeeRow({
         </span>
       </div>
 
-      {/* Status — dropdown if there are transitions available */}
+      {/* Status — select if there are transitions available */}
       {transitions.length > 0 && !readOnly ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex h-7 items-center gap-1 border-2 border-black px-2.5 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]",
-                colors.bg,
-                colors.text,
-              )}
-            >
-              <span className={cn("h-2 w-2", colors.dot)} />
-              {PROJECT_STATUS_LABELS[
-                attendee.status as keyof typeof PROJECT_STATUS_LABELS
-              ] ?? attendee.status}
-              <ChevronDown className="h-3 w-3" strokeWidth={3} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
+        <Select value={attendee.status} onValueChange={handleValueChange}>
+          <SelectTrigger
+            className={cn(
+              "h-9 w-auto min-w-28 border-2 border-black bg-white text-xs font-black uppercase tracking-tighter shadow-[2px_2px_0_0_#000]",
+              colors.text,
+            )}
+          >
+            <SelectValue>
+              <span className="flex items-center gap-1.5">
+                <span className={cn("h-2 w-2 shrink-0", colors.dot)} />
+                {currentLabel}
+              </span>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent
             align="end"
-            className="min-w-36 border-2 border-black shadow-[4px_4px_0_0_#000]"
+            className="min-w-36 border-2 border-black shadow-[3px_3px_0_0_#000]"
           >
             {transitions.map((transition) => {
               const tColors =
                 STATUS_COLORS[transition] ?? STATUS_COLORS.pending;
               return (
-                <DropdownMenuItem
+                <SelectItem
                   key={transition}
-                  className="gap-2 text-[10px] font-black uppercase tracking-wider"
-                  onClick={() => handleStatusChange(transition)}
+                  value={transition}
+                  className="gap-2 text-xs font-black uppercase tracking-tighter"
                 >
-                  <span className={cn("h-2 w-2", tColors.dot)} />
-                  {PROJECT_STATUS_LABELS[transition] ?? transition}
-                </DropdownMenuItem>
+                  <span className="flex items-center gap-2">
+                    <span className={cn("h-2 w-2 shrink-0", tColors.dot)} />
+                    {PROJECT_STATUS_LABELS[transition] ?? transition}
+                  </span>
+                </SelectItem>
               );
             })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </SelectContent>
+        </Select>
       ) : (
-        <StatusBadge
-          label={
-            PROJECT_STATUS_LABELS[
-              attendee.status as keyof typeof PROJECT_STATUS_LABELS
-            ] ?? attendee.status
-          }
-          colors={colors}
-        />
+        <StatusBadge label={currentLabel} colors={colors} />
       )}
 
       <div className="flex shrink-0 items-center gap-1">
@@ -214,6 +286,107 @@ export function WorkshopAttendeeRow({
           </Button>
         )}
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record Payment and Confirm Workshop</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="receipt-number">Receipt Number</Label>
+              <Input
+                id="receipt-number"
+                type="text"
+                placeholder="e.g. OR-10042"
+                value={receiptNumber}
+                onChange={(e) => setReceiptNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="payment-mode">Payment Mode</Label>
+              <PaymentModeSelect
+                value={paymentMode}
+                onValueChange={(v) =>
+                  setPaymentMode(
+                    v as "cash" | "gcash" | "bank transfer" | "others",
+                  )
+                }
+              >
+                <PaymentModeSelectTrigger id="payment-mode" className="w-full">
+                  <PaymentModeSelectValue placeholder="Select payment mode" />
+                </PaymentModeSelectTrigger>
+                <PaymentModeSelectContent>
+                  <PaymentModeSelectGroup>
+                    <PaymentModeSelectLabel>
+                      Payment Methods
+                    </PaymentModeSelectLabel>
+                    <PaymentModeSelectItem value="cash">
+                      Cash
+                    </PaymentModeSelectItem>
+                    <PaymentModeSelectItem value="gcash">
+                      GCash
+                    </PaymentModeSelectItem>
+                    <PaymentModeSelectItem value="bank transfer">
+                      Bank Transfer
+                    </PaymentModeSelectItem>
+                    <PaymentModeSelectItem value="others">
+                      Others
+                    </PaymentModeSelectItem>
+                  </PaymentModeSelectGroup>
+                </PaymentModeSelectContent>
+              </PaymentModeSelect>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="proof">Proof of Payment</Label>
+              <Textarea
+                id="proof"
+                placeholder="Reference number, transaction ID, or other details…"
+                rows={3}
+                value={proof}
+                onChange={(e) => setProof(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Attachments (optional)</Label>
+              <FileUpload
+                title="Upload proof (images or PDF)"
+                variant="compact"
+                multiple
+                accept="image/*,.pdf"
+                allowedTypes={[...FILE_CATEGORIES.Images, "application/pdf"]}
+                value={proofFiles}
+                onFilesChange={setProofFiles}
+                onUploadingChange={setIsUploadingProof}
+                autoUpload
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPaymentDialogOpen(false);
+              }}
+              disabled={isPaying}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleMarkPaid}
+              disabled={isPaying || isUploadingProof}
+              style={{ background: "var(--fab-teal)", color: "#fff" }}
+            >
+              {isUploadingProof
+                ? "Uploading…"
+                : isPaying
+                  ? "Saving…"
+                  : "Record Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

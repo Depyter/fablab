@@ -699,6 +699,8 @@ export const getWorkshopEvents = authQuery({
       registrationCount: number;
       cancelledCount: number;
       statusBreakdown: Record<string, number>;
+      resources?: Id<"resources">[];
+      availableMaterials?: Id<"materials">[];
       attendees: Array<{
         projectId: Id<"projects">;
         userId: Id<"userProfile">;
@@ -809,6 +811,8 @@ export const getWorkshopEvents = authQuery({
             registrationCount: activeProjects.length,
             cancelledCount: groupProjects.length - activeProjects.length,
             statusBreakdown,
+            resources: timeSlot.resources,
+            availableMaterials: timeSlot.availableMaterials,
             attendees,
           });
         }

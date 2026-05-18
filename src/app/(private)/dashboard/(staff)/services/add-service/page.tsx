@@ -8,6 +8,7 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import {
   defaultAddServiceValues,
+  toMutationWorkshopSchedules,
   type AddServiceFormValues,
 } from "@/types/add-service";
 import { toast } from "sonner";
@@ -40,7 +41,7 @@ export default function AddServicePage() {
           serviceCategory === "WORKSHOP"
             ? {
                 type: "WORKSHOP",
-                schedules: schedules ?? [],
+                schedules: toMutationWorkshopSchedules(schedules),
                 amount: pricing.type === "FIXED" ? pricing.amount : 0,
                 variants:
                   pricing.type === "FIXED" && pricing.variants.length > 0
