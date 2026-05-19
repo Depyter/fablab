@@ -63,12 +63,11 @@ async function loadAvailableWorkshopSlots(
 
         const usedSlots = timeSlot.usedUpSlots ?? 0;
         const remainingSlots = timeSlot.maxSlots - usedSlots;
-        if (remainingSlots <= 0) continue;
 
         const label =
-          remainingSlots > 0
-            ? `${remainingSlots} slot${remainingSlots > 1 ? "s" : ""} available`
-            : "Available";
+          remainingSlots <= 0
+            ? "Full"
+            : `${remainingSlots} slot${remainingSlots > 1 ? "s" : ""} available`;
 
         // Services tab: one placeholder per time slot
         services.push({
@@ -297,21 +296,38 @@ export async function loadCalendarBookings(
   ctx: CalendarQueryContext,
   range: CalendarBookingRange,
 ): Promise<CalendarBookingItem[]> {
-  const [usages, ownedProjectIds] = await Promise.all([
+  const [usages, ownedProjectIds, allServices] = await Promise.all([
     loadCandidateUsages(ctx, range),
     loadOwnedProjectIds(ctx),
+    ctx.db.query("services").collect(),
   ]);
+
+  // Build a service-type map so we can skip individual workshop resource
+  // usage records — workshop resources are rendered from schedule slots
+  // via loadAvailableWorkshopSlots instead.
+  const isWorkshopService = new Map<Id<"services">, boolean>();
+  for (const s of allServices) {
+    isWorkshopService.set(s._id, s.serviceCategory.type === "WORKSHOP");
+  }
+
+  // Filter out individual resourceUsage records that belong to workshop
+  // services — they are replaced by schedule-based slot entries below.
+  const nonWorkshopUsages = usages.filter((u) => {
+    const isWs = isWorkshopService.get(u.service);
+    return !isWs;
+  });
+
   const visibleProjectIds = collectVisibleProjectIds({
     role: ctx.profile.role,
     ownedProjectIds,
-    usages,
+    usages: nonWorkshopUsages,
   });
   const { projectById, clientById } = await loadCalendarBookingHydration(
     ctx,
     visibleProjectIds,
   );
 
-  const items = usages.map((usage) =>
+  const items = nonWorkshopUsages.map((usage) =>
     mapCalendarBookingItem({
       role: ctx.profile.role,
       ownedProjectIds,
@@ -321,8 +337,9 @@ export async function loadCalendarBookings(
     }),
   );
 
-  // Append available workshop resource slots so resources appear
-  // occupied by the workshop even when no one has registered yet.
+  // Append schedule-based workshop resource slots so resources appear
+  // as a single generic block per time slot (matching the services-tab
+  // pattern) rather than one block per project registration.
   const available = await loadAvailableWorkshopSlots(ctx, range);
   items.push(...available.resources);
 

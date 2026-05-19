@@ -93,11 +93,12 @@ export function DateTimePicker({
       // Disable today if the current time has passed the last viable
       // start-time — every time slot would already be in the past.
       if (!allowPastSelection) {
-        const todayStart = getLabDayStartTimestamp(Date.now());
+        const now = getCurrentTimestamp();
+        const todayStart = getLabDayStartTimestamp(now);
         const nextDateStart = getLabDayStartTimestamp(nextDate);
         if (
           nextDateStart === todayStart &&
-          Date.now() > getLabTimeTimestamp(nextDate, LAST_VIABLE_START_TIME)
+          now > getLabTimeTimestamp(nextDate, LAST_VIABLE_START_TIME)
         ) {
           return true;
         }

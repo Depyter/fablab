@@ -7,8 +7,7 @@ import type {
   CalendarMachineUsage,
 } from "./types";
 
-export const CALENDAR_DAY_ROW_HEIGHT = 40;
-export const CALENDAR_DAY_WORKSHOP_ROW_HEIGHT = 104;
+export const CALENDAR_DAY_ROW_HEIGHT = 56;
 export const CALENDAR_DAY_SECTION_HEIGHT = 26;
 export const CALENDAR_DAY_HEADER_HEIGHT = 44;
 export const CALENDAR_DAY_LEADING_COL_WIDTH = 160;
@@ -193,13 +192,34 @@ function buildDayTrackEntries(
     return buildWorkshopSlotClusters(usages);
   }
 
-  return usages.map((usage) => ({
-    id: usage.id,
-    kind: "booking",
-    usage,
-    startTime: usage.startTime,
-    endTime: usage.endTime,
-  }));
+  // For non-workshop machines (e.g. resources), route workshop entries
+  // through the same clustering so they render as WorkshopSlotCard,
+  // matching the services-tab pattern for generic workshop slots.
+  const workshopUsages = usages.filter(
+    (u) => u.serviceCategoryType === "WORKSHOP",
+  );
+  const regularUsages = usages.filter(
+    (u) => u.serviceCategoryType !== "WORKSHOP",
+  );
+
+  const entries: CalendarDayTrackEntry[] = [];
+
+  if (workshopUsages.length > 0) {
+    const clusters = buildWorkshopSlotClusters(workshopUsages);
+    entries.push(...clusters);
+  }
+
+  for (const usage of regularUsages) {
+    entries.push({
+      id: usage.id,
+      kind: "booking",
+      usage,
+      startTime: usage.startTime,
+      endTime: usage.endTime,
+    });
+  }
+
+  return entries;
 }
 
 export function packCalendarTracks<T>(
@@ -323,10 +343,7 @@ export function buildCalendarDayScheduleRows(args: {
         startTime: entry.startTime,
         endTime: entry.endTime,
       }));
-      const rowHeight =
-        machine.serviceCategoryType === "WORKSHOP"
-          ? CALENDAR_DAY_WORKSHOP_ROW_HEIGHT
-          : CALENDAR_DAY_ROW_HEIGHT;
+      const rowHeight = CALENDAR_DAY_ROW_HEIGHT;
 
       // Skip workshop machines with neither project bookings nor
       // available-slot entries — nothing to show on that day.

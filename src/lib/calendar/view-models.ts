@@ -1,8 +1,5 @@
 import { ResourceStatus, ServiceStatus } from "../../../convex/constants";
 
-/** Prefix used to identify synthetic available-workshop calendar items. */
-const AVAILABLE_WORKSHOP_ID_PREFIX = "available-ws-";
-
 import {
   getCalendarResourceGroupLabel,
   getCalendarServiceGroupLabel,
@@ -92,6 +89,7 @@ function buildCalendarUsage(
     startTime: window.startTime,
     endTime: window.endTime,
     serviceCategoryType,
+    serviceId: booking.serviceId,
     ...slotPresentation,
   };
 }
@@ -139,80 +137,25 @@ export function buildBookingCalendarViewModels(args: {
   const serviceMachines = buildServiceMachines(services);
 
   // ── Resource usages (day view) ─────────────────────────────────────────
-  // Cluster workshop resource usages by (resourceId, startTime, endTime) so
-  // the calendar shows one block per slot rather than one per project.
+  // The backend returns schedule-based entries for workshop resource slots
+  // (rather than individual project resourceUsages), so every workshop
+  // entry here is already a generic slot. Workshop entries are clustered
+  // into WorkshopSlotCards by buildDayTrackEntries in the layout layer.
   const resourceUsages =
     args.viewMode !== "day"
       ? []
-      : (() => {
-          const workshopClusters = new Map<string, CalendarMachineUsage[]>();
-          const clusterServiceNames = new Map<string, string>();
-          const regular: CalendarMachineUsage[] = [];
-          const workshopPlaceholders: CalendarMachineUsage[] = [];
-
-          for (const booking of args.bookings) {
-            if (!booking.resourceId) continue;
-
-            const service = servicesById.get(booking.serviceId);
-            if (!service) continue;
-
-            const usage = buildCalendarUsage(
-              booking,
-              booking.resourceId,
-              service.serviceCategoryType,
-              args.dayRange,
-            );
-            if (!usage) continue;
-
-            // Separate available-workshop placeholders from real bookings
-            // so they aren't counted in the cluster tally.
-            if (booking._id.startsWith(AVAILABLE_WORKSHOP_ID_PREFIX)) {
-              workshopPlaceholders.push(usage);
-              continue;
-            }
-
-            if (service.serviceCategoryType === "WORKSHOP") {
-              const key = `${booking.resourceId}:${usage.startTime}:${usage.endTime}`;
-              const cluster = workshopClusters.get(key);
-              if (cluster) {
-                cluster.push(usage);
-              } else {
-                workshopClusters.set(key, [usage]);
-                clusterServiceNames.set(key, service.name);
-              }
-            } else {
-              regular.push(usage);
-            }
-          }
-
-          // Convert each workshop cluster to a single aggregated entry
-          for (const [key, cluster] of workshopClusters) {
-            const first = cluster[0]!;
-            const serviceName = clusterServiceNames.get(key) ?? "Workshop";
-            regular.push({
-              ...first,
-              id: `ws-res-${first.machineId}-${first.startTime}`,
-              projectId: null,
-              projectAlias: serviceName,
-              projectStatus: "approved",
-              clientName: `${cluster.length} booked`,
-              isPendingReview: false,
-            });
-          }
-
-          // Add available workshop placeholders as individual blocks
-          for (const placeholder of workshopPlaceholders) {
-            regular.push({
-              ...placeholder,
-              id: `ws-avail-${placeholder.machineId}-${placeholder.startTime}`,
-              projectId: null,
-              projectStatus: "approved",
-              isPendingReview: false,
-            });
-          }
-
-          return regular;
-        })();
+      : args.bookings.flatMap((booking) => {
+          if (!booking.resourceId) return [];
+          const service = servicesById.get(booking.serviceId);
+          if (!service) return [];
+          const usage = buildCalendarUsage(
+            booking,
+            booking.resourceId,
+            service.serviceCategoryType,
+            args.dayRange,
+          );
+          return usage ? [usage] : [];
+        });
 
   const serviceUsages =
     args.viewMode !== "day"
@@ -240,7 +183,6 @@ export function buildBookingCalendarViewModels(args: {
           : args.bookings
         ).flatMap((booking) => {
           const service = servicesById.get(booking.serviceId);
-
           if (!service) return [];
 
           const secondaryLabel =

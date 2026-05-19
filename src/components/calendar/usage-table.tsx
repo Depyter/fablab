@@ -16,7 +16,6 @@ import {
   CALENDAR_DAY_SECTION_HEIGHT,
   CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_SLOT_WIDTH,
-  CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
   getCalendarDayNowIndicatorLeft,
   getCalendarDayUsagePosition,
   isWorkshopTrackEntry,
@@ -133,8 +132,8 @@ function WorkshopSlotCard({
       className={cn(
         "absolute z-[5] overflow-hidden rounded-xl border text-left shadow-sm",
         hasMembers
-          ? "border-blue-200 bg-blue-50/95"
-          : "border-dashed border-blue-200/60 bg-blue-50/60",
+          ? "border-fab-teal bg-white"
+          : "border-dashed border-fab-teal bg-white",
       )}
       style={{
         top: compact ? 2 : 4,
@@ -155,7 +154,7 @@ function WorkshopSlotCard({
             onOpenWorkshopEvent?.(entry.machineId, entry.startTime)
           }
           className={cn(
-            "flex items-start justify-between gap-2 text-left",
+            "flex items-start gap-2 text-left",
             onOpenWorkshopEvent && "cursor-pointer hover:opacity-80",
           )}
         >
@@ -163,7 +162,7 @@ function WorkshopSlotCard({
             <div
               className={cn(
                 "truncate font-bold uppercase tracking-[0.08em]",
-                hasMembers ? "text-blue-900" : "text-blue-600",
+                "text-fab-teal",
                 compact ? "text-[10px]" : "text-[11px]",
               )}
             >
@@ -173,22 +172,13 @@ function WorkshopSlotCard({
               className={cn(
                 "truncate",
                 compact ? "text-[9px]" : "text-[10px]",
-                hasMembers ? "text-blue-800/80" : "text-blue-500",
+                "text-fab-teal",
               )}
             >
               {hasMembers
                 ? `${entry.bookingCount} booked${entry.pendingCount > 0 ? ` \u00b7 ${entry.pendingCount} pending` : ""}`
                 : (entry.availableLabel ?? "Available")}
             </div>
-          </div>
-          <div
-            className={cn(
-              "shrink-0 rounded-full bg-white/80 font-semibold shadow-sm",
-              hasMembers ? "text-blue-900" : "text-blue-600",
-              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]",
-            )}
-          >
-            {formatShortTime(entry.startTime)}-{formatShortTime(entry.endTime)}
           </div>
         </button>
 
@@ -205,7 +195,7 @@ function WorkshopSlotCard({
             {hiddenMemberCount > 0 ? (
               <div
                 className={cn(
-                  "px-1 font-medium text-blue-900/75",
+                  "px-1 font-medium text-fab-teal",
                   compact ? "text-[9px]" : "text-[10px]",
                 )}
               >
@@ -247,7 +237,10 @@ function StandardUsageCard({
         if (usage.projectId && onOpenProjectDetails) {
           onOpenProjectDetails(usage.projectId);
         } else if (isWorkshopSlot) {
-          onOpenWorkshopEvent!(usage.machineId, usage.startTime);
+          onOpenWorkshopEvent!(
+            usage.serviceId ?? usage.machineId,
+            usage.startTime,
+          );
         }
       }}
       className={cn(
@@ -355,8 +348,7 @@ export function UsageTable({
   const dayLayoutTemplate = `${dayLeadingColWidth}px minmax(${dayTimelineMinWidth}px, 1fr)`;
   const getResponsiveRowHeight = (rowHeight: number) => {
     if (!isMobile) return rowHeight;
-    if (rowHeight === CALENDAR_DAY_WORKSHOP_ROW_HEIGHT) return 80;
-    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 32;
+    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 44;
     if (rowHeight === CALENDAR_DAY_SECTION_HEIGHT) return 22;
     return rowHeight;
   };

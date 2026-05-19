@@ -45,8 +45,8 @@ export function getCalendarSlotPresentation(args: {
 
   if (args.serviceCategoryType === "WORKSHOP") {
     return {
-      slotClassName: "bg-blue-100 border-blue-300 text-blue-800",
-      accentClassName: "bg-blue-500",
+      slotClassName: "bg-white border-fab-teal text-fab-teal",
+      accentClassName: "bg-fab-teal",
       isPendingReview: false,
     };
   }
