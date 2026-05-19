@@ -53,7 +53,7 @@ function ServicesPageHeader() {
         className="bg-fab-magenta text-white"
       >
         <Plus className="h-4 w-4" />
-        <span className="hidden sm:inline">Add Service</span>
+        <span className="hidden sm:inline">Add Fabrication</span>
       </BrandButton>
     </DataViewPageHeader>
   );

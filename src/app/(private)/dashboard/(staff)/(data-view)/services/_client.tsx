@@ -35,6 +35,11 @@ export function ServicesListClient() {
     if (!services) return [];
     let result = [...services];
 
+    // Only show fabrication services — workshops have their own page.
+    result = result.filter(
+      (s) => s.serviceCategory.type === "FABRICATION",
+    ) as typeof result;
+
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -44,17 +49,12 @@ export function ServicesListClient() {
       );
     }
 
-    const getSortPrice = (
-      cat: (typeof services)[number]["serviceCategory"],
-    ) => {
-      if (cat.type === "WORKSHOP") return cat.amount;
-      if (cat.type === "FABRICATION") return cat.setupFee + cat.timeRate;
-      return 0;
-    };
-
     result.sort((a, b) => {
-      const priceA = getSortPrice(a.serviceCategory);
-      const priceB = getSortPrice(b.serviceCategory);
+      // Both are FABRICATION at this point (filtered above).
+      const catA = a.serviceCategory as { setupFee: number; timeRate: number };
+      const catB = b.serviceCategory as { setupFee: number; timeRate: number };
+      const priceA = catA.setupFee + catA.timeRate;
+      const priceB = catB.setupFee + catB.timeRate;
       if (sortBy === "price-high") return priceB - priceA;
       if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "name-az") return a.name.localeCompare(b.name);
@@ -73,40 +73,42 @@ export function ServicesListClient() {
       items={filteredServices}
       totalItems={services.length}
       isLoading={isLoading}
-      renderItem={(service) => (
-        <ServiceCard
-          key={service._id}
-          slug={service.slug}
-          imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
-          title={service.name}
-          description={service.description}
-          showBadge={false}
-          pricing={
-            service.serviceCategory.type === "WORKSHOP"
-              ? {
-                  type: "FIXED" as const,
-                  amount: service.serviceCategory.amount,
-                  variants: service.serviceCategory.variants,
-                }
-              : {
-                  type: "FABRICATION" as const,
-                  setupFee: service.serviceCategory.setupFee,
-                  unitName: service.serviceCategory.unitName,
-                  timeRate: service.serviceCategory.timeRate,
-                  variants: service.serviceCategory.variants,
-                }
-          }
-        />
-      )}
+      renderItem={(service) => {
+        const cat = service.serviceCategory as {
+          setupFee: number;
+          unitName: string;
+          timeRate: number;
+          variants?:
+            | { name: string; setupFee: number; timeRate: number }[]
+            | undefined;
+        };
+        return (
+          <ServiceCard
+            key={service._id}
+            slug={service.slug}
+            imageSrc={service.imageUrls[0] ?? "/fablab_mural.png"}
+            title={service.name}
+            description={service.description}
+            showBadge={false}
+            pricing={{
+              type: "FABRICATION" as const,
+              setupFee: cat.setupFee,
+              unitName: cat.unitName,
+              timeRate: cat.timeRate,
+              variants: cat.variants,
+            }}
+          />
+        );
+      }}
       emptyState={{
         icon: <PackageOpen className="size-12" />,
-        title: "No services found",
+        title: "No fabrication services",
         description:
-          "The catalogue is empty. Create your first service to make it available for clients to browse and request.",
+          "The fabrication catalogue is empty. Create your first fabrication service to make it available for clients to request.",
         action: (
           <Link href="/dashboard/services/add-service">
             <Button variant="outline" size="sm">
-              Add Service
+              Add Fabrication Service
             </Button>
           </Link>
         ),
