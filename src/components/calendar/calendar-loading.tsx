@@ -10,7 +10,6 @@ import {
   CALENDAR_DAY_ROW_HEIGHT,
   CALENDAR_DAY_SECTION_HEIGHT,
   CALENDAR_DAY_TIMELINE_TEMPLATE,
-  CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
   CALENDAR_MONTH_CELL_MIN_HEIGHT,
   CALENDAR_MONTH_DAY_MIN_WIDTH,
   CALENDAR_WEEK_DAY_MIN_WIDTH,
@@ -105,7 +104,7 @@ const SERVICE_DAY_LOADING_ROWS: DayLoadingRow[] = [
     id: "workshop-track",
     kind: "track",
     labelWidth: "w-32",
-    rowHeight: CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
+    rowHeight: CALENDAR_DAY_ROW_HEIGHT,
     showStatus: true,
     slots: [{ start: 8, span: 5, kind: "workshop" }],
   },
@@ -203,7 +202,7 @@ function WorkshopDayLoadingSlot({
 
   return (
     <div
-      className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200/60 bg-blue-50/80 px-2.5 py-2 shadow-sm"
+      className="absolute z-[5] overflow-hidden rounded-xl border border-fab-teal bg-white px-2.5 py-2 shadow-sm"
       style={{
         top: 4,
         bottom: 4,

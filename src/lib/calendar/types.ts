@@ -54,6 +54,8 @@ export interface CalendarMachineUsage extends CalendarSlotPresentation {
   startTime: number;
   endTime: number;
   serviceCategoryType: CalendarServiceCategoryType;
+  /** The service this usage belongs to — used for workshop-slot navigation. */
+  serviceId?: Id<"services">;
 }
 
 export interface CalendarRangeEvent {
