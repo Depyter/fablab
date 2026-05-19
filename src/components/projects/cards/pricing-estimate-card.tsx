@@ -213,7 +213,16 @@ export function PricingEstimateCard({
     [editableMaterialDocs],
   );
   const editableResources: EditableResource[] = (resources ?? [])
-    .filter((r) => (service?.resources ?? []).includes(r._id))
+    .filter((r) => {
+      // If the service explicitly restricts resources, only allow those.
+      // Otherwise fall back to all resources so that existing services
+      // (created before the service form had a resources selector) still
+      // get a working resource picker.
+      if (service?.resources && service.resources.length > 0) {
+        return service.resources.includes(r._id);
+      }
+      return true;
+    })
     .map((resourceDoc) => ({
       _id: resourceDoc._id,
       name: resourceDoc.name,
