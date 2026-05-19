@@ -51,9 +51,11 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onCloseButtonClick,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  onCloseButtonClick?: () => void;
 }) {
   return (
     <DialogPortal>
@@ -61,22 +63,21 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-2xl border-4 border-black bg-white p-6 text-sm shadow-[8px_8px_0_0_#000] duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-lg border-2 border-black bg-background p-6 text-sm shadow-[2px_2px_0_0_#000] duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close data-slot="dialog-close" asChild>
-            <button
-              type="button"
-              className="absolute top-4 right-4 flex size-8 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
-            >
-              <XIcon className="size-4" strokeWidth={4} />
-              <span className="sr-only">Close</span>
-            </button>
-          </DialogPrimitive.Close>
+          <button
+            data-slot="dialog-close"
+            onClick={onCloseButtonClick}
+            className="absolute top-4 right-4 inline-flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 disabled:pointer-events-none disabled:opacity-50"
+          >
+            <XIcon className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
         )}
       </DialogPrimitive.Content>
     </DialogPortal>

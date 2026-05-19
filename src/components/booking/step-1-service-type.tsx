@@ -33,9 +33,9 @@ export function Step1ServiceType({
         </DialogTitle>
       </DialogHeader>
       <div className="grid grid-cols-1 gap-4 py-8 md:grid-cols-2">
-        <div
-          className="cursor-pointer rounded-none border-4 border-black bg-white p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000] hover:bg-fab-teal/5"
-          onClick={() => trackAndNext(FulfillmentMode.SELF_SERVICE)}
+        <Card
+          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-teal/10"
+          onClick={() => trackAndNext("self-service")}
         >
           <h3 className="mb-2 text-lg font-black uppercase tracking-tighter">
             Self-Service
@@ -43,10 +43,10 @@ export function Step1ServiceType({
           <p className="text-sm font-bold text-black/60">
             I will operate the machine myself.
           </p>
-        </div>
-        <div
-          className="cursor-pointer rounded-none border-4 border-black bg-white p-6 text-center shadow-[6px_6px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000] hover:bg-fab-magenta/5"
-          onClick={() => trackAndNext(FulfillmentMode.FULL_SERVICE)}
+        </Card>
+        <Card
+          className="cursor-pointer rounded-lg border-4 border-black bg-background p-6 text-center shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-magenta/10"
+          onClick={() => trackAndNext("full-service")}
         >
           <h3 className="mb-2 text-lg font-black uppercase tracking-tighter">
             Full-Service Request

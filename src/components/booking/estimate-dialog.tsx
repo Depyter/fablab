@@ -109,18 +109,24 @@ export function EstimateProjectDetails({
       </DialogHeader>
 
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-1 no-scrollbar">
-        <div className="overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[6px_6px_0_0_#000]">
-          {/* Service Summary */}
-          <div className="border-b-4 border-black px-4 pb-4 pt-4">
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-              Service Details
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Service
-                </p>
-                <p className="text-sm font-bold text-black">{serviceName}</p>
+        <Card className="rounded-lg border-2 border-black bg-background py-4">
+          <div className="divide-y">
+            {/* Service Summary */}
+            <div className="px-4 pb-4">
+              <h3 className="font-semibold text-gray-900 mb-2 text-lg">
+                Service Details
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-gray-600 text-sm">Service</p>
+                  <p className="font-medium text-sm">{serviceName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm">Type</p>
+                  <p className="font-medium text-sm capitalize">
+                    {data.serviceType?.replace("-", " ")}
+                  </p>
+                </div>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
@@ -341,9 +347,10 @@ export function EstimateProjectDetails({
         </div>
       </div>
 
-      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 border-t-4 border-black pt-4">
-        <button
-          type="button"
+      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 pt-4">
+        <Button
+          variant="outline"
+          className="rounded-none border-2 border-black bg-background shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           onClick={onBack}
           disabled={isSubmitting}
           className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
@@ -352,6 +359,7 @@ export function EstimateProjectDetails({
         </button>
         <button
           type="submit"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber hover:text-black"
           disabled={isSubmitting || canSubmit === false || !isChecked}
           className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >

@@ -224,7 +224,7 @@ export function EditServiceClient({
             description="This action cannot be undone. This will permanently delete the service and all its assets."
             baseActionText="Delete Service"
             confirmButtonText="Delete"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="bg-destructive text-white hover:bg-destructive/90"
           />
         </div>
       </div>

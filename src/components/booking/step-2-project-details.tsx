@@ -113,6 +113,11 @@ export function Step2ProjectDetails({
       return;
     }
 
+    if (!form.state.values.pricing) {
+      toast.error("Please select a pricing tier for your booking.");
+      return;
+    }
+
     const [startH, startM] = dateTime.startTime.split(":");
     const [endH, endM] = dateTime.endTime.split(":");
 
@@ -162,8 +167,8 @@ export function Step2ProjectDetails({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mb-4 border-4 border-black bg-white p-4 shadow-[4px_4px_0_0_#000]">
-        <p className="font-black uppercase tracking-[0.25em] text-black">
+      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[2px_2px_0_0_#000] text-gray-500">
+        <p className="font-black uppercase tracking-[0.25em] text-gray-900">
           File Guidelines
         </p>
         {requirements.length > 0 ? (
@@ -199,24 +204,47 @@ export function Step2ProjectDetails({
             <>
               <form.AppField
                 name="name"
-                children={(field) => (
-                  <field.TextInput
-                    label="Project Name"
-                    placeholder="Enter project name"
-                    required
-                  />
+                children={(field: any) => (
+                  <Field>
+                    <Label
+                      htmlFor="name-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                     Project Name <span className="text-fab-magenta">*</span>
+                    </Label>
+                    <Input
+                      id="name-1"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      required
+                      className="rounded-lg focus-visible:ring-0"
+                      placeholder="e.g. Custom Cup"
+                    />
+                  </Field>
                 )}
               />
 
               <form.AppField
                 name="description"
-                children={(field) => (
-                  <field.TextareaInput
-                    label="Project Description"
-                    placeholder="Describe your project, intended use, or specific details..."
-                    required
-                    className="min-h-20 resize-none md:min-h-32"
-                  />
+                children={(field: any) => (
+                  <Field>
+                    <Label
+                      htmlFor="description-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                     Project Description <span className="text-fab-magenta">*</span>
+                    </Label>
+                    <Textarea
+                      id="description-1"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      required
+                      className="min-h-20 resize-none rounded-lg focus-visible:ring-0 md:min-h-32"
+                      placeholder="Describe your project, intended use, or specific details..."
+                    />
+                  </Field>
                 )}
               />
             </>
@@ -224,12 +252,23 @@ export function Step2ProjectDetails({
 
           <form.AppField
             name="notes"
-            children={(field) => (
-              <field.TextareaInput
-                label="Notes (optional)"
-                placeholder="Any additional notes..."
-                className="min-h-20 resize-none"
-              />
+            children={(field: any) => (
+              <Field>
+                <Label
+                  htmlFor="notes-1"
+                  className="font-black uppercase tracking-[0.2em] text-xs"
+                >
+                Special Requirements or Notes
+                </Label>
+                <Textarea
+                  id="notes-1"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="min-h-12 resize-none rounded-lg focus-visible:ring-0 md:min-h-24"
+                  placeholder="Color preferences, dimensional tolerances..."
+                />
+              </Field>
             )}
           />
 
@@ -242,14 +281,17 @@ export function Step2ProjectDetails({
                     htmlFor="pricing-tier"
                     className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
                   >
-                    Pricing Tier
+                    Pricing Tier <span className="text-fab-magenta">*</span>
                   </Label>
                   <Select
                     value={field.state.value}
                     onValueChange={(val) => field.handleChange(val)}
                     required
                   >
-                    <SelectTrigger id="pricing-tier" className="w-full">
+                    <SelectTrigger
+                      id="pricing-tier"
+                      className="w-full rounded-lg"
+                    >
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
                     <SelectContent>
@@ -266,94 +308,103 @@ export function Step2ProjectDetails({
             />
           )}
 
-          <form.Field
-            name="material"
-            children={(field) => (
-              <Field>
-                <Label
-                  htmlFor="material-1"
-                  className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
-                >
-                  Material Preference
-                </Label>
-                <RadioGroupChoiceCard
-                  value={field.state.value}
-                  disableBuyFromLab={serviceMaterials.length === 0}
-                  onValueChange={(val) => {
-                    if (isProjectMaterial(val)) {
-                      field.handleChange(val);
-                    }
-                  }}
-                />
-              </Field>
-            )}
-          />
+          {serviceCategory !== "WORKSHOP" && (
+            <>
+              <form.Field
+                name="material"
+                children={(field: any) => (
+                  <Field>
+                    <Label
+                      htmlFor="material-1"
+                      className="font-black uppercase tracking-[0.2em] text-xs"
+                    >
+                     Material Preference <span className="text-fab-magenta">*</span>
+                    </Label>
+                    <RadioGroupChoiceCard
+                      value={field.state.value}
+                      disableBuyFromLab={serviceMaterials.length === 0}
+                      onValueChange={(val) =>
+                        field.handleChange(
+                          val as "provide-own" | "buy-from-lab",
+                        )
+                      }
+                    />
+                  </Field>
+                )}
+              />
 
-          <form.Subscribe
-            selector={(state) => state.values.material}
-            children={(material) =>
-              material === "buy-from-lab" &&
-              serviceMaterials.length > 0 && (
-                <form.Field
-                  name="requestedMaterialIds"
-                  children={(field) => {
-                    const selected = field.state.value;
-                    return (
-                      <Field>
-                        <Label
-                          htmlFor="requestedMaterialIds"
-                          className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
-                        >
-                          Select Lab Materials
-                        </Label>
-                        <div className="flex flex-col gap-2 rounded-none border-4 border-black bg-white p-3 shadow-[4px_4px_0_0_#000]">
-                          {serviceMaterials.map((m) => {
-                            const isChecked = selected.includes(m._id);
-                            return (
-                              <label
-                                key={m._id}
-                                className="flex cursor-pointer items-center gap-2.5"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      field.handleChange([...selected, m._id]);
-                                    } else {
-                                      field.handleChange(
-                                        selected.filter((id) => id !== m._id),
-                                      );
-                                    }
-                                  }}
-                                  className="h-4 w-4 accent-fab-teal"
-                                />
-                                <span className="flex-1 text-sm font-bold text-black">
-                                  {m.name}
-                                </span>
-                                <span className="shrink-0 text-xs font-bold text-black/60">
-                                  ₱{m.pricePerUnit ?? m.costPerUnit ?? 0}/
-                                  {m.unit}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={selected.join(",")}
-                          className="absolute pointer-events-none opacity-0"
-                          tabIndex={-1}
-                          onChange={() => {}}
-                        />
-                      </Field>
-                    );
-                  }}
-                />
-              )
-            }
-          />
+              <form.Subscribe
+                selector={(state: any) => state.values.material}
+                children={(material: string) =>
+                  material === "buy-from-lab" &&
+                  serviceMaterials.length > 0 && (
+                    <form.Field
+                      name="requestedMaterialIds"
+                      children={(field: any) => {
+                        const selected: string[] = field.state.value ?? [];
+                        return (
+                          <Field>
+                            <Label
+                              htmlFor="requestedMaterialIds"
+                              className="font-black uppercase tracking-[0.2em] text-xs"
+                            >
+                              Select Lab Materials
+                            </Label>
+                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
+                              {serviceMaterials.map((m) => {
+                                const isChecked = selected.includes(m._id);
+                                return (
+                                  <label
+                                    key={m._id}
+                                    className="flex items-center gap-2.5 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          field.handleChange([
+                                            ...selected,
+                                            m._id,
+                                          ]);
+                                        } else {
+                                          field.handleChange(
+                                            selected.filter(
+                                              (id) => id !== m._id,
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                      className="h-4 w-4 rounded border-input accent-primary"
+                                    />
+                                    <span className="text-sm flex-1">
+                                      {m.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground shrink-0">
+                                      ₱{m.pricePerUnit ?? m.costPerUnit ?? 0}/
+                                      {m.unit}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={selected.join(",")}
+                              className="absolute opacity-0 pointer-events-none"
+                              tabIndex={-1}
+                              onChange={() => {}}
+                            />
+                          </Field>
+                        );
+                      }}
+                    />
+                  )
+                }
+              />
+            </>
+          )}
 
           <FieldSeparator className="my-2" />
 
@@ -454,7 +505,7 @@ export function Step2ProjectDetails({
           <button
             type="button"
             onClick={onPrev}
-            className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
+            className="rounded-none border-2 border-black bg-background pl-3 shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           >
             <ChevronLeft className="size-4" strokeWidth={3} />
             Back
@@ -462,6 +513,7 @@ export function Step2ProjectDetails({
         )}
         <button
           type="submit"
+          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
           disabled={isUploading}
           className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >
