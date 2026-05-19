@@ -75,7 +75,7 @@ export function NavUser({
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 border-2 border-black bg-white shadow-[4px_4px_0_0_#000]"
             side={isMobile ? "bottom" : "right"}
-            align="end"
+            align={isMobile ? "center" : "end"}
             sideOffset={4}
           >
             {/* User identity header */}
