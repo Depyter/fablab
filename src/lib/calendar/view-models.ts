@@ -1,5 +1,8 @@
 import { ResourceStatus, ServiceStatus } from "../../../convex/constants";
 
+/** Prefix used to identify synthetic available-workshop calendar items. */
+const AVAILABLE_WORKSHOP_ID_PREFIX = "available-ws-";
+
 import {
   getCalendarResourceGroupLabel,
   getCalendarServiceGroupLabel,
@@ -145,6 +148,7 @@ export function buildBookingCalendarViewModels(args: {
           const workshopClusters = new Map<string, CalendarMachineUsage[]>();
           const clusterServiceNames = new Map<string, string>();
           const regular: CalendarMachineUsage[] = [];
+          const workshopPlaceholders: CalendarMachineUsage[] = [];
 
           for (const booking of args.bookings) {
             if (!booking.resourceId) continue;
@@ -159,6 +163,13 @@ export function buildBookingCalendarViewModels(args: {
               args.dayRange,
             );
             if (!usage) continue;
+
+            // Separate available-workshop placeholders from real bookings
+            // so they aren't counted in the cluster tally.
+            if (booking._id.startsWith(AVAILABLE_WORKSHOP_ID_PREFIX)) {
+              workshopPlaceholders.push(usage);
+              continue;
+            }
 
             if (service.serviceCategoryType === "WORKSHOP") {
               const key = `${booking.resourceId}:${usage.startTime}:${usage.endTime}`;
@@ -185,6 +196,17 @@ export function buildBookingCalendarViewModels(args: {
               projectAlias: serviceName,
               projectStatus: "approved",
               clientName: `${cluster.length} booked`,
+              isPendingReview: false,
+            });
+          }
+
+          // Add available workshop placeholders as individual blocks
+          for (const placeholder of workshopPlaceholders) {
+            regular.push({
+              ...placeholder,
+              id: `ws-avail-${placeholder.machineId}-${placeholder.startTime}`,
+              projectId: null,
+              projectStatus: "approved",
               isPendingReview: false,
             });
           }

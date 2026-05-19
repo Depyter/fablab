@@ -126,10 +126,16 @@ function WorkshopSlotCard({
 }) {
   const visibleMembers = entry.members.slice(0, compact ? 2 : 4);
   const hiddenMemberCount = entry.members.length - visibleMembers.length;
+  const hasMembers = entry.members.length > 0;
 
   return (
     <div
-      className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200 bg-blue-50/95 text-left shadow-sm"
+      className={cn(
+        "absolute z-[5] overflow-hidden rounded-xl border text-left shadow-sm",
+        hasMembers
+          ? "border-blue-200 bg-blue-50/95"
+          : "border-dashed border-blue-200/60 bg-blue-50/60",
+      )}
       style={{
         top: compact ? 2 : 4,
         bottom: compact ? 2 : 4,
@@ -156,7 +162,8 @@ function WorkshopSlotCard({
           <div className="min-w-0">
             <div
               className={cn(
-                "truncate font-bold uppercase tracking-[0.08em] text-blue-900",
+                "truncate font-bold uppercase tracking-[0.08em]",
+                hasMembers ? "text-blue-900" : "text-blue-600",
                 compact ? "text-[10px]" : "text-[11px]",
               )}
             >
@@ -164,17 +171,20 @@ function WorkshopSlotCard({
             </div>
             <div
               className={cn(
-                "truncate text-blue-800/80",
+                "truncate",
                 compact ? "text-[9px]" : "text-[10px]",
+                hasMembers ? "text-blue-800/80" : "text-blue-500",
               )}
             >
-              {entry.bookingCount} booked
-              {entry.pendingCount > 0 ? ` · ${entry.pendingCount} pending` : ""}
+              {hasMembers
+                ? `${entry.bookingCount} booked${entry.pendingCount > 0 ? ` \u00b7 ${entry.pendingCount} pending` : ""}`
+                : (entry.availableLabel ?? "Available")}
             </div>
           </div>
           <div
             className={cn(
-              "shrink-0 rounded-full bg-white/80 font-semibold text-blue-900 shadow-sm",
+              "shrink-0 rounded-full bg-white/80 font-semibold shadow-sm",
+              hasMembers ? "text-blue-900" : "text-blue-600",
               compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]",
             )}
           >
@@ -182,26 +192,28 @@ function WorkshopSlotCard({
           </div>
         </button>
 
-        <div className="grid min-h-0 gap-1 overflow-hidden">
-          {visibleMembers.map((member) => (
-            <WorkshopMemberChip
-              key={member.id}
-              usage={member}
-              compact={compact}
-              onOpenProjectDetails={onOpenProjectDetails}
-            />
-          ))}
-          {hiddenMemberCount > 0 ? (
-            <div
-              className={cn(
-                "px-1 font-medium text-blue-900/75",
-                compact ? "text-[9px]" : "text-[10px]",
-              )}
-            >
-              +{hiddenMemberCount} more booked
-            </div>
-          ) : null}
-        </div>
+        {hasMembers ? (
+          <div className="grid min-h-0 gap-1 overflow-hidden">
+            {visibleMembers.map((member) => (
+              <WorkshopMemberChip
+                key={member.id}
+                usage={member}
+                compact={compact}
+                onOpenProjectDetails={onOpenProjectDetails}
+              />
+            ))}
+            {hiddenMemberCount > 0 ? (
+              <div
+                className={cn(
+                  "px-1 font-medium text-blue-900/75",
+                  compact ? "text-[9px]" : "text-[10px]",
+                )}
+              >
+                +{hiddenMemberCount} more booked
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

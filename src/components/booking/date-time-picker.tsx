@@ -30,6 +30,8 @@ import {
   getCurrentTimestamp,
   getLabDayKey,
   getLabDayStart,
+  getLabDayStartTimestamp,
+  getLabTimeTimestamp,
   getLabWeekday,
   isLabDateBeforeToday,
   isLabTimeInPast,
@@ -44,6 +46,13 @@ for (let h = 9; h <= 18; h++) {
     TIME_SLOTS.push(`${hourStr}:30`);
   }
 }
+
+/**
+ * The last start-time that has a valid end-time after it.
+ * `18:00` is a valid start in TIME_SLOTS but has no later slot for the
+ * end-time selector, so the real cut-off is the second-to-last entry.
+ */
+const LAST_VIABLE_START_TIME = TIME_SLOTS[TIME_SLOTS.length - 2];
 
 const formatTimeLabel = (time: string) => {
   return formatLabClockTime(time);
@@ -80,6 +89,19 @@ export function DateTimePicker({
   const isDateDisabled = useCallback(
     (nextDate: Date) => {
       if (!allowPastSelection && isLabDateBeforeToday(nextDate)) return true;
+
+      // Disable today if the current time has passed the last viable
+      // start-time — every time slot would already be in the past.
+      if (!allowPastSelection) {
+        const todayStart = getLabDayStartTimestamp(Date.now());
+        const nextDateStart = getLabDayStartTimestamp(nextDate);
+        if (
+          nextDateStart === todayStart &&
+          Date.now() > getLabTimeTimestamp(nextDate, LAST_VIABLE_START_TIME)
+        ) {
+          return true;
+        }
+      }
 
       if (
         availableDays.length > 0 &&

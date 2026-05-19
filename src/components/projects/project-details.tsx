@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "convex/react";
 import { toast } from "sonner";
+import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { OptionRadioGroupItem } from "../option-radio-group";
@@ -45,7 +46,7 @@ import {
   FulfillmentModeType,
   FILE_CATEGORIES,
 } from "@convex/constants";
-import { getConfig, isKnownType } from "@/lib/project-type-meta";
+import { getConfig, getWorkflow, isKnownType } from "@/lib/project-type-meta";
 
 interface ProjectDetailsProps {
   projectId?: Id<"projects"> | null;
@@ -278,6 +279,21 @@ export function ProjectDetails({
   }
 
   const handleUpdateStatus = async (newStatus: ProjectStatusType) => {
+    // If transitioning from pending → approved and the project type requires
+    // a maker (FABRICATION) but none is assigned, show the assign-maker dialog
+    // instead of running the mutation (which would error out).
+    if (
+      newStatus === "approved" &&
+      project?.status === "pending" &&
+      !project?.assignedMaker &&
+      project &&
+      isKnownType(project.type) &&
+      getWorkflow(project.type).approvalRequiresMaker
+    ) {
+      setDialogView("assign-maker");
+      return;
+    }
+
     try {
       await updateProject({
         projectId,
@@ -289,8 +305,14 @@ export function ProjectDetails({
         new_status: newStatus,
       });
       toast.success(`Project status updated to ${newStatus}!`);
-    } catch {
-      toast.error(`Failed to update project status`);
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update project status";
+      toast.error(message);
     }
   };
 
@@ -313,8 +335,14 @@ export function ProjectDetails({
       });
       toast.success("Project details updated.");
       return true;
-    } catch {
-      toast.error("Failed to update project details.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update project details.";
+      toast.error(message);
       return false;
     }
   };
@@ -351,8 +379,14 @@ export function ProjectDetails({
       setPaymentMode("cash");
       setProofFiles([]);
       setIsPaying(false);
-    } catch {
-      toast.error("Failed to record payment.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to record payment.";
+      toast.error(message);
       setIsPaying(false);
     }
   };
@@ -469,8 +503,14 @@ export function ProjectDetails({
       });
       toast.success("Project moved to fabrication and maker assigned.");
       setDialogView("details");
-    } catch {
-      toast.error("Failed to assign maker.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to assign maker.";
+      toast.error(message);
     }
   };
 

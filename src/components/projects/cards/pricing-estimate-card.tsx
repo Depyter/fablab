@@ -26,6 +26,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 import { ProjectMaterial } from "@convex/constants";
 import {
@@ -516,8 +517,14 @@ export function PricingEstimateCard({
       setIsEditing(false);
       setUsageDrafts([]);
       setShowPastBookingDialog(false);
-    } catch {
-      toast.error("Failed to save changes.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to save changes.";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

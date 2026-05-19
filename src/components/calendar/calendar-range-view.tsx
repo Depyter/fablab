@@ -45,6 +45,7 @@ interface CalendarRangeViewProps {
   isLoading?: boolean;
   onSelectDay?: (date: Date) => void;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }
 
 interface WeekEventLayout extends CalendarRangeEvent {
@@ -188,29 +189,43 @@ function EventCard({
   dense = false,
   showDetails = true,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   event: CalendarRangeEvent;
   compact?: boolean;
   dense?: boolean;
   showDetails?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const canOpenProjectDetails =
     event.projectId !== null && onOpenProjectDetails !== undefined;
+  const isWorkshopSlot =
+    event.projectId === null &&
+    event.serviceCategoryType === "WORKSHOP" &&
+    onOpenWorkshopEvent !== undefined;
 
   return (
     <button
       type="button"
-      disabled={!canOpenProjectDetails}
-      onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
+      disabled={!canOpenProjectDetails && !isWorkshopSlot}
+      onClick={() => {
+        if (event.projectId && onOpenProjectDetails) {
+          onOpenProjectDetails(event.projectId);
+        } else if (isWorkshopSlot) {
+          onOpenWorkshopEvent!(event.serviceId, event.startTime);
+        }
+      }}
       title={showDetails ? undefined : event.projectAlias}
       className={cn(
         "relative w-full overflow-hidden rounded-xl border text-left shadow-sm transition-colors",
         event.slotClassName,
         event.isPendingReview && "border-2 border-dashed",
-        canOpenProjectDetails
+        isWorkshopSlot
           ? "cursor-pointer hover:opacity-90"
-          : "cursor-default",
+          : canOpenProjectDetails
+            ? "cursor-pointer hover:opacity-90"
+            : "cursor-default",
         dense
           ? "min-h-6 rounded-lg px-1.5 py-1"
           : compact
@@ -246,26 +261,40 @@ function WeekEventBlock({
   event,
   compact = false,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   event: WeekEventLayout;
   compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const canOpenProjectDetails =
     event.projectId !== null && onOpenProjectDetails !== undefined;
+  const isWorkshopSlot =
+    event.projectId === null &&
+    event.serviceCategoryType === "WORKSHOP" &&
+    onOpenWorkshopEvent !== undefined;
 
   return (
     <button
       type="button"
-      disabled={!canOpenProjectDetails}
-      onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
+      disabled={!canOpenProjectDetails && !isWorkshopSlot}
+      onClick={() => {
+        if (event.projectId && onOpenProjectDetails) {
+          onOpenProjectDetails(event.projectId);
+        } else if (isWorkshopSlot) {
+          onOpenWorkshopEvent!(event.serviceId, event.startTime);
+        }
+      }}
       className={cn(
         "absolute z-10 overflow-hidden rounded-lg border px-2 py-1 text-left shadow-sm transition-colors",
         event.slotClassName,
         event.isPendingReview && "border-2 border-dashed",
-        canOpenProjectDetails
+        isWorkshopSlot
           ? "cursor-pointer hover:opacity-90"
-          : "cursor-default",
+          : canOpenProjectDetails
+            ? "cursor-pointer hover:opacity-90"
+            : "cursor-default",
         compact && "rounded-md px-1 py-0.5",
       )}
       style={{
@@ -302,6 +331,7 @@ export function CalendarRangeView({
   isLoading = false,
   onSelectDay,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: CalendarRangeViewProps) {
   const isMobile = useIsMobile();
   const eventsByDay = buildEventsByDay(days, events);
@@ -497,6 +527,7 @@ export function CalendarRangeView({
                       event={event}
                       compact={isMobile}
                       onOpenProjectDetails={onOpenProjectDetails}
+                      onOpenWorkshopEvent={onOpenWorkshopEvent}
                     />
                   ))}
                 </div>
@@ -627,6 +658,7 @@ export function CalendarRangeView({
                       event={event}
                       showDetails={false}
                       onOpenProjectDetails={onOpenProjectDetails}
+                      onOpenWorkshopEvent={onOpenWorkshopEvent}
                     />
                   ))}
                   {showOverflowLabel ? (
