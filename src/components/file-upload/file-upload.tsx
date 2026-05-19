@@ -416,7 +416,7 @@ export function FileUpload({
           onDrop={handleDrop}
           onClick={triggerFileSelect}
           className={cn(
-            "cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center shadow-[2px_2px_0_0_#000] transition-all",
+            "cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center transition-all",
             isDragging && !disabled
               ? "-translate-x-0.5 -translate-y-0.5 bg-fab-teal/15"
               : "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none hover:bg-fab-magenta/10",

@@ -92,7 +92,7 @@ export function ProjectCard({
               <button
                 type="button"
                 onClick={onOpenDetails}
-                className="inline-flex h-8 w-full items-center justify-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white cursor-pointer rounded-none shadow-[4px_4px_0_0_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                className="inline-flex h-8 w-full items-center justify-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white cursor-pointer rounded-none shadow-[2px_2px_0_0_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
               >
                 View Details
               </button>
