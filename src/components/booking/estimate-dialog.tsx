@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DialogDescription,
   DialogHeader,
@@ -9,7 +9,7 @@ import { useState } from "react";
 
 import { FieldSeparator } from "@/components/ui/field";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
-import { UploadedFile } from "../file-upload/types";
+import type { UploadedFile } from "../file-upload/types";
 import {
   derivePricingFromSchema,
   getDurationMinutesFromTimeRange,
@@ -17,13 +17,17 @@ import {
   type ServicePricing,
 } from "@/lib/project-pricing";
 import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
+import type {
+  FulfillmentModeType,
+  ProjectMaterialType,
+} from "@convex/constants";
 
 export type BookingFormValues = {
-  serviceType: "self-service" | "full-service";
+  serviceType: FulfillmentModeType;
   name: string;
   description: string;
   notes: string;
-  material: string;
+  material: ProjectMaterialType;
   requestedMaterialIds?: string[];
   pricing: string;
   dateTime: {
@@ -128,229 +132,226 @@ export function EstimateProjectDetails({
                   </p>
                 </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Type
-                </p>
-                <p className="text-sm font-bold text-black capitalize">
-                  {data.serviceType?.replace("-", " ")}
-                </p>
-              </div>
             </div>
-          </div>
 
-          {/* Project Details */}
-          <div className="border-b-4 border-black px-4 pb-4 pt-4">
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-              Project Information
-            </h3>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Date
-                </p>
-                <p className="text-sm font-bold text-black">
-                  {data.dateTime.date
-                    ? formatLabDateNumeric(data.dateTime.date)
-                    : "Not specified"}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Time
-                </p>
-                <p className="text-sm font-bold text-black">
-                  {formatLabClockTime(data.dateTime.startTime)} -{" "}
-                  {formatLabClockTime(data.dateTime.endTime)}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Project Name
-                </p>
-                <p className="text-sm font-bold text-black">{data.name}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Material
-                </p>
-                <p className="text-sm font-bold text-black">
-                  {data.material === "provide-own"
-                    ? "Provide Materials"
-                    : "Buy From Fablab"}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Description
-                </p>
-                <p className="text-sm font-bold text-black">
-                  {data.description}
-                </p>
-              </div>
-              {data.notes && (
+            {/* Project Details */}
+            <div className="border-b-4 border-black px-4 pb-4 pt-4">
+              <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Project Information
+              </h3>
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                    Notes
+                    Date
                   </p>
-                  <p className="text-sm font-bold text-black">{data.notes}</p>
+                  <p className="text-sm font-bold text-black">
+                    {data.dateTime.date
+                      ? formatLabDateNumeric(data.dateTime.date)
+                      : "Not specified"}
+                  </p>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Files */}
-          <div className="border-b-4 border-black px-4 pb-4 pt-4">
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-              Uploaded Files
-            </h3>
-            <ProjectAttachments
-              files={data.files.map((f) => ({
-                url: f.url || "",
-                type: f.fileType,
-                originalName: f.fileName,
-              }))}
-            />
-          </div>
-
-          {/* Pricing */}
-          <div className="border-b-4 border-black bg-fab-amber/10 px-4 pb-4 pt-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                Pricing Estimate
-              </h3>
-              <div className="flex flex-wrap items-center gap-2">
-                {selectedVariant && (
-                  <span className="inline-flex items-center border-2 border-black bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-black">
-                    {selectedVariant}
-                  </span>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Time
+                  </p>
+                  <p className="text-sm font-bold text-black">
+                    {formatLabClockTime(data.dateTime.startTime)} -{" "}
+                    {formatLabClockTime(data.dateTime.endTime)}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Project Name
+                  </p>
+                  <p className="text-sm font-bold text-black">{data.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Material
+                  </p>
+                  <p className="text-sm font-bold text-black">
+                    {data.material === "provide-own"
+                      ? "Provide Materials"
+                      : "Buy From Fablab"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Description
+                  </p>
+                  <p className="text-sm font-bold text-black">
+                    {data.description}
+                  </p>
+                </div>
+                {data.notes && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Notes
+                    </p>
+                    <p className="text-sm font-bold text-black">{data.notes}</p>
+                  </div>
                 )}
-                <span className="inline-flex items-center border-2 border-black bg-fab-teal/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-fab-teal">
-                  {pricingType.replace("_", " ")}
-                </span>
               </div>
             </div>
-            <div className="space-y-3">
-              {pricingType === "WORKSHOP" && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                    Amount
-                  </span>
-                  <span className="text-sm font-bold text-black">
-                    ₱{pricing.setupFee.toFixed(2)}
+
+            {/* Files */}
+            <div className="border-b-4 border-black px-4 pb-4 pt-4">
+              <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                Uploaded Files
+              </h3>
+              <ProjectAttachments
+                files={data.files.map((f) => ({
+                  url: f.url || "",
+                  type: f.fileType,
+                  originalName: f.fileName,
+                }))}
+              />
+            </div>
+
+            {/* Pricing */}
+            <div className="border-b-4 border-black bg-fab-amber/10 px-4 pb-4 pt-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                  Pricing Estimate
+                </h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedVariant && (
+                    <span className="inline-flex items-center border-2 border-black bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-black">
+                      {selectedVariant}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center border-2 border-black bg-fab-teal/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-fab-teal">
+                    {pricingType.replace("_", " ")}
                   </span>
                 </div>
-              )}
-
-              {isTimeBased && (
-                <>
+              </div>
+              <div className="space-y-3">
+                {pricingType === "WORKSHOP" && (
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                      Setup Fee
+                      Amount
                     </span>
                     <span className="text-sm font-bold text-black">
                       ₱{pricing.setupFee.toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                      Duration ({pricing.unitName}s)
-                    </span>
-                    <span className="text-sm font-bold text-black">
-                      {pricing.duration.toFixed(2)} {pricing.unitName}s
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                      Rate / {pricing.unitName}
-                    </span>
-                    <span className="text-sm font-bold text-black">
-                      ₱{pricing.rate.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                      Time Cost
-                    </span>
-                    <span className="text-sm font-bold text-black">
-                      ₱{pricing.timeCost.toFixed(2)}
-                    </span>
-                  </div>
-                </>
-              )}
+                )}
 
-              {isBuyFromLab && (
-                <>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                      Materials
-                    </span>
-                    <span className="text-sm font-bold text-black text-right">
-                      {materialNames.length > 0
-                        ? materialNames.join(", ")
-                        : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                      Material Cost
-                    </span>
-                    <span className="text-sm font-bold text-black">N/A</span>
-                  </div>
-                </>
-              )}
+                {isTimeBased && (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                        Setup Fee
+                      </span>
+                      <span className="text-sm font-bold text-black">
+                        ₱{pricing.setupFee.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                        Duration ({pricing.unitName}s)
+                      </span>
+                      <span className="text-sm font-bold text-black">
+                        {pricing.duration.toFixed(2)} {pricing.unitName}s
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                        Rate / {pricing.unitName}
+                      </span>
+                      <span className="text-sm font-bold text-black">
+                        ₱{pricing.rate.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                        Time Cost
+                      </span>
+                      <span className="text-sm font-bold text-black">
+                        ₱{pricing.timeCost.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
 
-              <FieldSeparator className="my-1 bg-black" />
+                {isBuyFromLab && (
+                  <>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                        Materials
+                      </span>
+                      <span className="text-sm font-bold text-black text-right">
+                        {materialNames.length > 0
+                          ? materialNames.join(", ")
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                        Material Cost
+                      </span>
+                      <span className="text-sm font-bold text-black">N/A</span>
+                    </div>
+                  </>
+                )}
 
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
-                  Estimated Total
-                </span>
-                <span className="text-xl font-black text-fab-teal">
-                  ₱{pricing.total.toFixed(2)}
-                </span>
+                <FieldSeparator className="my-1 bg-black" />
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    Estimated Total
+                  </span>
+                  <span className="text-xl font-black text-fab-teal">
+                    ₱{pricing.total.toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-black/60">
+                  Final price may vary based on actual production time and
+                  materials used.
+                </p>
               </div>
-              <p className="text-xs font-bold text-black/60">
-                Final price may vary based on actual production time and
-                materials used.
-              </p>
+            </div>
+
+            {/* Terms */}
+            <div className="flex items-start bg-fab-amber/20 px-4 py-4">
+              <input
+                type="checkbox"
+                id="terms"
+                required
+                className="mt-1 h-4 w-4 border-2 border-black text-fab-magenta accent-fab-magenta"
+                onChange={handleCheckboxChange}
+              />
+              <label
+                htmlFor="terms"
+                className="ml-3 text-xs font-bold text-black/60 leading-relaxed"
+              >
+                I understand that this is a booking request and requires admin
+                approval. I agree to the{" "}
+                <a
+                  href="#"
+                  className="text-fab-teal underline hover:text-black"
+                >
+                  terms and conditions
+                </a>{" "}
+                and the{" "}
+                <a
+                  href="#"
+                  className="text-fab-teal underline hover:text-black"
+                >
+                  cancellation policy
+                </a>
+                .
+              </label>
             </div>
           </div>
-
-          {/* Terms */}
-          <div className="flex items-start bg-fab-amber/20 px-4 py-4">
-            <input
-              type="checkbox"
-              id="terms"
-              required
-              className="mt-1 h-4 w-4 border-2 border-black text-fab-magenta accent-fab-magenta"
-              onChange={handleCheckboxChange}
-            />
-            <label
-              htmlFor="terms"
-              className="ml-3 text-xs font-bold text-black/60 leading-relaxed"
-            >
-              I understand that this is a booking request and requires admin
-              approval. I agree to the{" "}
-              <a href="#" className="text-fab-teal underline hover:text-black">
-                terms and conditions
-              </a>{" "}
-              and the{" "}
-              <a href="#" className="text-fab-teal underline hover:text-black">
-                cancellation policy
-              </a>
-              .
-            </label>
-          </div>
-        </div>
+        </Card>
       </div>
 
       <div className="shrink-0 mt-4 flex items-center justify-end gap-2 pt-4">
-        <Button
-          variant="outline"
-          className="rounded-none border-2 border-black bg-background shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+        <button
+          type="button"
           onClick={onBack}
           disabled={isSubmitting}
           className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
@@ -359,7 +360,6 @@ export function EstimateProjectDetails({
         </button>
         <button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber hover:text-black"
           disabled={isSubmitting || canSubmit === false || !isChecked}
           className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >

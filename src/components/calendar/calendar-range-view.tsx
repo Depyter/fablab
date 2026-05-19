@@ -452,9 +452,7 @@ export function CalendarRangeView({
                     <span
                       className={cn(
                         "absolute left-0 bg-white font-medium uppercase tracking-[0.12em] text-muted-foreground",
-                        isMobile
-                          ? "px-1.5 text-[9px]"
-                          : "px-3 text-[10px]",
+                        isMobile ? "px-1.5 text-[9px]" : "px-3 text-[10px]",
                       )}
                       style={{
                         transform:

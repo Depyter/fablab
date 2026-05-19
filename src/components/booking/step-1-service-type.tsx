@@ -1,6 +1,7 @@
+import { Card } from "@/components/ui/card";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { AppFormApi } from "@/lib/form-context";
-import { FulfillmentMode, type FulfillmentModeType } from "@convex/constants";
+import type { FulfillmentModeType } from "@convex/constants";
 import posthog from "posthog-js";
 import type { BookingDetailsFormValues } from "./step-2-project-details";
 
@@ -54,7 +55,7 @@ export function Step1ServiceType({
           <p className="text-sm font-bold text-black/60">
             I need a maker to execute the project for me.
           </p>
-        </div>
+        </Card>
       </div>
     </>
   );

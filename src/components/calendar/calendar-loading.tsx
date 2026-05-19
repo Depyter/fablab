@@ -17,6 +17,7 @@ import {
   CALENDAR_WEEK_HEADER_HEIGHT,
   CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT,
   CALENDAR_WEEK_TIME_COL_WIDTH,
+  DAY_HOURS,
   DAY_END,
   DAY_START,
   HEADER_SLOTS,
@@ -412,9 +413,7 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                                 slotIndex > 0
                                   ? `1px solid ${CALENDAR_BORDER}`
                                   : "",
-                              background: isBoundary
-                                ? "#fff"
-                                : "#fff",
+                              background: isBoundary ? "#fff" : "#fff",
                               pointerEvents: "none",
                             }}
                           />
@@ -576,7 +575,7 @@ function RangeLoadingState({ viewMode }: { viewMode: "week" | "month" }) {
               style={{ minHeight: weekMinGridHeight }}
             >
               {weekHourSkeletons.map((hour, index) => {
-                const top = `${((hour - DAY_START) / CALENDAR_WEEK_TOTAL_HOURS) * 100}%`;
+                const top = `${((hour - DAY_START) / DAY_HOURS) * 100}%`;
 
                 return (
                   <div

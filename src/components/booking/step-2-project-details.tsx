@@ -21,7 +21,9 @@ import posthog from "posthog-js";
 import { getLabTimeRangeTimestamps, getCurrentTimestamp } from "@/lib/lab-time";
 import type { UploadedFile } from "../file-upload/types";
 import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { WorkshopSchedule } from "./workshop-time-slot-picker";
 import {
   ProjectMaterial,
@@ -113,7 +115,7 @@ export function Step2ProjectDetails({
       return;
     }
 
-    if (!form.state.values.pricing) {
+    if (hasUpPricing && pricingVariants.length > 0 && !formValues.pricing) {
       toast.error("Please select a pricing tier for your booking.");
       return;
     }
@@ -204,13 +206,13 @@ export function Step2ProjectDetails({
             <>
               <form.AppField
                 name="name"
-                children={(field: any) => (
+                children={(field) => (
                   <Field>
                     <Label
                       htmlFor="name-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                     Project Name <span className="text-fab-magenta">*</span>
+                      Project Name <span className="text-fab-magenta">*</span>
                     </Label>
                     <Input
                       id="name-1"
@@ -227,13 +229,14 @@ export function Step2ProjectDetails({
 
               <form.AppField
                 name="description"
-                children={(field: any) => (
+                children={(field) => (
                   <Field>
                     <Label
                       htmlFor="description-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                     Project Description <span className="text-fab-magenta">*</span>
+                      Project Description{" "}
+                      <span className="text-fab-magenta">*</span>
                     </Label>
                     <Textarea
                       id="description-1"
@@ -252,13 +255,13 @@ export function Step2ProjectDetails({
 
           <form.AppField
             name="notes"
-            children={(field: any) => (
+            children={(field) => (
               <Field>
                 <Label
                   htmlFor="notes-1"
                   className="font-black uppercase tracking-[0.2em] text-xs"
                 >
-                Special Requirements or Notes
+                  Special Requirements or Notes
                 </Label>
                 <Textarea
                   id="notes-1"
@@ -312,36 +315,37 @@ export function Step2ProjectDetails({
             <>
               <form.Field
                 name="material"
-                children={(field: any) => (
+                children={(field) => (
                   <Field>
                     <Label
                       htmlFor="material-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                     Material Preference <span className="text-fab-magenta">*</span>
+                      Material Preference{" "}
+                      <span className="text-fab-magenta">*</span>
                     </Label>
                     <RadioGroupChoiceCard
                       value={field.state.value}
                       disableBuyFromLab={serviceMaterials.length === 0}
-                      onValueChange={(val) =>
-                        field.handleChange(
-                          val as "provide-own" | "buy-from-lab",
-                        )
-                      }
+                      onValueChange={(val) => {
+                        if (isProjectMaterial(val)) {
+                          field.handleChange(val);
+                        }
+                      }}
                     />
                   </Field>
                 )}
               />
 
               <form.Subscribe
-                selector={(state: any) => state.values.material}
-                children={(material: string) =>
-                  material === "buy-from-lab" &&
+                selector={(state) => state.values.material}
+                children={(material) =>
+                  material === ProjectMaterial.BUY_FROM_LAB &&
                   serviceMaterials.length > 0 && (
                     <form.Field
                       name="requestedMaterialIds"
-                      children={(field: any) => {
-                        const selected: string[] = field.state.value ?? [];
+                      children={(field) => {
+                        const selected = field.state.value ?? [];
                         return (
                           <Field>
                             <Label
@@ -513,7 +517,6 @@ export function Step2ProjectDetails({
         )}
         <button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
           disabled={isUploading}
           className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
         >

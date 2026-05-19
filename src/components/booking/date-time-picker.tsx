@@ -173,7 +173,7 @@ export function DateTimePicker({
         </FieldLabel>
         <div className="relative">
           <TooltipProvider delayDuration={200}>
-            <Tooltip open={!date ? undefined : false} >
+            <Tooltip open={!date ? undefined : false}>
               <TooltipTrigger asChild>
                 <div>
                   <Select
@@ -249,7 +249,9 @@ export function DateTimePicker({
                 <div>
                   <Select
                     value={endTime}
-                    onValueChange={(val) => onChange({ ...value, endTime: val })}
+                    onValueChange={(val) =>
+                      onChange({ ...value, endTime: val })
+                    }
                     disabled={!startTime}
                   >
                     <SelectTrigger
@@ -267,7 +269,8 @@ export function DateTimePicker({
                         let isOverlapping = false;
                         if (startTime && slot > startTime) {
                           isOverlapping = bookedTimeBlocks.some(
-                            (block) => startTime < block.end && slot > block.start,
+                            (block) =>
+                              startTime < block.end && slot > block.start,
                           );
                         }
 

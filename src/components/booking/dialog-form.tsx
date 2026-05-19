@@ -109,7 +109,7 @@ export function BookingDialog({
   }, []);
 
   const hasFormInputs = useCallback(
-    (values: LocalBookingFormValues): boolean => {
+    (values: BookingDetailsFormValues): boolean => {
       return !!(
         values.name ||
         values.description ||
@@ -247,7 +247,7 @@ export function BookingDialog({
         originalEndTime: undefined,
       },
       files: [],
-    } as LocalBookingFormValues,
+    } as BookingDetailsFormValues,
     onSubmit: handleFormSubmit,
   });
 
