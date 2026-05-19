@@ -497,6 +497,7 @@ export function Step2ProjectDetails({
                   }}
                   accept="*/*"
                   allowedTypes={expandedFileTypes}
+                  showDriveLinkNote={true}
                 />
               );
             }}

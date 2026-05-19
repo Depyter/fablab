@@ -137,6 +137,7 @@ export function ProjectDetailsContent({
 
   const workflow = getWorkflow(project.type);
   const allowedTransitions = workflow.transitions[project.status] ?? [];
+  const currentStepIndex = workflow.steps.indexOf(project.status);
 
   async function handleStatusChange(newStatus: ProjectStatusType) {
     onUpdateStatus(newStatus);
@@ -157,7 +158,31 @@ export function ProjectDetailsContent({
             const label = getStatusLabel(status, project.type);
             const isDestructive =
               status === "rejected" || status === "cancelled";
-            const isPrimary = status === "approved" || status === "completed";
+            const targetStepIndex = workflow.steps.indexOf(status);
+            const direction =
+              currentStepIndex === -1 && targetStepIndex !== -1
+                ? "backward"
+                : currentStepIndex !== -1 && targetStepIndex !== -1
+                  ? targetStepIndex > currentStepIndex
+                    ? "forward"
+                    : targetStepIndex < currentStepIndex
+                      ? "backward"
+                      : "none"
+                  : "none";
+            const isPrimary = !isDestructive && direction === "forward";
+            const actionLabel = isDestructive
+              ? status === "rejected"
+                ? "Reject"
+                : "Cancel"
+              : status === "approved" && direction === "forward"
+                ? "Approve"
+                : status === "claimed" && direction === "forward"
+                  ? label
+                  : direction === "forward"
+                    ? "Proceed to " + label
+                    : direction === "backward"
+                      ? "Back to " + label
+                      : label;
 
             if (status === "paid") {
               return (
@@ -165,9 +190,9 @@ export function ProjectDetailsContent({
                   key={status}
                   type="button"
                   onClick={onMarkPaid}
-                  className="inline-flex h-8 items-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
+                  className="inline-flex h-8 items-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
                 >
-                  {label}
+                  Review Payment
                 </button>
               );
             }
@@ -177,7 +202,7 @@ export function ProjectDetailsContent({
                 key={status}
                 type="button"
                 onClick={() => handleStatusChange(status)}
-                className={`inline-flex h-8 items-center border-2 border-black px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] ${
+                className={`inline-flex h-8 items-center border-2 border-black px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none ${
                   isPrimary
                     ? "bg-fab-teal text-white"
                     : isDestructive
@@ -185,7 +210,7 @@ export function ProjectDetailsContent({
                       : "bg-white text-black"
                 }`}
               >
-                {label}
+                {actionLabel}
               </button>
             );
           })}
