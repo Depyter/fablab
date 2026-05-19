@@ -330,6 +330,91 @@ export const updateService = authMutation({
   },
 });
 
+/**
+ * Adds a single time slot to an existing workshop service schedule.
+ * If a schedule for the given date already exists, the slot is appended;
+ * otherwise a new schedule entry is created.
+ */
+export const addWorkshopSlot = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    serviceId: v.id("services"),
+    date: v.number(),
+    startTime: v.number(),
+    endTime: v.number(),
+    maxSlots: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existingService = await ctx.db.get(args.serviceId);
+    if (!existingService) throw new ConvexError("Service not found.");
+
+    if (existingService.serviceCategory.type !== "WORKSHOP") {
+      throw new ConvexError("Can only add slots to WORKSHOP-type services.");
+    }
+
+    const existing = existingService.serviceCategory as {
+      type: "WORKSHOP";
+      schedules: Array<{
+        date: number;
+        timeSlots: Array<{
+          startTime: number;
+          endTime: number;
+          maxSlots: number;
+          usedUpSlots?: number;
+        }>;
+      }>;
+      amount: number;
+      variants?: Array<{ name: string; amount: number }>;
+    };
+
+    const scheduleIndex = existing.schedules.findIndex(
+      (s) => s.date === args.date,
+    );
+
+    if (scheduleIndex >= 0) {
+      // Append time slot to existing schedule
+      const updatedSchedules = [...existing.schedules];
+      updatedSchedules[scheduleIndex] = {
+        ...updatedSchedules[scheduleIndex],
+        timeSlots: [
+          ...updatedSchedules[scheduleIndex].timeSlots,
+          {
+            startTime: args.startTime,
+            endTime: args.endTime,
+            maxSlots: args.maxSlots,
+            usedUpSlots: 0,
+          },
+        ],
+      };
+
+      await ctx.db.patch(args.serviceId, {
+        serviceCategory: { ...existing, schedules: updatedSchedules },
+      });
+    } else {
+      // Create new schedule entry
+      await ctx.db.patch(args.serviceId, {
+        serviceCategory: {
+          ...existing,
+          schedules: [
+            ...existing.schedules,
+            {
+              date: args.date,
+              timeSlots: [
+                {
+                  startTime: args.startTime,
+                  endTime: args.endTime,
+                  maxSlots: args.maxSlots,
+                  usedUpSlots: 0,
+                },
+              ],
+            },
+          ],
+        },
+      });
+    }
+  },
+});
+
 export const addImageToService = authMutation({
   role: ["admin", "maker"],
   args: {

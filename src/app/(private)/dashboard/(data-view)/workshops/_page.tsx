@@ -15,6 +15,7 @@ import {
   WorkshopEventCard,
   type WorkshopEvent,
 } from "@/components/workshops/workshop-event-card";
+import { AddWorkshopSlotDialog } from "@/components/workshops/add-workshop-slot-dialog";
 import { ProjectDetails } from "@/components/projects/project-details";
 import { Calendar, FolderOpen } from "lucide-react";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
@@ -154,6 +155,7 @@ export function WorkshopsPage() {
         {!isClient && (
           <DataViewPageHeader>
             <WorkshopsFilterBar />
+            <AddWorkshopSlotDialog />
           </DataViewPageHeader>
         )}
 

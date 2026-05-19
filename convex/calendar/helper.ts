@@ -1,4 +1,4 @@
-import { UserRole } from "../constants";
+import { ProjectStatus, UserRole } from "../constants";
 import type {
   CalendarBookingItem,
   CalendarFrameData,
@@ -370,7 +370,16 @@ async function loadCandidateServiceProjects(
     return ownedProjectIds.has(project._id);
   });
 
-  return visibleProjects;
+  // Exclude rejected / cancelled projects so they don't appear to occupy
+  // a time slot on the calendar. Their resourceUsage records are already
+  // deleted by applyStatusChange.
+  const activeProjects = visibleProjects.filter(
+    (project) =>
+      project.status !== ProjectStatus.REJECTED &&
+      project.status !== ProjectStatus.CANCELLED,
+  );
+
+  return activeProjects;
 }
 
 function mapServiceBookingItem(args: {
