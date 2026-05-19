@@ -10,9 +10,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "rounded-none border-2 border-black bg-fab-teal text-white font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]",
+          "rounded-none border-2 border-black bg-fab-teal text-white font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none",
         outline:
-          "rounded-none border-2 border-black bg-white text-black font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]",
+          "rounded-none border-2 border-black bg-white text-black font-black uppercase transition-all shadow-[2px_2px_0_0_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none",
         secondary:
           "rounded-none border-2 border-black bg-secondary text-secondary-foreground font-black uppercase tracking-wider hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

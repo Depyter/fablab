@@ -39,6 +39,15 @@ type BookingServiceMaterial = {
   unit?: string;
 };
 
+type BookingServiceResource = {
+  _id: string;
+  name: string;
+  category?: string | null;
+  type?: string | null;
+  status?: string | null;
+  description?: string | null;
+};
+
 type BookingPricingVariant = { name: string };
 
 interface BookingDialog {
@@ -48,6 +57,7 @@ interface BookingDialog {
   fileTypes?: string[];
   availableDays?: number[];
   serviceMaterials?: BookingServiceMaterial[];
+  serviceResources?: BookingServiceResource[];
   hasUpPricing?: boolean;
   pricingVariants?: BookingPricingVariant[];
   servicePricing?: ServicePricing;
@@ -69,6 +79,7 @@ export function BookingDialog({
   fileTypes = EMPTY_FILE_TYPES,
   availableDays = EMPTY_AVAILABLE_DAYS,
   serviceMaterials = EMPTY_SERVICE_MATERIALS,
+  serviceResources = [],
   hasUpPricing = false,
   pricingVariants = EMPTY_PRICING_VARIANTS,
   servicePricing,
@@ -118,6 +129,7 @@ export function BookingDialog({
         values.dateTime?.startTime ||
         values.dateTime?.endTime ||
         values.files.length > 0 ||
+        values.requestedResourceIds.length > 0 ||
         (values.pricing && values.pricing !== "")
       );
     },
@@ -215,6 +227,7 @@ export function BookingDialog({
     material: ProjectMaterial.PROVIDE_OWN,
     pricing: "Default",
     requestedMaterialIds: [],
+    requestedResourceIds: [],
     dateTime: {
       date: undefined,
       startTime: "",
@@ -238,6 +251,7 @@ export function BookingDialog({
       material: ProjectMaterial.PROVIDE_OWN,
       pricing: "",
       requestedMaterialIds: [],
+      requestedResourceIds: [],
       dateTime: {
         date: undefined,
         startTime: "",
@@ -393,6 +407,7 @@ export function BookingDialog({
               requirements={requirements}
               availableDays={availableDays}
               serviceMaterials={serviceMaterials}
+              serviceResources={serviceResources}
               hasUpPricing={hasUpPricing}
               pricingVariants={pricingVariants}
               serviceCategory={serviceCategory}

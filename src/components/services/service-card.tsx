@@ -88,7 +88,11 @@ export function ServiceCard({
           href={`/dashboard/services/${slug}/edit`}
           className="w-full block"
         >
-          <Button size="sm" variant="outline" className="w-full h-8 text-xs">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-8 text-xs cursor-pointer"
+          >
             {buttonText}
           </Button>
         </Link>

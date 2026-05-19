@@ -5,6 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 
 import { FieldSeparator } from "@/components/ui/field";
@@ -29,6 +30,7 @@ export type BookingFormValues = {
   notes: string;
   material: ProjectMaterialType;
   requestedMaterialIds?: string[];
+  requestedResourceIds?: string[];
   pricing: string;
   dateTime: {
     date: Date | undefined;
@@ -103,7 +105,7 @@ export function EstimateProjectDetails({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <DialogHeader className="shrink-0 border-b-4 border-black px-2 pb-4 sm:px-0">
+      <DialogHeader className="shrink-0 border-black px-2 pb-4 sm:px-0">
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Review & Estimate
         </DialogTitle>
@@ -213,7 +215,7 @@ export function EstimateProjectDetails({
             {/* Pricing */}
             <div className="border-b-4 border-black bg-fab-amber/10 px-4 pb-4 pt-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-black">
                   Pricing Estimate
                 </h3>
                 <div className="flex flex-wrap items-center gap-2">
@@ -297,7 +299,7 @@ export function EstimateProjectDetails({
                   </>
                 )}
 
-                <FieldSeparator className="my-1 bg-black" />
+                <FieldSeparator className="my-1" />
 
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
@@ -354,14 +356,15 @@ export function EstimateProjectDetails({
           type="button"
           onClick={onBack}
           disabled={isSubmitting}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
+          className="inline-flex h-9 w-fit items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
         >
+          <ChevronLeft className="size-4" strokeWidth={3} />
           Back
         </button>
         <button
           type="submit"
           disabled={isSubmitting || canSubmit === false || !isChecked}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}
         </button>

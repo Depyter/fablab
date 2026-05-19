@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroupChoiceCard } from "./select-option-form";
 import { DateTimePicker } from "@/components/booking/date-time-picker";
+import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
 import { FileUpload } from "@/components/file-upload";
 import { ChevronLeft } from "lucide-react";
 import type { AppFormApi } from "@/lib/form-context";
@@ -47,6 +48,7 @@ export interface BookingDetailsFormValues {
   pricing: string;
   material: ProjectMaterialType;
   requestedMaterialIds: string[];
+  requestedResourceIds: string[];
   serviceType: FulfillmentModeType;
 }
 
@@ -70,6 +72,7 @@ export function Step2ProjectDetails({
   requirements,
   availableDays,
   serviceMaterials,
+  serviceResources,
   hasUpPricing,
   pricingVariants = EMPTY_PRICING_VARIANTS,
   serviceCategory,
@@ -92,6 +95,14 @@ export function Step2ProjectDetails({
     pricePerUnit?: number;
     costPerUnit?: number;
     unit?: string;
+  }>;
+  serviceResources: Array<{
+    _id: string;
+    name: string;
+    category?: string | null;
+    type?: string | null;
+    status?: string | null;
+    description?: string | null;
   }>;
   hasUpPricing: boolean;
   pricingVariants?: PricingVariantOption[];
@@ -160,7 +171,7 @@ export function Step2ProjectDetails({
 
   return (
     <form onSubmit={handleNext} className="flex flex-col h-full min-h-0">
-      <DialogHeader className="shrink-0 border-b-4 border-black px-2 pb-4 sm:px-0">
+      <DialogHeader className="shrink-0 px-2 pb-4 sm:px-0">
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Book {serviceName}
         </DialogTitle>
@@ -220,7 +231,6 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="rounded-lg focus-visible:ring-0"
                       placeholder="e.g. Custom Cup"
                     />
                   </Field>
@@ -244,7 +254,7 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="min-h-20 resize-none rounded-lg focus-visible:ring-0 md:min-h-32"
+                      className="min-h-20 resize-none md:min-h-32"
                       placeholder="Describe your project, intended use, or specific details..."
                     />
                   </Field>
@@ -268,7 +278,7 @@ export function Step2ProjectDetails({
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="min-h-12 resize-none rounded-lg focus-visible:ring-0 md:min-h-24"
+                  className="min-h-12 resize-none md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
@@ -282,7 +292,7 @@ export function Step2ProjectDetails({
                 <Field>
                   <Label
                     htmlFor="pricing-tier"
-                    className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60"
+                    className="font-black uppercase tracking-[0.2em] text-xs"
                   >
                     Pricing Tier <span className="text-fab-magenta">*</span>
                   </Label>
@@ -293,7 +303,7 @@ export function Step2ProjectDetails({
                   >
                     <SelectTrigger
                       id="pricing-tier"
-                      className="w-full rounded-lg"
+                      className="w-full rounded-none cursor-pointer"
                     >
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
@@ -410,6 +420,24 @@ export function Step2ProjectDetails({
             </>
           )}
 
+          {serviceResources.length > 0 && (
+            <form.Field
+              name="requestedResourceIds"
+              children={(field) => (
+                <MultipleSelectForm
+                  options={serviceResources.map((resource) => ({
+                    label: resource.name,
+                    value: resource._id,
+                  }))}
+                  title="Resources"
+                  placeholder="Select resources..."
+                  value={field.state.value || []}
+                  onChange={field.handleChange}
+                />
+              )}
+            />
+          )}
+
           <FieldSeparator className="my-2" />
 
           <form.AppField
@@ -509,7 +537,7 @@ export function Step2ProjectDetails({
           <button
             type="button"
             onClick={onPrev}
-            className="rounded-none border-2 border-black bg-background pl-3 shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-none border-2 border-black bg-background px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           >
             <ChevronLeft className="size-4" strokeWidth={3} />
             Back
@@ -518,7 +546,7 @@ export function Step2ProjectDetails({
         <button
           type="submit"
           disabled={isUploading}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
         >
           Review & Estimate
         </button>

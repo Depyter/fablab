@@ -213,18 +213,32 @@ export function ServiceForm({
             selector={(state) => state.values.serviceCategory}
             children={(serviceCategory) =>
               serviceCategory === "FABRICATION" ? (
-                <form.Field
-                  name="materials"
-                  children={(field) => (
-                    <MultipleSelectForm
-                      options={materialOptions}
-                      title="Allowed Materials"
-                      placeholder="Select materials..."
-                      value={field.state.value || []}
-                      onChange={field.handleChange}
-                    />
-                  )}
-                />
+                <>
+                  <form.Field
+                    name="resources"
+                    children={(field) => (
+                      <MultipleSelectForm
+                        options={resourceOptions}
+                        title="Resources"
+                        placeholder="Select resources..."
+                        value={field.state.value || []}
+                        onChange={field.handleChange}
+                      />
+                    )}
+                  />
+                  <form.Field
+                    name="materials"
+                    children={(field) => (
+                      <MultipleSelectForm
+                        options={materialOptions}
+                        title="Allowed Materials"
+                        placeholder="Select materials..."
+                        value={field.state.value || []}
+                        onChange={field.handleChange}
+                      />
+                    )}
+                  />
+                </>
               ) : null
             }
           />

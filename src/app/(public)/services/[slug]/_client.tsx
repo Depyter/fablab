@@ -351,6 +351,7 @@ export function ServiceDetailClient({
                     : []
                 }
                 serviceMaterials={service.materialDetails ?? []}
+                serviceResources={service.resourceDetails ?? []}
                 hasUpPricing={
                   (service.serviceCategory.variants?.length ?? 0) > 0
                 }
