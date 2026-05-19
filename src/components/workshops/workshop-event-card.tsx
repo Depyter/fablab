@@ -34,8 +34,8 @@ export type WorkshopEvent = {
   registrationCount: number;
   cancelledCount: number;
   statusBreakdown: Record<string, number>;
-  resources?: string[];
-  availableMaterials?: string[];
+  resources?: { _id: string; name: string }[];
+  availableMaterials?: { _id: string; name: string; unit: string }[];
   attendees: Array<{
     projectId: string;
     userId: string;
@@ -236,12 +236,12 @@ export function WorkshopEventCard({
                         Resources:
                       </span>
                       <span className="inline-flex flex-wrap gap-1">
-                        {event.resources.map((rid) => (
+                        {event.resources.map((r) => (
                           <span
-                            key={rid}
+                            key={r._id}
                             className="inline-flex items-center border border-black bg-fab-teal/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
                           >
-                            {rid.slice(0, 8)}…
+                            {r.name}
                           </span>
                         ))}
                       </span>
@@ -254,12 +254,12 @@ export function WorkshopEventCard({
                           Materials:
                         </span>
                         <span className="inline-flex flex-wrap gap-1">
-                          {event.availableMaterials.map((mid) => (
+                          {event.availableMaterials.map((m) => (
                             <span
-                              key={mid}
+                              key={m._id}
                               className="inline-flex items-center border border-black bg-fab-amber/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
                             >
-                              {mid.slice(0, 8)}…
+                              {m.name}
                             </span>
                           ))}
                         </span>
