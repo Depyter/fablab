@@ -48,7 +48,6 @@ export interface BookingDetailsFormValues {
   pricing: string;
   material: ProjectMaterialType;
   requestedMaterialIds: string[];
-  requestedResourceIds: string[];
   serviceType: FulfillmentModeType;
 }
 
@@ -72,7 +71,6 @@ export function Step2ProjectDetails({
   requirements,
   availableDays,
   serviceMaterials,
-  serviceResources,
   hasUpPricing,
   pricingVariants = EMPTY_PRICING_VARIANTS,
   serviceCategory,
@@ -95,14 +93,6 @@ export function Step2ProjectDetails({
     pricePerUnit?: number;
     costPerUnit?: number;
     unit?: string;
-  }>;
-  serviceResources: Array<{
-    _id: string;
-    name: string;
-    category?: string | null;
-    type?: string | null;
-    status?: string | null;
-    description?: string | null;
   }>;
   hasUpPricing: boolean;
   pricingVariants?: PricingVariantOption[];
@@ -418,24 +408,6 @@ export function Step2ProjectDetails({
                 }
               />
             </>
-          )}
-
-          {serviceResources.length > 0 && (
-            <form.Field
-              name="requestedResourceIds"
-              children={(field) => (
-                <MultipleSelectForm
-                  options={serviceResources.map((resource) => ({
-                    label: resource.name,
-                    value: resource._id,
-                  }))}
-                  title="Resources"
-                  placeholder="Select resources..."
-                  value={field.state.value || []}
-                  onChange={field.handleChange}
-                />
-              )}
-            />
           )}
 
           <FieldSeparator className="my-2" />

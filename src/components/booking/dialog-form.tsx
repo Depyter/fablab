@@ -129,7 +129,6 @@ export function BookingDialog({
         values.dateTime?.startTime ||
         values.dateTime?.endTime ||
         values.files.length > 0 ||
-        values.requestedResourceIds.length > 0 ||
         (values.pricing && values.pricing !== "")
       );
     },
@@ -227,7 +226,6 @@ export function BookingDialog({
     material: ProjectMaterial.PROVIDE_OWN,
     pricing: "Default",
     requestedMaterialIds: [],
-    requestedResourceIds: [],
     dateTime: {
       date: undefined,
       startTime: "",
@@ -407,7 +405,6 @@ export function BookingDialog({
               requirements={requirements}
               availableDays={availableDays}
               serviceMaterials={serviceMaterials}
-              serviceResources={serviceResources}
               hasUpPricing={hasUpPricing}
               pricingVariants={pricingVariants}
               serviceCategory={serviceCategory}
