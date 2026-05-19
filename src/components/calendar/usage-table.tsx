@@ -16,7 +16,6 @@ import {
   CALENDAR_DAY_SECTION_HEIGHT,
   CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_SLOT_WIDTH,
-  CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
   getCalendarDayNowIndicatorLeft,
   getCalendarDayUsagePosition,
   isWorkshopTrackEntry,
@@ -126,10 +125,16 @@ function WorkshopSlotCard({
 }) {
   const visibleMembers = entry.members.slice(0, compact ? 2 : 4);
   const hiddenMemberCount = entry.members.length - visibleMembers.length;
+  const hasMembers = entry.members.length > 0;
 
   return (
     <div
-      className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200 bg-blue-50/95 text-left shadow-sm"
+      className={cn(
+        "absolute z-[5] overflow-hidden rounded-xl border text-left shadow-sm",
+        hasMembers
+          ? "border-fab-teal bg-white"
+          : "border-dashed border-fab-teal bg-white",
+      )}
       style={{
         top: compact ? 2 : 4,
         bottom: compact ? 2 : 4,
@@ -149,14 +154,15 @@ function WorkshopSlotCard({
             onOpenWorkshopEvent?.(entry.machineId, entry.startTime)
           }
           className={cn(
-            "flex items-start justify-between gap-2 text-left",
+            "flex items-start gap-2 text-left",
             onOpenWorkshopEvent && "cursor-pointer hover:opacity-80",
           )}
         >
           <div className="min-w-0">
             <div
               className={cn(
-                "truncate font-bold uppercase tracking-[0.08em] text-blue-900",
+                "truncate font-bold uppercase tracking-[0.08em]",
+                "text-fab-teal",
                 compact ? "text-[10px]" : "text-[11px]",
               )}
             >
@@ -164,44 +170,40 @@ function WorkshopSlotCard({
             </div>
             <div
               className={cn(
-                "truncate text-blue-800/80",
+                "truncate",
                 compact ? "text-[9px]" : "text-[10px]",
+                "text-fab-teal",
               )}
             >
-              {entry.bookingCount} booked
-              {entry.pendingCount > 0 ? ` · ${entry.pendingCount} pending` : ""}
+              {hasMembers
+                ? `${entry.bookingCount} booked${entry.pendingCount > 0 ? ` \u00b7 ${entry.pendingCount} pending` : ""}`
+                : (entry.availableLabel ?? "Available")}
             </div>
-          </div>
-          <div
-            className={cn(
-              "shrink-0 rounded-full bg-white/80 font-semibold text-blue-900 shadow-sm",
-              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]",
-            )}
-          >
-            {formatShortTime(entry.startTime)}-{formatShortTime(entry.endTime)}
           </div>
         </button>
 
-        <div className="grid min-h-0 gap-1 overflow-hidden">
-          {visibleMembers.map((member) => (
-            <WorkshopMemberChip
-              key={member.id}
-              usage={member}
-              compact={compact}
-              onOpenProjectDetails={onOpenProjectDetails}
-            />
-          ))}
-          {hiddenMemberCount > 0 ? (
-            <div
-              className={cn(
-                "px-1 font-medium text-blue-900/75",
-                compact ? "text-[9px]" : "text-[10px]",
-              )}
-            >
-              +{hiddenMemberCount} more booked
-            </div>
-          ) : null}
-        </div>
+        {hasMembers ? (
+          <div className="grid min-h-0 gap-1 overflow-hidden">
+            {visibleMembers.map((member) => (
+              <WorkshopMemberChip
+                key={member.id}
+                usage={member}
+                compact={compact}
+                onOpenProjectDetails={onOpenProjectDetails}
+              />
+            ))}
+            {hiddenMemberCount > 0 ? (
+              <div
+                className={cn(
+                  "px-1 font-medium text-fab-teal",
+                  compact ? "text-[9px]" : "text-[10px]",
+                )}
+              >
+                +{hiddenMemberCount} more booked
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -235,7 +237,10 @@ function StandardUsageCard({
         if (usage.projectId && onOpenProjectDetails) {
           onOpenProjectDetails(usage.projectId);
         } else if (isWorkshopSlot) {
-          onOpenWorkshopEvent!(usage.machineId, usage.startTime);
+          onOpenWorkshopEvent!(
+            usage.serviceId ?? usage.machineId,
+            usage.startTime,
+          );
         }
       }}
       className={cn(
@@ -343,8 +348,7 @@ export function UsageTable({
   const dayLayoutTemplate = `${dayLeadingColWidth}px minmax(${dayTimelineMinWidth}px, 1fr)`;
   const getResponsiveRowHeight = (rowHeight: number) => {
     if (!isMobile) return rowHeight;
-    if (rowHeight === CALENDAR_DAY_WORKSHOP_ROW_HEIGHT) return 80;
-    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 32;
+    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 44;
     if (rowHeight === CALENDAR_DAY_SECTION_HEIGHT) return 22;
     return rowHeight;
   };

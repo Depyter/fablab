@@ -43,6 +43,7 @@ import {
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 import {
   StatusBadge,
@@ -148,8 +149,14 @@ export function WorkshopAttendeeRow({
       toast.success(
         `${attendee.name} → ${PROJECT_STATUS_LABELS[newStatus] ?? newStatus}`,
       );
-    } catch {
-      toast.error("Failed to update status.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update status.";
+      toast.error(message);
     }
   };
 
@@ -177,8 +184,14 @@ export function WorkshopAttendeeRow({
       setProof("");
       setPaymentMode("cash");
       setProofFiles([]);
-    } catch {
-      toast.error("Failed to record payment.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to record payment.";
+      toast.error(message);
     } finally {
       setIsPaying(false);
     }

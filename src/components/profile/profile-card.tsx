@@ -5,6 +5,7 @@ import { User, Camera, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,8 +144,14 @@ function UserProfileDialogForm({
       toast.success("Profile updated");
       setIsSaving(false);
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to update profile");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update profile";
+      toast.error(message);
       setIsSaving(false);
     }
   };

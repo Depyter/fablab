@@ -65,6 +65,7 @@ export function BookingCalendarView({
               isLoading={bookingsLoading}
               onSelectDay={onSelectDay}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
             />
           )
         ) : isAdminOrMaker ? (
@@ -85,6 +86,7 @@ export function BookingCalendarView({
               isLoading={bookingsLoading}
               onSelectDay={onSelectDay}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
             />
           )
         ) : null}
