@@ -259,7 +259,6 @@ export function ProjectDetailsContent({
               <WorkshopPricingSummary
                 project={project}
                 receipt={isClient ? undefined : project.receipt}
-                status={project.status}
                 onMarkPaid={isClient ? undefined : onMarkPaid}
               />
             </div>

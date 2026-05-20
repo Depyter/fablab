@@ -305,6 +305,7 @@ describe("Project and Chat functionality", () => {
           .query("resourceUsage")
           .withIndex("by_project", (q) => q.eq("projectId", projectId))
           .first();
+        const service = await ctx.db.get(serviceId);
 
         expect(project!.status).toBe("rejected");
         const room = await ctx.db.query("rooms").collect();

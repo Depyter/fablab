@@ -16,7 +16,18 @@ import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { AddServiceFormValues } from "@/types/add-service";
-import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
+import {
+  ServiceStatus,
+  type ServiceStatusType,
+  FILE_CATEGORIES,
+} from "@convex/constants";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   InlineResourceSelect,
   InlineMaterialSelect,
@@ -209,62 +220,79 @@ export function ServiceForm({
               )}
             />
 
-            {/* Resources — available for all service types as defaults */}
-            <form.Field
-              name="resources"
-              children={(field) => (
-                <InlineResourceSelect
-                  value={field.state.value || []}
-                  onChange={field.handleChange}
-                />
-              )}
-            />
-
-            {/* Materials — FABRICATION only */}
-            <form.Subscribe
-              selector={(state) => state.values.serviceCategory}
-              children={(serviceCategory) =>
-                (mode ?? serviceCategory) === "FABRICATION" ? (
-                  <form.Field
-                    name="materials"
-                    children={(field) => (
-                      <InlineMaterialSelect
-                        value={field.state.value || []}
-                        onChange={field.handleChange}
-                      />
-                    )}
+            {/* Resources, File Types & Status — grouped */}
+            <FormSection title="Resources &amp; Settings">
+              {/* Resources — available for all service types as defaults */}
+              <form.Field
+                name="resources"
+                children={(field) => (
+                  <InlineResourceSelect
+                    value={field.state.value || []}
+                    onChange={field.handleChange}
                   />
-                ) : null
-              }
-            />
+                )}
+              />
 
-            <form.Field
-              name="fileTypes"
-              children={(field) => (
-                <MultipleSelectForm
-                  options={acceptedFileTypeOptions}
-                  title="Accepted File Types"
-                  placeholder="Select file type..."
-                  value={field.state.value}
-                  onChange={field.handleChange}
-                />
-              )}
-            />
-
-            <form.AppField
-              name="status"
-              children={(field) => (
-                <div className="w-full sm:max-w-3xl">
-                  <FormSection title="Status">
-                    <field.SelectInput
-                      label=""
-                      placeholder="Select status..."
-                      options={statusOptions}
+              {/* Materials — FABRICATION only */}
+              <form.Subscribe
+                selector={(state) => state.values.serviceCategory}
+                children={(serviceCategory) =>
+                  (mode ?? serviceCategory) === "FABRICATION" ? (
+                    <form.Field
+                      name="materials"
+                      children={(field) => (
+                        <InlineMaterialSelect
+                          value={field.state.value || []}
+                          onChange={field.handleChange}
+                        />
+                      )}
                     />
-                  </FormSection>
-                </div>
-              )}
-            />
+                  ) : null
+                }
+              />
+
+              <form.Field
+                name="fileTypes"
+                children={(field) => (
+                  <MultipleSelectForm
+                    compact
+                    options={acceptedFileTypeOptions}
+                    title="Accepted File Types"
+                    placeholder="Select file type..."
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
+              />
+
+              <form.AppField
+                name="status"
+                children={(field) => (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Status
+                    </label>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(val) =>
+                        field.handleChange(val as ServiceStatusType)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
+            </FormSection>
           </div>
         </div>
       </main>

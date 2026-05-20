@@ -134,8 +134,7 @@ export function EditSessionDialog({
           <DialogTitle className="text-xl">Edit Session</DialogTitle>
           <DialogDescription>
             Update session details. Attendees will be notified of schedule
-            changes. Resource/material-only changes won&apos;t trigger
-            notifications.
+            changes.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -206,9 +205,6 @@ export function EditSessionDialog({
             <div className="space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 Resources &amp; Materials
-              </span>
-              <span className="ml-1 text-[9px] font-medium text-black/40">
-                (changing these won&apos;t notify attendees)
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

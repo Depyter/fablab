@@ -23,6 +23,8 @@ interface MultipleSelectFormProps {
   onAddNew?: () => void;
   /** Label for the add-new option. Defaults to "Add new…" */
   addNewLabel?: string;
+  /** When true, renders without the card wrapper for inline use. */
+  compact?: boolean;
 }
 
 export function MultipleSelectForm({
@@ -34,6 +36,7 @@ export function MultipleSelectForm({
   onChange,
   onAddNew,
   addNewLabel,
+  compact = false,
 }: MultipleSelectFormProps) {
   // Local state as fallback for uncontrolled usage
   const [localValues, setLocalValues] = useState<string[]>([]);
@@ -69,15 +72,32 @@ export function MultipleSelectForm({
     : "resource";
 
   return (
-    <div className="w-full sm:max-w-3xl">
-      <FormSection title={title} className="space-y-1 flex flex-col gap-2">
+    <div className={`w-full ${compact ? "" : "sm:max-w-3xl"}`}>
+      {compact ? (
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+            {title}
+          </label>
+          {renderItems()}
+        </div>
+      ) : (
+        <FormSection title={title} className="space-y-1 flex flex-col gap-2">
+          {renderItems()}
+        </FormSection>
+      )}
+    </div>
+  );
+
+  function renderItems() {
+    return (
+      <>
         {/* Render existing selections */}
         {selectedValues.map((val: string, index: number) => {
           const label = options.find((o) => o.value === val)?.label;
           return (
             <div
               key={val}
-              className="flex items-center justify-between p-2 border-2 rounded-none border-black bg-white"
+              className="flex items-center justify-between gap-2 rounded-md border border-input bg-background px-2.5 py-1.5 text-sm"
             >
               <span>{label ?? val}</span>
 
@@ -85,8 +105,12 @@ export function MultipleSelectForm({
                   if used without react-form field binding. */}
               {!value && <input type="hidden" name={fieldName} value={val} />}
 
-              <button type="button" onClick={() => removeItem(index)}>
-                <XIcon className="h-4 w-4 text-gray-500" />
+              <button
+                type="button"
+                onClick={() => removeItem(index)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <XIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           );
@@ -125,7 +149,7 @@ export function MultipleSelectForm({
             )}
           </SelectContent>
         </Select>
-      </FormSection>
-    </div>
-  );
+      </>
+    );
+  }
 }

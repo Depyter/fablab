@@ -60,6 +60,7 @@ export function InlineResourceSelect({
   return (
     <>
       <MultipleSelectForm
+        compact
         options={options}
         title={title}
         placeholder={placeholder}
@@ -89,21 +90,16 @@ export function InlineResourceSelect({
               <p className="text-xs text-muted-foreground">
                 Choose a resource type:
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-wrap gap-2">
                 {RESOURCE_TYPE_OPTIONS.map((opt) => (
                   <button
                     key={opt.type}
                     type="button"
                     onClick={() => setResourceType(opt.type)}
-                    className="flex flex-col gap-1 border-2 border-black bg-white p-4 text-left shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
                   >
-                    <span className="inline-flex items-center gap-1.5 text-sm font-black uppercase tracking-tighter">
-                      <Plus className="h-3.5 w-3.5" />
-                      {opt.label}
-                    </span>
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {opt.desc}
-                    </span>
+                    <Plus className="h-3 w-3" />
+                    {opt.label}
                   </button>
                 ))}
               </div>
@@ -140,6 +136,7 @@ export function InlineMaterialSelect({
   return (
     <>
       <MultipleSelectForm
+        compact
         options={options}
         title={title}
         placeholder={placeholder}
