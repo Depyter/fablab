@@ -56,7 +56,8 @@ async function loadAvailableWorkshopSlots(
       for (const timeSlot of schedule.timeSlots) {
         if (
           timeSlot.startTime < range.startTime ||
-          timeSlot.startTime >= range.endTime
+          timeSlot.startTime >= range.endTime ||
+          timeSlot.startTime < Date.now()
         ) {
           continue;
         }
