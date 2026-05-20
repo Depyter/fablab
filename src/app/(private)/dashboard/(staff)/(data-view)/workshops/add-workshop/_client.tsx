@@ -6,21 +6,15 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import { type AddServiceFormValues } from "@/types/add-service";
+import type { AddServiceFormValues } from "@/types/add-service";
 import { toast } from "sonner";
 import { ServiceForm } from "@/components/services/forms/service-form";
 
-const FABRICATION_INITIAL_VALUES: AddServiceFormValues = {
+const WORKSHOP_INITIAL_VALUES: AddServiceFormValues = {
   name: "",
   description: "",
-  serviceCategory: "FABRICATION",
-  pricing: {
-    type: "FABRICATION" as const,
-    setupFee: 0,
-    unitName: "hour",
-    timeRate: 0,
-    variants: [],
-  },
+  serviceCategory: "WORKSHOP",
+  pricing: { type: "FIXED" as const, amount: 0, variants: [] },
   status: "Available",
   images: [],
   samples: [],
@@ -31,7 +25,7 @@ const FABRICATION_INITIAL_VALUES: AddServiceFormValues = {
   availableDays: [],
 };
 
-export default function AddServicePage() {
+export function AddWorkshopClient() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -53,27 +47,17 @@ export default function AddServicePage() {
         resources: value.resources as Id<"resources">[],
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         serviceCategory: {
-          type: "FABRICATION",
-          availableDays: value.availableDays,
-          materials: value.materials as Id<"materials">[],
-          setupFee:
-            value.pricing.type === "FABRICATION" ? value.pricing.setupFee : 0,
-          unitName:
-            value.pricing.type === "FABRICATION"
-              ? value.pricing.unitName
-              : ("hour" as const),
-          timeRate:
-            value.pricing.type === "FABRICATION" ? value.pricing.timeRate : 0,
+          type: "WORKSHOP",
+          amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
           variants:
-            value.pricing.type === "FABRICATION" &&
-            value.pricing.variants.length > 0
+            value.pricing.type === "FIXED" && value.pricing.variants.length > 0
               ? value.pricing.variants
               : undefined,
         },
       });
 
-      toast.success("Fabrication service added successfully!");
-      router.push("/dashboard/services");
+      toast.success("Workshop added!");
+      router.push("/dashboard/workshops");
       return true;
     } catch (error) {
       const message =
@@ -81,7 +65,7 @@ export default function AddServicePage() {
           ? String(error.data)
           : error instanceof Error
             ? error.message
-            : "Failed to add service.";
+            : "Failed to add workshop.";
       setSubmitError(message);
       toast.error(message);
       return false;
@@ -89,26 +73,26 @@ export default function AddServicePage() {
   };
 
   const handleDiscard = async (formValues: AddServiceFormValues) => {
-    const { images, samples } = formValues;
     const orphans = [
-      ...(images as Id<"_storage">[]),
-      ...(samples as Id<"_storage">[]),
+      ...(formValues.images as Id<"_storage">[]),
+      ...(formValues.samples as Id<"_storage">[]),
     ];
     if (orphans.length > 0) {
       await deleteOrphanedFiles({ storageIds: orphans });
     }
     setSubmitError(null);
-    router.push("/dashboard/services");
+    router.push("/dashboard/workshops");
   };
 
   return (
     <ServiceForm
-      title="Add Fabrication Service"
-      initialValues={FABRICATION_INITIAL_VALUES}
+      title="Add New Workshop"
+      initialValues={WORKSHOP_INITIAL_VALUES}
       onSubmit={handleSubmit}
       onDiscard={handleDiscard}
       submitError={submitError}
-      mode="FABRICATION"
+      mode="WORKSHOP"
+      backHref="/dashboard/workshops"
     />
   );
 }

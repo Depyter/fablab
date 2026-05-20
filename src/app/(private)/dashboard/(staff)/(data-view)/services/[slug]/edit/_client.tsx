@@ -172,21 +172,19 @@ export function EditServiceClient({
   };
 
   return (
-    <>
-      <ServiceForm
-        title={`Edit ${service.name}`}
-        initialValues={initialValues}
-        initialImages={initialImages}
-        initialSamples={initialSamples}
-        onSubmit={handleSubmit}
-        onDiscard={() => {
-          router.push("/dashboard/services");
-        }}
-        submitError={submitError}
-        mode="FABRICATION"
-      />
-      <div className="container mx-auto max-w-6xl px-10 pb-10 -mt-8">
-        <div className="mt-12 rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+    <ServiceForm
+      title={`Edit ${service.name}`}
+      initialValues={initialValues}
+      initialImages={initialImages}
+      initialSamples={initialSamples}
+      onSubmit={handleSubmit}
+      onDiscard={() => {
+        router.push("/dashboard/services");
+      }}
+      submitError={submitError}
+      mode="FABRICATION"
+      footer={
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="font-semibold text-destructive">Danger Zone</h3>
             <p className="text-sm text-muted-foreground">
@@ -203,7 +201,7 @@ export function EditServiceClient({
             className="bg-destructive text-white hover:bg-destructive/90"
           />
         </div>
-      </div>
-    </>
+      }
+    />
   );
 }

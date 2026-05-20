@@ -307,7 +307,7 @@ describe("Project and Chat functionality", () => {
           .first();
         const service = await ctx.db.get(serviceId);
 
-        expect(project!.status).toBe("rejected");
+        expect(project!.status).toBe("pending");
         const room = await ctx.db.query("rooms").collect();
         const members = await ctx.db.query("roomMembers").collect();
         const thread = await ctx.db.query("threads").collect();

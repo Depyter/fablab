@@ -610,17 +610,24 @@ function ExpandableSessionCard({
 
         {/* Edit button */}
         {!readOnly && onEditSession && (
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               e.stopPropagation();
               onEditSession();
             }}
-            className="shrink-0 rounded border-2 border-black bg-fab-amber/10 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-black transition-all hover:bg-fab-amber/20 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_#000]"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+                onEditSession();
+              }
+            }}
+            className="inline-flex shrink-0 cursor-pointer items-center rounded border-2 border-black bg-fab-amber/10 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-black transition-all hover:bg-fab-amber/20 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_#000] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
           >
             <Edit className="h-3 w-3 inline mr-0.5" strokeWidth={3} />
             Edit
-          </button>
+          </span>
         )}
 
         {/* Expand toggle */}

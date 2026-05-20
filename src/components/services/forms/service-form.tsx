@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, createContext } from "react";
+import * as React from "react";
+import { useState, createContext } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/action-dialog";
+import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import Link from "next/link";
 import { useAppForm } from "@/lib/form-context";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -64,6 +66,8 @@ export interface ServiceFormProps {
   mode?: "WORKSHOP" | "FABRICATION";
   /** Override the back button destination. */
   backHref?: string;
+  /** Optional content rendered at the bottom of the scrollable area. */
+  footer?: React.ReactNode;
 }
 
 export function ServiceForm({
@@ -76,20 +80,12 @@ export function ServiceForm({
   submitError,
   mode,
   backHref = "/dashboard/services",
+  footer,
 }: ServiceFormProps) {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const form = useAppForm({
     defaultValues: initialValues,
@@ -101,68 +97,63 @@ export function ServiceForm({
 
   return (
     <ServiceFormModeContext.Provider value={mode}>
-      <main className="container mx-auto max-w-6xl p-10">
-        {/* Top Navigation & Actions */}
-        <header
-          className={`sticky top-0 z-10 flex items-center justify-between pt-3 mb-8 bg-background pb-4 ${
-            isScrolled ? "border-b border-gray-200" : "border-b-0"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <Link href={backHref}>
+      <DataViewPageHeader>
+        <Link href={backHref}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 border-2 border-black bg-white text-black shrink-0"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={4} />
+          </Button>
+        </Link>
+        <h1 className="text-sm font-black uppercase tracking-wider text-black truncate">
+          {title}
+        </h1>
+        <div className="ml-auto flex items-center gap-2">
+          {submitError && (
+            <p className="text-xs text-red-500 max-w-40 text-right hidden sm:block">
+              {submitError}
+            </p>
+          )}
+          <ActionDialog
+            onConfirm={async () => {
+              await onDiscard(form.state.values);
+              form.reset();
+            }}
+            title="Discard changes?"
+            description="Are you sure you want to discard your changes? This cannot be undone."
+            baseActionText="Discard"
+            confirmButtonText="Confirm Discard"
+            className="h-9 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black"
+          />
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
               <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 border-gray-200 rounded-lg"
+                type="button"
+                className="h-9 border-2 border-black bg-fab-teal px-4 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-60"
+                disabled={
+                  !canSubmit ||
+                  isSubmitting ||
+                  hasUploadsInProgress ||
+                  isSuccess
+                }
+                onClick={() => form.handleSubmit()}
               >
-                <ChevronLeft className="h-5 w-5" />
+                {isSubmitting || isSuccess
+                  ? "Saving..."
+                  : hasUploadsInProgress
+                    ? "Uploading..."
+                    : "Save"}
               </Button>
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {submitError && (
-              <p className="text-sm text-red-500 max-w-xs text-right">
-                {submitError}
-              </p>
             )}
-            <ActionDialog
-              onConfirm={async () => {
-                await onDiscard(form.state.values);
-                form.reset();
-              }}
-              title="Discard changes?"
-              description="Are you sure you want to discard your changes? This cannot be undone."
-              baseActionText="Discard"
-              confirmButtonText="Confirm Discard"
-              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            />
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
-                <Button
-                  type="button"
-                  className="bg-[#1A8A7E] hover:bg-[#156E65] px-8 font-medium rounded-lg"
-                  disabled={
-                    !canSubmit ||
-                    isSubmitting ||
-                    hasUploadsInProgress ||
-                    isSuccess
-                  }
-                  onClick={() => form.handleSubmit()}
-                >
-                  {isSubmitting || isSuccess
-                    ? "Saving..."
-                    : hasUploadsInProgress
-                      ? "Uploading..."
-                      : "Save Service"}
-                </Button>
-              )}
-            />
-          </div>
-        </header>
+          />
+        </div>
+      </DataViewPageHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-8 gap-8">
           {/* Left Content */}
           <div className="lg:col-span-5 space-y-5">
             <GeneralInfoForm form={form} />
@@ -295,7 +286,8 @@ export function ServiceForm({
             </FormSection>
           </div>
         </div>
-      </main>
+        {footer && <div className="mt-8 mx-auto max-w-6xl">{footer}</div>}
+      </div>
     </ServiceFormModeContext.Provider>
   );
 }
