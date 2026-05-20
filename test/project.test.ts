@@ -300,16 +300,13 @@ describe("Project and Chat functionality", () => {
           .query("userProfile")
           .withIndex("by_userId", (q) => q.eq("userId", "1"))
           .first();
-        const userAera = await ctx.db
-          .query("userProfile")
-          .withIndex("by_userId", (q) => q.eq("userId", "2"))
-          .first();
         const project = await ctx.db.get(projectId);
         const usage = await ctx.db
           .query("resourceUsage")
           .withIndex("by_project", (q) => q.eq("projectId", projectId))
           .first();
-        const service = await ctx.db.get(serviceId);
+
+        expect(project!.status).toBe("rejected");
         const room = await ctx.db.query("rooms").collect();
         const members = await ctx.db.query("roomMembers").collect();
         const thread = await ctx.db.query("threads").collect();
@@ -804,8 +801,6 @@ describe("Project and Chat functionality", () => {
           .query("resourceUsage")
           .withIndex("by_project", (q) => q.eq("projectId", projectId))
           .first();
-        const service = await ctx.db.get(serviceId);
-
         expect(project!.status).toBe("rejected");
         expect(project!.totalInvoice).toBeUndefined();
         expect(project!.pricingSnapshot).toBeUndefined();

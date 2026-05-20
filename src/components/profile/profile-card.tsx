@@ -226,6 +226,7 @@ function UserProfileForm({
               className="h-16 w-16 rounded-full bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {previewSrc ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={previewSrc}
                   alt={name || profile.name}

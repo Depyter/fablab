@@ -6,11 +6,9 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useProfile } from "@/components/sidebar/profile-context";
 import { AddSessionDialog } from "@/components/workshops/add-session-dialog";
-import {
-  WorkshopAttendeeRow,
-  type AttendeeInfo,
-} from "@/components/workshops/workshop-attendee-row";
+import { WorkshopAttendeeRow } from "@/components/workshops/workshop-attendee-row";
 import { ProjectDetails } from "@/components/projects/project-details";
+import { EditSessionDialog } from "@/components/workshops/edit-session-dialog";
 import type { Id } from "@convex/_generated/dataModel";
 import {
   BrandSkeleton,
@@ -154,6 +152,7 @@ function WorkshopCard({
       <Link href={`/dashboard/workshops/${service.slug}/edit`}>
         <div className="relative h-36 w-full overflow-hidden bg-black/5">
           {service.imageUrls[0] ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={service.imageUrls[0]}
               alt={service.name}
@@ -317,9 +316,20 @@ export function WorkshopsPage() {
   const [preselectedServiceId, setPreselectedServiceId] = useState<
     string | undefined
   >(undefined);
-  const [selectedProjectId, setSelectedProjectId] = useState<
-    Id<"projects"> | null
-  >(null);
+  const [selectedProjectId, setSelectedProjectId] =
+    useState<Id<"projects"> | null>(null);
+  const [editSessionOpen, setEditSessionOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<{
+    _id: string;
+    serviceId: string;
+    date: number;
+    startTime: number;
+    endTime: number;
+    maxSlots: number;
+    usedUpSlots: number;
+    resources?: string[];
+    availableMaterials?: string[];
+  } | null>(null);
 
   // ── Data ──────────────────────────────────────────────────────────────
   const upcomingSessions = useQuery(
@@ -443,6 +453,26 @@ export function WorkshopsPage() {
                 onOpenProjectDetails={(projectId) =>
                   setSelectedProjectId(projectId as Id<"projects">)
                 }
+                onEditSession={(raw) => {
+                  const event = raw as WorkshopEvent & {
+                    sessionId: string;
+                    resources?: Array<{ _id: string; name: string }>;
+                    availableMaterials?: Array<{ _id: string; name: string }>;
+                  };
+                  setSelectedSession({
+                    _id: event.sessionId,
+                    serviceId: event.serviceId,
+                    date: event.date,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    maxSlots: event.maxSlots,
+                    usedUpSlots: event.usedSlots,
+                    resources: event.resources?.map((r) => r._id) ?? [],
+                    availableMaterials:
+                      event.availableMaterials?.map((m) => m._id) ?? [],
+                  });
+                  setEditSessionOpen(true);
+                }}
               />
             ) : (
               <AllWorkshopsTab
@@ -465,6 +495,18 @@ export function WorkshopsPage() {
         }}
         hideTrigger
       />
+
+      {/* Edit Session Dialog */}
+      {selectedSession && (
+        <EditSessionDialog
+          open={editSessionOpen}
+          onOpenChange={(open) => {
+            setEditSessionOpen(open);
+            if (!open) setSelectedSession(null);
+          }}
+          session={selectedSession}
+        />
+      )}
 
       {/* Add Session Dialog */}
       <AddSessionDialog
@@ -493,11 +535,13 @@ function ExpandableSessionCard({
   readOnly,
   variant = "upcoming",
   onOpenProjectDetails,
+  onEditSession,
 }: {
   event: WorkshopEvent;
   readOnly: boolean;
   variant?: "upcoming" | "past";
   onOpenProjectDetails?: (projectId: string) => void;
+  onEditSession?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -538,8 +582,7 @@ function ExpandableSessionCard({
             </span>
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3.5 w-3.5 text-fab-teal" strokeWidth={2.5} />
-              {formatLabTime(event.startTime)} –{" "}
-              {formatLabTime(event.endTime)}
+              {formatLabTime(event.startTime)} – {formatLabTime(event.endTime)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Users
@@ -563,6 +606,21 @@ function ExpandableSessionCard({
               maxSlots={event.maxSlots}
             />
           </div>
+        )}
+
+        {/* Edit button */}
+        {!readOnly && onEditSession && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditSession();
+            }}
+            className="shrink-0 rounded border-2 border-black bg-fab-amber/10 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-black transition-all hover:bg-fab-amber/20 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_#000]"
+          >
+            <Edit className="h-3 w-3 inline mr-0.5" strokeWidth={3} />
+            Edit
+          </button>
         )}
 
         {/* Expand toggle */}
@@ -611,11 +669,13 @@ function UpcomingTab({
   pastEvents,
   readOnly,
   onOpenProjectDetails,
+  onEditSession,
 }: {
   upcomingEvents: WorkshopEvent[];
   pastEvents: WorkshopEvent[];
   readOnly: boolean;
   onOpenProjectDetails?: (projectId: string) => void;
+  onEditSession?: (event: WorkshopEvent) => void;
 }) {
   if (upcomingEvents.length === 0 && pastEvents.length === 0) {
     return (
@@ -648,6 +708,9 @@ function UpcomingTab({
               event={event}
               readOnly={readOnly}
               onOpenProjectDetails={onOpenProjectDetails}
+              onEditSession={
+                onEditSession ? () => onEditSession(event) : undefined
+              }
             />
           ))}
         </div>

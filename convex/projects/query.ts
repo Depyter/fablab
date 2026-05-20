@@ -712,6 +712,7 @@ export const getWorkshopEvents = authQuery({
     const allMaterialIds = new Set<Id<"materials">>();
 
     interface EventTemplate {
+      sessionId: Id<"workshopSessions">;
       serviceId: Id<"services">;
       serviceName: string;
       serviceSlug: string;
@@ -736,6 +737,7 @@ export const getWorkshopEvents = authQuery({
 
       const key = `${session.serviceId}:${session.startTime}`;
       eventTemplates.push({
+        sessionId: session._id,
         serviceId: session.serviceId,
         serviceName: serviceInfo?.name ?? "Unknown Workshop",
         serviceSlug: serviceInfo?.slug ?? "",
@@ -856,6 +858,7 @@ export const getWorkshopEvents = authQuery({
         .filter((m): m is NonNullable<typeof m> => m !== undefined);
 
       return {
+        sessionId: t.sessionId,
         serviceId: t.serviceId,
         serviceName: t.serviceName,
         serviceSlug: t.serviceSlug,

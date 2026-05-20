@@ -24,7 +24,11 @@ const RESOURCE_TYPE_OPTIONS: Array<{
   label: string;
   desc: string;
 }> = [
-  { type: "machine", label: "Machine", desc: "3D printers, CNC, laser cutters" },
+  {
+    type: "machine",
+    label: "Machine",
+    desc: "3D printers, CNC, laser cutters",
+  },
   { type: "tool", label: "Tool", desc: "Power tools, hand tools, measurement" },
   { type: "room", label: "Room", desc: "Workshop areas, meeting rooms" },
   { type: "misc", label: "Misc", desc: "General items, consumables" },
@@ -47,7 +51,9 @@ export function InlineResourceSelect({
 }: InlineSelectProps) {
   const resources = useQuery(api.resource.query.getResources) ?? [];
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [resourceType, setResourceType] = useState<InventoryItemType | null>(null);
+  const [resourceType, setResourceType] = useState<InventoryItemType | null>(
+    null,
+  );
 
   const options = resources.map((r) => ({ label: r.name, value: r._id }));
 
@@ -147,10 +153,7 @@ export function InlineMaterialSelect({
           className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          <MaterialForm
-            mode="add"
-            onSuccess={() => setDialogOpen(false)}
-          />
+          <MaterialForm mode="add" onSuccess={() => setDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </>

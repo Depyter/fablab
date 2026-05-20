@@ -99,6 +99,7 @@ export function PresenceIndicator({
               )}
             >
               {picUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={picUrl}
                   alt={presence.userId}

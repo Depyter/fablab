@@ -17,7 +17,10 @@ import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { AddServiceFormValues } from "@/types/add-service";
 import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
-import { InlineResourceSelect, InlineMaterialSelect } from "@/components/services/forms/inline-resource-material-select";
+import {
+  InlineResourceSelect,
+  InlineMaterialSelect,
+} from "@/components/services/forms/inline-resource-material-select";
 
 const acceptedFileTypeOptions = Object.keys(FILE_CATEGORIES).map(
   (category) => ({
@@ -264,7 +267,6 @@ export function ServiceForm({
             />
           </div>
         </div>
-
       </main>
     </ServiceFormModeContext.Provider>
   );

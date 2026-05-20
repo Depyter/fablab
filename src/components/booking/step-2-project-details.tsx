@@ -13,13 +13,17 @@ import {
 } from "@/components/ui/select";
 import { RadioGroupChoiceCard } from "./select-option-form";
 import { DateTimePicker } from "@/components/booking/date-time-picker";
-import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
+
 import { FileUpload } from "@/components/file-upload";
 import { ChevronLeft } from "lucide-react";
 import type { AppFormApi } from "@/lib/form-context";
 import { toast } from "sonner";
 import posthog from "posthog-js";
-import { getLabTimeRangeTimestamps, getCurrentTimestamp } from "@/lib/lab-time";
+import {
+  getLabTimeRangeTimestamps,
+  getCurrentTimestamp,
+  formatLabCurrency,
+} from "@/lib/lab-time";
 import type { UploadedFile } from "../file-upload/types";
 import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -321,14 +325,10 @@ export function Step2ProjectDetails({
                 const isDefault = !pricing || pricing === "Default";
 
                 if (servicePricing.type === "WORKSHOP") {
-                  const variant =
-                    !isDefault
-                      ? servicePricing.variants?.find(
-                          (v) => v.name === pricing,
-                        )
-                      : undefined;
-                  const amount =
-                    variant?.amount ?? servicePricing.amount;
+                  const variant = !isDefault
+                    ? servicePricing.variants?.find((v) => v.name === pricing)
+                    : undefined;
+                  const amount = variant?.amount ?? servicePricing.amount;
 
                   return (
                     <div className="flex items-center justify-between rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
@@ -336,45 +336,34 @@ export function Step2ProjectDetails({
                         {isDefault ? "Default Price" : pricing}
                       </span>
                       <span className="text-sm font-black">
-                        ₱{amount.toLocaleString()}
+                        ₱{formatLabCurrency(amount)}
                       </span>
                     </div>
                   );
                 }
 
                 if (servicePricing.type === "FABRICATION") {
-                  const variant =
-                    !isDefault
-                      ? servicePricing.variants?.find(
-                          (v) => v.name === pricing,
-                        )
-                      : undefined;
-                  const setupFee =
-                    variant?.setupFee ?? servicePricing.setupFee;
-                  const timeRate =
-                    variant?.timeRate ?? servicePricing.timeRate;
+                  const variant = !isDefault
+                    ? servicePricing.variants?.find((v) => v.name === pricing)
+                    : undefined;
+                  const setupFee = variant?.setupFee ?? servicePricing.setupFee;
+                  const timeRate = variant?.timeRate ?? servicePricing.timeRate;
 
                   return (
                     <div className="rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
                       <div className="text-xs font-bold uppercase tracking-[0.2em]">
-                        {isDefault
-                          ? "Default Pricing"
-                          : pricing}
+                        {isDefault ? "Default Pricing" : pricing}
                       </div>
                       <div className="mt-1.5 flex items-center justify-between text-sm">
-                        <span className="font-medium">
-                          Setup Fee
-                        </span>
+                        <span className="font-medium">Setup Fee</span>
                         <span className="font-black">
-                          ₱{setupFee.toLocaleString()}
+                          ₱{formatLabCurrency(setupFee)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">
-                          Time Rate
-                        </span>
+                        <span className="font-medium">Time Rate</span>
                         <span className="font-black">
-                          ₱{timeRate.toLocaleString()}/
+                          ₱{formatLabCurrency(timeRate)}/
                           {servicePricing.unitName}
                         </span>
                       </div>

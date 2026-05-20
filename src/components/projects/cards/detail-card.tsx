@@ -19,7 +19,6 @@ interface DetailCardProps {
   onSave?: () => void;
   onCancel?: () => void;
   isSaving?: boolean;
-  penColor?: string;
 }
 
 export function DetailCard({
@@ -37,7 +36,6 @@ export function DetailCard({
   onSave,
   onCancel,
   isSaving,
-  penColor = "text-black/40",
 }: DetailCardProps) {
   const [collapsed, setCollapsed] = useState(false);
 

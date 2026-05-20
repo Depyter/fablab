@@ -476,8 +476,6 @@ describe("Service mutations and queries", () => {
     test("initializes workshop schedule slot usage to zero", async () => {
       const { t, tAera } = await setupUsers();
 
-      const scheduleDate = Date.UTC(2026, 5, 15);
-
       await tAera.mutation(api.services.mutate.addService, {
         name: "Intro to Laser Cutting",
         images: [],

@@ -42,6 +42,7 @@ interface ProjectDetailsContentProps {
 export function ProjectDetailsContent({
   project,
   timelineSteps,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onOpenAssignView: _onOpenAssignView,
   onUpdateStatus,
   onMarkPaid,

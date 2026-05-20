@@ -489,6 +489,7 @@ export function ChatInterface({
                           }}
                         >
                           {message.senderProfilePicUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={message.senderProfilePicUrl}
                               alt={message.sender}
