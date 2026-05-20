@@ -7,10 +7,7 @@ import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { useMutation, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  toMutationWorkshopSchedules,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import { type AddServiceFormValues } from "@/types/add-service";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
 import { ConvexError } from "convex/values";
@@ -95,7 +92,6 @@ export function EditWorkshopClient({
     resources: [],
     materials: [],
     availableDays: [],
-    schedules: service.serviceCategory.schedules,
   };
 
   const handleDeleteService = async () => {
@@ -125,7 +121,6 @@ export function EditWorkshopClient({
         description: value.description,
         serviceCategory: {
           type: "WORKSHOP",
-          schedules: toMutationWorkshopSchedules(value.schedules),
           amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
           variants:
             value.pricing.type === "FIXED" && value.pricing.variants.length > 0

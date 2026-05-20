@@ -36,6 +36,8 @@ import type * as resource_query from "../resource/query.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
 import type * as users from "../users.js";
+import type * as workshopSessions_mutate from "../workshopSessions/mutate.js";
+import type * as workshopSessions_query from "../workshopSessions/query.js";
 
 import type {
   ApiFromModules,
@@ -72,6 +74,8 @@ declare const fullApi: ApiFromModules<{
   "services/mutate": typeof services_mutate;
   "services/query": typeof services_query;
   users: typeof users;
+  "workshopSessions/mutate": typeof workshopSessions_mutate;
+  "workshopSessions/query": typeof workshopSessions_query;
 }>;
 
 /**

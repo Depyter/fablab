@@ -45,59 +45,70 @@ async function loadAvailableWorkshopSlots(
     return { services: [], resources: [] };
   }
 
-  const allServices = await ctx.db.query("services").collect();
+  // Load all workshop sessions in the calendar range
+  const allSessions = await ctx.db
+    .query("workshopSessions")
+    .withIndex("by_startTime", (q) => q.gte("startTime", range.startTime))
+    .collect();
+
+  // Filter to only future sessions within range
+  const now = Date.now();
+  const activeSessions = allSessions.filter(
+    (s) => s.startTime >= now && s.startTime < range.endTime,
+  );
+
+  // Batch-fetch service names
+  const uniqueServiceIds = [...new Set(activeSessions.map((s) => s.serviceId))];
+  const serviceDocs = await Promise.all(
+    uniqueServiceIds.map((id) => ctx.db.get(id)),
+  );
+  const serviceMap = new Map(
+    serviceDocs
+      .filter((d): d is NonNullable<typeof d> => d !== null)
+      .map((d) => [d._id, d]),
+  );
+
   const services: CalendarBookingItem[] = [];
   const resources: CalendarBookingItem[] = [];
 
-  for (const service of allServices) {
-    if (service.serviceCategory.type !== "WORKSHOP") continue;
+  for (const session of activeSessions) {
+    const service = serviceMap.get(session.serviceId);
+    if (!service) continue;
 
-    for (const schedule of service.serviceCategory.schedules) {
-      for (const timeSlot of schedule.timeSlots) {
-        if (
-          timeSlot.startTime < range.startTime ||
-          timeSlot.startTime >= range.endTime ||
-          timeSlot.startTime < Date.now()
-        ) {
-          continue;
-        }
+    const usedSlots = session.usedUpSlots;
+    const remainingSlots = session.maxSlots - usedSlots;
 
-        const usedSlots = timeSlot.usedUpSlots ?? 0;
-        const remainingSlots = timeSlot.maxSlots - usedSlots;
+    const label =
+      remainingSlots <= 0
+        ? "Full"
+        : `${remainingSlots} slot${remainingSlots > 1 ? "s" : ""} available`;
 
-        const label =
-          remainingSlots <= 0
-            ? "Full"
-            : `${remainingSlots} slot${remainingSlots > 1 ? "s" : ""} available`;
+    // Services tab: one placeholder per time slot
+    services.push({
+      _id: `available-ws-${session.serviceId}-${session.startTime}`,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      projectId: null,
+      projectAlias: service.name,
+      projectStatus: "approved",
+      clientName: label,
+      serviceId: session.serviceId,
+      resourceId: null,
+    });
 
-        // Services tab: one placeholder per time slot
-        services.push({
-          _id: `available-ws-${service._id}-${timeSlot.startTime}`,
-          startTime: timeSlot.startTime,
-          endTime: timeSlot.endTime,
-          projectId: null,
-          projectAlias: service.name,
-          projectStatus: "approved",
-          clientName: label,
-          serviceId: service._id,
-          resourceId: null,
-        });
-
-        // Resources tab: one placeholder per resource on the time slot
-        for (const resourceId of timeSlot.resources ?? []) {
-          resources.push({
-            _id: `available-ws-${service._id}-${resourceId}-${timeSlot.startTime}`,
-            startTime: timeSlot.startTime,
-            endTime: timeSlot.endTime,
-            projectId: null,
-            projectAlias: service.name,
-            projectStatus: "approved",
-            clientName: label,
-            serviceId: service._id,
-            resourceId,
-          });
-        }
-      }
+    // Resources tab: one placeholder per resource on the time slot
+    for (const resourceId of session.resources ?? []) {
+      resources.push({
+        _id: `available-ws-${session.serviceId}-${resourceId}-${session.startTime}`,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        projectId: null,
+        projectAlias: service.name,
+        projectStatus: "approved",
+        clientName: label,
+        serviceId: session.serviceId,
+        resourceId,
+      });
     }
   }
 

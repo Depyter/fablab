@@ -6,10 +6,7 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import {
-  toMutationWorkshopSchedules,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import type { AddServiceFormValues } from "@/types/add-service";
 import { toast } from "sonner";
 import { ServiceForm } from "@/components/services/forms/service-form";
 
@@ -26,7 +23,6 @@ const WORKSHOP_INITIAL_VALUES: AddServiceFormValues = {
   resources: [],
   materials: [],
   availableDays: [],
-  schedules: [],
 };
 
 export default function AddWorkshopPage() {
@@ -52,7 +48,6 @@ export default function AddWorkshopPage() {
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         serviceCategory: {
           type: "WORKSHOP",
-          schedules: toMutationWorkshopSchedules(value.schedules),
           amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
           variants:
             value.pricing.type === "FIXED" && value.pricing.variants.length > 0

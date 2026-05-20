@@ -46,12 +46,6 @@ describe("Type-aware project workflows", () => {
       serviceCategory: {
         type: "WORKSHOP",
         amount: 500,
-        schedules: [
-          {
-            date,
-            timeSlots: [{ startTime, endTime, maxSlots: 10 }],
-          },
-        ],
       },
       requirements: [],
       fileTypes: [],

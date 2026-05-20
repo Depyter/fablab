@@ -50,24 +50,6 @@ export default defineSchema({
     serviceCategory: v.union(
       v.object({
         type: v.literal("WORKSHOP"),
-        schedules: v.array(
-          v.object({
-            date: v.number(),
-            timeSlots: v.array(
-              v.object({
-                startTime: v.number(),
-                endTime: v.number(),
-                maxSlots: v.number(),
-                usedUpSlots: v.optional(v.number()),
-                // Resources this time slot consumes (rooms, machines)
-                resources: v.optional(v.array(v.id("resources"))),
-                // Materials available for participants to select
-                availableMaterials: v.optional(v.array(v.id("materials"))),
-              }),
-            ),
-          }),
-        ),
-        // Pricing: one-time flat payment
         amount: v.number(),
         variants: v.optional(
           v.array(v.object({ name: v.string(), amount: v.number() })),
@@ -269,6 +251,29 @@ export default defineSchema({
       searchField: "searchText",
       filterFields: ["status"],
     }),
+
+  // --------------------------------------------------------
+  // 6. WORKSHOP SESSIONS: Individual scheduled occurrences of a workshop service
+  // --------------------------------------------------------
+  workshopSessions: defineTable({
+    serviceId: v.id("services"),
+    date: v.number(),
+    startTime: v.number(),
+    endTime: v.number(),
+    maxSlots: v.number(),
+    usedUpSlots: v.number(),
+    resources: v.optional(v.array(v.id("resources"))),
+    availableMaterials: v.optional(v.array(v.id("materials"))),
+    status: v.union(
+      v.literal("active"),
+      v.literal("cancelled"),
+      v.literal("completed"),
+    ),
+  })
+    .index("by_serviceId", ["serviceId"])
+    .index("by_startTime", ["startTime"])
+    .index("by_serviceId_startTime", ["serviceId", "startTime"])
+    .index("by_status", ["status"]),
 
   receipts: defineTable({
     receiptString: v.string(),

@@ -8,7 +8,7 @@ import {
   deleteFiles,
   slugify,
 } from "../helper";
-import { formatLabDateNumeric } from "../../src/lib/lab-time";
+
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
 type ServicePatch = Partial<Omit<Doc<"services">, "_id" | "_creationTime">>;
@@ -66,21 +66,6 @@ export const addService = authMutation({
     serviceCategory: v.union(
       v.object({
         type: v.literal("WORKSHOP"),
-        schedules: v.array(
-          v.object({
-            date: v.number(),
-            timeSlots: v.array(
-              v.object({
-                startTime: v.number(),
-                endTime: v.number(),
-                maxSlots: v.number(),
-                usedUpSlots: v.optional(v.number()),
-                resources: v.optional(v.array(v.id("resources"))),
-                availableMaterials: v.optional(v.array(v.id("materials"))),
-              }),
-            ),
-          }),
-        ),
         amount: v.number(),
         variants: v.optional(
           v.array(v.object({ name: v.string(), amount: v.number() })),
@@ -128,14 +113,6 @@ export const addService = authMutation({
       args.serviceCategory.type === "FABRICATION"
         ? normalizeFabricationCategory(args.serviceCategory)
         : args.serviceCategory;
-    if (finalServiceCategory.type === "WORKSHOP") {
-      finalServiceCategory.schedules.forEach((schedule) => {
-        schedule.timeSlots.forEach((slot) => {
-          slot.usedUpSlots = 0;
-        });
-      });
-    }
-
     await ctx.db.insert("services", {
       name: args.name,
       slug: slugify(args.name),
@@ -163,21 +140,6 @@ export const updateService = authMutation({
       v.union(
         v.object({
           type: v.literal("WORKSHOP"),
-          schedules: v.array(
-            v.object({
-              date: v.number(),
-              timeSlots: v.array(
-                v.object({
-                  startTime: v.number(),
-                  endTime: v.number(),
-                  maxSlots: v.number(),
-                  usedUpSlots: v.optional(v.number()),
-                  resources: v.optional(v.array(v.id("resources"))),
-                  availableMaterials: v.optional(v.array(v.id("materials"))),
-                }),
-              ),
-            }),
-          ),
           amount: v.number(),
           variants: v.optional(
             v.array(v.object({ name: v.string(), amount: v.number() })),
@@ -278,46 +240,6 @@ export const updateService = authMutation({
           args.serviceCategory,
         );
       } else {
-        if (existingService.serviceCategory.type === "WORKSHOP") {
-          for (const incomingSchedule of args.serviceCategory.schedules) {
-            const existingSchedule =
-              existingService.serviceCategory.schedules.find(
-                (s) => s.date === incomingSchedule.date,
-              );
-            if (existingSchedule) {
-              for (const incomingSlot of incomingSchedule.timeSlots) {
-                const existingSlot = existingSchedule.timeSlots.find(
-                  (t) =>
-                    t.startTime === incomingSlot.startTime &&
-                    t.endTime === incomingSlot.endTime,
-                );
-                if (existingSlot) {
-                  const usedUp = existingSlot.usedUpSlots || 0;
-                  if (incomingSlot.maxSlots < usedUp) {
-                    throw new ConvexError(
-                      `Cannot reduce max slots below used up slots (${usedUp}) for schedule on ${formatLabDateNumeric(
-                        incomingSchedule.date,
-                      )}`,
-                    );
-                  }
-                  incomingSlot.usedUpSlots = usedUp;
-                } else {
-                  incomingSlot.usedUpSlots = 0;
-                }
-              }
-            } else {
-              for (const incomingSlot of incomingSchedule.timeSlots) {
-                incomingSlot.usedUpSlots = 0;
-              }
-            }
-          }
-        } else {
-          for (const incomingSchedule of args.serviceCategory.schedules) {
-            for (const incomingSlot of incomingSchedule.timeSlots) {
-              incomingSlot.usedUpSlots = 0;
-            }
-          }
-        }
         updates.serviceCategory = args.serviceCategory;
       }
     }
@@ -327,91 +249,6 @@ export const updateService = authMutation({
     if (args.resources !== undefined) updates.resources = args.resources;
 
     await ctx.db.patch(args.service, updates);
-  },
-});
-
-/**
- * Adds a single time slot to an existing workshop service schedule.
- * If a schedule for the given date already exists, the slot is appended;
- * otherwise a new schedule entry is created.
- */
-export const addWorkshopSlot = authMutation({
-  role: ["admin", "maker"],
-  args: {
-    serviceId: v.id("services"),
-    date: v.number(),
-    startTime: v.number(),
-    endTime: v.number(),
-    maxSlots: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const existingService = await ctx.db.get(args.serviceId);
-    if (!existingService) throw new ConvexError("Service not found.");
-
-    if (existingService.serviceCategory.type !== "WORKSHOP") {
-      throw new ConvexError("Can only add slots to WORKSHOP-type services.");
-    }
-
-    const existing = existingService.serviceCategory as {
-      type: "WORKSHOP";
-      schedules: Array<{
-        date: number;
-        timeSlots: Array<{
-          startTime: number;
-          endTime: number;
-          maxSlots: number;
-          usedUpSlots?: number;
-        }>;
-      }>;
-      amount: number;
-      variants?: Array<{ name: string; amount: number }>;
-    };
-
-    const scheduleIndex = existing.schedules.findIndex(
-      (s) => s.date === args.date,
-    );
-
-    if (scheduleIndex >= 0) {
-      // Append time slot to existing schedule
-      const updatedSchedules = [...existing.schedules];
-      updatedSchedules[scheduleIndex] = {
-        ...updatedSchedules[scheduleIndex],
-        timeSlots: [
-          ...updatedSchedules[scheduleIndex].timeSlots,
-          {
-            startTime: args.startTime,
-            endTime: args.endTime,
-            maxSlots: args.maxSlots,
-            usedUpSlots: 0,
-          },
-        ],
-      };
-
-      await ctx.db.patch(args.serviceId, {
-        serviceCategory: { ...existing, schedules: updatedSchedules },
-      });
-    } else {
-      // Create new schedule entry
-      await ctx.db.patch(args.serviceId, {
-        serviceCategory: {
-          ...existing,
-          schedules: [
-            ...existing.schedules,
-            {
-              date: args.date,
-              timeSlots: [
-                {
-                  startTime: args.startTime,
-                  endTime: args.endTime,
-                  maxSlots: args.maxSlots,
-                  usedUpSlots: 0,
-                },
-              ],
-            },
-          ],
-        },
-      });
-    }
   },
 });
 

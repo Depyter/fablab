@@ -11,7 +11,6 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
-import { WorkshopScheduleForm } from "@/components/services/forms/workshop-schedule-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
 import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
@@ -166,7 +165,6 @@ export function ServiceForm({
           {/* Left Content */}
           <div className="lg:col-span-5 space-y-5">
             <GeneralInfoForm form={form} />
-            {mode !== "FABRICATION" && <WorkshopScheduleForm form={form} />}
             <PricingForm form={form} />
             <RequirementsForm form={form} />
 
