@@ -225,20 +225,10 @@ function WorkshopCard({
   readOnly?: boolean;
   onAddSession: (serviceId: string) => void;
 }) {
-  const upcomingSessions = useMemo(
-    () => sessions.filter((s) => s.status !== "cancelled").slice(0, 2),
-    [sessions],
-  );
-
-  const now = Date.now();
-  const { upcomingCount, totalCount } = useMemo(() => {
-    return {
-      upcomingCount: sessions.filter(
-        (s) => s.status !== "cancelled" && s.date >= now,
-      ).length,
-      totalCount: sessions.length,
-    };
-  }, [sessions, now]);
+  const activeSessions = sessions.filter((s) => s.status !== "cancelled");
+  const upcomingSessions = activeSessions.slice(0, 2);
+  const upcomingCount = activeSessions.length;
+  const totalCount = sessions.length;
 
   return (
     <BrandCard className="flex flex-col">

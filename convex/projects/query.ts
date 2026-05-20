@@ -686,7 +686,9 @@ export const getWorkshopEvents = authQuery({
     // Also filter by serviceId / startTime on the project side
     let filteredProjects = allProjects;
     if (args.serviceId) {
-      filteredProjects = filteredProjects.filter((p) => p.service === args.serviceId);
+      filteredProjects = filteredProjects.filter(
+        (p) => p.service === args.serviceId,
+      );
     }
     if (args.startTime) {
       filteredProjects = filteredProjects.filter(

@@ -19,8 +19,16 @@ import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { AddServiceFormValues } from "@/types/add-service";
 import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InventoryItemForm, type InventoryItemType } from "@/components/inventory/forms/inventory-item-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InventoryItemForm,
+  type InventoryItemType,
+} from "@/components/inventory/forms/inventory-item-form";
 import { MaterialForm } from "@/components/inventory/forms/material-form";
 
 const acceptedFileTypeOptions = Object.keys(FILE_CATEGORIES).map(
@@ -75,7 +83,8 @@ export function ServiceForm({
 
   // Inline add-new dialogs for resources and materials
   const [addResourceOpen, setAddResourceOpen] = useState(false);
-  const [addResourceType, setAddResourceType] = useState<InventoryItemType | null>(null);
+  const [addResourceType, setAddResourceType] =
+    useState<InventoryItemType | null>(null);
   const [addMaterialOpen, setAddMaterialOpen] = useState(false);
 
   const resourcesQuery = useQuery(api.resource.query.getResources) || [];
@@ -318,11 +327,31 @@ export function ServiceForm({
                 <div className="grid grid-cols-2 gap-3">
                   {(
                     [
-                      { type: "machine" as const, label: "Machine", desc: "3D printers, CNC, laser cutters" },
-                      { type: "tool" as const, label: "Tool", desc: "Power tools, hand tools, measurement" },
-                      { type: "room" as const, label: "Room", desc: "Workshop areas, meeting rooms" },
-                      { type: "misc" as const, label: "Misc", desc: "General items, consumables" },
-                    ] satisfies Array<{ type: InventoryItemType; label: string; desc: string }>
+                      {
+                        type: "machine" as const,
+                        label: "Machine",
+                        desc: "3D printers, CNC, laser cutters",
+                      },
+                      {
+                        type: "tool" as const,
+                        label: "Tool",
+                        desc: "Power tools, hand tools, measurement",
+                      },
+                      {
+                        type: "room" as const,
+                        label: "Room",
+                        desc: "Workshop areas, meeting rooms",
+                      },
+                      {
+                        type: "misc" as const,
+                        label: "Misc",
+                        desc: "General items, consumables",
+                      },
+                    ] satisfies Array<{
+                      type: InventoryItemType;
+                      label: string;
+                      desc: string;
+                    }>
                   ).map((opt) => (
                     <button
                       key={opt.type}
@@ -355,10 +384,7 @@ export function ServiceForm({
         </Dialog>
 
         {/* ── Add Material Dialog ──────────────────────────────────────── */}
-        <Dialog
-          open={addMaterialOpen}
-          onOpenChange={setAddMaterialOpen}
-        >
+        <Dialog open={addMaterialOpen} onOpenChange={setAddMaterialOpen}>
           <DialogContent
             className="sm:max-w-sm lg:max-w-3xl rounded-xl p-0 overflow-hidden"
             showCloseButton={false}

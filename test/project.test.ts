@@ -810,7 +810,6 @@ describe("Project and Chat functionality", () => {
         expect(project!.totalInvoice).toBeUndefined();
         expect(project!.pricingSnapshot).toBeUndefined();
         expect(usage).toBeNull();
-
       });
     });
 

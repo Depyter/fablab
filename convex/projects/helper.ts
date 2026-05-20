@@ -401,7 +401,11 @@ export async function createWorkshopUsage(
       )
       .filter((q) => q.eq(q.field("date"), booking.date))
       .first();
-    if (session && session.maxSlots > 0 && session.usedUpSlots >= session.maxSlots) {
+    if (
+      session &&
+      session.maxSlots > 0 &&
+      session.usedUpSlots >= session.maxSlots
+    ) {
       throw new ConvexError("This workshop timeslot is fully booked.");
     }
   }
@@ -494,7 +498,9 @@ export async function decrementWorkshopSlot(
     .withIndex("by_serviceId_startTime", (q) =>
       q.eq("serviceId", service._id).eq("startTime", usage.startTime),
     )
-    .filter((q) => q.eq(q.field("date"), getLabDayStartTimestamp(usage.startTime)))
+    .filter((q) =>
+      q.eq(q.field("date"), getLabDayStartTimestamp(usage.startTime)),
+    )
     .first();
   if (session && session.usedUpSlots > 0) {
     await ctx.db.patch(session._id, { usedUpSlots: session.usedUpSlots - 1 });
@@ -829,9 +835,16 @@ export async function applyStatusChange(
       const session = await ctx.db
         .query("workshopSessions")
         .withIndex("by_serviceId_startTime", (q) =>
-          q.eq("serviceId", project.service).eq("startTime", project.bookingStartTime!),
+          q
+            .eq("serviceId", project.service)
+            .eq("startTime", project.bookingStartTime!),
         )
-        .filter((q) => q.eq(q.field("date"), getLabDayStartTimestamp(project.bookingStartTime!)))
+        .filter((q) =>
+          q.eq(
+            q.field("date"),
+            getLabDayStartTimestamp(project.bookingStartTime!),
+          ),
+        )
         .first();
 
       if (

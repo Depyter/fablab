@@ -232,7 +232,8 @@ export function ServiceDetailClient({
               )}
 
               {service.serviceCategory.type === "WORKSHOP" &&
-                groupedSchedules && groupedSchedules.length > 0 && (
+                groupedSchedules &&
+                groupedSchedules.length > 0 && (
                   <div>
                     <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] text-foreground/50">
                       Available Sessions

@@ -58,8 +58,9 @@ export function MultipleSelectForm({
     else setLocalValues(newValues);
   };
 
-  const resourceLabel =
-    title.toLowerCase().includes("material") ? "material" : "resource";
+  const resourceLabel = title.toLowerCase().includes("material")
+    ? "material"
+    : "resource";
 
   return (
     <div className="w-full sm:max-w-3xl">
@@ -76,9 +77,7 @@ export function MultipleSelectForm({
 
               {/* CRUCIAL: Hidden input ensures this value is included in the parent form's submission.
                   if used without react-form field binding. */}
-              {!value && (
-                <input type="hidden" name={fieldName} value={val} />
-              )}
+              {!value && <input type="hidden" name={fieldName} value={val} />}
 
               <button type="button" onClick={() => removeItem(index)}>
                 <XIcon className="h-4 w-4 text-gray-500" />

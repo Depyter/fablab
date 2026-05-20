@@ -9,7 +9,6 @@ import {
   slugify,
 } from "../helper";
 
-
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
 type ServicePatch = Partial<Omit<Doc<"services">, "_id" | "_creationTime">>;
 
