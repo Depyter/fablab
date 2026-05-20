@@ -16,5 +16,5 @@ export function usePostHogIdentify(profile: Profile | null | undefined) {
       email: profile.email,
       role: profile.role,
     });
-  }, [profile?._id]);
+  }, [profile]);
 }

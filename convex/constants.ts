@@ -257,9 +257,9 @@ export type UserRoleType = (typeof UserRole)[keyof typeof UserRole];
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatusType, string> = {
   pending: "Review",
-  approved: "Fabrication",
-  completed: "Payment",
-  paid: "Claim",
+  approved: "Approved",
+  completed: "Completed",
+  paid: "Paid",
   claimed: "Claimed",
   rejected: "Rejected",
   cancelled: "Cancelled",
@@ -271,24 +271,3 @@ export const PROJECT_ARCHIVE_STATUSES: readonly ProjectStatusType[] = [
   ProjectStatus.REJECTED,
   ProjectStatus.CLAIMED,
 ] as const;
-
-export const PROJECT_STATUS_TRANSITIONS: Record<
-  ProjectStatusType,
-  readonly ProjectStatusType[]
-> = {
-  pending: [
-    ProjectStatus.APPROVED,
-    ProjectStatus.REJECTED,
-    ProjectStatus.CANCELLED,
-  ],
-  approved: [
-    ProjectStatus.PENDING,
-    ProjectStatus.COMPLETED,
-    ProjectStatus.CANCELLED,
-  ],
-  completed: [ProjectStatus.APPROVED, ProjectStatus.PAID],
-  paid: [ProjectStatus.COMPLETED, ProjectStatus.CLAIMED],
-  claimed: [ProjectStatus.PAID],
-  rejected: [ProjectStatus.PENDING],
-  cancelled: [ProjectStatus.PENDING],
-};

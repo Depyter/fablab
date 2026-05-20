@@ -111,14 +111,16 @@ export function InventoryItemForm({
   const handleThumbnailUploading = (isUploading: boolean) =>
     setThumbnailUploading(isUploading);
 
+  const defaultValues: InventoryItemFormValues = {
+    name: initialValues?.name ?? "",
+    description: initialValues?.description ?? "",
+    type: initialValues?.type ?? config.typeOptions[0].value,
+    status: initialValues?.status ?? ResourceStatus.AVAILABLE,
+    thumbnail: initialValues?.thumbnail ?? [],
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      name: initialValues?.name ?? "",
-      description: initialValues?.description ?? "",
-      type: initialValues?.type ?? config.typeOptions[0].value,
-      status: initialValues?.status ?? ResourceStatus.AVAILABLE,
-      thumbnail: initialValues?.thumbnail ?? ([] as string[]),
-    } as InventoryItemFormValues,
+    defaultValues,
     onSubmit: async ({ value }) => {
       const actionPromise = isEdit
         ? updateResource({

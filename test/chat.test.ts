@@ -1,20 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { api, internal } from "../convex/_generated/api";
+import { api } from "../convex/_generated/api";
 import { setupUsers } from "./helper";
 
 describe("Room membership authorization", () => {
-  test("only admins can add and remove people in a room", async () => {
-    const { t, tAera: tAdmin, tHarley: tClient } = await setupUsers();
+  test("admins and makers can add and remove members; clients cannot", async () => {
+    const { t, tAera: tAdmin, tHarley: tClient, tMaker } = await setupUsers();
 
-    // Create a Maker
-    await tAdmin.mutation(internal.users.createMaker, {
-      userId: "3",
-      email: "maker@example.com",
-      name: "Maker",
-    });
-    const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
+    // Maker already created by setupUsers() — use the returned identity
 
     // Get profile IDs directly from DB to avoid BetterAuth component calls in getUserProfile
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const adminProfile = await t.run(async (ctx) =>
       ctx.db
         .query("userProfile")
@@ -125,16 +120,22 @@ describe("Room membership authorization", () => {
       "Unauthorized: You do not have the correct permissions to mutate.",
     );
 
-    // 5. Test Maker status (Currently the code allows Makers, let's confirm this)
-    // If the requirement is ONLY admins, we might need to change the code later.
-    // For now, let's see what happens. I'll expect failure for maker to confirm if I need to change code.
-    await expect(
-      tMaker.mutation(api.chat.mutate.addNewMember, {
-        roomId,
-        userId: makerProfile!._id,
-      }),
-    ).rejects.toThrow(
-      "Unauthorized: You do not have the correct permissions to mutate.",
-    );
+    // 5. Test Maker CAN add members (makers have implicit access to all rooms)
+    await tMaker.mutation(api.chat.mutate.addNewMember, {
+      roomId,
+      userId: makerProfile!._id,
+    });
+
+    // Verify Maker was added
+    const isMakerAdded = await t.run(async (ctx) => {
+      const member = await ctx.db
+        .query("roomMembers")
+        .withIndex("by_roomId_participantId", (q) =>
+          q.eq("roomId", roomId).eq("participantId", makerProfile!._id),
+        )
+        .first();
+      return !!member;
+    });
+    expect(isMakerAdded).toBe(true);
   });
 });

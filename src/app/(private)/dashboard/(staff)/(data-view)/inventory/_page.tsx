@@ -1,63 +1,25 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ViewHeaderMain } from "@/components/ui/view-header";
+import { SelectItem } from "@/components/ui/select";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import {
   getSearchParam,
   useDataViewRouteState,
 } from "@/components/manage/data-view-route-state";
 import {
-  DataViewFilterField,
-  DataViewFilterPanel,
-  DataViewSearchField,
-} from "@/components/manage/data-view-toolbar";
+  BrandSelect,
+  BrandFilterPanel,
+  BrandButton,
+  BrandSearchField,
+} from "@/components/brand/primitives";
 import { InventoryClient } from "./_client";
-
-function InventoryFilterControls() {
-  const { searchParams, replaceParams } = useDataViewRouteState();
-  const sort = getSearchParam(searchParams, "sort", "name-az");
-  const activeFilterCount = [sort !== "name-az"].filter(Boolean).length;
-
-  return (
-    <DataViewFilterPanel
-      activeCount={activeFilterCount}
-      title="Inventory filters"
-      onClear={() => replaceParams({ sort: null })}
-    >
-      <DataViewFilterField label="Sort">
-        <Select
-          value={sort}
-          onValueChange={(value) =>
-            replaceParams({ sort: value === "name-az" ? null : value })
-          }
-        >
-          <SelectTrigger className="h-9 w-full bg-background text-sm shadow-none">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name-az">Name A → Z</SelectItem>
-            <SelectItem value="status">Status</SelectItem>
-          </SelectContent>
-        </Select>
-      </DataViewFilterField>
-    </DataViewFilterPanel>
-  );
-}
 
 function InventoryAddButton() {
   const { replaceParams } = useDataViewRouteState();
@@ -65,25 +27,42 @@ function InventoryAddButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" className="h-8 shrink-0 gap-1">
+        <BrandButton className="bg-fab-magenta text-white">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Add Item</span>
-        </Button>
+          <ChevronDown className="size-3" strokeWidth={4} />
+        </BrandButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => replaceParams({ dialog: "machine" })}>
+      <DropdownMenuContent
+        align="end"
+        className="border-2 border-black shadow-[4px_4px_0_0_#000]"
+      >
+        <DropdownMenuItem
+          className="text-[10px] font-black uppercase tracking-wider"
+          onSelect={() => replaceParams({ dialog: "machine" })}
+        >
           Add Machine
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => replaceParams({ dialog: "tool" })}>
+        <DropdownMenuItem
+          className="text-[10px] font-black uppercase tracking-wider"
+          onSelect={() => replaceParams({ dialog: "tool" })}
+        >
           Add Tool
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => replaceParams({ dialog: "room" })}>
+        <DropdownMenuItem
+          className="text-[10px] font-black uppercase tracking-wider"
+          onSelect={() => replaceParams({ dialog: "room" })}
+        >
           Add Room
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => replaceParams({ dialog: "misc" })}>
+        <DropdownMenuItem
+          className="text-[10px] font-black uppercase tracking-wider"
+          onSelect={() => replaceParams({ dialog: "misc" })}
+        >
           Add Misc Item
         </DropdownMenuItem>
         <DropdownMenuItem
+          className="text-[10px] font-black uppercase tracking-wider"
           onSelect={() => replaceParams({ dialog: "material" })}
         >
           Add Material
@@ -95,25 +74,37 @@ function InventoryAddButton() {
 
 function InventoryPageHeader() {
   const { pathname, searchParams, replaceParams } = useDataViewRouteState();
+  const sort = getSearchParam(searchParams, "sort", "name-az");
   const search = getSearchParam(searchParams, "search");
+  const activeFilterCount = [sort !== "name-az"].filter(Boolean).length;
 
   return (
-    <DataViewPageHeader>
-      <ViewHeaderMain>
-        <DataViewSearchField
-          key={`${pathname}:${search}`}
-          search={search}
-          onSearchChange={(value) =>
-            replaceParams({ search: value ? value : null })
+    <DataViewPageHeader hideBorder>
+      <BrandSearchField
+        value={search}
+        onChange={(value) => replaceParams({ search: value ? value : null })}
+        placeholder="Search inventory…"
+        remountKey={`${pathname}:${search}`}
+      />
+
+      <BrandFilterPanel
+        title="Inventory filters"
+        activeCount={activeFilterCount}
+        onClear={() => replaceParams({ sort: null })}
+      >
+        <BrandSelect
+          value={sort}
+          onValueChange={(value) =>
+            replaceParams({ sort: value === "name-az" ? null : value })
           }
-          placeholder="Search inventory…"
-          className="max-w-sm"
-        />
-        <div className="flex shrink-0 items-center gap-2">
-          <InventoryFilterControls />
-          <InventoryAddButton />
-        </div>
-      </ViewHeaderMain>
+          placeholder="Sort"
+        >
+          <SelectItem value="name-az">Name A → Z</SelectItem>
+          <SelectItem value="status">Status</SelectItem>
+        </BrandSelect>
+      </BrandFilterPanel>
+
+      <InventoryAddButton />
     </DataViewPageHeader>
   );
 }

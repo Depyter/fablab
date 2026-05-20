@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  Loader2,
-  Send,
-  User,
-  Hash,
-  ArrowLeft,
-  Calendar,
-  Clock,
-} from "lucide-react";
+import { Loader2, Send, User, Hash, ArrowLeft, Clock } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
@@ -18,9 +10,10 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SystemMessageCard } from "./parts/system-message-card";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatLabDate } from "@/lib/lab-time";
-import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import { getStatusLabel } from "@/lib/project-type-meta";
 import { FileUpload } from "@/components/file-upload";
 import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
 import { useChat } from "./use-chat";
@@ -32,7 +25,6 @@ import { ChatInterfaceProps, MessageFile } from "./types";
 import { ChatMessagesSkeletonList } from "./chat-loading";
 import Image from "next/image";
 import posthog from "posthog-js";
-import { FieldSeparator } from "../ui/field";
 
 const AVATAR_COLORS = [
   "var(--fab-magenta)",
@@ -89,9 +81,10 @@ function ArchivalBanner({ threadId }: { threadId: Id<"threads"> }) {
 
   if (!info) return null;
 
-  const statusLabel =
-    PROJECT_STATUS_LABELS[info.status as keyof typeof PROJECT_STATUS_LABELS] ??
-    info.status;
+  const statusLabel = getStatusLabel(
+    info.status as Parameters<typeof getStatusLabel>[0],
+    info.type,
+  );
 
   const deadlineDate =
     info.archivalDeadline !== null
@@ -276,7 +269,6 @@ export function ChatInterface({
               const isCurrentUser = message.sender === currentUserName;
 
               const prevMessage = messages[index - 1];
-              const nextMessage = messages[index + 1];
               const showSeparator =
                 prevMessage &&
                 message._creationTime - prevMessage._creationTime >
@@ -286,12 +278,6 @@ export function ChatInterface({
                 !prevMessage ||
                 prevMessage.sender !== message.sender ||
                 message._creationTime - prevMessage._creationTime >
-                  5 * 60 * 1000;
-
-              const isLastInGroup =
-                !nextMessage ||
-                nextMessage.sender !== message.sender ||
-                nextMessage._creationTime - message._creationTime >
                   5 * 60 * 1000;
 
               const messageFiles: MessageFile[] =
@@ -426,168 +412,17 @@ export function ChatInterface({
                               showTimeId === message._id ? null : message._id,
                             )
                           }
-                          className="rounded-2xl bg-(--fab-bg-main) px-4 py-3 text-sm leading-relaxed cursor-pointer"
+                          className="rounded-2xl px-3 py-2 text-sm leading-relaxed cursor-pointer"
                           style={{
-                            color: "var(--fab-text-primary)",
+                            color: "var(--fab-text-muted)",
                             fontFamily: "var(--font-body)",
+                            background: "var(--fab-chat-system-bg)",
                           }}
                         >
-                          {message.content &&
-                          typeof message.content === "string" &&
-                          message.content.startsWith("New project created:") ? (
-                            (() => {
-                              const lines = message.content
-                                .split("\n")
-                                .map((l) => l.trim());
-                              const data: Record<string, string> = {};
-                              // First line: New project created: {name}
-                              const first = lines[0] || "";
-                              const m = first.match(
-                                /^New project created:\s*(.*)$/i,
-                              );
-                              if (m) data.title = m[1];
-                              for (let i = 1; i < lines.length; i++) {
-                                const line = lines[i];
-                                if (!line) continue;
-                                const parts = line.split(":");
-                                if (parts.length >= 2) {
-                                  const key = parts[0].trim();
-                                  const val = parts.slice(1).join(":").trim();
-                                  data[key] = val;
-                                }
-                              }
-
-                              const booking = data["Booking"] || "";
-
-                              return (
-                                <div className="flex gap-3 items-start">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex flex-col items-start">
-                                      <div className="flex flex-row items-center gap-2">
-                                        <div
-                                          className="text-sm font-bold text-[15px]"
-                                          style={{
-                                            color: "var(--fab-text-primary)",
-                                          }}
-                                        >
-                                          {data.title || data["Service"]}
-                                        </div>
-                                        <p>•</p>
-                                        {data["Service"] && (
-                                          <div className="text-[15px] text-muted-foreground truncate">
-                                            {data["Service"]}
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-row gap-1 items-center text-right mt-1">
-                                        <Calendar className="inline-block h-3.5 w-3.5 mr-1 opacity-80" />
-                                        <div className="text-xs text-muted-foreground">
-                                          {booking}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <FieldSeparator className="mt-1" />
-
-                                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                                      {data["Type"] && (
-                                        <div>
-                                          <p
-                                            className="text-[11px] opacity-50 uppercase"
-                                            style={{
-                                              color: "var(--fab-text-primary)",
-                                            }}
-                                          >
-                                            Type
-                                          </p>{" "}
-                                          <strong className="">
-                                            {data["Type"]}
-                                          </strong>
-                                        </div>
-                                      )}
-                                      {data["Fulfillment"] && (
-                                        <div>
-                                          <p
-                                            className="text-[11px] opacity-50 uppercase"
-                                            style={{
-                                              color: "var(--fab-text-primary)",
-                                            }}
-                                          >
-                                            Fulfillment
-                                          </p>{" "}
-                                          <strong className=" uppercase">
-                                            {data["Fulfillment"]}
-                                          </strong>
-                                        </div>
-                                      )}
-                                      {data["Material"] && (
-                                        <div>
-                                          <p
-                                            className="text-[11px] opacity-50 uppercase"
-                                            style={{
-                                              color: "var(--fab-text-primary)",
-                                            }}
-                                          >
-                                            Material
-                                          </p>{" "}
-                                          <strong className=" uppercase">
-                                            {data["Material"]}
-                                          </strong>
-                                        </div>
-                                      )}
-                                      {data["Pricing"] && (
-                                        <div>
-                                          <p
-                                            className="text-[11px] opacity-50 uppercase"
-                                            style={{
-                                              color: "var(--fab-text-primary)",
-                                            }}
-                                          >
-                                            Pricing
-                                          </p>{" "}
-                                          <strong className=" uppercase">
-                                            {data["Pricing"]}
-                                          </strong>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {data["Description"] && (
-                                      <p className="mt-3 text-sm text-muted-foreground truncate">
-                                        {data["Description"]}
-                                      </p>
-                                    )}
-
-                                    {messageFiles.length > 0 && (
-                                      <div
-                                        className={cn(
-                                          message.content ? "mt-2" : "",
-                                        )}
-                                      >
-                                        <MessageAttachments
-                                          files={messageFiles}
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            <>
-                              <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
-                                <ReactMarkdown>{message.content}</ReactMarkdown>
-                              </div>
-
-                              {messageFiles.length > 0 && (
-                                <div
-                                  className={cn(message.content ? "mt-2" : "")}
-                                >
-                                  <MessageAttachments files={messageFiles} />
-                                </div>
-                              )}
-                            </>
-                          )}
+                          <SystemMessageCard
+                            content={message.content}
+                            files={messageFiles}
+                          />
                         </div>
 
                         {showTimeId === message._id && (

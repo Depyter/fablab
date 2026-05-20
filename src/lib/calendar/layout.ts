@@ -7,8 +7,7 @@ import type {
   CalendarMachineUsage,
 } from "./types";
 
-export const CALENDAR_DAY_ROW_HEIGHT = 40;
-export const CALENDAR_DAY_WORKSHOP_ROW_HEIGHT = 104;
+export const CALENDAR_DAY_ROW_HEIGHT = 56;
 export const CALENDAR_DAY_SECTION_HEIGHT = 26;
 export const CALENDAR_DAY_HEADER_HEIGHT = 44;
 export const CALENDAR_DAY_LEADING_COL_WIDTH = 160;
@@ -17,7 +16,7 @@ export const CALENDAR_DAY_TIMELINE_MIN_WIDTH =
   HEADER_SLOTS.length * CALENDAR_DAY_SLOT_WIDTH;
 export const CALENDAR_DAY_MIN_WIDTH =
   CALENDAR_DAY_LEADING_COL_WIDTH + CALENDAR_DAY_TIMELINE_MIN_WIDTH;
-export const CALENDAR_DAY_LAYOUT_TEMPLATE = `minmax(${CALENDAR_DAY_LEADING_COL_WIDTH}px, 3fr) minmax(${CALENDAR_DAY_TIMELINE_MIN_WIDTH}px, ${HEADER_SLOTS.length}fr)`;
+export const CALENDAR_DAY_LAYOUT_TEMPLATE = `${CALENDAR_DAY_LEADING_COL_WIDTH}px minmax(${CALENDAR_DAY_TIMELINE_MIN_WIDTH}px, 1fr)`;
 export const CALENDAR_DAY_TIMELINE_TEMPLATE = `repeat(${HEADER_SLOTS.length}, minmax(${CALENDAR_DAY_SLOT_WIDTH}px, 1fr))`;
 
 export const CALENDAR_WEEK_TIME_COL_WIDTH = 72;
@@ -57,6 +56,8 @@ export interface CalendarWorkshopSlotCluster {
   endTime: number;
   bookingCount: number;
   pendingCount: number;
+  /** Human-readable label like "2 slots available", or null if fully booked. */
+  availableLabel: string | null;
   members: CalendarMachineUsage[];
 }
 
@@ -121,9 +122,20 @@ function getWorkshopMemberSortValue(
 }
 
 function buildWorkshopSlotClusters(usages: CalendarMachineUsage[]) {
+  // Separate available-slot placeholders (projectId === null) from real
+  // project usages. At most one placeholder exists per (machineId, startTime,
+  // endTime) – it carries the availability label.
+  const availabilityMap = new Map<string, string | null>();
+  const projectUsages = usages.filter((u) => {
+    if (u.projectId !== null) return true;
+    const key = `${u.machineId}:${u.startTime}:${u.endTime}`;
+    availabilityMap.set(key, u.clientName);
+    return false;
+  });
+
   const clusters = new Map<string, CalendarMachineUsage[]>();
 
-  for (const usage of usages) {
+  for (const usage of projectUsages) {
     const key = `${usage.machineId}:${usage.startTime}:${usage.endTime}`;
     const existing = clusters.get(key);
 
@@ -134,8 +146,17 @@ function buildWorkshopSlotClusters(usages: CalendarMachineUsage[]) {
     }
   }
 
-  return Array.from(clusters.entries())
-    .map(([key, members]) => {
+  // Collect slot keys from both sides so empty slots still produce a cluster
+  const allKeys = new Set([...clusters.keys(), ...availabilityMap.keys()]);
+
+  return Array.from(allKeys)
+    .map((key) => {
+      const members = clusters.get(key) ?? [];
+      const [machineId, startTimeStr, endTimeStr] = key.split(":");
+      const startTime = Number(startTimeStr);
+      const endTime = Number(endTimeStr);
+      const availableLabel = availabilityMap.get(key) ?? null;
+
       const sortedMembers = [...members].sort(
         (left, right) =>
           getWorkshopMemberSortValue(left.projectStatus) -
@@ -147,12 +168,13 @@ function buildWorkshopSlotClusters(usages: CalendarMachineUsage[]) {
       return {
         id: `workshop-${key}`,
         kind: "workshop" as const,
-        machineId: members[0]!.machineId,
-        startTime: members[0]!.startTime,
-        endTime: members[0]!.endTime,
+        machineId,
+        startTime,
+        endTime,
         bookingCount: sortedMembers.length,
         pendingCount: sortedMembers.filter((member) => member.isPendingReview)
           .length,
+        availableLabel,
         members: sortedMembers,
       };
     })
@@ -170,13 +192,34 @@ function buildDayTrackEntries(
     return buildWorkshopSlotClusters(usages);
   }
 
-  return usages.map((usage) => ({
-    id: usage.id,
-    kind: "booking",
-    usage,
-    startTime: usage.startTime,
-    endTime: usage.endTime,
-  }));
+  // For non-workshop machines (e.g. resources), route workshop entries
+  // through the same clustering so they render as WorkshopSlotCard,
+  // matching the services-tab pattern for generic workshop slots.
+  const workshopUsages = usages.filter(
+    (u) => u.serviceCategoryType === "WORKSHOP",
+  );
+  const regularUsages = usages.filter(
+    (u) => u.serviceCategoryType !== "WORKSHOP",
+  );
+
+  const entries: CalendarDayTrackEntry[] = [];
+
+  if (workshopUsages.length > 0) {
+    const clusters = buildWorkshopSlotClusters(workshopUsages);
+    entries.push(...clusters);
+  }
+
+  for (const usage of regularUsages) {
+    entries.push({
+      id: usage.id,
+      kind: "booking",
+      usage,
+      startTime: usage.startTime,
+      endTime: usage.endTime,
+    });
+  }
+
+  return entries;
 }
 
 export function packCalendarTracks<T>(
@@ -275,6 +318,8 @@ export function buildCalendarDayScheduleRows(args: {
   const usagesByMachine = groupCalendarUsagesByMachine(args.usages);
 
   for (const section of sections) {
+    const sectionStartIndex = rows.length;
+
     if (section.label) {
       rows.push({
         id: `section-${section.label}`,
@@ -283,6 +328,8 @@ export function buildCalendarDayScheduleRows(args: {
         rowHeight: CALENDAR_DAY_SECTION_HEIGHT,
       });
     }
+
+    let sectionHasRows = false;
 
     for (const machine of section.machines) {
       const machineUsages = usagesByMachine.get(machine.id) ?? [];
@@ -296,10 +343,18 @@ export function buildCalendarDayScheduleRows(args: {
         startTime: entry.startTime,
         endTime: entry.endTime,
       }));
-      const rowHeight =
-        machine.serviceCategoryType === "WORKSHOP"
-          ? CALENDAR_DAY_WORKSHOP_ROW_HEIGHT
-          : CALENDAR_DAY_ROW_HEIGHT;
+      const rowHeight = CALENDAR_DAY_ROW_HEIGHT;
+
+      // Skip workshop machines with neither project bookings nor
+      // available-slot entries — nothing to show on that day.
+      if (
+        machine.serviceCategoryType === "WORKSHOP" &&
+        packedEntries.length === 0
+      ) {
+        continue;
+      }
+
+      sectionHasRows = true;
 
       if (packedEntries.length === 0) {
         rows.push({
@@ -339,6 +394,11 @@ export function buildCalendarDayScheduleRows(args: {
           rowHeight,
         });
       }
+    }
+
+    // Remove the section header when none of its machines produced rows
+    if (!sectionHasRows && section.label) {
+      rows.splice(sectionStartIndex, 1);
     }
   }
 

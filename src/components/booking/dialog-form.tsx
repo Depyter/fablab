@@ -1,14 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ActionDialog } from "@/components/action-dialog";
 import { useState, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { EstimateProjectDetails, BookingFormValues } from "./estimate-dialog";
+import { EstimateProjectDetails } from "./estimate-dialog";
 import { Step1ServiceType } from "./step-1-service-type";
-import { Step2ProjectDetails } from "./step-2-project-details";
+import {
+  Step2ProjectDetails,
+  type BookingDetailsFormValues,
+} from "./step-2-project-details";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { useStore } from "@tanstack/react-form";
-import { UploadedFile } from "../file-upload/types";
 import { useMutation, useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
@@ -54,17 +57,6 @@ interface BookingDialog {
 
 type Step = 1 | 2 | 3;
 
-interface LocalBookingFormValues extends Omit<
-  BookingFormValues,
-  "files" | "material"
-> {
-  files: UploadedFile[];
-  material:
-    | typeof ProjectMaterial.PROVIDE_OWN
-    | typeof ProjectMaterial.BUY_FROM_LAB;
-  requestedMaterialIds: string[];
-}
-
 const EMPTY_FILE_TYPES: string[] = [];
 const EMPTY_AVAILABLE_DAYS: number[] = [];
 const EMPTY_SERVICE_MATERIALS: BookingServiceMaterial[] = [];
@@ -97,6 +89,7 @@ export function BookingDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
   const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
 
@@ -115,9 +108,24 @@ export function BookingDialog({
     setIsUploading(uploading);
   }, []);
 
+  const hasFormInputs = useCallback(
+    (values: BookingDetailsFormValues): boolean => {
+      return !!(
+        values.name ||
+        values.description ||
+        values.notes ||
+        values.dateTime?.date ||
+        values.dateTime?.startTime ||
+        values.dateTime?.endTime ||
+        values.files.length > 0 ||
+        (values.pricing && values.pricing !== "")
+      );
+    },
+    [],
+  );
+
   const handleFormSubmit = useCallback(
-    async ({ value: rawValue }: { value: LocalBookingFormValues }) => {
-      const value = rawValue as LocalBookingFormValues;
+    async ({ value }: { value: BookingDetailsFormValues }) => {
       if (!value.dateTime.date) {
         toast.error("Please select a date.");
         return;
@@ -196,6 +204,28 @@ export function BookingDialog({
     [serviceCategory, serviceId, serviceName, createProject, loginHref, router],
   );
 
+  const defaultFormValues: BookingDetailsFormValues = {
+    serviceType:
+      serviceCategory === "WORKSHOP"
+        ? FulfillmentMode.FULL_SERVICE
+        : FulfillmentMode.SELF_SERVICE,
+    name: "",
+    description: "",
+    notes: "",
+    material: ProjectMaterial.PROVIDE_OWN,
+    pricing: "Default",
+    requestedMaterialIds: [],
+    dateTime: {
+      date: undefined,
+      startTime: "",
+      endTime: "",
+      originalDate: undefined,
+      originalStartTime: undefined,
+      originalEndTime: undefined,
+    },
+    files: [],
+  };
+
   const form = useAppForm({
     defaultValues: {
       serviceType:
@@ -206,7 +236,7 @@ export function BookingDialog({
       description: "",
       notes: "",
       material: ProjectMaterial.PROVIDE_OWN,
-      pricing: "Default",
+      pricing: "",
       requestedMaterialIds: [],
       dateTime: {
         date: undefined,
@@ -217,13 +247,13 @@ export function BookingDialog({
         originalEndTime: undefined,
       },
       files: [],
-    } as LocalBookingFormValues,
+    } as BookingDetailsFormValues,
     onSubmit: handleFormSubmit,
   });
 
   const selectedDateRaw = useStore(
     form.store,
-    (state: { values: LocalBookingFormValues }) => state.values.dateTime.date,
+    (state) => state.values.dateTime.date,
   );
   let queryDateTs: number | undefined;
   if (selectedDateRaw) {
@@ -256,16 +286,40 @@ export function BookingDialog({
   };
 
   const handleOpenChange = (open: boolean) => {
+    // Only allow closing through explicit close button, not backdrop
+    if (open === false && isOpen === true) {
+      // Backdrop click attempted - ignore it
+      return;
+    }
     setIsOpen(open);
-    if (!open) {
+    if (open) {
+      // Reset form when opening
+      form.reset();
+    } else {
       // Reset state on close
+      form.reset();
       setTimeout(() => {
         setStep(serviceCategory === "WORKSHOP" ? 2 : 1);
         setIsSubmitting(false);
         setIsSuccess(false);
-        form.reset();
+        setShowConfirmClose(false);
       }, 300);
     }
+  };
+
+  const handleManualClose = () => {
+    // Check if form has any inputs
+    if (hasFormInputs(form.state.values)) {
+      setShowConfirmClose(true);
+    } else {
+      setIsOpen(false);
+    }
+  };
+
+  const handleConfirmClose = () => {
+    form.reset();
+    setShowConfirmClose(false);
+    setIsOpen(false);
   };
 
   const handleCreateBookingClick = async () => {
@@ -284,95 +338,110 @@ export function BookingDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleCreateBookingClick}
-        className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.35em] text-white shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-amber hover:text-black sm:px-10"
-      >
-        Create Booking
-      </Button>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleCreateBookingClick}
+          className="w-full rounded-none border-2 border-black bg-fab-magenta px-8 py-6 text-sm font-black uppercase tracking-[0.35em] text-white shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-1.5 hover:translate-y-1.5 hover:shadow-none hover:bg-fab-amber hover:text-black sm:px-10"
+        >
+          Create Booking
+        </Button>
 
-      <DialogContent className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-4 border-black bg-background p-4 shadow-[12px_12px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]">
-        {step === 1 && serviceCategory !== "WORKSHOP" && (
-          <Step1ServiceType
-            form={form}
-            serviceName={serviceName}
-            serviceCategory={serviceCategory}
-            onNext={() => {
-              if (
-                serviceCategory === "FABRICATION" &&
-                availableDays.length === 0
-              ) {
-                toast.error(
-                  "This service is currently unavailable for booking.",
-                );
-                return;
-              }
-              if (
-                serviceCategory === "WORKSHOP" &&
-                (!schedules || schedules.length === 0)
-              ) {
-                toast.error("This workshop has no available schedules.");
-                return;
-              }
-              handleNextStep();
-            }}
-          />
-        )}
-
-        {step === 2 && (
-          <Step2ProjectDetails
-            form={form}
-            serviceName={serviceName}
-            expandedFileTypes={expandedFileTypes}
-            is3DPrinting={is3DPrinting}
-            isUploading={isUploading}
-            onUploadingChange={handleUploadingChange}
-            onPrev={handlePrevStep}
-            onNext={handleNextStep}
-            requirements={requirements}
-            availableDays={availableDays}
-            serviceMaterials={serviceMaterials}
-            hasUpPricing={hasUpPricing}
-            pricingVariants={pricingVariants}
-            serviceCategory={serviceCategory}
-            schedules={schedules}
-            bookedTimeBlocks={bookedTimeBlocks}
-          />
-        )}
-
-        {step === 3 && (
-          <form
-            className="w-full flex flex-col h-full min-h-0"
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (isSubmitting || isSuccess) return;
-              form.handleSubmit();
-            }}
-          >
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, formIsSubmitting]) => (
-                <EstimateProjectDetails
-                  serviceName={serviceName}
-                  data={{
-                    ...form.state.values,
-                    files: form.state.values.files,
-                  }}
-                  servicePricing={servicePricing}
-                  serviceMaterials={serviceMaterials}
-                  isSubmitting={isSubmitting || formIsSubmitting || isSuccess}
-                  canSubmit={canSubmit && !isSuccess}
-                  onBack={handlePrevStep}
-                />
-              )}
+        <DialogContent
+          className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-2 border-black bg-background p-4 shadow-[2px_2px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]"
+          onCloseButtonClick={handleManualClose}
+        >
+          {step === 1 && serviceCategory !== "WORKSHOP" && (
+            <Step1ServiceType
+              form={form}
+              serviceName={serviceName}
+              serviceCategory={serviceCategory}
+              onNext={() => {
+                if (
+                  serviceCategory === "FABRICATION" &&
+                  availableDays.length === 0
+                ) {
+                  toast.error(
+                    "This service is currently unavailable for booking.",
+                  );
+                  return;
+                }
+                if (
+                  serviceCategory === "WORKSHOP" &&
+                  (!schedules || schedules.length === 0)
+                ) {
+                  toast.error("This workshop has no available schedules.");
+                  return;
+                }
+                handleNextStep();
+              }}
             />
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+
+          {step === 2 && (
+            <Step2ProjectDetails
+              form={form}
+              serviceName={serviceName}
+              expandedFileTypes={expandedFileTypes}
+              is3DPrinting={is3DPrinting}
+              isUploading={isUploading}
+              onUploadingChange={handleUploadingChange}
+              onPrev={handlePrevStep}
+              onNext={handleNextStep}
+              requirements={requirements}
+              availableDays={availableDays}
+              serviceMaterials={serviceMaterials}
+              hasUpPricing={hasUpPricing}
+              pricingVariants={pricingVariants}
+              serviceCategory={serviceCategory}
+              schedules={schedules}
+              bookedTimeBlocks={bookedTimeBlocks}
+            />
+          )}
+
+          {step === 3 && (
+            <form
+              className="w-full flex flex-col h-full min-h-0"
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isSubmitting || isSuccess) return;
+                form.handleSubmit();
+              }}
+            >
+              <form.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                children={([canSubmit, formIsSubmitting]) => (
+                  <EstimateProjectDetails
+                    serviceName={serviceName}
+                    data={{
+                      ...form.state.values,
+                      files: form.state.values.files,
+                    }}
+                    servicePricing={servicePricing}
+                    serviceMaterials={serviceMaterials}
+                    isSubmitting={isSubmitting || formIsSubmitting || isSuccess}
+                    canSubmit={canSubmit && !isSuccess}
+                    onBack={handlePrevStep}
+                  />
+                )}
+              />
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ActionDialog
+        open={showConfirmClose}
+        onOpenChange={setShowConfirmClose}
+        title="Discard Changes?"
+        description="Are you sure you want to close this booking form? All edits will be discarded and cannot be recovered."
+        cancelButtonText="Keep Editing"
+        confirmButtonText="Discard"
+        onConfirm={handleConfirmClose}
+      />
+    </>
   );
 }

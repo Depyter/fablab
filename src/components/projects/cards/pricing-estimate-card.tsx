@@ -26,6 +26,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 import { ProjectMaterial } from "@convex/constants";
 import {
@@ -212,7 +213,16 @@ export function PricingEstimateCard({
     [editableMaterialDocs],
   );
   const editableResources: EditableResource[] = (resources ?? [])
-    .filter((r) => (service?.resources ?? []).includes(r._id))
+    .filter((r) => {
+      // If the service explicitly restricts resources, only allow those.
+      // Otherwise fall back to all resources so that existing services
+      // (created before the service form had a resources selector) still
+      // get a working resource picker.
+      if (service?.resources && service.resources.length > 0) {
+        return service.resources.includes(r._id);
+      }
+      return true;
+    })
     .map((resourceDoc) => ({
       _id: resourceDoc._id,
       name: resourceDoc.name,
@@ -516,8 +526,14 @@ export function PricingEstimateCard({
       setIsEditing(false);
       setUsageDrafts([]);
       setShowPastBookingDialog(false);
-    } catch {
-      toast.error("Failed to save changes.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to save changes.";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

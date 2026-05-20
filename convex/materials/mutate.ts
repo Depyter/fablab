@@ -1,5 +1,8 @@
 import { v, ConvexError } from "convex/values";
+import type { Doc } from "../_generated/dataModel";
 import { authMutation, claimFiles, deleteFiles } from "../helper";
+
+type MaterialPatch = Partial<Omit<Doc<"materials">, "_id" | "_creationTime">>;
 
 export const addMaterial = authMutation({
   role: ["admin", "maker"],
@@ -66,8 +69,7 @@ export const updateMaterial = authMutation({
     const material = await ctx.db.get(args.id);
     if (!material) throw new ConvexError("Material not found.");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updates: Record<string, any> = {};
+    const updates: MaterialPatch = {};
 
     if (args.name !== undefined) updates.name = args.name;
     if (args.category !== undefined) updates.category = args.category;

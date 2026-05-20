@@ -50,7 +50,7 @@ export function ManageCard({
         {badgeText && (
           <span
             className={cn(
-              "absolute top-2.5 right-2.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-sm bg-background/70",
+              "absolute top-2.5 right-2.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 border-2 border-black bg-white shadow-[1px_1px_0_0_#000]",
               badgeClassName,
             )}
           >
@@ -62,14 +62,18 @@ export function ManageCard({
       {/* Body */}
       <div className="flex flex-col gap-3 px-4 pt-3 pb-4 flex-1">
         <div className="flex flex-col gap-0.5 min-w-0">
-          <h3 className="font-bold text-sm leading-tight truncate">{title}</h3>
+          <h3 className="font-black uppercase tracking-tighter text-sm leading-tight truncate">
+            {title}
+          </h3>
           {subtitle && (
-            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+            <p className="text-xs font-bold text-black/60 truncate">
+              {subtitle}
+            </p>
           )}
         </div>
 
         {description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+          <p className="text-xs font-bold text-black/60 line-clamp-2 leading-relaxed">
             {description}
           </p>
         )}

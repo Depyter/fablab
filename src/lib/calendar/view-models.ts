@@ -89,6 +89,7 @@ function buildCalendarUsage(
     startTime: window.startTime,
     endTime: window.endTime,
     serviceCategoryType,
+    serviceId: booking.serviceId,
     ...slotPresentation,
   };
 }
@@ -135,31 +136,26 @@ export function buildBookingCalendarViewModels(args: {
   const resourceMachines = buildResourceMachines(resources);
   const serviceMachines = buildServiceMachines(services);
 
+  // ── Resource usages (day view) ─────────────────────────────────────────
+  // The backend returns schedule-based entries for workshop resource slots
+  // (rather than individual project resourceUsages), so every workshop
+  // entry here is already a generic slot. Workshop entries are clustered
+  // into WorkshopSlotCards by buildDayTrackEntries in the layout layer.
   const resourceUsages =
     args.viewMode !== "day"
       ? []
-      : args.bookings
-          .filter(
-            (
-              booking,
-            ): booking is CalendarBookingItem & {
-              resourceId: NonNullable<CalendarBookingItem["resourceId"]>;
-            } => booking.resourceId !== null,
-          )
-          .flatMap((booking) => {
-            const service = servicesById.get(booking.serviceId);
-
-            if (!service) return [];
-
-            const usage = buildCalendarUsage(
-              booking,
-              booking.resourceId,
-              service.serviceCategoryType,
-              args.dayRange,
-            );
-
-            return usage ? [usage] : [];
-          });
+      : args.bookings.flatMap((booking) => {
+          if (!booking.resourceId) return [];
+          const service = servicesById.get(booking.serviceId);
+          if (!service) return [];
+          const usage = buildCalendarUsage(
+            booking,
+            booking.resourceId,
+            service.serviceCategoryType,
+            args.dayRange,
+          );
+          return usage ? [usage] : [];
+        });
 
   const serviceUsages =
     args.viewMode !== "day"
@@ -187,7 +183,6 @@ export function buildBookingCalendarViewModels(args: {
           : args.bookings
         ).flatMap((booking) => {
           const service = servicesById.get(booking.serviceId);
-
           if (!service) return [];
 
           const secondaryLabel =

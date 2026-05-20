@@ -8,6 +8,7 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import {
   defaultAddServiceValues,
+  toMutationWorkshopSchedules,
   type AddServiceFormValues,
 } from "@/types/add-service";
 import { toast } from "sonner";
@@ -25,47 +26,50 @@ export default function AddServicePage() {
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
-      const {
-        availableDays,
-        schedules,
-        serviceCategory,
-        materials,
-        pricing,
-        ...restValue
-      } = value;
-
       await addService({
-        ...restValue,
-        serviceCategory:
-          serviceCategory === "WORKSHOP"
-            ? {
-                type: "WORKSHOP",
-                schedules: schedules ?? [],
-                amount: pricing.type === "FIXED" ? pricing.amount : 0,
-                variants:
-                  pricing.type === "FIXED" && pricing.variants.length > 0
-                    ? pricing.variants
-                    : undefined,
-              }
-            : {
-                type: "FABRICATION",
-                availableDays,
-                materials: materials as Id<"materials">[],
-                setupFee: pricing.type === "FABRICATION" ? pricing.setupFee : 0,
-                unitName:
-                  pricing.type === "FABRICATION"
-                    ? pricing.unitName
-                    : ("hour" as const),
-                timeRate: pricing.type === "FABRICATION" ? pricing.timeRate : 0,
-                variants:
-                  pricing.type === "FABRICATION" && pricing.variants.length > 0
-                    ? pricing.variants
-                    : undefined,
-              },
+        name: value.name,
+        description: value.description,
+        status: value.status,
+        fileTypes: value.fileTypes,
         images: value.images as Id<"_storage">[],
         samples: value.samples as Id<"_storage">[],
         resources: value.resources as Id<"resources">[],
         requirements: value.requirements.filter((r) => r.trim() !== ""),
+        serviceCategory:
+          value.serviceCategory === "WORKSHOP"
+            ? {
+                type: "WORKSHOP",
+                schedules: toMutationWorkshopSchedules(value.schedules),
+                amount:
+                  value.pricing.type === "FIXED" ? value.pricing.amount : 0,
+                variants:
+                  value.pricing.type === "FIXED" &&
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
+                    : undefined,
+              }
+            : {
+                type: "FABRICATION",
+                availableDays: value.availableDays,
+                materials: value.materials as Id<"materials">[],
+                setupFee:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.setupFee
+                    : 0,
+                unitName:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.unitName
+                    : ("hour" as const),
+                timeRate:
+                  value.pricing.type === "FABRICATION"
+                    ? value.pricing.timeRate
+                    : 0,
+                variants:
+                  value.pricing.type === "FABRICATION" &&
+                  value.pricing.variants.length > 0
+                    ? value.pricing.variants
+                    : undefined,
+              },
       });
 
       toast.success("Service added successfully!");

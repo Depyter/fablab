@@ -8,6 +8,8 @@ import {
   getCurrentTimestamp,
   getLabDayStartTimestamp,
 } from "../../src/lib/lab-time";
+import { PROJECT_ARCHIVE_STATUSES, type ProjectStatusType } from "../constants";
+import { getWorkflow } from "../../src/lib/project-workflow";
 import {
   BookingWindow,
   ProjectStatus,
@@ -31,11 +33,14 @@ import {
   sendProjectSystemMessage,
   applyStatusChange,
   applyMakerAssignment,
-  addRoomMember,
   syncMaterialUsageStock,
   buildMaterialSnapshot,
   scheduleProjectUpdateEmail,
 } from "./helper";
+
+// ============================================================================
+// Type-aware business rules
+// ============================================================================
 
 // ============================================================================
 // Mutations
@@ -192,6 +197,44 @@ export const createProject = authMutation({
         args.materialIds,
       );
       await incrementWorkshopSlot(ctx, service, booking);
+
+      // ── Slot-level resource usages ───────────────────────────────────
+      // Create a resourceUsage record for each resource configured on the
+      // matched time slot. Each project in the slot gets its own set so
+      // that cancellation cleanup works independently per project.
+      const wsCategory = service.serviceCategory;
+      if (wsCategory.type === "WORKSHOP") {
+        const wsSchedule = wsCategory.schedules.find(
+          (s) => s.date === booking.date,
+        );
+        const wsTimeSlot = wsSchedule?.timeSlots.find(
+          (t) => t.startTime === booking.startTime,
+        );
+
+        for (const resourceId of wsTimeSlot?.resources ?? []) {
+          await ctx.db.insert("resourceUsage", {
+            projectId,
+            service: args.service,
+            resource: resourceId,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            snapshot: {
+              name: service.name,
+              costAtTime: 0,
+              unit: "session",
+            },
+            pricingSnapshot: {
+              duration: 0,
+              rate: 0,
+              timeCost: 0,
+              materialCost: 0,
+              setupFeePortion: 0,
+              subtotal: 0,
+              unitName: "session",
+            },
+          });
+        }
+      }
     } else {
       await createFabricationUsage(
         ctx,
@@ -232,12 +275,7 @@ export const createProject = authMutation({
       now,
     );
 
-    // ── 10. If a maker was pre-assigned, add them to the chat room ────────────
-    if (args.assignedMaker) {
-      await addRoomMember(ctx, roomId, args.assignedMaker);
-    }
-
-    // ── 11. Claim uploaded files ──────────────────────────────────────────────
+    // ── 10. Claim uploaded files ──────────────────────────────────────────────
     if (args.files && args.files.length > 0) {
       claimFiles(ctx, args.files);
     }
@@ -260,8 +298,8 @@ export const updateProject = authMutation({
         v.literal("approved"),
         v.literal("rejected"),
         v.literal("completed"),
-        v.literal("cancelled"),
         v.literal("paid"),
+        v.literal("cancelled"),
         v.literal("claimed"),
       ),
     ),
@@ -279,9 +317,22 @@ export const updateProject = authMutation({
 
     // ── Status change ────────────────────────────────────────────────────────
     if (args.status !== undefined) {
+      // Enforce maker assignment for fabrication pending→approved (Bug 3)
+      const workflow = getWorkflow(existingProject.type);
+      if (
+        args.status === "approved" &&
+        existingProject.status === "pending" &&
+        workflow.approvalRequiresMaker &&
+        (args.makerId === undefined || args.makerId === null) &&
+        !existingProject.assignedMaker
+      ) {
+        throw new ConvexError(
+          "Maker must be assigned before approving a fabrication project.",
+        );
+      }
+
       const lines = await applyStatusChange(
         ctx,
-        existingProject,
         existingProject,
         args.status as ProjectStatus,
       );
@@ -385,7 +436,9 @@ export const createUsage = authMutation({
             usagePricingSnapshot,
           );
 
-    if (service.serviceCategory.type === "WORKSHOP") {
+    // Only the main workshop usage (no resource) increments the slot counter.
+    // Resource-level usages (rooms, machines) should not affect attendee capacity.
+    if (service.serviceCategory.type === "WORKSHOP" && !resource) {
       await incrementWorkshopSlot(ctx, service, booking);
     }
 
@@ -494,7 +547,37 @@ export const updateUsage = authMutation({
       updates.resource = nextResourceId;
     }
 
-    await ctx.db.patch(usage._id, updates);
+    // ── Workshop slot tracking ────────────────────────────────────────────
+    if (service.serviceCategory.type === "WORKSHOP" && bookingChanged) {
+      if (!usage.resource) {
+        // Only the main workshop usage (no resource) affects the slot counter.
+        // Resource-level usages (rooms, machines) should not increment/decrement
+        // the attendee slot counter.
+        await decrementWorkshopSlot(ctx, service, usage);
+
+        // Re-fetch the service — decrementWorkshopSlot patched the document
+        const refreshedService = await ctx.db.get(project.service);
+        if (!refreshedService) throw new ConvexError("Service not found.");
+
+        // Update usage time
+        await ctx.db.patch(usage._id, updates);
+
+        // Increment the new time slot
+        await incrementWorkshopSlot(ctx, refreshedService, booking);
+
+        // Keep project-level booking times in sync with the main workshop usage
+        await ctx.db.patch(project._id, {
+          bookingStartTime: nextStartTime,
+          bookingEndTime: nextEndTime,
+        });
+      } else {
+        // Resource-level usage update — just patch the usage, no slot impact
+        await ctx.db.patch(usage._id, updates);
+      }
+    } else {
+      await ctx.db.patch(usage._id, updates);
+    }
+
     await syncProjectTotalInvoice(ctx, project._id);
     await scheduleProjectUpdateEmail(ctx, project._id);
 
@@ -595,6 +678,21 @@ export const updateUsagePricing = authMutation({
         ]),
       );
 
+      // Validate stock availability before deducting.
+      for (const { materialId, amountUsed } of args.materialsUsed) {
+        const material = await ctx.db.get(materialId);
+        if (!material) {
+          throw new ConvexError(`Material with id ${materialId} not found.`);
+        }
+        const previousAmount = previousAmounts.get(materialId) ?? 0;
+        const availableStock = material.currentStock + previousAmount;
+        if (amountUsed > availableStock) {
+          throw new ConvexError(
+            `Insufficient stock for "${material.name}". Available: ${availableStock} ${material.unit}, requested: ${amountUsed} ${material.unit}.`,
+          );
+        }
+      }
+
       for (const existing of usage.materialsUsed ?? []) {
         if (
           !args.materialsUsed.some((m) => m.materialId === existing.materialId)
@@ -671,7 +769,9 @@ export const deleteUsage = authMutation({
     const service = await ctx.db.get(project.service);
     if (!service) throw new ConvexError("Service not found.");
 
-    if (service.serviceCategory.type === "WORKSHOP") {
+    // Only the main workshop usage (no resource) decrements the slot counter.
+    // Resource-level usages (rooms, machines) should not affect attendee capacity.
+    if (service.serviceCategory.type === "WORKSHOP" && !usage.resource) {
       await decrementWorkshopSlot(ctx, service, usage);
     }
 
@@ -718,6 +818,37 @@ export const updateProjectSchedule = authMutation({
       return;
     }
 
+    // ── Workshop slot + usage sync ──────────────────────────────────────────
+    const service = await ctx.db.get(project.service);
+    if (service && service.serviceCategory.type === "WORKSHOP") {
+      const usageDocs = await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_project", (q) => q.eq("projectId", project._id))
+        .collect();
+
+      // Find the main workshop usage (no resource). Resource-level usages
+      // (rooms, machines) should not drive slot counter changes. Fall back
+      // to the first usage if no main usage is found (defensive).
+      const usage = usageDocs.find((u) => !u.resource) ?? usageDocs[0];
+      if (usage) {
+        // Decrement old slot
+        await decrementWorkshopSlot(ctx, service, usage);
+
+        // Re-fetch service — decrementWorkshopSlot patched the document
+        const refreshedService = await ctx.db.get(project.service);
+        if (!refreshedService) throw new ConvexError("Service not found.");
+
+        // Update usage time to match new schedule
+        await ctx.db.patch(usage._id, {
+          startTime: args.startTime,
+          endTime: args.endTime,
+        });
+
+        // Increment new slot
+        await incrementWorkshopSlot(ctx, refreshedService, booking);
+      }
+    }
+
     await ctx.db.patch(project._id, {
       bookingStartTime: args.startTime,
       bookingEndTime: args.endTime,
@@ -747,14 +878,16 @@ export const markProjectPaid = authMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
-    if (
-      project.status !== "completed" &&
-      project.status !== "paid" &&
-      project.status !== "claimed"
-    ) {
-      throw new ConvexError(
-        "Only completed or paid projects can have payment details set.",
-      );
+
+    const workflow = getWorkflow(project.type);
+    if (!workflow.payableStatuses.includes(project.status)) {
+      throw new ConvexError("Project is not currently payable.");
+    }
+
+    if (project.status !== "paid") {
+      if (!workflow.transitions[project.status]?.includes("paid")) {
+        throw new ConvexError("Project is not currently payable.");
+      }
     }
 
     let receiptId: Id<"receipts">;
@@ -781,10 +914,21 @@ export const markProjectPaid = authMutation({
       receipt: receiptId,
     });
 
+    // Clean up archive deadline if leaving a terminal status (Bug 1)
+    const wasArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
+      project.status as ProjectStatusType,
+    );
+    if (wasArchiveStatus) {
+      await ctx.db.patch(args.projectId, { archivalDeadline: undefined });
+    }
+
     await scheduleProjectUpdateEmail(ctx, args.projectId);
 
+    const nextLabel =
+      project.type === "WORKSHOP" ? "workshop confirmed" : "claim";
+
     const lines: string[] = [
-      `Payment recorded. Project moved to **claim**.`,
+      `Payment recorded. Project moved to **${nextLabel}**.`,
       `- Receipt #: ${args.receiptString}`,
       `- Payment mode: ${args.paymentMode}`,
       ...(args.proof ? [`- Proof: ${args.proof}`] : []),
@@ -809,23 +953,14 @@ export const cancelOwnProject = authMutation({
 
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
-    const service = await ctx.db.get(project.service);
-    if (!service) throw new ConvexError("Service not found.");
 
     if (project.userId !== userProfile._id) {
       throw new ConvexError("You do not own this project.");
     }
 
-    if (
-      ["completed", "paid", "claimed", "rejected", "cancelled"].includes(
-        project.status,
-      )
-    ) {
-      throw new ConvexError("Cannot cancel a project in its current status.");
-    }
-
-    // applyStatusChange handles the patch, workshop slot release, and returns log lines
-    const lines = await applyStatusChange(ctx, project, project, "cancelled");
+    // applyStatusChange validates the transition through PROJECT_STATUS_TRANSITIONS,
+    // handles the patch, workshop slot release, and returns log lines.
+    const lines = await applyStatusChange(ctx, project, "cancelled");
     await scheduleProjectUpdateEmail(ctx, args.projectId);
     await sendProjectSystemMessage(ctx, args.projectId, lines);
   },

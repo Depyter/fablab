@@ -8,7 +8,7 @@ import { AuthFunctions } from "@convex-dev/better-auth";
 import { internal } from "./_generated/api";
 import { authQuery } from "./helper";
 import authSchema from "./betterAuth/schema";
-import { admin, oAuthProxy } from "better-auth/plugins";
+import { admin } from "better-auth/plugins";
 
 const authfunctions: AuthFunctions = internal.auth;
 
@@ -56,20 +56,12 @@ function isPreviewEnvironment(): boolean {
 }
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  const betterAuthUrl = process.env.BETTER_AUTH_URL ?? "";
-  const trustedOrigins =
-    process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",")
-      .map((s) => s.trim())
-      .filter(Boolean) ?? [];
-
   const currentSiteUrl = process.env.CURRENT_SITE_URL;
-  if (currentSiteUrl && !trustedOrigins.includes(currentSiteUrl)) {
-    trustedOrigins.push(currentSiteUrl);
-  }
 
   const isPreview = isPreviewEnvironment();
 
   return {
+    baseURL: currentSiteUrl,
     secret: process.env.BETTER_AUTH_SECRET as string,
     rateLimit: {
       enabled: true,
@@ -85,12 +77,8 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         "/callback/*": { window: 60, max: 10 },
       },
     },
-    trustedOrigins,
     onAPIError: {
       errorURL: "/error",
-    },
-    advanced: {
-      trustedProxyHeaders: true,
     },
     database: authComponent.adapter(ctx),
 
@@ -115,17 +103,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         },
 
     plugins: [
-      // The oAuthProxy plugin is only needed when social OAuth is active.
-      // In preview, including it would produce warnings since the necessary
-      // env vars (BETTER_AUTH_URL) may not be set.
-      ...(isPreview
-        ? []
-        : [
-            oAuthProxy({
-              productionURL: betterAuthUrl,
-              currentURL: process.env.CURRENT_SITE_URL,
-            }),
-          ]),
       // The Convex plugin is required for Convex compatibility
       convex({ authConfig }),
       admin(),

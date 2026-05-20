@@ -53,19 +53,21 @@ export function MaterialForm({
   const handleThumbnailUploading = (isUploading: boolean) =>
     setThumbnailUploading(isUploading);
 
+  const defaultValues: MaterialFormValues = {
+    name: initialValues?.name ?? "",
+    category: initialValues?.category ?? MaterialCategory.FILAMENT,
+    unit: initialValues?.unit ?? MaterialUnit.GRAMS,
+    currentStock: initialValues?.currentStock ?? 0,
+    costPerUnit: initialValues?.costPerUnit ?? 0,
+    pricePerUnit: initialValues?.pricePerUnit ?? 0,
+    reorderThreshold: initialValues?.reorderThreshold ?? 0,
+    color: initialValues?.color ?? "",
+    status: initialValues?.status ?? "IN_STOCK",
+    image: initialValues?.image ?? "",
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      name: initialValues?.name ?? "",
-      category: initialValues?.category ?? MaterialCategory.FILAMENT,
-      unit: initialValues?.unit ?? MaterialUnit.GRAMS,
-      currentStock: initialValues?.currentStock ?? 0,
-      costPerUnit: initialValues?.costPerUnit ?? 0,
-      pricePerUnit: initialValues?.pricePerUnit ?? 0,
-      reorderThreshold: initialValues?.reorderThreshold ?? 0,
-      color: initialValues?.color ?? "",
-      status: initialValues?.status ?? "IN_STOCK",
-      image: initialValues?.image ?? "",
-    } as MaterialFormValues,
+    defaultValues,
     onSubmit: async ({ value }) => {
       const actionPromise = isEdit
         ? updateMaterial({

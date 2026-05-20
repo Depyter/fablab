@@ -37,14 +37,29 @@ export async function setupUsers() {
     name: "Aera",
   });
 
+  await t.mutation(internal.users.createMaker, {
+    userId: "3",
+    email: "delivered+maker@resend.dev",
+    name: "Maker",
+  });
+
   const tHarley = t.withIdentity({ subject: "1", name: "Harley" });
   const tAera = t.withIdentity({ subject: "2", name: "Aera" });
+  const tMaker = t.withIdentity({ subject: "3", name: "Maker" });
 
-  return { t, tHarley, tAera };
+  const makerId = await t.run(async (ctx) => {
+    const maker = await ctx.db
+      .query("userProfile")
+      .withIndex("by_userId", (q) => q.eq("userId", "3"))
+      .first();
+    return maker!._id;
+  });
+
+  return { t, tHarley, tAera, tMaker, makerId };
 }
 
 export async function setupProject() {
-  const { t, tHarley, tAera } = await setupUsers();
+  const { t, tHarley, tAera, makerId } = await setupUsers();
 
   await tAera.mutation(api.services.mutate.addService, {
     name: "3d printing",
@@ -95,6 +110,7 @@ export async function setupProject() {
     t,
     tHarley,
     tAera,
+    makerId,
     serviceId,
     projectId,
     roomId,

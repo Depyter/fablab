@@ -5,11 +5,17 @@ import { QueryCtx } from "../_generated/server";
 import { UserRole } from "../constants";
 import { authQuery } from "../helper";
 import {
+  buildProjectGroups,
+  buildEventsFromGroups,
+  splitUpcomingPast,
+} from "./helper";
+import {
   addLabDays,
   endOfLabMonth,
   endOfLabWeek,
   getCurrentTimestamp,
   getLabDayBoundsMs,
+  getLabDayStartTimestamp,
   startOfLabMonth,
   startOfLabWeek,
 } from "../../src/lib/lab-time";
@@ -108,6 +114,7 @@ function paginateProjects<T>(
 export const getProjects = authQuery({
   args: {
     paginationOpts: paginationOptsValidator,
+    type: v.optional(v.union(v.literal("WORKSHOP"), v.literal("FABRICATION"))),
     statusFilter: v.optional(v.string()),
     dateFilter: v.optional(v.string()),
     sortBy: v.optional(v.string()),
@@ -146,6 +153,12 @@ export const getProjects = authQuery({
         );
       }
 
+      if (args.type) {
+        searchQuery = searchQuery.filter((q) =>
+          q.eq(q.field("type"), args.type!),
+        );
+      }
+
       const result = await searchQuery.paginate(args.paginationOpts);
       const enrichedPage = await enrichProjects(ctx, result.page);
       return { ...result, page: enrichedPage };
@@ -176,6 +189,10 @@ export const getProjects = authQuery({
             hasStatusFilter &&
             project.status !== (args.statusFilter as StatusUnion)
           ) {
+            return false;
+          }
+
+          if (args.type && project.type !== args.type) {
             return false;
           }
 
@@ -221,6 +238,11 @@ export const getProjects = authQuery({
                 q.eq("status", args.statusFilter as StatusUnion),
               )
               .order("asc");
+          } else if (args.type) {
+            orderedQuery = ctx.db
+              .query("projects")
+              .withIndex("by_type", (q) => q.eq("type", args.type!))
+              .order("asc");
           } else {
             orderedQuery = baseQuery.order("asc");
           }
@@ -232,6 +254,11 @@ export const getProjects = authQuery({
               .withIndex("by_status", (q) =>
                 q.eq("status", args.statusFilter as StatusUnion),
               )
+              .order("desc");
+          } else if (args.type) {
+            orderedQuery = ctx.db
+              .query("projects")
+              .withIndex("by_type", (q) => q.eq("type", args.type!))
               .order("desc");
           } else {
             orderedQuery = baseQuery.order("desc");
@@ -259,6 +286,10 @@ export const getProjects = authQuery({
       query = query.filter((q) =>
         q.eq(q.field("status"), args.statusFilter as StatusUnion),
       );
+    }
+
+    if (args.type) {
+      query = query.filter((q) => q.eq(q.field("type"), args.type!));
     }
 
     const result = await query.paginate(args.paginationOpts);
@@ -343,13 +374,13 @@ export const getProject = authQuery({
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Project not found.");
 
-    // Access control: admin sees all; maker sees assigned projects;
+    // Access control: admin and maker see all projects;
     // client sees only their own.
     const { role, _id: callerId } = ctx.profile;
 
     const canView =
       role === UserRole.ADMIN ||
-      (role === UserRole.MAKER && project.assignedMaker === callerId) ||
+      role === UserRole.MAKER ||
       project.userId === callerId;
 
     if (!canView) {
@@ -522,6 +553,7 @@ export const getProject = authQuery({
       client: {
         _id: clientProfile?._id ?? null,
         name: clientProfile?.name ?? "Unknown Client",
+        email: clientProfile?.email ?? null,
         pfpUrl: clientPfpUrl,
       },
       assignedMaker: assignedMakerProfile
@@ -538,5 +570,315 @@ export const getProject = authQuery({
       threadId: thread?._id ?? null,
       roomId: thread?.roomId ?? null,
     };
+  },
+});
+
+// ── getWorkshopEvents ───────────────────────────────────────────────────────
+// Aggregates workshop projects by (service, bookingStartTime) so staff can
+// manage workshop events holistically.
+
+export const getWorkshopEvents = authQuery({
+  args: {
+    serviceId: v.optional(v.id("services")),
+    startTime: v.optional(v.number()),
+    status: v.optional(
+      v.union(v.literal("upcoming"), v.literal("past"), v.literal("all")),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const status = args.status ?? "upcoming";
+    const todayStart = getLabDayStartTimestamp(Date.now());
+
+    // ── Determine time range ───────────────────────────────────────────────
+    let minTime: number | undefined;
+    let maxTime: number | undefined;
+
+    if (status === "upcoming") {
+      minTime = todayStart;
+    } else if (status === "past") {
+      maxTime = todayStart;
+    }
+    // "all" → no time filter
+
+    const { role, _id: callerId } = ctx.profile;
+    const isPrivileged = role === UserRole.ADMIN || role === UserRole.MAKER;
+
+    // ── For clients: query their own workshop projects only ────────────────
+    if (!isPrivileged) {
+      // Use the same indexed query but filtered to the caller's userId
+      const myProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_type_bookingStartTime", (q) => {
+          if (minTime !== undefined) {
+            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
+          }
+          if (maxTime !== undefined) {
+            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
+          }
+          return q.eq("type", "WORKSHOP");
+        })
+        .filter((q) => q.eq(q.field("userId"), callerId))
+        .collect();
+
+      const groups = buildProjectGroups(
+        myProjects,
+        args.serviceId,
+        args.startTime,
+      );
+      const events = await buildEventsFromGroups(ctx, groups);
+      return splitUpcomingPast(events, todayStart);
+    }
+
+    // ── For staff: start from workshop service schedules ─────────────────
+    // Load all services and filter to workshops in memory
+    const allServices = await ctx.db.query("services").collect();
+    let workshopServices = allServices.filter(
+      (s): s is Doc<"services"> & { serviceCategory: { type: "WORKSHOP" } } =>
+        s.serviceCategory.type === "WORKSHOP",
+    );
+
+    // Filter by serviceId if provided (calendar click-through)
+    if (args.serviceId) {
+      workshopServices = workshopServices.filter(
+        (s) => s._id === args.serviceId,
+      );
+    }
+
+    if (workshopServices.length === 0) {
+      return { upcoming: [], past: [] };
+    }
+
+    // Load all workshop projects in time range for batch matching
+    let allProjects: Doc<"projects">[] = [];
+    if (status !== "upcoming" || true) {
+      // Always load projects to enrich slots that have registrations
+      allProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_type_bookingStartTime", (q) => {
+          if (minTime !== undefined) {
+            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
+          }
+          if (maxTime !== undefined) {
+            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
+          }
+          return q.eq("type", "WORKSHOP");
+        })
+        .collect();
+
+      // Also filter by serviceId / startTime on the project side
+      if (args.serviceId) {
+        allProjects = allProjects.filter((p) => p.service === args.serviceId);
+      }
+      if (args.startTime) {
+        allProjects = allProjects.filter(
+          (p) => p.bookingStartTime === args.startTime,
+        );
+      }
+    }
+
+    // Build a map from (serviceId:bookingStartTime) → projects
+    const projectsByKey = new Map<string, Doc<"projects">[]>();
+    for (const p of allProjects) {
+      if (p.bookingStartTime == null) continue;
+      const key = `${p.service}:${p.bookingStartTime}`;
+      const existing = projectsByKey.get(key);
+      if (existing) existing.push(p);
+      else projectsByKey.set(key, [p]);
+    }
+
+    // ── Single pass: collect schedule event templates and unique
+    //    resource / material IDs, filtered to the target date / time range.
+    const allResourceIds = new Set<Id<"resources">>();
+    const allMaterialIds = new Set<Id<"materials">>();
+
+    interface EventTemplate {
+      serviceId: Id<"services">;
+      serviceName: string;
+      serviceSlug: string;
+      startTime: number;
+      endTime: number;
+      maxSlots: number;
+      usedSlots: number;
+      groupProjects: Doc<"projects">[];
+      resourceIds: Id<"resources">[];
+      materialIds: Id<"materials">[];
+    }
+
+    const eventTemplates: EventTemplate[] = [];
+
+    for (const service of workshopServices) {
+      const cat = service.serviceCategory;
+
+      for (const schedule of cat.schedules) {
+        // ── Date range filter ──────────────────────────────────────────
+        if (minTime !== undefined && schedule.date + 86_400_000 < minTime)
+          continue;
+        if (maxTime !== undefined && schedule.date >= maxTime) continue;
+
+        for (const timeSlot of schedule.timeSlots) {
+          // ── Time range filter ───────────────────────────────────────
+          if (minTime !== undefined && timeSlot.startTime < minTime) continue;
+          if (maxTime !== undefined && timeSlot.startTime >= maxTime) continue;
+          if (args.startTime && timeSlot.startTime !== args.startTime) continue;
+
+          // Collect unique IDs while we have the schedule data open
+          for (const rid of timeSlot.resources ?? []) allResourceIds.add(rid);
+          for (const mid of timeSlot.availableMaterials ?? [])
+            allMaterialIds.add(mid);
+
+          const key = `${service._id}:${timeSlot.startTime}`;
+          eventTemplates.push({
+            serviceId: service._id,
+            serviceName: service.name,
+            serviceSlug: service.slug,
+            startTime: timeSlot.startTime,
+            endTime: timeSlot.endTime,
+            maxSlots: timeSlot.maxSlots,
+            usedSlots: timeSlot.usedUpSlots ?? 0,
+            groupProjects: projectsByKey.get(key) ?? [],
+            resourceIds: timeSlot.resources ?? [],
+            materialIds: timeSlot.availableMaterials ?? [],
+          });
+        }
+      }
+    }
+
+    // ── Batch-fetch resource & material details ────────────────────────
+    const [resourceDocs, materialDocs] = await Promise.all([
+      Promise.all(Array.from(allResourceIds).map((id) => ctx.db.get(id))),
+      Promise.all(Array.from(allMaterialIds).map((id) => ctx.db.get(id))),
+    ]);
+    const resourceMap = new Map(
+      resourceDocs
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map((d) => [d._id, { _id: d._id, name: d.name }]),
+    );
+    const materialMap = new Map(
+      materialDocs
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map((d) => [d._id, { _id: d._id, name: d.name, unit: d.unit }]),
+    );
+
+    // ── Pre-fetch threads and user profiles for all active projects ─────
+    const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+    const allActiveProjects = allProjects.filter(
+      (p) => !TERMINAL_STATUSES.has(p.status),
+    );
+
+    const threadDocs = await Promise.all(
+      allActiveProjects.map((p) =>
+        ctx.db
+          .query("threads")
+          .withIndex("projectId", (q) => q.eq("projectId", p._id))
+          .first(),
+      ),
+    );
+    const threadMap = new Map(
+      threadDocs
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+        .map((t) => [t.projectId!, t]),
+    );
+
+    const uniqueUserIds = Array.from(
+      new Set(allActiveProjects.map((p) => p.userId)),
+    );
+    const userDocs = await Promise.all(
+      uniqueUserIds.map((id) => ctx.db.get(id)),
+    );
+    const userMap = new Map(
+      userDocs
+        .filter((u): u is NonNullable<typeof u> => u !== null)
+        .map((u) => [u._id, u]),
+    );
+
+    const uniqueProfilePics = Array.from(
+      new Set(
+        userDocs
+          .filter(
+            (u): u is NonNullable<typeof u> => u !== null && !!u.profilePic,
+          )
+          .map((u) => u!.profilePic!),
+      ),
+    );
+    const urlPairs = await Promise.all(
+      uniqueProfilePics.map(async (pic) => [
+        pic,
+        await ctx.storage.getUrl(pic),
+      ]),
+    );
+    const urlMap = new Map(urlPairs as [Id<"_storage">, string | null][]);
+
+    // ── Resolve templates into schedule events ──────────────────────────
+    const scheduleEvents = eventTemplates.map((t) => {
+      const activeProjects = t.groupProjects.filter(
+        (p) => !TERMINAL_STATUSES.has(p.status),
+      );
+
+      const statusBreakdown: Record<string, number> = {};
+      for (const p of t.groupProjects) {
+        statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
+      }
+
+      const attendees = activeProjects
+        .map((project) => {
+          const profile = userMap.get(project.userId);
+          if (!profile) return null;
+
+          const thread = threadMap.get(project._id);
+          return {
+            projectId: project._id,
+            userId: project.userId,
+            name: profile.name,
+            email: profile.email,
+            status: project.status,
+            pfpUrl: profile.profilePic
+              ? (urlMap.get(profile.profilePic) ?? null)
+              : null,
+            createdAt: project._creationTime,
+            roomId: thread?.roomId ?? null,
+            threadId: thread?._id ?? null,
+          };
+        })
+        .filter((a): a is NonNullable<typeof a> => a !== null);
+
+      const resolvedResources = Array.from(new Set(t.resourceIds))
+        .map((rid) => resourceMap.get(rid))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined);
+
+      const resolvedMaterials = Array.from(new Set(t.materialIds))
+        .map((mid) => materialMap.get(mid))
+        .filter((m): m is NonNullable<typeof m> => m !== undefined);
+
+      return {
+        serviceId: t.serviceId,
+        serviceName: t.serviceName,
+        serviceSlug: t.serviceSlug,
+        date: getLabDayStartTimestamp(t.startTime),
+        startTime: t.startTime,
+        endTime: t.endTime,
+        maxSlots: t.maxSlots,
+        usedSlots: t.usedSlots,
+        registrationCount: activeProjects.length,
+        cancelledCount: t.groupProjects.length - activeProjects.length,
+        statusBreakdown,
+        resources: resolvedResources.length > 0 ? resolvedResources : undefined,
+        availableMaterials:
+          resolvedMaterials.length > 0 ? resolvedMaterials : undefined,
+        attendees,
+      };
+    });
+
+    // ── Sort and split into upcoming / past ──────────────────────────────
+    const upcoming = scheduleEvents
+      .filter((e) => e.startTime >= todayStart)
+      .sort((a, b) => a.startTime - b.startTime)
+      .slice(0, 50);
+
+    const past = scheduleEvents
+      .filter((e) => e.startTime < todayStart)
+      .sort((a, b) => b.startTime - a.startTime)
+      .slice(0, 50);
+
+    return { upcoming, past };
   },
 });

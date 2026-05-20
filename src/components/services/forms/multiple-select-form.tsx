@@ -73,7 +73,7 @@ export function MultipleSelectForm({
           return (
             <div
               key={machineValue}
-              className="flex items-center justify-between p-2 border rounded-lg bg-gray-50"
+              className="flex items-center justify-between p-2 border-2 rounded-none border-black bg-white"
             >
               <span>{label ?? machineValue}</span>
 

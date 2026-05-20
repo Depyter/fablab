@@ -7,11 +7,19 @@ import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { useMutation, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import type { AddServiceFormValues } from "@/types/add-service";
+import {
+  toMutationWorkshopSchedules,
+  type AddServiceFormValues,
+} from "@/types/add-service";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
 import { ConvexError } from "convex/values";
 import { toast } from "sonner";
+import { ServiceStatus, type ServiceStatusType } from "@convex/constants";
+
+const isServiceStatus = (value: unknown): value is ServiceStatusType =>
+  typeof value === "string" &&
+  Object.values(ServiceStatus).includes(value as ServiceStatusType);
 
 export function EditServiceClient({
   preloadedService,
@@ -79,8 +87,9 @@ export function EditServiceClient({
               timeRate: number;
             }>,
           },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: service.status as any,
+    status: isServiceStatus(service.status)
+      ? service.status
+      : ServiceStatus.AVAILABLE,
     images: service.images as string[],
     samples: service.samples as string[],
     requirements:
@@ -114,7 +123,7 @@ export function EditServiceClient({
           value.serviceCategory === "WORKSHOP"
             ? {
                 type: "WORKSHOP",
-                schedules: value.schedules ?? [],
+                schedules: toMutationWorkshopSchedules(value.schedules),
                 amount:
                   value.pricing.type === "FIXED" ? value.pricing.amount : 0,
                 variants:
@@ -145,8 +154,7 @@ export function EditServiceClient({
                     ? value.pricing.variants
                     : undefined,
               },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        status: value.status as any,
+        status: value.status,
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         fileTypes: value.fileTypes,
         resources: value.resources as Id<"resources">[],
@@ -216,7 +224,7 @@ export function EditServiceClient({
             description="This action cannot be undone. This will permanently delete the service and all its assets."
             baseActionText="Delete Service"
             confirmButtonText="Delete"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="bg-destructive text-white hover:bg-destructive/90"
           />
         </div>
       </div>

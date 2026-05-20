@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Circle, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 export type ProjectTimelineStep = {
   title: string;
@@ -17,149 +17,158 @@ interface ProjectTimelineProps {
   className?: string;
 }
 
-function StepDot({
-  active,
-  completed,
-  rejected,
-}: {
-  active?: boolean;
-  completed?: boolean;
-  rejected?: boolean;
-}) {
+function Dot({ status }: { status: ProjectTimelineStep }) {
+  if (status.rejected) {
+    return <XCircle className="size-7 text-red-500" strokeWidth={2.5} />;
+  }
+  if (status.completed) {
+    return (
+      <div className="size-7 shrink-0 rounded-full border-4 border-fab-teal bg-fab-teal" />
+    );
+  }
+  if (status.active) {
+    return (
+      <div className="size-7 shrink-0 rounded-full border-4 border-fab-amber bg-fab-amber" />
+    );
+  }
   return (
-    <div
-      className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-background shadow-sm sm:h-10 sm:w-10",
-        completed &&
-          !rejected &&
-          "border-[var(--fab-timeline-complete)] bg-[var(--fab-timeline-complete-soft)] text-[var(--fab-timeline-complete)]",
-        rejected &&
-          "border-[var(--fab-timeline-rejected)] bg-[var(--fab-timeline-rejected-soft)] text-[var(--fab-timeline-rejected)]",
-        active &&
-          !completed &&
-          !rejected &&
-          "border-[var(--fab-timeline-active)] bg-[var(--fab-timeline-active-soft)] text-[var(--fab-timeline-active)]",
-        !active &&
-          !completed &&
-          !rejected &&
-          "border-[var(--fab-border-md)] bg-[var(--fab-bg-sidebar)] text-[var(--fab-text-dim)]",
-      )}
-    >
-      {rejected ? (
-        <XCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-      ) : completed ? (
-        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-      ) : (
-        <Circle className="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" />
-      )}
-    </div>
+    <div className="size-7 shrink-0 rounded-full border-4 border-black/20 bg-transparent" />
   );
 }
 
-function connectorCn(
-  nextCompleted?: boolean,
-  nextRejected?: boolean,
-  nextActive?: boolean,
-) {
-  if (nextRejected) return "bg-[var(--fab-timeline-rejected)]/50";
-  if (nextCompleted) return "bg-[var(--fab-timeline-complete)]/50";
-  if (nextActive) return "bg-[var(--fab-timeline-active)]/50";
-  return "bg-[var(--fab-border-md)]";
+function Line({ complete }: { complete?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "h-0.75 flex-1 min-w-2 rounded-full",
+        complete ? "bg-fab-teal" : "bg-black/15",
+      )}
+    />
+  );
 }
 
 export function ProjectTimeline({ steps, className }: ProjectTimelineProps) {
   return (
-    <div className={cn("w-full", className)}>
-      {/* ── Mobile: vertical ─────────────────────────────────────── */}
-      <div className="flex flex-col md:hidden">
+    <div className={cn("flex flex-col", className)}>
+      {/* ── Desktop: horizontal dots + line row ── */}
+      <div
+        className="hidden sm:grid"
+        style={{
+          gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`,
+        }}
+      >
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1;
+          const lineComplete = step.completed && !step.rejected;
+
           return (
-            <div key={step.title} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <StepDot
-                  active={step.active}
-                  completed={step.completed}
-                  rejected={step.rejected}
-                />
+            <div
+              key={step.title}
+              className="flex min-w-0 flex-col items-center text-center"
+            >
+              <div className="relative flex h-7 w-full items-center justify-center">
+                {index > 0 && (
+                  <div className="absolute left-0 right-1/2 flex items-center pr-3.5">
+                    <Line
+                      complete={
+                        steps[index - 1].completed && !steps[index - 1].rejected
+                      }
+                    />
+                  </div>
+                )}
+                <Dot status={step} />
                 {!isLast && (
-                  <div
-                    className={cn(
-                      "w-px min-h-8 flex-1",
-                      connectorCn(
-                        steps[index + 1].completed,
-                        steps[index + 1].rejected,
-                        steps[index + 1].active,
-                      ),
-                    )}
-                  />
+                  <div className="absolute left-1/2 right-0 flex items-center pl-3.5">
+                    <Line complete={lineComplete} />
+                  </div>
                 )}
               </div>
-              <div className={cn("min-w-0 flex-1", !isLast && "pb-6")}>
-                <h4 className="flex h-9 items-center text-sm font-semibold leading-tight text-[var(--fab-text-primary)]">
+
+              <div className="mt-2 flex min-w-0 flex-col items-center px-1.5">
+                <span
+                  className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider whitespace-nowrap",
+                    step.active
+                      ? "text-fab-amber"
+                      : step.completed || step.rejected
+                        ? "text-fab-teal"
+                        : "text-black/30",
+                  )}
+                >
+                  Step {String(index + 1).padStart(2, "0")}
+                </span>
+                <span
+                  className={cn(
+                    "text-[13px] font-black uppercase tracking-tight leading-tight",
+                    step.active
+                      ? "text-black"
+                      : step.completed || step.rejected
+                        ? "text-black/50"
+                        : "text-black/20",
+                  )}
+                >
                   {step.title}
-                </h4>
+                </span>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── Desktop: horizontal ──────────────────────────────────── */}
-      <div className="hidden md:block overflow-x-auto">
-        <div className="flex min-w-180 pb-2 lg:min-w-0">
-          {steps.map((step, index) => {
-            const isFirst = index === 0;
-            const isLast = index === steps.length - 1;
-            const next = steps[index + 1];
+      {/* ── Mobile: vertical timeline ── */}
+      <div className="flex flex-col gap-0 sm:hidden">
+        {steps.map((step, index) => {
+          const isLast = index === steps.length - 1;
+          const lineComplete = step.completed && !step.rejected;
 
-            return (
-              <div
-                key={step.title}
-                className="flex min-w-0 flex-1 flex-col items-center"
-              >
-                {/* Connector halves flanking the dot */}
-                <div className="flex w-full items-center">
+          return (
+            <div
+              key={step.title}
+              className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3"
+            >
+              {/* Dot + line column */}
+              <div className="flex flex-col items-center">
+                <Dot status={step} />
+                {!isLast && (
                   <div
                     className={cn(
-                      "h-0.5 flex-1 rounded-full",
-                      isFirst
-                        ? "invisible"
-                        : connectorCn(
-                            step.completed,
-                            step.rejected,
-                            step.active,
-                          ),
+                      "mt-1 w-0.75 min-h-6 flex-1 rounded-full",
+                      lineComplete ? "bg-fab-teal" : "bg-black/15",
                     )}
                   />
-                  <StepDot
-                    active={step.active}
-                    completed={step.completed}
-                    rejected={step.rejected}
-                  />
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 rounded-full",
-                      isLast
-                        ? "invisible"
-                        : connectorCn(
-                            next.completed,
-                            next.rejected,
-                            next.active,
-                          ),
-                    )}
-                  />
-                </div>
-
-                <div className="mt-3 px-1 text-center">
-                  <h4 className="text-[11px] font-semibold leading-tight text-[var(--fab-text-primary)] sm:text-sm break-words">
-                    {step.title}
-                  </h4>
-                </div>
+                )}
               </div>
-            );
-          })}
-        </div>
+
+              {/* Label column */}
+              <div className={cn("min-w-0 pt-0.5", !isLast && "pb-4")}>
+                <span
+                  className={cn(
+                    "mb-1.5 block text-[10px] font-bold uppercase tracking-wider",
+                    step.active
+                      ? "text-fab-amber"
+                      : step.completed || step.rejected
+                        ? "text-fab-teal"
+                        : "text-black/30",
+                  )}
+                >
+                  Step {String(index + 1).padStart(2, "0")}
+                </span>
+                <span
+                  className={cn(
+                    "text-[13px] font-black uppercase tracking-tight leading-tight",
+                    step.active
+                      ? "text-black"
+                      : step.completed || step.rejected
+                        ? "text-black/50"
+                        : "text-black/20",
+                  )}
+                >
+                  {step.title}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

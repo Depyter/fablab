@@ -16,7 +16,6 @@ import {
   CALENDAR_DAY_SECTION_HEIGHT,
   CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_SLOT_WIDTH,
-  CALENDAR_DAY_WORKSHOP_ROW_HEIGHT,
   getCalendarDayNowIndicatorLeft,
   getCalendarDayUsagePosition,
   isWorkshopTrackEntry,
@@ -34,13 +33,16 @@ import {
 } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 
-const SECTION_BG = "rgba(220,215,245,0.55)";
-const SECTION_BG_STICKY = "rgba(220,215,245,0.9)";
+const SECTION_BG = "#ffffff";
+const SECTION_BG_STICKY = "#ffffff";
+const CALENDAR_HEADER_BG = "#f3f4f6";
+const CALENDAR_BORDER = "#9ca3af";
 
 interface UsageTableProps {
   machines: Machine[];
   usages: MachineUsage[];
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
   leadingColumnLabel?: string;
 }
 
@@ -113,18 +115,26 @@ function WorkshopSlotCard({
   position,
   compact = false,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   entry: Extract<CalendarDayTrackEntry, { kind: "workshop" }>;
   position: { left: string; width: string };
   compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const visibleMembers = entry.members.slice(0, compact ? 2 : 4);
   const hiddenMemberCount = entry.members.length - visibleMembers.length;
+  const hasMembers = entry.members.length > 0;
 
   return (
     <div
-      className="absolute z-[5] overflow-hidden rounded-xl border border-blue-200 bg-blue-50/95 text-left shadow-sm"
+      className={cn(
+        "absolute z-[5] overflow-hidden rounded-xl border text-left shadow-sm",
+        hasMembers
+          ? "border-fab-teal bg-white"
+          : "border-dashed border-fab-teal bg-white",
+      )}
       style={{
         top: compact ? 2 : 4,
         bottom: compact ? 2 : 4,
@@ -138,11 +148,21 @@ function WorkshopSlotCard({
           compact ? "gap-1 px-1.5 py-1" : "gap-1.5 px-2.5 py-2",
         )}
       >
-        <div className="flex items-start justify-between gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            onOpenWorkshopEvent?.(entry.machineId, entry.startTime)
+          }
+          className={cn(
+            "flex items-start gap-2 text-left",
+            onOpenWorkshopEvent && "cursor-pointer hover:opacity-80",
+          )}
+        >
           <div className="min-w-0">
             <div
               className={cn(
-                "truncate font-bold uppercase tracking-[0.08em] text-blue-900",
+                "truncate font-bold uppercase tracking-[0.08em]",
+                "text-fab-teal",
                 compact ? "text-[10px]" : "text-[11px]",
               )}
             >
@@ -150,44 +170,40 @@ function WorkshopSlotCard({
             </div>
             <div
               className={cn(
-                "truncate text-blue-800/80",
+                "truncate",
                 compact ? "text-[9px]" : "text-[10px]",
+                "text-fab-teal",
               )}
             >
-              {entry.bookingCount} booked
-              {entry.pendingCount > 0 ? ` · ${entry.pendingCount} pending` : ""}
+              {hasMembers
+                ? `${entry.bookingCount} booked${entry.pendingCount > 0 ? ` \u00b7 ${entry.pendingCount} pending` : ""}`
+                : (entry.availableLabel ?? "Available")}
             </div>
           </div>
-          <div
-            className={cn(
-              "shrink-0 rounded-full bg-white/80 font-semibold text-blue-900 shadow-sm",
-              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]",
-            )}
-          >
-            {formatShortTime(entry.startTime)}-{formatShortTime(entry.endTime)}
-          </div>
-        </div>
+        </button>
 
-        <div className="grid min-h-0 gap-1 overflow-hidden">
-          {visibleMembers.map((member) => (
-            <WorkshopMemberChip
-              key={member.id}
-              usage={member}
-              compact={compact}
-              onOpenProjectDetails={onOpenProjectDetails}
-            />
-          ))}
-          {hiddenMemberCount > 0 ? (
-            <div
-              className={cn(
-                "px-1 font-medium text-blue-900/75",
-                compact ? "text-[9px]" : "text-[10px]",
-              )}
-            >
-              +{hiddenMemberCount} more booked
-            </div>
-          ) : null}
-        </div>
+        {hasMembers ? (
+          <div className="grid min-h-0 gap-1 overflow-hidden">
+            {visibleMembers.map((member) => (
+              <WorkshopMemberChip
+                key={member.id}
+                usage={member}
+                compact={compact}
+                onOpenProjectDetails={onOpenProjectDetails}
+              />
+            ))}
+            {hiddenMemberCount > 0 ? (
+              <div
+                className={cn(
+                  "px-1 font-medium text-fab-teal",
+                  compact ? "text-[9px]" : "text-[10px]",
+                )}
+              >
+                +{hiddenMemberCount} more booked
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -198,23 +214,38 @@ function StandardUsageCard({
   position,
   compact = false,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   usage: MachineUsage;
   position: { left: string; width: string };
   compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const canOpenProjectDetails =
     usage.projectId !== null && onOpenProjectDetails !== undefined;
+  const isWorkshopSlot =
+    usage.projectId === null &&
+    usage.serviceCategoryType === "WORKSHOP" &&
+    onOpenWorkshopEvent !== undefined;
 
   return (
     <button
       type="button"
-      disabled={!canOpenProjectDetails}
-      onClick={() => usage.projectId && onOpenProjectDetails?.(usage.projectId)}
+      disabled={!canOpenProjectDetails && !isWorkshopSlot}
+      onClick={() => {
+        if (usage.projectId && onOpenProjectDetails) {
+          onOpenProjectDetails(usage.projectId);
+        } else if (isWorkshopSlot) {
+          onOpenWorkshopEvent!(
+            usage.serviceId ?? usage.machineId,
+            usage.startTime,
+          );
+        }
+      }}
       className={cn(
         "absolute z-[5] text-left disabled:cursor-default",
-        canOpenProjectDetails &&
+        (canOpenProjectDetails || isWorkshopSlot) &&
           "cursor-pointer transition-shadow hover:shadow-sm",
       )}
       style={{
@@ -289,6 +320,7 @@ export function UsageTable({
   machines,
   usages,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
   leadingColumnLabel = "RESOURCES",
 }: UsageTableProps) {
   const isMobile = useIsMobile();
@@ -313,11 +345,10 @@ export function UsageTable({
   const dayTimelineMinWidth = HEADER_SLOTS.length * daySlotWidth;
   const dayMinWidth = dayLeadingColWidth + dayTimelineMinWidth;
   const dayTimelineTemplate = `repeat(${HEADER_SLOTS.length}, minmax(${daySlotWidth}px, 1fr))`;
-  const dayLayoutTemplate = `minmax(${dayLeadingColWidth}px, ${isMobile ? 2.2 : 3}fr) minmax(${dayTimelineMinWidth}px, ${HEADER_SLOTS.length}fr)`;
+  const dayLayoutTemplate = `${dayLeadingColWidth}px minmax(${dayTimelineMinWidth}px, 1fr)`;
   const getResponsiveRowHeight = (rowHeight: number) => {
     if (!isMobile) return rowHeight;
-    if (rowHeight === CALENDAR_DAY_WORKSHOP_ROW_HEIGHT) return 80;
-    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 32;
+    if (rowHeight === CALENDAR_DAY_ROW_HEIGHT) return 44;
     if (rowHeight === CALENDAR_DAY_SECTION_HEIGHT) return 22;
     return rowHeight;
   };
@@ -341,14 +372,17 @@ export function UsageTable({
       <div className="flex h-full min-h-0 min-w-0 flex-1">
         <ScrollArea className="min-h-0 min-w-0 flex-1">
           <div
-            className="grid h-full min-h-full min-w-0 bg-background"
+            className="grid h-full min-h-full min-w-0 bg-white"
             style={{
               width: `max(100%, ${dayMinWidth}px)`,
               gridTemplateRows: `auto 1fr`,
               height: "100%",
             }}
           >
-            <ViewHeader className="border-0 shadow-none">
+            <ViewHeader
+              className="border-0 shadow-none"
+              style={{ background: CALENDAR_HEADER_BG }}
+            >
               <div
                 className="grid"
                 style={{ gridTemplateColumns: dayLayoutTemplate }}
@@ -361,6 +395,10 @@ export function UsageTable({
                       ? "h-[34px] px-2 text-[9px]"
                       : "h-11 px-3 text-[10px]",
                   )}
+                  style={{
+                    background: CALENDAR_HEADER_BG,
+                    borderColor: CALENDAR_BORDER,
+                  }}
                 >
                   {leadingColumnLabel}
                 </ViewHeaderLeading>
@@ -370,6 +408,7 @@ export function UsageTable({
                   style={{
                     gridTemplateColumns: dayTimelineTemplate,
                     height: dayHeaderHeight,
+                    background: CALENDAR_HEADER_BG,
                   }}
                 >
                   {HEADER_SLOTS.map((slot, slotIndex) => {
@@ -379,12 +418,15 @@ export function UsageTable({
                     return (
                       <div
                         key={`header-slot-${slot}`}
-                        className="flex items-center whitespace-nowrap border-b border-l border-border px-1"
+                        className="flex items-center whitespace-nowrap border-b px-1"
                         style={{
                           height: "100%",
                           background: isCurrentHeader
-                            ? "rgba(157,26,88,0.06)"
-                            : "transparent",
+                            ? "#e5e7eb"
+                            : CALENDAR_HEADER_BG,
+                          borderBottomColor: CALENDAR_BORDER,
+                          borderLeft:
+                            slotIndex > 0 ? `1px solid ${CALENDAR_BORDER}` : "",
                           color: isCurrentHeader
                             ? "var(--fab-magenta)"
                             : "var(--fab-text-muted)",
@@ -434,9 +476,8 @@ export function UsageTable({
                           left: 0,
                           zIndex: 12,
                           background: SECTION_BG_STICKY,
-                          borderTop: "1px solid var(--fab-border-md)",
-                          borderBottom: "1px solid var(--fab-border-md)",
-                          borderRight: "1px solid var(--fab-border-md)",
+                          borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                          borderRight: `1px solid ${CALENDAR_BORDER}`,
                         }}
                       >
                         <span
@@ -458,15 +499,17 @@ export function UsageTable({
                           background: SECTION_BG,
                         }}
                       >
-                        {HEADER_SLOTS.map((slot) => (
+                        {HEADER_SLOTS.map((slot, slotIndex) => (
                           <div
                             key={`${row.id}-${slot}`}
                             aria-hidden
                             style={{
                               height: "100%",
-                              borderTop: "1px solid var(--fab-border-md)",
-                              borderBottom: "1px solid var(--fab-border-md)",
-                              borderLeft: "1px solid var(--fab-border)",
+                              borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                              borderLeft:
+                                slotIndex > 0
+                                  ? `1px solid ${CALENDAR_BORDER}`
+                                  : "",
                             }}
                           />
                         ))}
@@ -494,9 +537,9 @@ export function UsageTable({
                         position: "sticky",
                         left: 0,
                         zIndex: 8,
-                        background: "var(--fab-bg-main)",
-                        borderBottom: "1px solid var(--fab-border-md)",
-                        borderRight: "1px solid var(--fab-border-md)",
+                        background: "#fff",
+                        borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                        borderRight: `1px solid ${CALENDAR_BORDER}`,
                       }}
                     >
                       {row.isFirstTrack ? (
@@ -559,7 +602,7 @@ export function UsageTable({
                     </div>
 
                     <div
-                      className="relative grid"
+                      className="relative grid bg-white"
                       style={{
                         gridTemplateColumns: dayTimelineTemplate,
                         minHeight: getResponsiveRowHeight(row.rowHeight),
@@ -577,13 +620,16 @@ export function UsageTable({
                             aria-hidden
                             style={{
                               height: "100%",
-                              borderBottom: "1px solid var(--fab-border-soft)",
-                              borderLeft: "1px solid var(--fab-border)",
+                              borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                              borderLeft:
+                                slotIndex > 0
+                                  ? `1px solid ${CALENDAR_BORDER}`
+                                  : "",
                               background: isBoundary
-                                ? "var(--fab-bg-sidebar)"
+                                ? "#ffffff"
                                 : isHighlightedSlot
                                   ? "rgba(181,32,79,0.03)"
-                                  : "transparent",
+                                  : "#ffffff",
                               pointerEvents: "none",
                             }}
                           />
@@ -610,6 +656,7 @@ export function UsageTable({
                             position={position}
                             compact={isMobile}
                             onOpenProjectDetails={onOpenProjectDetails}
+                            onOpenWorkshopEvent={onOpenWorkshopEvent}
                           />
                         ) : (
                           <StandardUsageCard
@@ -618,6 +665,7 @@ export function UsageTable({
                             position={position}
                             compact={isMobile}
                             onOpenProjectDetails={onOpenProjectDetails}
+                            onOpenWorkshopEvent={onOpenWorkshopEvent}
                           />
                         );
                       })}

@@ -35,6 +35,7 @@ export interface FileUploadProps {
   showPreview?: boolean;
   autoUpload?: boolean;
   value?: UploadedFile[];
+  showDriveLinkNote?: boolean;
 }
 
 export interface ModelUploadProps {

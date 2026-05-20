@@ -45,6 +45,7 @@ interface CalendarRangeViewProps {
   isLoading?: boolean;
   onSelectDay?: (date: Date) => void;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }
 
 interface WeekEventLayout extends CalendarRangeEvent {
@@ -188,29 +189,43 @@ function EventCard({
   dense = false,
   showDetails = true,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   event: CalendarRangeEvent;
   compact?: boolean;
   dense?: boolean;
   showDetails?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const canOpenProjectDetails =
     event.projectId !== null && onOpenProjectDetails !== undefined;
+  const isWorkshopSlot =
+    event.projectId === null &&
+    event.serviceCategoryType === "WORKSHOP" &&
+    onOpenWorkshopEvent !== undefined;
 
   return (
     <button
       type="button"
-      disabled={!canOpenProjectDetails}
-      onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
+      disabled={!canOpenProjectDetails && !isWorkshopSlot}
+      onClick={() => {
+        if (event.projectId && onOpenProjectDetails) {
+          onOpenProjectDetails(event.projectId);
+        } else if (isWorkshopSlot) {
+          onOpenWorkshopEvent!(event.serviceId, event.startTime);
+        }
+      }}
       title={showDetails ? undefined : event.projectAlias}
       className={cn(
         "relative w-full overflow-hidden rounded-xl border text-left shadow-sm transition-colors",
         event.slotClassName,
         event.isPendingReview && "border-2 border-dashed",
-        canOpenProjectDetails
+        isWorkshopSlot
           ? "cursor-pointer hover:opacity-90"
-          : "cursor-default",
+          : canOpenProjectDetails
+            ? "cursor-pointer hover:opacity-90"
+            : "cursor-default",
         dense
           ? "min-h-6 rounded-lg px-1.5 py-1"
           : compact
@@ -246,26 +261,40 @@ function WeekEventBlock({
   event,
   compact = false,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: {
   event: WeekEventLayout;
   compact?: boolean;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
 }) {
   const canOpenProjectDetails =
     event.projectId !== null && onOpenProjectDetails !== undefined;
+  const isWorkshopSlot =
+    event.projectId === null &&
+    event.serviceCategoryType === "WORKSHOP" &&
+    onOpenWorkshopEvent !== undefined;
 
   return (
     <button
       type="button"
-      disabled={!canOpenProjectDetails}
-      onClick={() => event.projectId && onOpenProjectDetails?.(event.projectId)}
+      disabled={!canOpenProjectDetails && !isWorkshopSlot}
+      onClick={() => {
+        if (event.projectId && onOpenProjectDetails) {
+          onOpenProjectDetails(event.projectId);
+        } else if (isWorkshopSlot) {
+          onOpenWorkshopEvent!(event.serviceId, event.startTime);
+        }
+      }}
       className={cn(
         "absolute z-10 overflow-hidden rounded-lg border px-2 py-1 text-left shadow-sm transition-colors",
         event.slotClassName,
         event.isPendingReview && "border-2 border-dashed",
-        canOpenProjectDetails
+        isWorkshopSlot
           ? "cursor-pointer hover:opacity-90"
-          : "cursor-default",
+          : canOpenProjectDetails
+            ? "cursor-pointer hover:opacity-90"
+            : "cursor-default",
         compact && "rounded-md px-1 py-0.5",
       )}
       style={{
@@ -302,6 +331,7 @@ export function CalendarRangeView({
   isLoading = false,
   onSelectDay,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
 }: CalendarRangeViewProps) {
   const isMobile = useIsMobile();
   const eventsByDay = buildEventsByDay(days, events);
@@ -365,9 +395,9 @@ export function CalendarRangeView({
             gridTemplateRows: `auto minmax(${weekMinGridHeight}px, 1fr)`,
           }}
         >
-          <ViewHeader className="border-0 shadow-none">
+          <ViewHeader className="border-0 bg-[#f3f4f6] shadow-none">
             <div
-              className="grid border-b"
+              className="grid border-b border-[#9ca3af]"
               style={{
                 gridTemplateColumns: `${weekTimeColWidth}px repeat(${days.length}, minmax(${weekDayMinWidth}px, 1fr))`,
               }}
@@ -375,7 +405,7 @@ export function CalendarRangeView({
               <ViewHeaderLeading
                 width={weekTimeColWidth}
                 className={cn(
-                  "border-r font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  "border-r border-[#9ca3af] bg-[#f3f4f6] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                   isMobile
                     ? "px-1.5 py-1.5 text-[9px]"
                     : "px-3 py-2 text-[10px]",
@@ -392,7 +422,7 @@ export function CalendarRangeView({
                   <div
                     key={dayKey}
                     className={cn(
-                      "border-r bg-muted/10 last:border-r-0",
+                      "border-r border-[#9ca3af] bg-[#f3f4f6] last:border-r-0",
                       isMobile ? "px-1 py-1.5" : "px-3 py-2",
                     )}
                   >
@@ -412,7 +442,7 @@ export function CalendarRangeView({
                           "inline-flex items-center justify-center rounded-full font-semibold",
                           isMobile ? "size-5 text-[11px]" : "size-7 text-sm",
                           isCurrentLabDay(day)
-                            ? "bg-card text-foreground ring-1 ring-border"
+                            ? "bg-white text-foreground ring-1 ring-[#9ca3af]"
                             : "text-foreground",
                         )}
                       >
@@ -437,35 +467,33 @@ export function CalendarRangeView({
             }}
           >
             <div
-              className="grid border-r bg-background"
-              style={{
-                gridTemplateRows: `repeat(${WEEK_TOTAL_HOURS}, minmax(${weekHourRowMinHeight}px, 1fr))`,
-              }}
+              className="relative border-r border-[#9ca3af] bg-white"
+              style={{ minHeight: weekMinGridHeight }}
             >
-              {WEEK_HOURS.map((hour, index) => (
-                <div
-                  key={`week-time-${hour}`}
-                  className={cn(
-                    "border-b border-border/60",
-                    isMobile ? "px-1.5" : "px-3",
-                  )}
-                  style={{
-                    display:
-                      index === WEEK_HOURS.length - 1 ? "none" : undefined,
-                  }}
-                >
-                  <span
-                    className={cn(
-                      "inline-block bg-background font-medium uppercase tracking-[0.12em] text-muted-foreground",
-                      isMobile
-                        ? "-translate-y-2 pr-1 text-[9px]"
-                        : "-translate-y-2.5 pr-2 text-[10px]",
-                    )}
+              {WEEK_HOURS.slice(0, -1).map((hour, index) => {
+                const top = `${((hour - DAY_START) / WEEK_TOTAL_HOURS) * 100}%`;
+
+                return (
+                  <div
+                    key={`week-time-${hour}`}
+                    className="absolute left-0 right-0"
+                    style={{ top }}
                   >
-                    {formatWeekAxisLabel(hour)}
-                  </span>
-                </div>
-              ))}
+                    <span
+                      className={cn(
+                        "absolute left-0 bg-white font-medium uppercase tracking-[0.12em] text-muted-foreground",
+                        isMobile ? "px-1.5 text-[9px]" : "px-3 text-[10px]",
+                      )}
+                      style={{
+                        transform:
+                          index === 0 ? "translateY(0)" : "translateY(-50%)",
+                      }}
+                    >
+                      {formatWeekAxisLabel(hour)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
             {days.map((day) => {
@@ -475,7 +503,7 @@ export function CalendarRangeView({
               return (
                 <div
                   key={`week-column-${dayKey}`}
-                  className="relative border-r last:border-r-0"
+                  className="relative border-r border-[#9ca3af] bg-white last:border-r-0"
                   style={{ minHeight: weekMinGridHeight }}
                 >
                   {WEEK_HALF_HOUR_MARKS.map((mark, index) => (
@@ -484,8 +512,8 @@ export function CalendarRangeView({
                       className={cn(
                         "absolute left-0 right-0",
                         index % 2 === 0
-                          ? "border-t border-border/60"
-                          : "border-t border-dashed border-border/40",
+                          ? "border-t border-[#9ca3af]"
+                          : "border-t border-dashed border-[#9ca3af]",
                       )}
                       style={{
                         top: `${((mark - DAY_START) / WEEK_TOTAL_HOURS) * 100}%`,
@@ -499,6 +527,7 @@ export function CalendarRangeView({
                       event={event}
                       compact={isMobile}
                       onOpenProjectDetails={onOpenProjectDetails}
+                      onOpenWorkshopEvent={onOpenWorkshopEvent}
                     />
                   ))}
                 </div>
@@ -522,9 +551,9 @@ export function CalendarRangeView({
           gridTemplateRows: "auto minmax(0, 1fr)",
         }}
       >
-        <ViewHeader className="border-0 shadow-none">
+        <ViewHeader className="border-0 bg-[#f3f4f6] shadow-none">
           <div
-            className="grid border-b"
+            className="grid border-b border-[#9ca3af]"
             style={{
               gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
             }}
@@ -533,11 +562,11 @@ export function CalendarRangeView({
               <div
                 key={`month-weekday-${toDayKey(day)}`}
                 className={cn(
-                  "truncate whitespace-nowrap font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+                  "truncate whitespace-nowrap bg-[#f3f4f6] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                   isMobile
                     ? "px-1 py-1.5 text-[9px] text-center"
                     : "px-3 py-2 text-[10px]",
-                  index === 0 ? "" : "border-l",
+                  index === 0 ? "" : "border-l border-[#9ca3af]",
                 )}
               >
                 {formatLabDate(day, { weekday: isMobile ? "narrow" : "long" })}
@@ -548,7 +577,7 @@ export function CalendarRangeView({
 
         <div
           ref={monthBodyRef}
-          className="grid min-h-0 border-b border-r bg-background"
+          className="grid min-h-0 border-b border-r border-[#9ca3af] bg-white"
           style={{
             gridTemplateColumns: `repeat(7, minmax(${monthDayMinWidth}px, 1fr))`,
             gridTemplateRows: `repeat(${monthRowCount}, minmax(${monthCellMinHeight}px, 1fr))`,
@@ -579,8 +608,8 @@ export function CalendarRangeView({
               <div
                 key={toDayKey(day)}
                 className={cn(
-                  "flex min-h-0 flex-col border-l border-t",
-                  isCurrentMonth ? "bg-background" : "bg-muted/10",
+                  "flex min-h-0 flex-col border-l border-t border-[#9ca3af]",
+                  isCurrentMonth ? "bg-white" : "bg-white",
                 )}
               >
                 <button
@@ -588,11 +617,11 @@ export function CalendarRangeView({
                   disabled={onSelectDay === undefined}
                   title={`Open ${formatLabDate(day, { month: "long", day: "numeric" })} in day view`}
                   className={cn(
-                    "flex items-center justify-between gap-2 border-b bg-muted/10 text-left",
+                    "flex items-center justify-between gap-2 border-b border-[#9ca3af] bg-[#f3f4f6] text-left",
                     isMobile ? "px-1.5 py-1" : "px-3 py-2",
                     onSelectDay === undefined
                       ? "cursor-default"
-                      : "transition-colors hover:bg-muted/20",
+                      : "transition-colors hover:bg-[#e5e7eb]",
                   )}
                   onClick={() => onSelectDay?.(day)}
                 >
@@ -603,7 +632,7 @@ export function CalendarRangeView({
                       isCurrentMonth
                         ? "text-foreground"
                         : "text-muted-foreground",
-                      isCurrentLabDay(day) && "bg-card ring-1 ring-border",
+                      isCurrentLabDay(day) && "bg-white ring-1 ring-[#9ca3af]",
                     )}
                   >
                     {formatLabDate(day, { day: "numeric" })}
@@ -629,6 +658,7 @@ export function CalendarRangeView({
                       event={event}
                       showDetails={false}
                       onOpenProjectDetails={onOpenProjectDetails}
+                      onOpenWorkshopEvent={onOpenWorkshopEvent}
                     />
                   ))}
                   {showOverflowLabel ? (

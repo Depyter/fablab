@@ -312,7 +312,7 @@ describe("Service mutations and queries", () => {
     });
 
     test("rejects duplicate slugs on add and update", async () => {
-      const { t, tAera, tHarley } = await setupUsers();
+      const { t, tAera } = await setupUsers();
 
       await tAera.mutation(api.services.mutate.addService, {
         name: "Laser Cutting",
@@ -925,7 +925,9 @@ describe("Service mutations and queries", () => {
           date: bookingDay,
         },
       );
-      expect(serviceLevelBookedSlots).toEqual([]);
+      expect(serviceLevelBookedSlots).toEqual([
+        { usageId, startTime: bookingStart, endTime: bookingEnd },
+      ]);
 
       const bookings = await tHarley.query(api.resource.query.getBookings, {
         date: bookingDay,

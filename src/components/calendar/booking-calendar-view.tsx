@@ -19,6 +19,7 @@ export function BookingCalendarView({
   visibleRange,
   onSelectDay,
   onOpenProjectDetails,
+  onOpenWorkshopEvent,
   activeTab,
   isAdminOrMaker,
   bookingsLoading,
@@ -33,6 +34,7 @@ export function BookingCalendarView({
   visibleRange: CalendarVisibleRange;
   onSelectDay?: (date: Date) => void;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
+  onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
   activeTab: CalendarTab;
   isAdminOrMaker: boolean;
   bookingsLoading: boolean;
@@ -43,7 +45,7 @@ export function BookingCalendarView({
   rangeEvents: CalendarRangeEvent[];
 }) {
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
       <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
         {activeTab === "services" ? (
           viewMode === "day" ? (
@@ -51,6 +53,7 @@ export function BookingCalendarView({
               machines={serviceMachines}
               usages={serviceUsages}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
               leadingColumnLabel="SERVICES"
             />
           ) : (
@@ -62,6 +65,7 @@ export function BookingCalendarView({
               isLoading={bookingsLoading}
               onSelectDay={onSelectDay}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
             />
           )
         ) : isAdminOrMaker ? (
@@ -70,6 +74,7 @@ export function BookingCalendarView({
               machines={resourceMachines}
               usages={resourceUsages}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
               leadingColumnLabel="RESOURCES"
             />
           ) : (
@@ -81,6 +86,7 @@ export function BookingCalendarView({
               isLoading={bookingsLoading}
               onSelectDay={onSelectDay}
               onOpenProjectDetails={onOpenProjectDetails}
+              onOpenWorkshopEvent={onOpenWorkshopEvent}
             />
           )
         ) : null}

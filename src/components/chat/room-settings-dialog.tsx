@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UserRole } from "@convex/constants";
+import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 import { UserPlus, UserMinus, Search, Settings } from "lucide-react";
 
@@ -51,8 +52,14 @@ export function RoomSettingsDialog({
     try {
       await addMember({ roomId, userId });
       toast.success("Member added to workspace");
-    } catch {
-      toast.error("Failed to add member");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to add member";
+      toast.error(message);
     }
   };
 
@@ -60,8 +67,14 @@ export function RoomSettingsDialog({
     try {
       await removeMember({ roomId, userId });
       toast.success("Member removed from workspace");
-    } catch {
-      toast.error("Failed to remove member");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to remove member";
+      toast.error(message);
     }
   };
 
@@ -71,8 +84,14 @@ export function RoomSettingsDialog({
       await updateRoomName({ roomId, name: newRoomName });
       toast.success("Workspace name updated");
       setIsOpen(false);
-    } catch {
-      toast.error("Failed to update workspace name");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update workspace name";
+      toast.error(message);
     }
   };
 

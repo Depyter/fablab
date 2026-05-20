@@ -3,8 +3,6 @@ import Link from "next/link";
 import { PublicMobileNavCard } from "@/components/public-mobile-nav-card";
 import { PublicNavAuth } from "@/components/public-nav-auth";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
-import { PublicNavBackButton } from "@/components/public-nav-back-button";
-
 const publicNavItems = [
   {
     href: "/#about",

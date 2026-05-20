@@ -59,6 +59,10 @@ export default defineSchema({
                 endTime: v.number(),
                 maxSlots: v.number(),
                 usedUpSlots: v.optional(v.number()),
+                // Resources this time slot consumes (rooms, machines)
+                resources: v.optional(v.array(v.id("resources"))),
+                // Materials available for participants to select
+                availableMaterials: v.optional(v.array(v.id("materials"))),
               }),
             ),
           }),
@@ -258,6 +262,8 @@ export default defineSchema({
     .index("by_userProfile", ["userId"])
     .index("by_status", ["status"])
     .index("by_bookingStartTime", ["bookingStartTime"])
+    .index("by_type_bookingStartTime", ["type", "bookingStartTime"])
+    .index("by_type", ["type"])
     .index("by_assignedMaker", ["assignedMaker"])
     .searchIndex("search_body", {
       searchField: "searchText",

@@ -59,7 +59,7 @@ export function OptionRadioGroup({
         <FieldLabel
           key={option.value}
           htmlFor={option.id}
-          className={`rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] transition-all cursor-pointer ${
+          className={`rounded-none border-2 border-black bg-background shadow-[4px_4px_0_0_#000] transition-all cursor-pointer ${
             option.disabled
               ? "cursor-not-allowed opacity-50"
               : "hover:translate-x-1 hover:translate-y-1 hover:shadow-none"

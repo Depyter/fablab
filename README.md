@@ -161,11 +161,8 @@ Set these GitHub repository secrets before enabling the workflows:
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-Do **not** set `BETTER_AUTH_URL` in Convex when you want Better Auth to infer the active preview URL from the request. Keep the production OAuth callback URL separate with `BETTER_AUTH_PRODUCTION_URL`, and use `BETTER_AUTH_TRUSTED_ORIGINS` for preview host patterns.
+Configure these Convex environment variables across all deployments:
 
-Google OAuth now uses Better Auth's OAuth Proxy so preview and staging deployments can reuse the production Google OAuth app. Configure auth like this across Convex deployments:
-
-- `BETTER_AUTH_PRODUCTION_URL=https://fablab.harleyvan.com`
 - `BETTER_AUTH_SECRET=<same value in production and every preview/staging deployment>`
 - `BETTER_AUTH_TRUSTED_ORIGINS=<comma-separated preview host patterns, for example *-fablab-preview.acabalharleyvan.workers.dev>`
 

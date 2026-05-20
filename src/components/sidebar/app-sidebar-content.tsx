@@ -3,12 +3,13 @@
 import * as React from "react";
 import { usePostHogIdentify } from "@/hooks/use-posthog-identify";
 import {
+  CalendarCheckIcon,
   CalendarIcon,
   MessageSquareIcon,
   FolderIcon,
   WrenchIcon,
   PackageIcon,
-  // BarChart2Icon,
+  BarChart2Icon,
   UsersIcon,
 } from "lucide-react";
 import {
@@ -64,6 +65,15 @@ const allNavItems: NavItem[] = [
     group: "main",
   },
   {
+    title: "Workshops",
+    url: "/dashboard/workshops",
+    icon: <CalendarCheckIcon />,
+    iconBackground: "var(--fab-amber-light)",
+    iconColor: "var(--fab-amber)",
+    roles: ["admin", "maker", "client"],
+    group: "main",
+  },
+  {
     title: "Services",
     url: "/dashboard/services",
     icon: <WrenchIcon />,
@@ -90,15 +100,15 @@ const allNavItems: NavItem[] = [
     roles: ["admin"],
     group: "manage",
   },
-  // {
-  //   title: "Reports",
-  //   url: "#",
-  //   icon: <BarChart2Icon />,
-  //   iconBackground: "var(--fab-bg-deep)",
-  //   iconColor: "var(--fab-text-muted)",
-  //   roles: ["admin", "maker"],
-  //   group: "reports",
-  // },
+  {
+    title: "Reports",
+    url: "/dashboard/reports",
+    icon: <BarChart2Icon />,
+    iconBackground: "var(--fab-bg-deep)",
+    iconColor: "var(--fab-text-muted)",
+    roles: ["admin", "maker"],
+    group: "reports",
+  },
 ];
 
 function filterNavItems(items: NavItem[], role: Role): NavItem[] {
@@ -129,7 +139,7 @@ export function SidebarNavigation() {
         <React.Fragment key={group.key}>
           {groupIndex > 0 && (
             <div className="px-3 py-1">
-              <Separator style={{ background: "var(--fab-border-md)" }} />
+              <Separator className="bg-black" />
             </div>
           )}
           <SidebarGroup className="py-0">

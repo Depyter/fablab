@@ -21,6 +21,8 @@ interface ActionDialogProps {
   cancelButtonText?: string;
   className?: string;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ActionDialog({
@@ -32,19 +34,23 @@ export function ActionDialog({
   cancelButtonText,
   className,
   disabled,
+  open,
+  onOpenChange,
 }: ActionDialogProps) {
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <form>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn("rounded-lg", className)}
-            disabled={disabled}
-          >
-            {baseActionText || "Back"}
-          </Button>
-        </DialogTrigger>
+        {baseActionText && (
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn("rounded-lg", className)}
+              disabled={disabled}
+            >
+              {baseActionText}
+            </Button>
+          </DialogTrigger>
+        )}
         <DialogContent
           className="sm:max-w-sm rounded-xl"
           showCloseButton={false}

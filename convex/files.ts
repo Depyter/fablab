@@ -1,7 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { authMutation, authQuery } from "./helper";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "./constants";
-import { rateLimiter } from "./ratelimit";
 
 // The file size is not limited, but upload POST request has a 2 minute timeout.
 export const generateUploadUrl = authMutation({

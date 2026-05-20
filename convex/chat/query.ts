@@ -9,7 +9,7 @@ const ARCHIVE_STATUSES = new Set(PROJECT_ARCHIVE_STATUSES);
 export const getRoom = authQuery({
   args: { roomId: v.id("rooms") },
   handler: async (ctx, args) => {
-    checkRoomMembership(args.roomId, ctx, ctx.user);
+    checkRoomMembership(args.roomId, ctx, ctx.profile);
     return await ctx.db.get(args.roomId);
   },
 });
@@ -21,7 +21,7 @@ export const getRoomMessages = authQuery({
     threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {
-    checkRoomMembership(args.room, ctx, ctx.user);
+    checkRoomMembership(args.room, ctx, ctx.profile);
 
     const messages = await ctx.db
       .query("messages")
@@ -104,24 +104,29 @@ export const getRooms = authQuery({
     // TODO: PAGINATED QUERY INSTEAD
     // TODO: Split this into lightweight room summaries plus per-room thread
     // queries as chat grows so the shell does not preload every thread up front.
-    const roomMembers = await ctx.db
-      .query("roomMembers")
-      .withIndex("by_participantId", (q) =>
-        q.eq("participantId", ctx.profile._id),
-      )
-      .collect();
+    let rooms;
 
-    // Wave 1: fetch all rooms in parallel
-    const rooms = await Promise.all(
-      roomMembers.map((member) => ctx.db.get(member.roomId)),
-    );
+    if (ctx.profile.role === "admin" || ctx.profile.role === "maker") {
+      // Admins and makers have implicit access to all rooms
+      rooms = await ctx.db.query("rooms").collect();
+    } else {
+      // Clients only see rooms they're explicitly added to
+      const roomMembers = await ctx.db
+        .query("roomMembers")
+        .withIndex("by_participantId", (q) =>
+          q.eq("participantId", ctx.profile._id),
+        )
+        .collect();
 
-    const validRooms = rooms.filter(
-      (r): r is NonNullable<typeof r> => r !== null,
-    );
+      rooms = await Promise.all(
+        roomMembers.map((member) => ctx.db.get(member.roomId)),
+      );
+
+      rooms = rooms.filter((r): r is NonNullable<typeof r> => r !== null);
+    }
 
     const roomsWithThreads = await Promise.all(
-      validRooms.map(async (room) => {
+      rooms.map(async (room) => {
         const threads = await ctx.db
           .query("threads")
           .withIndex("by_roomId", (q) => q.eq("roomId", room._id))
@@ -211,6 +216,12 @@ export const getRoomMembers = authQuery({
 export const getAddableUsers = authQuery({
   args: { roomId: v.id("rooms") },
   handler: async (ctx, args) => {
+    // Admins and makers can see all users — they can add anyone to any room
+    if (ctx.profile.role === "admin" || ctx.profile.role === "maker") {
+      return await ctx.db.query("userProfile").collect();
+    }
+
+    // Clients can only see users who aren't already members
     const memberships = await ctx.db
       .query("roomMembers")
       .withIndex("by_roomId_participantId", (q) => q.eq("roomId", args.roomId))
@@ -242,6 +253,7 @@ export const getThreadProjectStatus = authQuery({
 
     return {
       status: project.status,
+      type: project.type,
       archivalDeadline: project.archivalDeadline ?? null,
     };
   },

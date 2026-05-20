@@ -1,24 +1,24 @@
 import { ConvexError } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
-import { MutationCtx } from "../_generated/server";
+import { MutationCtx, QueryCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
   formatLabDate,
   formatLabTime,
   getCurrentTimestamp,
+  getLabDayStartTimestamp,
   getLabWeekday,
 } from "../../src/lib/lab-time";
 import {
   FILE_CATEGORIES,
   MaterialStatus,
   PROJECT_ARCHIVE_STATUSES,
-  PROJECT_STATUS_LABELS,
-  PROJECT_STATUS_TRANSITIONS,
   UserRole,
   type MaterialStatusType,
   type ProjectStatusType,
 } from "../constants";
+import { getWorkflow, getStatusLabel } from "../../src/lib/project-workflow";
 
 /**
  * Builds the denormalized search text for a project.
@@ -142,13 +142,6 @@ export function validateBookingTiming(
   }
 }
 
-function serviceUsesDiscreteResources(service: ServiceDoc) {
-  return (
-    service.serviceCategory.type === "FABRICATION" &&
-    (service.resources?.length ?? 0) > 0
-  );
-}
-
 export async function validateFabricationAvailability(
   ctx: MutationCtx,
   serviceId: Id<"services">,
@@ -180,12 +173,10 @@ export async function validateFabricationAvailability(
           q.eq("resource", options.resourceId!),
         )
         .collect()
-    : serviceUsesDiscreteResources(service)
-      ? []
-      : await ctx.db
-          .query("resourceUsage")
-          .withIndex("by_service", (q) => q.eq("service", serviceId))
-          .collect();
+    : await ctx.db
+        .query("resourceUsage")
+        .withIndex("by_service", (q) => q.eq("service", serviceId))
+        .collect();
 
   for (const usage of existingUsages) {
     if (options?.excludeUsageId && usage._id === options.excludeUsageId) {
@@ -560,19 +551,9 @@ export async function ensureProjectRoom(
     participantId: userProfile._id,
   });
 
-  const admins = await ctx.db
-    .query("userProfile")
-    .withIndex("by_role", (q) => q.eq("role", "admin"))
-    .collect();
-
-  for (const admin of admins) {
-    if (admin._id !== userProfile._id) {
-      await ctx.db.insert("roomMembers", {
-        roomId,
-        participantId: admin._id,
-      });
-    }
-  }
+  // Admins and makers have implicit access to all rooms — they don't need
+  // explicit roomMembers records. Only the client (project owner) is added
+  // so the client-facing query gate works correctly.
 
   const welcomeContent = `Welcome to ${workspaceName}! This is your main room for general inquiries.`;
   const generalThreadId = await ctx.db.insert("threads", {
@@ -790,29 +771,37 @@ export async function sendProjectSystemMessage(
 export async function applyStatusChange(
   ctx: MutationCtx,
   project: Doc<"projects">,
-  existingProject: Doc<"projects">,
   status: ProjectStatus,
 ): Promise<string[]> {
   if (project.status === status) return [];
 
-  if (!PROJECT_STATUS_TRANSITIONS[project.status].includes(status)) {
+  const workflow = getWorkflow(project.type);
+  if (!workflow.transitions[project.status]?.includes(status)) {
     throw new ConvexError(
       `Cannot change project status from ${project.status} to ${status}.`,
     );
   }
 
+  // Enforce that transitioning to "paid" requires an existing receipt.
+  // First-time payment must go through markProjectPaid which creates the receipt.
+  if (status === "paid" && !project.receipt) {
+    throw new ConvexError(
+      "Cannot set status to paid without a receipt. Use markProjectPaid instead.",
+    );
+  }
+
   await ctx.db.patch(project._id, { status });
 
-  const lines: string[] = [
-    `Status updated to: **${PROJECT_STATUS_LABELS[status]}**`,
-  ];
+  const label = getStatusLabel(workflow, status);
+
+  const lines: string[] = [`Status updated to: **${label}**`];
 
   // Release bookings, workshop slots, and any reserved materials on
   // cancellation / rejection so the project no longer holds resources.
   if (
     (status === "cancelled" || status === "rejected") &&
-    existingProject.status !== "cancelled" &&
-    existingProject.status !== "rejected"
+    project.status !== "cancelled" &&
+    project.status !== "rejected"
   ) {
     const service = await ctx.db.get(project.service);
     const usages = await ctx.db
@@ -821,7 +810,13 @@ export async function applyStatusChange(
       .collect();
 
     for (const usage of usages) {
-      if (service && service.serviceCategory.type === "WORKSHOP") {
+      // Only decrement the main workshop slot usage (no resource).
+      // Resource usages (rooms, machines) should not decrement the slot counter.
+      if (
+        service &&
+        service.serviceCategory.type === "WORKSHOP" &&
+        !usage.resource
+      ) {
         await decrementWorkshopSlot(ctx, service, usage);
       }
 
@@ -842,9 +837,171 @@ export async function applyStatusChange(
     await syncProjectTotalInvoice(ctx, project._id);
   }
 
+  // Re-acquire workshop slot & re-create usage when reactivating from
+  // cancelled/rejected — check capacity before allowing the transition.
+  if (
+    (project.status === "cancelled" || project.status === "rejected") &&
+    status !== "cancelled" &&
+    status !== "rejected" &&
+    project.bookingStartTime != null
+  ) {
+    const service = await ctx.db.get(project.service);
+    if (service && service.serviceCategory.type === "WORKSHOP") {
+      const schedule = service.serviceCategory.schedules.find(
+        (s) => s.date === getLabDayStartTimestamp(project.bookingStartTime!),
+      );
+      const timeSlot = schedule?.timeSlots.find(
+        (t) => t.startTime === project.bookingStartTime!,
+      );
+
+      if (
+        timeSlot &&
+        timeSlot.maxSlots > 0 &&
+        (timeSlot.usedUpSlots ?? 0) >= timeSlot.maxSlots
+      ) {
+        throw new ConvexError(
+          "Cannot reactivate — this workshop timeslot is fully booked.",
+        );
+      }
+
+      // ── Re-create resourceUsage records ──────────────────────────────
+      // The original usage records were deleted on cancellation. Re-create
+      // them so the project appears in the calendar, has a valid invoice,
+      // and retains accurate pricing snapshots. We create the usages BEFORE
+      // incrementing the slot so createWorkshopUsage's internal capacity
+      // check (which reads usedUpSlots) sees the current, un-incremented value.
+      const booking: BookingWindow = {
+        startTime: project.bookingStartTime!,
+        endTime: project.bookingEndTime ?? project.bookingStartTime!,
+        date: getLabDayStartTimestamp(project.bookingStartTime!),
+      };
+
+      const bookingDurationMs = booking.endTime - booking.startTime;
+      const provisional = computeProvisionalCostBreakdown(
+        service,
+        project.pricing,
+        project.fulfillmentMode,
+        bookingDurationMs,
+      );
+
+      const usageSnapshot = {
+        name: service.name,
+        costAtTime: provisional.total,
+        unit: "session",
+      };
+
+      const usagePricingSnapshot = buildUsagePricingSnapshot({
+        duration: provisional.duration,
+        rate: provisional.rate,
+        timeCost: provisional.timeCost,
+        materialCost: provisional.materialCost,
+        setupFeePortion: provisional.setupFee,
+        unitName: provisional.unitName,
+        pricingVariant: project.pricing,
+      });
+
+      // Re-create the main workshop usage (no resource)
+      await createWorkshopUsage(
+        ctx,
+        project.service,
+        service,
+        booking,
+        project._id,
+        usageSnapshot,
+        usagePricingSnapshot,
+      );
+
+      // Re-create slot-level resource usages (rooms, machines)
+      for (const resourceId of timeSlot?.resources ?? []) {
+        await ctx.db.insert("resourceUsage", {
+          projectId: project._id,
+          service: project.service,
+          resource: resourceId,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          snapshot: {
+            name: service.name,
+            costAtTime: 0,
+            unit: "session",
+          },
+          pricingSnapshot: {
+            duration: 0,
+            rate: 0,
+            timeCost: 0,
+            materialCost: 0,
+            setupFeePortion: 0,
+            subtotal: 0,
+            unitName: "session",
+          },
+        });
+      }
+
+      // Increment the slot AFTER re-creating usages so the capacity check
+      // inside createWorkshopUsage sees the pre-increment value.
+      await incrementWorkshopSlot(ctx, service, {
+        startTime: project.bookingStartTime!,
+        endTime: project.bookingEndTime ?? project.bookingStartTime!,
+        date: getLabDayStartTimestamp(project.bookingStartTime!),
+      });
+
+      await syncProjectTotalInvoice(ctx, project._id, {
+        fallbackTotal: provisional.total,
+      });
+    } else if (service && service.serviceCategory.type === "FABRICATION") {
+      // Re-create fabrication resource usage that was deleted on cancellation.
+      const booking: BookingWindow = {
+        startTime: project.bookingStartTime!,
+        endTime: project.bookingEndTime ?? project.bookingStartTime!,
+        date: getLabDayStartTimestamp(project.bookingStartTime!),
+      };
+
+      // Validate that the time slot and resource are still available.
+      // Another project may have booked this slot while this one was cancelled.
+      await validateFabricationAvailability(
+        ctx,
+        project.service,
+        service,
+        booking,
+      );
+
+      const bookingDurationMs = booking.endTime - booking.startTime;
+      const provisional = computeProvisionalCostBreakdown(
+        service,
+        project.pricing,
+        project.fulfillmentMode,
+        bookingDurationMs,
+      );
+
+      const usageSnapshot = {
+        name: service.name,
+        costAtTime: provisional.total,
+        unit: service.serviceCategory.unitName,
+      };
+
+      const usagePricingSnapshot = buildUsagePricingSnapshot({
+        duration: provisional.duration,
+        rate: provisional.rate,
+        timeCost: provisional.timeCost,
+        materialCost: provisional.materialCost,
+        setupFeePortion: provisional.setupFee,
+        unitName: provisional.unitName,
+        pricingVariant: project.pricing,
+      });
+
+      await createFabricationUsage(
+        ctx,
+        project.service,
+        booking,
+        project._id,
+        usageSnapshot,
+        usagePricingSnapshot,
+      );
+    }
+  }
+
   // ── Unschedule / schedule on terminal status transitions ──────────────
   const wasArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
-    existingProject.status as ProjectStatusType,
+    project.status as ProjectStatusType,
   );
   const isArchiveStatus = PROJECT_ARCHIVE_STATUSES.includes(
     status as ProjectStatusType,
@@ -888,108 +1045,15 @@ export async function applyStatusChange(
 }
 
 /**
- * Assigns a maker to the project record and its resource usage record.
- * Returns change-log lines for the system message.
- */
-// ── Chat room membership helpers ────────────────────────────────────────────
-
-/**
- * Find the chat room associated with a project, if any.
- * Projects link to rooms via the threads table (threads.projectId → threads.roomId).
- */
-async function findProjectRoom(
-  ctx: Pick<MutationCtx, "db">,
-  projectId: Id<"projects">,
-): Promise<Id<"rooms"> | null> {
-  const thread = await ctx.db
-    .query("threads")
-    .withIndex("projectId", (q) => q.eq("projectId", projectId))
-    .first();
-  return thread?.roomId ?? null;
-}
-
-/**
- * Add a user to a room if they aren't already a member.
- */
-export async function addRoomMember(
-  ctx: Pick<MutationCtx, "db">,
-  roomId: Id<"rooms">,
-  participantId: Id<"userProfile">,
-): Promise<void> {
-  const existing = await ctx.db
-    .query("roomMembers")
-    .withIndex("by_roomId_participantId", (q) =>
-      q.eq("roomId", roomId).eq("participantId", participantId),
-    )
-    .first();
-
-  if (!existing) {
-    await ctx.db.insert("roomMembers", { roomId, participantId });
-  }
-}
-
-/**
- * Remove a user from a room if they are a member.
- */
-export async function removeRoomMember(
-  ctx: Pick<MutationCtx, "db">,
-  roomId: Id<"rooms">,
-  participantId: Id<"userProfile">,
-): Promise<void> {
-  const existing = await ctx.db
-    .query("roomMembers")
-    .withIndex("by_roomId_participantId", (q) =>
-      q.eq("roomId", roomId).eq("participantId", participantId),
-    )
-    .first();
-
-  if (existing) {
-    await ctx.db.delete(existing._id);
-  }
-}
-
-/**
- * Check if a maker is still assigned to any other project that shares the
- * given chat room. Prevents removing a maker from a room they should still
- * have access to.
- */
-async function isMakerAssignedToOtherProjectInRoom(
-  ctx: Pick<MutationCtx, "db">,
-  roomId: Id<"rooms">,
-  excludeProjectId: Id<"projects">,
-  makerId: Id<"userProfile">,
-): Promise<boolean> {
-  const threads = await ctx.db
-    .query("threads")
-    .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-    .collect();
-
-  const otherProjectIds = threads
-    .map((t) => t.projectId)
-    .filter(
-      (pid): pid is Id<"projects"> =>
-        pid !== undefined && pid !== excludeProjectId,
-    );
-
-  if (otherProjectIds.length === 0) return false;
-
-  const otherProjects = await Promise.all(
-    otherProjectIds.map((pid) => ctx.db.get(pid)),
-  );
-
-  return otherProjects.some((p) => p?.assignedMaker === makerId);
-}
-
-/**
  * Assigns or unassigns a maker for a project.
  *
- * When **assigning** (`makerId` is a valid user ID): patches the project's
- * `assignedMaker`, adds the new maker to the project's chat room, and removes
- * the previous maker (if any) — unless they're still needed for another project
- * in the same room.
+ * Maker assignment/unassignment is purely a business-domain concern.
+ * Chat room access is handled implicitly — makers have access to all rooms.
  *
- * When **unassigning** (`makerId` is `null`): clears `assignedMaker` and removes
- * the maker from the chat room (subject to the same multi-project guard).
+ * When **assigning** (`makerId` is a valid user ID): patches the project's
+ * `assignedMaker`. Clears the previous maker (if any).
+ *
+ * When **unassigning** (`makerId` is `null`): clears `assignedMaker`.
  *
  * Returns change-log lines for the system message.
  */
@@ -1005,21 +1069,6 @@ export async function applyMakerAssignment(
     // Already unassigned — nothing to do
     if (!project.assignedMaker) return [];
 
-    const roomId = await findProjectRoom(ctx, project._id);
-    if (roomId) {
-      // Only remove from room if they aren't assigned to another project in it
-      const stillNeeded = await isMakerAssignedToOtherProjectInRoom(
-        ctx,
-        roomId,
-        project._id,
-        project.assignedMaker,
-      );
-      if (!stillNeeded) {
-        await removeRoomMember(ctx, roomId, project.assignedMaker);
-      }
-    }
-
-    // Patch with undefined to clear the optional field
     await ctx.db.patch(project._id, { assignedMaker: undefined });
 
     messages.push(`- Maker unassigned from project`);
@@ -1033,31 +1082,6 @@ export async function applyMakerAssignment(
   }
 
   if (project.assignedMaker === makerId) return [];
-
-  // Find the project room once — both removal and addition use the same room
-  const roomId = await findProjectRoom(ctx, project._id);
-
-  // If there was a previous maker who is being replaced, remove them from the room
-  // but only if they aren't assigned to another project that shares the same room.
-  if (project.assignedMaker) {
-    if (roomId) {
-      const stillNeeded = await isMakerAssignedToOtherProjectInRoom(
-        ctx,
-        roomId,
-        project._id,
-        project.assignedMaker,
-      );
-      if (!stillNeeded) {
-        await removeRoomMember(ctx, roomId, project.assignedMaker);
-        messages.push(`- Previous maker removed from project chat room`);
-      }
-    }
-  }
-
-  // Add the new maker to the project's chat room
-  if (roomId) {
-    await addRoomMember(ctx, roomId, makerId);
-  }
 
   await ctx.db.patch(project._id, { assignedMaker: makerId });
 
@@ -1183,4 +1207,219 @@ export async function scheduleProjectUpdateEmail(
       total: pricingResult.total,
     },
   });
+}
+
+// ── Workshop event helpers ───────────────────────────────────────────────────
+// Shared between the workshops page query and any other code that needs to
+// aggregate workshop projects into event records.
+
+export function buildProjectGroups(
+  projects: Doc<"projects">[],
+  serviceId?: Id<"services">,
+  startTime?: number,
+): Map<string, Doc<"projects">[]> {
+  let filtered = projects.filter((p) => p.bookingStartTime != null);
+
+  if (serviceId) {
+    filtered = filtered.filter((p) => p.service === serviceId);
+  }
+  if (startTime) {
+    filtered = filtered.filter((p) => p.bookingStartTime === startTime);
+  }
+
+  const groups = new Map<string, Doc<"projects">[]>();
+  for (const project of filtered) {
+    const key = `${project.service}:${project.bookingStartTime}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(project);
+    } else {
+      groups.set(key, [project]);
+    }
+  }
+  return groups;
+}
+
+export async function buildEventsFromGroups(
+  ctx: QueryCtx,
+  groups: Map<string, Doc<"projects">[]>,
+) {
+  const serviceCache = new Map<string, Doc<"services">>();
+  const userProfileCache = new Map<string, Doc<"userProfile">>();
+
+  async function getService(id: Id<"services">): Promise<Doc<"services">> {
+    const key = id as string;
+    const cached = serviceCache.get(key);
+    if (cached) return cached;
+    const doc = await ctx.db.get(id);
+    if (!doc) throw new ConvexError("Service not found");
+    serviceCache.set(key, doc);
+    return doc;
+  }
+
+  async function getUserProfile(
+    id: Id<"userProfile">,
+  ): Promise<Doc<"userProfile">> {
+    const key = id as string;
+    const cached = userProfileCache.get(key);
+    if (cached) return cached;
+    const doc = await ctx.db.get(id);
+    if (!doc) throw new ConvexError("User profile not found");
+    userProfileCache.set(key, doc);
+    return doc;
+  }
+
+  const events: Array<{
+    serviceId: Id<"services">;
+    serviceName: string;
+    serviceSlug: string;
+    date: number;
+    startTime: number;
+    endTime: number;
+    maxSlots: number;
+    usedSlots: number;
+    registrationCount: number;
+    cancelledCount: number;
+    statusBreakdown: Record<string, number>;
+    resources?: Id<"resources">[];
+    availableMaterials?: Id<"materials">[];
+    attendees: Array<{
+      projectId: Id<"projects">;
+      userId: Id<"userProfile">;
+      name: string;
+      email: string;
+      status: string;
+      pfpUrl: string | null;
+      createdAt: number;
+      roomId: string | null;
+      threadId: string | null;
+    }>;
+  }> = [];
+
+  for (const [key, groupProjects] of groups.entries()) {
+    const [serviceIdStr, startTimeStr] = key.split(":");
+    const serviceId = serviceIdStr as unknown as Id<"services">;
+    const bookingStartTime = Number(startTimeStr);
+
+    const service = await getService(serviceId);
+
+    // Resolve schedule details
+    let endTime = bookingStartTime;
+    let maxSlots = 0;
+    let usedSlots = 0;
+    let resources: Id<"resources">[] | undefined;
+    let availableMaterials: Id<"materials">[] | undefined;
+
+    if (service.serviceCategory.type === "WORKSHOP") {
+      const projectDate = getLabDayStartTimestamp(bookingStartTime);
+      const schedule = service.serviceCategory.schedules.find(
+        (s) => s.date === projectDate,
+      );
+      if (schedule) {
+        const timeSlot = schedule.timeSlots.find(
+          (ts) => ts.startTime === bookingStartTime,
+        );
+        if (timeSlot) {
+          endTime = timeSlot.endTime;
+          maxSlots = timeSlot.maxSlots;
+          usedSlots = timeSlot.usedUpSlots ?? 0;
+          resources = timeSlot.resources;
+          availableMaterials = timeSlot.availableMaterials;
+        }
+      }
+    }
+
+    // Use the first project's bookingEndTime as fallback
+    if (groupProjects[0].bookingEndTime != null) {
+      endTime = groupProjects[0].bookingEndTime;
+    }
+
+    // Separate active vs cancelled/rejected projects
+    const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+    const activeProjects = groupProjects.filter(
+      (p) => !TERMINAL_STATUSES.has(p.status),
+    );
+
+    // Load attendee profiles + threads
+    const threadPromises = activeProjects.map((project) =>
+      ctx.db
+        .query("threads")
+        .withIndex("projectId", (q) => q.eq("projectId", project._id))
+        .first(),
+    );
+    const threads = await Promise.all(threadPromises);
+    const threadByProjectId = new Map(
+      threads
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+        .map((t) => [t.projectId as string, t]),
+    );
+
+    const attendees = await Promise.all(
+      activeProjects.map(async (project) => {
+        const profile = await getUserProfile(project.userId);
+        let pfpUrl: string | null = null;
+        if (profile.profilePic) {
+          try {
+            pfpUrl = await ctx.storage.getUrl(profile.profilePic);
+          } catch {
+            // Gracefully handle inaccessible storage
+          }
+        }
+        const thread = threadByProjectId.get(project._id as string);
+        return {
+          projectId: project._id,
+          userId: project.userId,
+          name: profile.name,
+          email: profile.email,
+          status: project.status,
+          pfpUrl,
+          createdAt: project._creationTime,
+          roomId: thread?.roomId ?? null,
+          threadId: thread?._id ?? null,
+        };
+      }),
+    );
+
+    // Build status breakdown
+    const statusBreakdown: Record<string, number> = {};
+    for (const p of groupProjects) {
+      statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
+    }
+
+    events.push({
+      serviceId,
+      serviceName: service.name,
+      serviceSlug: service.slug,
+      date: getLabDayStartTimestamp(bookingStartTime),
+      startTime: bookingStartTime,
+      endTime,
+      maxSlots,
+      usedSlots,
+      registrationCount: activeProjects.length,
+      cancelledCount: groupProjects.length - activeProjects.length,
+      statusBreakdown,
+      resources,
+      availableMaterials,
+      attendees,
+    });
+  }
+
+  return events;
+}
+
+export function splitUpcomingPast<T extends { startTime: number }>(
+  events: T[],
+  todayStart: number,
+): { upcoming: T[]; past: T[] } {
+  const upcoming = events
+    .filter((e) => e.startTime >= todayStart)
+    .sort((a, b) => a.startTime - b.startTime)
+    .slice(0, 50);
+
+  const past = events
+    .filter((e) => e.startTime < todayStart)
+    .sort((a, b) => b.startTime - a.startTime)
+    .slice(0, 50);
+
+  return { upcoming, past };
 }

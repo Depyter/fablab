@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
 import { withForm } from "@/lib/form-context";
-import { addServiceFormOpts } from "@/types/add-service";
+import {
+  addServiceFormOpts,
+  type AddServiceFormValues,
+} from "@/types/add-service";
+import { ServiceFormModeContext } from "@/components/services/forms/service-form";
 import { FormSection } from "@/components/ui/form-section";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -21,15 +25,30 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 
 type TimeUnit = "minute" | "hour" | "day";
+type ServiceCategory = AddServiceFormValues["serviceCategory"];
+type Pricing = AddServiceFormValues["pricing"];
+type FixedPricing = Extract<Pricing, { type: "FIXED" }>;
+type FabricationPricing = Extract<Pricing, { type: "FABRICATION" }>;
+type FixedPricingVariant = FixedPricing["variants"][number];
+type FabricationPricingVariant = FabricationPricing["variants"][number];
+
 const TIME_UNITS: { value: TimeUnit; label: string }[] = [
   { value: "minute", label: "Minute" },
   { value: "hour", label: "Hour" },
   { value: "day", label: "Day" },
 ];
 
+const isServiceCategory = (value: string): value is ServiceCategory =>
+  value === "WORKSHOP" || value === "FABRICATION";
+
+const isTimeUnit = (value: string): value is TimeUnit =>
+  TIME_UNITS.some((unit) => unit.value === value);
+
 export const PricingForm = withForm({
   ...addServiceFormOpts,
   render: function PricingRender({ form }) {
+    const serviceFormMode = useContext(ServiceFormModeContext);
+    const hideCategorySelector = serviceFormMode !== undefined;
     const pricingValue = form.state.values.pricing;
     const nextVariantKeyRef = useRef(0);
     const createVariantKey = () =>
@@ -55,45 +74,51 @@ export const PricingForm = withForm({
         <form.Field
           name="serviceCategory"
           children={(field) => (
-            <FormSection
-              title="Category & Pricing Model"
-              description="Define what kind of service this is and how it will be priced."
-            >
-              <Field>
-                <FieldLabel htmlFor="serviceCategory">
-                  Service Category
-                </FieldLabel>
-                <Select
-                  value={field.state.value}
-                  onValueChange={(val) => {
-                    field.handleChange(val as "WORKSHOP" | "FABRICATION");
-                    if (val === "WORKSHOP") {
-                      form.setFieldValue("pricing", {
-                        type: "FIXED",
-                        amount: 0,
-                        variants: [],
-                      });
-                    } else {
-                      form.setFieldValue("pricing", {
-                        type: "FABRICATION",
-                        setupFee: 0,
-                        unitName: "hour" as TimeUnit,
-                        timeRate: 0,
-                        variants: [],
-                      });
-                    }
-                  }}
+            <>
+              {!hideCategorySelector && (
+                <FormSection
+                  title="Category & Pricing Model"
+                  description="Define what kind of service this is and how it will be priced."
                 >
-                  <SelectTrigger id="serviceCategory">
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="WORKSHOP">Workshop</SelectItem>
-                    <SelectItem value="FABRICATION">Fabrication</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </FormSection>
+                  <Field>
+                    <FieldLabel htmlFor="serviceCategory">
+                      Service Category
+                    </FieldLabel>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(val) => {
+                        if (!isServiceCategory(val)) return;
+
+                        field.handleChange(val);
+                        if (val === "WORKSHOP") {
+                          form.setFieldValue("pricing", {
+                            type: "FIXED",
+                            amount: 0,
+                            variants: [],
+                          });
+                        } else {
+                          form.setFieldValue("pricing", {
+                            type: "FABRICATION",
+                            setupFee: 0,
+                            unitName: "hour",
+                            timeRate: 0,
+                            variants: [],
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="serviceCategory">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="WORKSHOP">Workshop</SelectItem>
+                        <SelectItem value="FABRICATION">Fabrication</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </FormSection>
+              )}
+            </>
           )}
         />
 
@@ -102,20 +127,6 @@ export const PricingForm = withForm({
           children={(field) => {
             const pricing = field.state.value;
             const pricingType = pricing.type;
-
-            const handleTypeChange = (newType: string) => {
-              if (newType === "FIXED") {
-                field.handleChange({ type: "FIXED", amount: 0, variants: [] });
-              } else if (newType === "FABRICATION") {
-                field.handleChange({
-                  type: "FABRICATION",
-                  setupFee: 0,
-                  unitName: "hour" as TimeUnit,
-                  timeRate: 0,
-                  variants: [],
-                });
-              }
-            };
 
             const addVariant = () => {
               setVariantKeys((prev) => [...prev, createVariantKey()]);
@@ -139,30 +150,46 @@ export const PricingForm = withForm({
               }
             };
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const getVariants = () => pricing.variants as any[];
-
             const removeVariant = (index: number) => {
               setVariantKeys((prev) => prev.filter((_, i) => i !== index));
+              if (pricing.type === "FIXED") {
+                field.handleChange({
+                  ...pricing,
+                  variants: pricing.variants.filter((_, i) => i !== index),
+                });
+                return;
+              }
+
               field.handleChange({
                 ...pricing,
-                variants: getVariants().filter((_, i) => i !== index),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any);
+                variants: pricing.variants.filter((_, i) => i !== index),
+              });
             };
 
-            const updateVariant = (
+            const updateFixedVariant = (
               index: number,
-              patch: Record<string, unknown>,
+              patch: Partial<FixedPricingVariant>,
             ) => {
-              const updated = getVariants().map((v, i) =>
-                i === index ? { ...v, ...patch } : v,
-              );
+              if (pricing.type !== "FIXED") return;
               field.handleChange({
                 ...pricing,
-                variants: updated,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any);
+                variants: pricing.variants.map((variant, i) =>
+                  i === index ? { ...variant, ...patch } : variant,
+                ),
+              });
+            };
+
+            const updateFabricationVariant = (
+              index: number,
+              patch: Partial<FabricationPricingVariant>,
+            ) => {
+              if (pricing.type !== "FABRICATION") return;
+              field.handleChange({
+                ...pricing,
+                variants: pricing.variants.map((variant, i) =>
+                  i === index ? { ...variant, ...patch } : variant,
+                ),
+              });
             };
 
             return (
@@ -175,7 +202,7 @@ export const PricingForm = withForm({
                         <FieldLabel htmlFor="fixedAmount">
                           Default Amount
                         </FieldLabel>
-                        <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                        <InputGroup className="flex items-center border-2 border-black rounded-none shadow-none bg-white focus-within:ring-3 focus-within:ring-fab-teal/50 focus-within:border-ring">
                           <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                             <InputGroupText>₱</InputGroupText>
                           </InputGroupAddon>
@@ -212,13 +239,15 @@ export const PricingForm = withForm({
                                   placeholder="e.g. UP, Senior, Staff"
                                   value={variant.name}
                                   onChange={(e) =>
-                                    updateVariant(i, { name: e.target.value })
+                                    updateFixedVariant(i, {
+                                      name: e.target.value,
+                                    })
                                   }
                                 />
                               </Field>
                               <Field>
                                 <FieldLabel>Amount</FieldLabel>
-                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                <InputGroup className="flex items-center border-2 border-black transition-shadow focus-within:ring-3 focus-within:border-ring">
                                   <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                                     <InputGroupText>₱</InputGroupText>
                                   </InputGroupAddon>
@@ -230,7 +259,7 @@ export const PricingForm = withForm({
                                       variant.amount === 0 ? "" : variant.amount
                                     }
                                     onChange={(e) =>
-                                      updateVariant(i, {
+                                      updateFixedVariant(i, {
                                         amount: Number(e.target.value) || 0,
                                       })
                                     }
@@ -274,12 +303,14 @@ export const PricingForm = withForm({
                           </FieldLabel>
                           <Select
                             value={pricing.unitName ?? "hour"}
-                            onValueChange={(val) =>
+                            onValueChange={(val) => {
+                              if (!isTimeUnit(val)) return;
+
                               field.handleChange({
                                 ...pricing,
-                                unitName: val as TimeUnit,
-                              })
-                            }
+                                unitName: val,
+                              });
+                            }}
                           >
                             <SelectTrigger id="fabricationUnitName">
                               <SelectValue placeholder="Select unit" />
@@ -298,7 +329,7 @@ export const PricingForm = withForm({
                           <FieldLabel htmlFor="fabricationSetupFee">
                             Default Setup Fee
                           </FieldLabel>
-                          <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                          <InputGroup className="flex items-center border-2 border-black rounded-none shadow-none bg-white focus-within:ring-3 focus-within:ring-fab-teal/50 focus-within:border-ring">
                             <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                               <InputGroupText>₱</InputGroupText>
                             </InputGroupAddon>
@@ -324,7 +355,7 @@ export const PricingForm = withForm({
                           <FieldLabel htmlFor="fabricationTimeRate">
                             Default Time Rate per Unit
                           </FieldLabel>
-                          <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                          <InputGroup className="flex items-center border-2 border-black rounded-none shadow-none bg-white focus-within:ring-3 focus-within:ring-fab-teal/50 focus-within:border-ring">
                             <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                               <InputGroupText>₱</InputGroupText>
                             </InputGroupAddon>
@@ -364,13 +395,15 @@ export const PricingForm = withForm({
                                   placeholder="e.g. UP, Senior"
                                   value={variant.name}
                                   onChange={(e) =>
-                                    updateVariant(i, { name: e.target.value })
+                                    updateFabricationVariant(i, {
+                                      name: e.target.value,
+                                    })
                                   }
                                 />
                               </Field>
                               <Field>
                                 <FieldLabel>Setup Fee</FieldLabel>
-                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                <InputGroup className="flex items-center border-2 border-black rounded-none shadow-none bg-white focus-within:ring-3 focus-within:ring-fab-teal/50 focus-within:border-ring">
                                   <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                                     <InputGroupText>₱</InputGroupText>
                                   </InputGroupAddon>
@@ -384,7 +417,7 @@ export const PricingForm = withForm({
                                         : variant.setupFee
                                     }
                                     onChange={(e) =>
-                                      updateVariant(i, {
+                                      updateFabricationVariant(i, {
                                         setupFee: Number(e.target.value) || 0,
                                       })
                                     }
@@ -395,7 +428,7 @@ export const PricingForm = withForm({
                                 <FieldLabel>
                                   Time Rate per {pricing.unitName || "unit"}
                                 </FieldLabel>
-                                <InputGroup className="flex items-center border border-input transition-shadow focus-within:ring-3 focus-within:ring-gray-300 focus-within:border-gray-400">
+                                <InputGroup className="flex items-center border-2 border-black rounded-none shadow-none bg-white focus-within:ring-3 focus-within:ring-fab-teal/50 focus-within:border-ring">
                                   <InputGroupAddon className="border-none bg-transparent ring-0 px-3 pr-1 text-muted-foreground">
                                     <InputGroupText>₱</InputGroupText>
                                   </InputGroupAddon>
@@ -409,7 +442,7 @@ export const PricingForm = withForm({
                                         : variant.timeRate
                                     }
                                     onChange={(e) =>
-                                      updateVariant(i, {
+                                      updateFabricationVariant(i, {
                                         timeRate: Number(e.target.value) || 0,
                                       })
                                     }

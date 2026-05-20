@@ -1,4 +1,5 @@
 import { formOptions } from "@tanstack/react-form";
+import type { Id } from "@convex/_generated/dataModel";
 import { ServiceStatus, type ServiceStatusType } from "@convex/constants";
 
 export type PricingVariant =
@@ -32,8 +33,53 @@ export interface AddServiceFormValues {
   availableDays: number[];
   schedules?: {
     date: number;
-    timeSlots: { startTime: number; endTime: number; maxSlots: number }[];
+    timeSlots: {
+      startTime: number;
+      endTime: number;
+      maxSlots: number;
+      usedUpSlots?: number;
+      resources?: string[];
+      availableMaterials?: string[];
+    }[];
   }[];
+}
+
+export type MutationWorkshopSchedule = {
+  date: number;
+  timeSlots: Array<{
+    startTime: number;
+    endTime: number;
+    maxSlots: number;
+    usedUpSlots?: number;
+    resources?: Id<"resources">[];
+    availableMaterials?: Id<"materials">[];
+  }>;
+};
+
+export function toMutationWorkshopSchedules(
+  schedules: AddServiceFormValues["schedules"] = [],
+): MutationWorkshopSchedule[] {
+  return schedules.map((schedule) => ({
+    date: schedule.date,
+    timeSlots: schedule.timeSlots.map((slot) => ({
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      maxSlots: slot.maxSlots,
+      ...(slot.usedUpSlots === undefined
+        ? {}
+        : { usedUpSlots: slot.usedUpSlots }),
+      ...(slot.resources && slot.resources.length > 0
+        ? { resources: slot.resources.map((id) => id as Id<"resources">) }
+        : {}),
+      ...(slot.availableMaterials && slot.availableMaterials.length > 0
+        ? {
+            availableMaterials: slot.availableMaterials.map(
+              (id) => id as Id<"materials">,
+            ),
+          }
+        : {}),
+    })),
+  }));
 }
 
 export const defaultAddServiceValues: AddServiceFormValues = {

@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from "@/components/ui/button";
 import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChevronLeft } from "lucide-react";
-import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   Select,
   SelectContent,
@@ -17,18 +12,52 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroupChoiceCard } from "./select-option-form";
-import { Textarea } from "../ui/textarea";
-import { FileUpload } from "../file-upload";
-import { DateTimePicker } from "./date-time-picker";
+import { DateTimePicker } from "@/components/booking/date-time-picker";
+import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
+import { FileUpload } from "@/components/file-upload";
+import { ChevronLeft } from "lucide-react";
+import type { AppFormApi } from "@/lib/form-context";
 import { toast } from "sonner";
-import { WorkshopSchedule } from "./workshop-time-slot-picker";
-import { getCurrentTimestamp, getLabTimeRangeTimestamps } from "@/lib/lab-time";
 import posthog from "posthog-js";
-import { type UploadedFile } from "../file-upload/types";
+import { getLabTimeRangeTimestamps, getCurrentTimestamp } from "@/lib/lab-time";
+import type { UploadedFile } from "../file-upload/types";
+import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import type { WorkshopSchedule } from "./workshop-time-slot-picker";
+import {
+  ProjectMaterial,
+  type FulfillmentModeType,
+  type ProjectMaterialType,
+} from "@convex/constants";
+
+export interface BookingDetailsFormValues {
+  dateTime: {
+    date: Date | undefined;
+    startTime: string;
+    endTime: string;
+    originalDate?: number;
+    originalStartTime?: number;
+    originalEndTime?: number;
+  };
+  files: UploadedFile[];
+  name: string;
+  description: string;
+  notes: string;
+  pricing: string;
+  material: ProjectMaterialType;
+  requestedMaterialIds: string[];
+  serviceType: FulfillmentModeType;
+}
 
 type PricingVariantOption = { name: string };
 
 const EMPTY_PRICING_VARIANTS: PricingVariantOption[] = [];
+
+const isProjectMaterial = (value: string): value is ProjectMaterialType =>
+  value === ProjectMaterial.PROVIDE_OWN ||
+  value === ProjectMaterial.BUY_FROM_LAB;
 
 export function Step2ProjectDetails({
   form,
@@ -48,7 +77,7 @@ export function Step2ProjectDetails({
   schedules,
   bookedTimeBlocks,
 }: {
-  form: any;
+  form: AppFormApi<BookingDetailsFormValues>;
   serviceName: string;
   expandedFileTypes: string[];
   is3DPrinting: boolean;
@@ -74,7 +103,8 @@ export function Step2ProjectDetails({
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const dateTime = form.state.values.dateTime;
+    const formValues = form.state.values;
+    const dateTime = formValues.dateTime;
 
     if (!dateTime || !dateTime.date) {
       toast.error("Please select a valid date for your booking.");
@@ -83,6 +113,11 @@ export function Step2ProjectDetails({
 
     if (!dateTime.startTime || !dateTime.endTime) {
       toast.error("Please select a start and end time for your booking.");
+      return;
+    }
+
+    if (hasUpPricing && pricingVariants.length > 0 && !formValues.pricing) {
+      toast.error("Please select a pricing tier for your booking.");
       return;
     }
 
@@ -118,7 +153,7 @@ export function Step2ProjectDetails({
     posthog.capture("booking_details_completed", {
       service_name: serviceName,
       service_category: serviceCategory,
-      file_count: (form.state.values.files as UploadedFile[]).length,
+      file_count: formValues.files.length,
     });
 
     onNext(e);
@@ -130,17 +165,17 @@ export function Step2ProjectDetails({
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Book {serviceName}
         </DialogTitle>
-        <DialogDescription className="max-w-xl text-sm text-muted-foreground">
+        <DialogDescription className="max-w-xl text-sm font-bold text-black/60">
           Provide necessary information for your project request.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[4px_4px_0_0_#000] text-gray-500">
+      <div className="mb-4 border-2 border-black bg-fab-teal/10 p-4 shadow-[2px_2px_0_0_#000] text-gray-500">
         <p className="font-black uppercase tracking-[0.25em] text-gray-900">
           File Guidelines
         </p>
         {requirements.length > 0 ? (
-          <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+          <ul className="mt-2 list-inside list-disc space-y-1 text-sm font-bold text-black/60">
             {requirements.map((req, i) => (
               <li
                 key={`${req}-${
@@ -152,7 +187,7 @@ export function Step2ProjectDetails({
             ))}
           </ul>
         ) : (
-          <p className="text-gray-400 text-sm">
+          <p className="mt-2 text-sm font-bold text-black/40">
             No strict requirements listed.
           </p>
         )}
@@ -161,29 +196,24 @@ export function Step2ProjectDetails({
       <div className="-mx-4 flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
         <FieldGroup>
           <div className="flex flex-col gap-2 mb-2">
-            <Label className="font-bold text-lg">
+            <Label className="font-black uppercase tracking-tighter text-base">
               {serviceCategory === "WORKSHOP"
                 ? "Booking Details"
                 : "Project Details"}
             </Label>
-            <p className="text-sm text-muted-foreground">
-              {serviceCategory === "WORKSHOP"
-                ? "Tell us more about your booking."
-                : "Tell us about your project."}
-            </p>
           </div>
 
           {serviceCategory !== "WORKSHOP" && (
             <>
-              <form.Field
+              <form.AppField
                 name="name"
-                children={(field: any) => (
+                children={(field) => (
                   <Field>
                     <Label
                       htmlFor="name-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                      Project Name
+                      Project Name <span className="text-fab-magenta">*</span>
                     </Label>
                     <Input
                       id="name-1"
@@ -191,22 +221,22 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0"
                       placeholder="e.g. Custom Cup"
                     />
                   </Field>
                 )}
               />
 
-              <form.Field
+              <form.AppField
                 name="description"
-                children={(field: any) => (
+                children={(field) => (
                   <Field>
                     <Label
                       htmlFor="description-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                      Project Description
+                      Project Description{" "}
+                      <span className="text-fab-magenta">*</span>
                     </Label>
                     <Textarea
                       id="description-1"
@@ -214,7 +244,7 @@ export function Step2ProjectDetails({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
-                      className="min-h-20 resize-none rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0 md:min-h-32"
+                      className="min-h-20 resize-none md:min-h-32"
                       placeholder="Describe your project, intended use, or specific details..."
                     />
                   </Field>
@@ -223,9 +253,9 @@ export function Step2ProjectDetails({
             </>
           )}
 
-          <form.Field
+          <form.AppField
             name="notes"
-            children={(field: any) => (
+            children={(field) => (
               <Field>
                 <Label
                   htmlFor="notes-1"
@@ -238,7 +268,7 @@ export function Step2ProjectDetails({
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className="min-h-12 resize-none rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000] focus-visible:ring-0 md:min-h-24"
+                  className="min-h-12 resize-none md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
                 />
               </Field>
@@ -248,22 +278,22 @@ export function Step2ProjectDetails({
           {hasUpPricing && pricingVariants.length > 0 && (
             <form.Field
               name="pricing"
-              children={(field: any) => (
+              children={(field) => (
                 <Field>
                   <Label
                     htmlFor="pricing-tier"
                     className="font-black uppercase tracking-[0.2em] text-xs"
                   >
-                    Pricing Tier
+                    Pricing Tier <span className="text-fab-magenta">*</span>
                   </Label>
                   <Select
-                    value={field.state.value as string}
+                    value={field.state.value}
                     onValueChange={(val) => field.handleChange(val)}
                     required
                   >
                     <SelectTrigger
                       id="pricing-tier"
-                      className="w-full rounded-lg border-2 border-black bg-background shadow-[4px_4px_0_0_#000]"
+                      className="w-full rounded-none cursor-pointer"
                     >
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
@@ -285,36 +315,37 @@ export function Step2ProjectDetails({
             <>
               <form.Field
                 name="material"
-                children={(field: any) => (
+                children={(field) => (
                   <Field>
                     <Label
                       htmlFor="material-1"
                       className="font-black uppercase tracking-[0.2em] text-xs"
                     >
-                      Material Preference
+                      Material Preference{" "}
+                      <span className="text-fab-magenta">*</span>
                     </Label>
                     <RadioGroupChoiceCard
                       value={field.state.value}
                       disableBuyFromLab={serviceMaterials.length === 0}
-                      onValueChange={(val) =>
-                        field.handleChange(
-                          val as "provide-own" | "buy-from-lab",
-                        )
-                      }
+                      onValueChange={(val) => {
+                        if (isProjectMaterial(val)) {
+                          field.handleChange(val);
+                        }
+                      }}
                     />
                   </Field>
                 )}
               />
 
               <form.Subscribe
-                selector={(state: any) => state.values.material}
-                children={(material: string) =>
-                  material === "buy-from-lab" &&
+                selector={(state) => state.values.material}
+                children={(material) =>
+                  material === ProjectMaterial.BUY_FROM_LAB &&
                   serviceMaterials.length > 0 && (
                     <form.Field
                       name="requestedMaterialIds"
-                      children={(field: any) => {
-                        const selected: string[] = field.state.value ?? [];
+                      children={(field) => {
+                        const selected = field.state.value ?? [];
                         return (
                           <Field>
                             <Label
@@ -323,7 +354,7 @@ export function Step2ProjectDetails({
                             >
                               Select Lab Materials
                             </Label>
-                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[4px_4px_0_0_#000]">
+                            <div className="flex flex-col gap-2 rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
                               {serviceMaterials.map((m) => {
                                 const isChecked = selected.includes(m._id);
                                 return (
@@ -383,96 +414,115 @@ export function Step2ProjectDetails({
 
           <form.AppField
             name="dateTime"
-            children={(field: any) => (
-              <>
-                {serviceCategory === "WORKSHOP" ? (
-                  <field.WorkshopTimeSlotPicker schedules={schedules} />
-                ) : is3DPrinting ? (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <Label className="font-bold text-lg">
-                        Deadline (PST)
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Set the deadline of your project. All dates and times
-                        are in Philippine Standard Time (PST).
-                      </p>
-                    </div>
-                    <DateTimePicker
-                      value={field.state.value as any}
-                      onChange={field.handleChange as any}
-                      availableDays={availableDays}
-                      bookedTimeBlocks={bookedTimeBlocks}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <Label className="font-bold text-lg">
-                        Booking Date & Time (PST)
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Set the date and time for your booking. All dates and
-                        times are in Philippine Standard Time (PST).
-                      </p>
-                    </div>
-                    <DateTimePicker
-                      value={field.state.value as any}
-                      onChange={field.handleChange as any}
-                      availableDays={availableDays}
-                      bookedTimeBlocks={bookedTimeBlocks}
-                    />
-                  </>
-                )}
-              </>
-            )}
+            children={(field) => {
+              const dateTimeValue = field.state.value;
+              return (
+                <>
+                  {serviceCategory === "WORKSHOP" ? (
+                    <field.WorkshopTimeSlotPicker schedules={schedules} />
+                  ) : is3DPrinting ? (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-black uppercase tracking-tighter text-base">
+                          Deadline (PST)
+                        </Label>
+                      </div>
+                      <DateTimePicker
+                        value={{
+                          date: dateTimeValue.date,
+                          startTime: dateTimeValue.startTime,
+                          endTime: dateTimeValue.endTime,
+                        }}
+                        onChange={(val) => {
+                          field.handleChange({
+                            ...dateTimeValue,
+                            ...val,
+                          });
+                        }}
+                        availableDays={availableDays}
+                        bookedTimeBlocks={bookedTimeBlocks}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-black uppercase tracking-tighter text-base">
+                          Booking Date & Time (PST)
+                        </Label>
+                      </div>
+                      <DateTimePicker
+                        value={{
+                          date: dateTimeValue.date,
+                          startTime: dateTimeValue.startTime,
+                          endTime: dateTimeValue.endTime,
+                        }}
+                        onChange={(val) => {
+                          field.handleChange({
+                            ...dateTimeValue,
+                            ...val,
+                          });
+                        }}
+                        availableDays={availableDays}
+                        bookedTimeBlocks={bookedTimeBlocks}
+                      />
+                    </>
+                  )}
+                </>
+              );
+            }}
           />
 
           <FieldSeparator className="my-2" />
 
           <form.Field
             name="files"
-            children={(field: any) => (
-              <FileUpload
-                title="Upload Your Files"
-                value={field.state.value as any}
-                onFilesChange={field.handleChange as any}
-                onUploadingChange={onUploadingChange}
-                onUploadComplete={(file: UploadedFile) => {
-                  posthog.capture("booking_file_uploaded", {
-                    service_name: serviceName,
-                    service_category: serviceCategory,
-                    file_name: file.fileName,
-                    file_type: file.fileType,
-                    file_size_bytes: file.fileSize,
-                  });
-                }}
-                accept="*/*"
-                allowedTypes={expandedFileTypes as any}
-              />
-            )}
+            children={(field) => {
+              const filesValue = field.state.value;
+              return (
+                <FileUpload
+                  title="Upload Your Files"
+                  value={filesValue}
+                  onFilesChange={(val) => {
+                    field.handleChange(val);
+                  }}
+                  onUploadingChange={onUploadingChange}
+                  onUploadComplete={(file: UploadedFile) => {
+                    posthog.capture("booking_file_uploaded", {
+                      service_name: serviceName,
+                      service_category: serviceCategory,
+                      file_name: file.fileName,
+                      file_type: file.fileType,
+                      file_size_bytes: file.fileSize,
+                    });
+                  }}
+                  accept="*/*"
+                  allowedTypes={expandedFileTypes}
+                  showDriveLinkNote={true}
+                />
+              );
+            }}
           />
         </FieldGroup>
       </div>
 
-      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 border-t-4 border-black pt-6">
+      <div className="mt-4 flex shrink-0 items-center justify-end gap-2 border-t-4 border-black pt-4">
         {serviceCategory !== "WORKSHOP" && (
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={onPrev}
-            className="rounded-none border-2 border-black bg-background pl-3 shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-none border-2 border-black bg-background px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
+            <ChevronLeft className="size-4" strokeWidth={3} />
+            Back
+          </button>
         )}
-        <Button
+        <button
           type="submit"
-          className="rounded-none border-2 border-black bg-fab-magenta text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-teal"
           disabled={isUploading}
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
         >
-          {isUploading ? "Uploading..." : "Review & Estimate"}
-        </Button>
+          Review & Estimate
+        </button>
       </div>
     </form>
   );

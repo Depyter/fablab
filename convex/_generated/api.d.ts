@@ -29,6 +29,7 @@ import type * as projects_helper from "../projects/helper.js";
 import type * as projects_mutate from "../projects/mutate.js";
 import type * as projects_query from "../projects/query.js";
 import type * as ratelimit from "../ratelimit.js";
+import type * as reports_query from "../reports/query.js";
 import type * as resource_helper from "../resource/helper.js";
 import type * as resource_mutate from "../resource/mutate.js";
 import type * as resource_query from "../resource/query.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   "projects/mutate": typeof projects_mutate;
   "projects/query": typeof projects_query;
   ratelimit: typeof ratelimit;
+  "reports/query": typeof reports_query;
   "resource/helper": typeof resource_helper;
   "resource/mutate": typeof resource_mutate;
   "resource/query": typeof resource_query;

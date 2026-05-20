@@ -47,8 +47,8 @@ describe("calendar shared domain", () => {
         serviceCategoryType: "WORKSHOP",
       }),
     ).toMatchObject({
-      slotClassName: expect.stringContaining("blue"),
-      accentClassName: "bg-blue-500",
+      slotClassName: expect.stringContaining("fab-teal"),
+      accentClassName: "bg-fab-teal",
       isPendingReview: false,
     });
   });
@@ -145,7 +145,7 @@ describe("calendar shared domain", () => {
     expect(viewModels.serviceMachines).toHaveLength(2);
     expect(viewModels.rangeEvents).toHaveLength(2);
     expect(viewModels.rangeEvents[0]?.slotClassName).toContain("emerald");
-    expect(viewModels.rangeEvents[1]?.slotClassName).toContain("blue");
+    expect(viewModels.rangeEvents[1]?.slotClassName).toContain("fab-teal");
 
     const dayViewModels = buildBookingCalendarViewModels({
       frame: {

@@ -1,4 +1,5 @@
 import { internalMutation } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 import {
   authMutation,
@@ -10,6 +11,7 @@ import {
 import { formatLabDateNumeric } from "../../src/lib/lab-time";
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
+type ServicePatch = Partial<Omit<Doc<"services">, "_id" | "_creationTime">>;
 
 function normalizeFabricationCategory<
   T extends {
@@ -73,6 +75,8 @@ export const addService = authMutation({
                 endTime: v.number(),
                 maxSlots: v.number(),
                 usedUpSlots: v.optional(v.number()),
+                resources: v.optional(v.array(v.id("resources"))),
+                availableMaterials: v.optional(v.array(v.id("materials"))),
               }),
             ),
           }),
@@ -168,6 +172,8 @@ export const updateService = authMutation({
                   endTime: v.number(),
                   maxSlots: v.number(),
                   usedUpSlots: v.optional(v.number()),
+                  resources: v.optional(v.array(v.id("resources"))),
+                  availableMaterials: v.optional(v.array(v.id("materials"))),
                 }),
               ),
             }),
@@ -221,8 +227,7 @@ export const updateService = authMutation({
     const existingService = await ctx.db.get(args.service);
     if (!existingService) throw new ConvexError("Service not found!");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updates: Record<string, any> = {};
+    const updates: ServicePatch = {};
 
     if (args.name !== undefined) {
       const slug = slugify(args.name);
@@ -325,6 +330,91 @@ export const updateService = authMutation({
   },
 });
 
+/**
+ * Adds a single time slot to an existing workshop service schedule.
+ * If a schedule for the given date already exists, the slot is appended;
+ * otherwise a new schedule entry is created.
+ */
+export const addWorkshopSlot = authMutation({
+  role: ["admin", "maker"],
+  args: {
+    serviceId: v.id("services"),
+    date: v.number(),
+    startTime: v.number(),
+    endTime: v.number(),
+    maxSlots: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existingService = await ctx.db.get(args.serviceId);
+    if (!existingService) throw new ConvexError("Service not found.");
+
+    if (existingService.serviceCategory.type !== "WORKSHOP") {
+      throw new ConvexError("Can only add slots to WORKSHOP-type services.");
+    }
+
+    const existing = existingService.serviceCategory as {
+      type: "WORKSHOP";
+      schedules: Array<{
+        date: number;
+        timeSlots: Array<{
+          startTime: number;
+          endTime: number;
+          maxSlots: number;
+          usedUpSlots?: number;
+        }>;
+      }>;
+      amount: number;
+      variants?: Array<{ name: string; amount: number }>;
+    };
+
+    const scheduleIndex = existing.schedules.findIndex(
+      (s) => s.date === args.date,
+    );
+
+    if (scheduleIndex >= 0) {
+      // Append time slot to existing schedule
+      const updatedSchedules = [...existing.schedules];
+      updatedSchedules[scheduleIndex] = {
+        ...updatedSchedules[scheduleIndex],
+        timeSlots: [
+          ...updatedSchedules[scheduleIndex].timeSlots,
+          {
+            startTime: args.startTime,
+            endTime: args.endTime,
+            maxSlots: args.maxSlots,
+            usedUpSlots: 0,
+          },
+        ],
+      };
+
+      await ctx.db.patch(args.serviceId, {
+        serviceCategory: { ...existing, schedules: updatedSchedules },
+      });
+    } else {
+      // Create new schedule entry
+      await ctx.db.patch(args.serviceId, {
+        serviceCategory: {
+          ...existing,
+          schedules: [
+            ...existing.schedules,
+            {
+              date: args.date,
+              timeSlots: [
+                {
+                  startTime: args.startTime,
+                  endTime: args.endTime,
+                  maxSlots: args.maxSlots,
+                  usedUpSlots: 0,
+                },
+              ],
+            },
+          ],
+        },
+      });
+    }
+  },
+});
+
 export const addImageToService = authMutation({
   role: ["admin", "maker"],
   args: {
@@ -372,6 +462,18 @@ export const deleteService = authMutation({
     const service = await ctx.db.get(args.service);
 
     if (!service) throw new ConvexError("Service not found!");
+
+    // Prevent deletion if any active projects reference this service.
+    const activeProject = await ctx.db
+      .query("projects")
+      .filter((q) => q.eq(q.field("service"), args.service))
+      .first();
+    if (activeProject) {
+      throw new ConvexError(
+        "Cannot delete a service that has active projects. Archive or reassign them first.",
+      );
+    }
+
     await deleteFiles(ctx, service.images);
     await deleteFiles(ctx, service.samples);
     await ctx.db.delete("services", args.service);

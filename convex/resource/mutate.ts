@@ -75,6 +75,17 @@ export const deleteResource = authMutation({
     const resource = await ctx.db.get(args.id);
     if (!resource) throw new ConvexError("Resource not found!");
 
+    // Prevent deletion if any active resourceUsage records reference this resource.
+    const activeUsage = await ctx.db
+      .query("resourceUsage")
+      .withIndex("by_resource_startTime", (q) => q.eq("resource", args.id))
+      .first();
+    if (activeUsage) {
+      throw new ConvexError(
+        "Cannot delete a resource that has active bookings. Reschedule them first.",
+      );
+    }
+
     if (resource.images) {
       await deleteFiles(ctx, resource.images);
     }

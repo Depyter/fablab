@@ -131,13 +131,13 @@
   --chart-6: #0fa896;
   --light-yellow: #fef3dc;
   --radius: 0.45rem;
-  --sidebar: #e8e4fb;
-  --sidebar-foreground: #14112b;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
   --sidebar-primary: #0fa896;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--fab-sidebar-hover);
-  --sidebar-accent-foreground: #14112b;
-  --sidebar-border: rgba(80, 60, 160, 0.15);
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #000000;
   --sidebar-ring: #0fa896;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/action-dialog";
@@ -35,6 +35,11 @@ const statusOptions = [
 
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
+/** @internal Context for passing a locked service-category mode to sub-forms. */
+export const ServiceFormModeContext = createContext<
+  "WORKSHOP" | "FABRICATION" | undefined
+>(undefined);
+
 export interface ServiceFormProps {
   title: string;
   initialValues: AddServiceFormValues;
@@ -43,6 +48,10 @@ export interface ServiceFormProps {
   onSubmit: (values: AddServiceFormValues) => Promise<boolean>;
   onDiscard: (formValues: AddServiceFormValues) => Promise<void> | void;
   submitError: string | null;
+  /** When set, locks the service category and only renders relevant sections. */
+  mode?: "WORKSHOP" | "FABRICATION";
+  /** Override the back button destination. */
+  backHref?: string;
 }
 
 export function ServiceForm({
@@ -53,6 +62,8 @@ export function ServiceForm({
   onSubmit,
   onDiscard,
   submitError,
+  mode,
+  backHref = "/dashboard/services",
 }: ServiceFormProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
@@ -89,190 +100,191 @@ export function ServiceForm({
   });
 
   return (
-    <main className="container mx-auto max-w-6xl p-10">
-      {/* Top Navigation & Actions */}
-      <header
-        className={`sticky top-0 z-10 flex items-center justify-between pt-3 mb-8 bg-background pb-4 ${
-          isScrolled ? "border-b border-gray-200" : "border-b-0"
-        }`}
-      >
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/services">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 border-gray-200 rounded-lg"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          {submitError && (
-            <p className="text-sm text-red-500 max-w-xs text-right">
-              {submitError}
-            </p>
-          )}
-          <ActionDialog
-            onConfirm={async () => {
-              await onDiscard(form.state.values);
-              form.reset();
-            }}
-            title="Discard changes?"
-            description="Are you sure you want to discard your changes? This cannot be undone."
-            baseActionText="Discard"
-            confirmButtonText="Confirm Discard"
-            className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-          />
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
+    <ServiceFormModeContext.Provider value={mode}>
+      <main className="container mx-auto max-w-6xl p-10">
+        {/* Top Navigation & Actions */}
+        <header
+          className={`sticky top-0 z-10 flex items-center justify-between pt-3 mb-8 bg-background pb-4 ${
+            isScrolled ? "border-b border-gray-200" : "border-b-0"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <Link href={backHref}>
               <Button
-                type="button"
-                className="bg-[#1A8A7E] hover:bg-[#156E65] px-8 font-medium rounded-lg"
-                disabled={
-                  !canSubmit ||
-                  isSubmitting ||
-                  hasUploadsInProgress ||
-                  isSuccess
-                }
-                onClick={() => form.handleSubmit()}
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 border-gray-200 rounded-lg"
               >
-                {isSubmitting || isSuccess
-                  ? "Saving..."
-                  : hasUploadsInProgress
-                    ? "Uploading..."
-                    : "Save Service"}
+                <ChevronLeft className="h-5 w-5" />
               </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {submitError && (
+              <p className="text-sm text-red-500 max-w-xs text-right">
+                {submitError}
+              </p>
             )}
-          />
-        </div>
-      </header>
+            <ActionDialog
+              onConfirm={async () => {
+                await onDiscard(form.state.values);
+                form.reset();
+              }}
+              title="Discard changes?"
+              description="Are you sure you want to discard your changes? This cannot be undone."
+              baseActionText="Discard"
+              confirmButtonText="Confirm Discard"
+              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
+            />
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <Button
+                  type="button"
+                  className="bg-[#1A8A7E] hover:bg-[#156E65] px-8 font-medium rounded-lg"
+                  disabled={
+                    !canSubmit ||
+                    isSubmitting ||
+                    hasUploadsInProgress ||
+                    isSuccess
+                  }
+                  onClick={() => form.handleSubmit()}
+                >
+                  {isSubmitting || isSuccess
+                    ? "Saving..."
+                    : hasUploadsInProgress
+                      ? "Uploading..."
+                      : "Save Service"}
+                </Button>
+              )}
+            />
+          </div>
+        </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
-        {/* Left Content */}
-        <div className="lg:col-span-5 space-y-5">
-          <GeneralInfoForm form={form} />
-          <WorkshopScheduleForm form={form} />
-          <PricingForm form={form} />
-          <RequirementsForm form={form} />
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
+          {/* Left Content */}
+          <div className="lg:col-span-5 space-y-5">
+            <GeneralInfoForm form={form} />
+            {mode !== "FABRICATION" && <WorkshopScheduleForm form={form} />}
+            <PricingForm form={form} />
+            <RequirementsForm form={form} />
 
-          {/* Sample Projects */}
-          <form.Field
-            name="samples"
-            children={(field) => (
-              <FileUpload
-                title="Sample Projects"
-                accept="*/*"
-                value={initialSamples}
-                onFilesChange={(files) =>
-                  field.handleChange(
-                    files.map((f) => f.storageId as Id<"_storage">),
-                  )
-                }
-                onUploadingChange={setSamplesUploading}
-              />
-            )}
-          />
-        </div>
-
-        {/* Right Content */}
-        <div className="lg:col-span-3 space-y-4">
-          <form.Field
-            name="images"
-            validators={{
-              onSubmit: ({ value }) =>
-                value.length === 0
-                  ? "At least one thumbnail is required"
-                  : undefined,
-            }}
-            children={(field) => (
-              <>
+            {/* Sample Projects */}
+            <form.Field
+              name="samples"
+              children={(field) => (
                 <FileUpload
-                  title="Thumbnail"
+                  title="Sample Projects"
                   accept="*/*"
-                  value={initialImages}
+                  value={initialSamples}
                   onFilesChange={(files) =>
                     field.handleChange(
                       files.map((f) => f.storageId as Id<"_storage">),
                     )
                   }
-                  onUploadingChange={setThumbnailUploading}
+                  onUploadingChange={setSamplesUploading}
                 />
-                {field.state.meta.errors.length > 0 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {field.state.meta.errors[0]?.toString()}
-                  </p>
-                )}
-              </>
-            )}
-          />
+              )}
+            />
+          </div>
 
-          <form.Field
-            name="resources"
-            children={(field) => (
-              <MultipleSelectForm
-                options={resourceOptions}
-                title="Resources (Machines, etc.)"
-                placeholder="Select resource..."
-                value={field.state.value || []}
-                onChange={(val) => field.handleChange(val as Id<"resources">[])}
-              />
-            )}
-          />
-
-          <form.Subscribe
-            selector={(state) => state.values.serviceCategory}
-            children={(serviceCategory) =>
-              serviceCategory === "FABRICATION" ? (
-                <form.Field
-                  name="materials"
-                  children={(field) => (
-                    <MultipleSelectForm
-                      options={materialOptions}
-                      title="Allowed Materials"
-                      placeholder="Select materials..."
-                      value={field.state.value || []}
-                      onChange={(val) =>
-                        field.handleChange(val as Id<"materials">[])
-                      }
-                    />
-                  )}
-                />
-              ) : null
-            }
-          />
-
-          <form.Field
-            name="fileTypes"
-            children={(field) => (
-              <MultipleSelectForm
-                options={acceptedFileTypeOptions}
-                title="Accepted File Types"
-                placeholder="Select file type..."
-                value={field.state.value}
-                onChange={field.handleChange}
-              />
-            )}
-          />
-
-          <form.AppField
-            name="status"
-            children={(field) => (
-              <div className="w-full sm:max-w-3xl">
-                <FormSection title="Status">
-                  <field.SelectInput
-                    label=""
-                    placeholder="Select status..."
-                    options={statusOptions}
+          {/* Right Content */}
+          <div className="lg:col-span-3 space-y-4">
+            <form.Field
+              name="images"
+              validators={{
+                onSubmit: ({ value }) =>
+                  value.length === 0
+                    ? "At least one thumbnail is required"
+                    : undefined,
+              }}
+              children={(field) => (
+                <>
+                  <FileUpload
+                    title="Thumbnail"
+                    accept="*/*"
+                    value={initialImages}
+                    onFilesChange={(files) =>
+                      field.handleChange(
+                        files.map((f) => f.storageId as Id<"_storage">),
+                      )
+                    }
+                    onUploadingChange={setThumbnailUploading}
                   />
-                </FormSection>
-              </div>
-            )}
-          />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {field.state.meta.errors[0]?.toString()}
+                    </p>
+                  )}
+                </>
+              )}
+            />
+
+            <form.Subscribe
+              selector={(state) => state.values.serviceCategory}
+              children={(serviceCategory) =>
+                (mode ?? serviceCategory) === "FABRICATION" ? (
+                  <>
+                    <form.Field
+                      name="resources"
+                      children={(field) => (
+                        <MultipleSelectForm
+                          options={resourceOptions}
+                          title="Resources"
+                          placeholder="Select resources..."
+                          value={field.state.value || []}
+                          onChange={field.handleChange}
+                        />
+                      )}
+                    />
+                    <form.Field
+                      name="materials"
+                      children={(field) => (
+                        <MultipleSelectForm
+                          options={materialOptions}
+                          title="Allowed Materials"
+                          placeholder="Select materials..."
+                          value={field.state.value || []}
+                          onChange={field.handleChange}
+                        />
+                      )}
+                    />
+                  </>
+                ) : null
+              }
+            />
+
+            <form.Field
+              name="fileTypes"
+              children={(field) => (
+                <MultipleSelectForm
+                  options={acceptedFileTypeOptions}
+                  title="Accepted File Types"
+                  placeholder="Select file type..."
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                />
+              )}
+            />
+
+            <form.AppField
+              name="status"
+              children={(field) => (
+                <div className="w-full sm:max-w-3xl">
+                  <FormSection title="Status">
+                    <field.SelectInput
+                      label=""
+                      placeholder="Select status..."
+                      options={statusOptions}
+                    />
+                  </FormSection>
+                </div>
+              )}
+            />
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </ServiceFormModeContext.Provider>
   );
 }

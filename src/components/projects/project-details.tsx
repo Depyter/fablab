@@ -3,15 +3,19 @@ import React, { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { XIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "convex/react";
 import { toast } from "sonner";
+import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { OptionRadioGroupItem } from "../option-radio-group";
@@ -23,13 +27,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload";
-import { Skeleton } from "@/components/ui/skeleton";
 import posthog from "posthog-js";
 
 import {
@@ -40,6 +46,7 @@ import {
   FulfillmentModeType,
   FILE_CATEGORIES,
 } from "@convex/constants";
+import { getConfig, getWorkflow, isKnownType } from "@/lib/project-type-meta";
 
 interface ProjectDetailsProps {
   projectId?: Id<"projects"> | null;
@@ -54,8 +61,9 @@ interface ProjectDetailsProps {
 
 const PROJECT_DETAILS_TIMELINE_LOADING_STEPS = Array.from(
   { length: 5 },
-  () => ({
+  (_, i) => ({
     titleWidth: "w-20",
+    isLast: i === 4,
   }),
 );
 
@@ -99,34 +107,36 @@ function ProjectTimelineLoading() {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <div className="flex min-w-180 pb-2 lg:min-w-0">
+        <div
+          className="grid min-w-180 pb-2 lg:min-w-0"
+          style={{
+            gridTemplateColumns: `repeat(${PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length}, minmax(0, 1fr))`,
+          }}
+        >
           {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step, index) => {
-            const isFirst = index === 0;
             const isLast =
               index === PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length - 1;
 
             return (
               <div
                 key={`project-timeline-desktop-loading-${index}`}
-                className="flex min-w-0 flex-1 flex-col items-center"
+                className="flex min-w-0 flex-col items-center"
               >
-                <div className="flex w-full items-center">
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]",
-                      isFirst && "invisible",
-                    )}
-                  />
+                <div className="relative flex h-10 w-full items-center justify-center">
+                  {index > 0 && (
+                    <div className="absolute left-0 right-1/2 flex items-center pr-[18px]">
+                      <div className="h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]" />
+                    </div>
+                  )}
                   <ProjectTimelineLoadingDot />
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]",
-                      isLast && "invisible",
-                    )}
-                  />
+                  {!isLast && (
+                    <div className="absolute left-1/2 right-0 flex items-center pl-[18px]">
+                      <div className="h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]" />
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-3 px-1 text-center">
+                <div className="mt-2 px-2.5 text-center">
                   <Skeleton
                     className={cn("mx-auto h-4 rounded-full", step.titleWidth)}
                   />
@@ -269,6 +279,21 @@ export function ProjectDetails({
   }
 
   const handleUpdateStatus = async (newStatus: ProjectStatusType) => {
+    // If transitioning from pending → approved and the project type requires
+    // a maker (FABRICATION) but none is assigned, show the assign-maker dialog
+    // instead of running the mutation (which would error out).
+    if (
+      newStatus === "approved" &&
+      project?.status === "pending" &&
+      !project?.assignedMaker &&
+      project &&
+      isKnownType(project.type) &&
+      getWorkflow(project.type).approvalRequiresMaker
+    ) {
+      setDialogView("assign-maker");
+      return;
+    }
+
     try {
       await updateProject({
         projectId,
@@ -280,8 +305,14 @@ export function ProjectDetails({
         new_status: newStatus,
       });
       toast.success(`Project status updated to ${newStatus}!`);
-    } catch {
-      toast.error(`Failed to update project status`);
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update project status";
+      toast.error(message);
     }
   };
 
@@ -304,8 +335,14 @@ export function ProjectDetails({
       });
       toast.success("Project details updated.");
       return true;
-    } catch {
-      toast.error("Failed to update project details.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to update project details.";
+      toast.error(message);
       return false;
     }
   };
@@ -333,115 +370,65 @@ export function ProjectDetails({
         project_name: project?.name,
         payment_mode: paymentMode,
       });
-      toast.success("Payment recorded. Project moved to claim.");
+      const nextLabel =
+        project?.type === "WORKSHOP" ? "workshop confirmed" : "claim";
+      toast.success(`Payment recorded. Project moved to ${nextLabel}.`);
       setPaymentDialogOpen(false);
       setReceiptNumber("");
       setProof("");
       setPaymentMode("cash");
       setProofFiles([]);
       setIsPaying(false);
-    } catch {
-      toast.error("Failed to record payment.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to record payment.";
+      toast.error(message);
       setIsPaying(false);
     }
   };
 
-  const timelineSteps = project
-    ? [
-        {
-          title: "Submission",
-          statusLabel: "Completed",
-          byLabel: project.client?.name ?? "Client",
-          completed: true,
-        },
-        {
-          title: "Review",
-          statusLabel:
-            project.status === "rejected"
-              ? "Rejected"
-              : project.status === "cancelled"
+  const timelineSteps =
+    project && isKnownType(project.type)
+      ? (() => {
+          const config = getConfig(project.type);
+          const { timeline } = config;
+          const currentStepIndex = timeline.findIndex(
+            (step) => step.status === project.status,
+          );
+          const isRejected =
+            project.status === "rejected" || project.status === "cancelled";
+          const isPastEndState = currentStepIndex < 0 && !isRejected;
+          const effectiveIndex = isPastEndState
+            ? timeline.length
+            : currentStepIndex >= 0
+              ? Math.min(currentStepIndex + 1, timeline.length)
+              : timeline.length;
+
+          return timeline.map((stepDef, index) => {
+            const isPast = index < effectiveIndex || isPastEndState;
+            const isCurrent = index === effectiveIndex && !isPastEndState;
+
+            return {
+              title: stepDef.title,
+              statusLabel: isRejected
                 ? "Cancelled"
-                : project.status === "pending"
+                : isCurrent
                   ? "In progress"
-                  : "Completed",
-          byLabel:
-            project.status === "pending" ? "FabLab Staff" : "FabLab Staff",
-          active: project.status === "pending",
-          completed:
-            project.status === "approved" ||
-            project.status === "completed" ||
-            project.status === "paid" ||
-            project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-        {
-          title: "Fabrication",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "approved"
-                ? "In progress"
-                : project.status === "completed" ||
-                    project.status === "paid" ||
-                    project.status === "claimed"
-                  ? "Completed"
-                  : "Pending",
-          byLabel: project.assignedMaker
-            ? project.assignedMaker.name
-            : "Waiting",
-          active: project.status === "approved",
-          completed:
-            project.status === "completed" ||
-            project.status === "paid" ||
-            project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-        {
-          title: "Payment",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "completed"
-                ? "In progress"
-                : project.status === "paid" || project.status === "claimed"
-                  ? "Completed"
-                  : "Pending",
-          byLabel:
-            project.status === "paid" || project.status === "claimed"
-              ? "FabLab Staff"
-              : project.status === "completed"
-                ? "Waiting"
-                : "—",
-          active: project.status === "completed",
-          completed: project.status === "paid" || project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-        {
-          title: "Claim",
-          statusLabel:
-            project.status === "rejected" || project.status === "cancelled"
-              ? "Cancelled"
-              : project.status === "paid"
-                ? "In progress"
-                : project.status === "claimed"
-                  ? "Completed"
-                  : "Pending",
-          byLabel:
-            project.status === "claimed"
-              ? "Client"
-              : project.status === "paid"
-                ? "Waiting"
-                : "—",
-          active: project.status === "paid",
-          completed: project.status === "claimed",
-          rejected:
-            project.status === "rejected" || project.status === "cancelled",
-        },
-      ]
-    : [];
+                  : isPast
+                    ? "Completed"
+                    : "Pending",
+              byLabel: stepDef.getByLabel(project),
+              active: isCurrent && !isRejected,
+              completed: isPast && !isRejected,
+              rejected: isRejected,
+            };
+          });
+        })()
+      : [];
 
   const makerOptions: OptionRadioGroupItem[] = makers
     ? makers.map((m) => ({
@@ -473,7 +460,6 @@ export function ProjectDetails({
   };
 
   const handleOpenPaymentDialog = () => {
-    // Pre-populate from existing receipt when updating
     if (project?.receipt) {
       setReceiptNumber(project.receipt.receiptString ?? "");
       setPaymentMode(
@@ -517,8 +503,14 @@ export function ProjectDetails({
       });
       toast.success("Project moved to fabrication and maker assigned.");
       setDialogView("details");
-    } catch {
-      toast.error("Failed to assign maker.");
+    } catch (error) {
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : error instanceof Error
+            ? error.message
+            : "Failed to assign maker.";
+      toast.error(message);
     }
   };
 
@@ -539,7 +531,10 @@ export function ProjectDetails({
         )
       ) : null}
 
-      <DialogContent className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-6xl max-w-full overflow-x-hidden overflow-y-auto rounded-none sm:rounded-xl p-4 sm:p-6">
+      <DialogContent
+        showCloseButton={false}
+        className="top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 translate-x-0 translate-y-0 max-h-screen h-screen sm:h-auto sm:max-h-[92vh] sm:max-w-4xl max-w-full overflow-x-hidden overflow-y-auto rounded-none p-3 sm:p-4"
+      >
         {!project || role === undefined ? (
           <ProjectDetailsLoadingSkeleton />
         ) : dialogView === "assign-maker" ? (
@@ -558,14 +553,24 @@ export function ProjectDetails({
               timelineSteps={timelineSteps}
               onOpenAssignView={handleOpenAssignView}
               onUpdateStatus={handleUpdateStatus}
-              onMarkPaid={() => handleOpenPaymentDialog()}
+              onMarkPaid={handleOpenPaymentDialog}
               isClient={isClient}
               onUpdateDetails={
                 isClient || isAdminOrMaker ? handleUpdateDetails : undefined
               }
+              headerRight={
+                <DialogClose asChild>
+                  <button
+                    type="button"
+                    className="flex size-8 shrink-0 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
+                  >
+                    <XIcon className="size-4" strokeWidth={4} />
+                    <span className="sr-only">Close</span>
+                  </button>
+                </DialogClose>
+              }
             />
 
-            {/* ── Mark as Paid dialog ─────────────────────────────────── */}
             <Dialog
               open={paymentDialogOpen}
               onOpenChange={setPaymentDialogOpen}
@@ -575,7 +580,9 @@ export function ProjectDetails({
                   <DialogTitle>
                     {project?.receipt
                       ? "Update Payment Details"
-                      : "Record Payment and Move to Claim"}
+                      : project?.type === "WORKSHOP"
+                        ? "Record Payment and Confirm Workshop"
+                        : "Record Payment and Move to Claim"}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
@@ -600,15 +607,18 @@ export function ProjectDetails({
                       }
                     >
                       <SelectTrigger id="payment-mode" className="w-full">
-                        <SelectValue />
+                        <SelectValue placeholder="Select payment mode" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="gcash">GCash</SelectItem>
-                        <SelectItem value="bank transfer">
-                          Bank Transfer
-                        </SelectItem>
-                        <SelectItem value="others">Others</SelectItem>
+                        <SelectGroup>
+                          <SelectLabel>Payment Methods</SelectLabel>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="gcash">GCash</SelectItem>
+                          <SelectItem value="bank transfer">
+                            Bank Transfer
+                          </SelectItem>
+                          <SelectItem value="others">Others</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
@@ -643,10 +653,15 @@ export function ProjectDetails({
                 <DialogFooter>
                   <Button
                     variant="outline"
-                    onClick={() => setPaymentDialogOpen(false)}
+                    onClick={() => {
+                      setPaymentDialogOpen(false);
+                      if (project?.receipt) {
+                        handleUpdateStatus("paid");
+                      }
+                    }}
                     disabled={isPaying}
                   >
-                    Cancel
+                    {project?.receipt ? "Skip" : "Cancel"}
                   </Button>
                   <Button
                     onClick={handleMarkPaid}
