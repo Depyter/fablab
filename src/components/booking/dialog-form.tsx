@@ -226,6 +226,13 @@ export function BookingDialog({
     files: [],
   };
 
+  const initialPricingDefault =
+    pricingVariants.length > 0
+      ? (pricingVariants.find(
+          (v) => !v.name.toUpperCase().includes("UP"),
+        )?.name ?? pricingVariants[0].name)
+      : "";
+
   const form = useAppForm({
     defaultValues: {
       serviceType:
@@ -236,7 +243,7 @@ export function BookingDialog({
       description: "",
       notes: "",
       material: ProjectMaterial.PROVIDE_OWN,
-      pricing: "",
+      pricing: initialPricingDefault,
       requestedMaterialIds: [],
       dateTime: {
         date: undefined,
@@ -395,6 +402,7 @@ export function BookingDialog({
               serviceMaterials={serviceMaterials}
               hasUpPricing={hasUpPricing}
               pricingVariants={pricingVariants}
+              servicePricing={servicePricing}
               serviceCategory={serviceCategory}
               schedules={schedules}
               bookedTimeBlocks={bookedTimeBlocks}

@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { WorkshopSchedule } from "./workshop-time-slot-picker";
+import type { ServicePricing } from "@/lib/project-pricing";
 import {
   ProjectMaterial,
   type FulfillmentModeType,
@@ -73,6 +74,7 @@ export function Step2ProjectDetails({
   serviceMaterials,
   hasUpPricing,
   pricingVariants = EMPTY_PRICING_VARIANTS,
+  servicePricing,
   serviceCategory,
   schedules,
   bookedTimeBlocks,
@@ -96,6 +98,7 @@ export function Step2ProjectDetails({
   }>;
   hasUpPricing: boolean;
   pricingVariants?: PricingVariantOption[];
+  servicePricing?: ServicePricing;
   serviceCategory?: string;
   schedules?: WorkshopSchedule[];
   bookedTimeBlocks?: { start: string; end: string }[];
@@ -308,6 +311,79 @@ export function Step2ProjectDetails({
                   </Select>
                 </Field>
               )}
+            />
+          )}
+
+          {servicePricing && (
+            <form.Subscribe
+              selector={(state) => state.values.pricing}
+              children={(pricing) => {
+                const isDefault = !pricing || pricing === "Default";
+
+                if (servicePricing.type === "WORKSHOP") {
+                  const variant =
+                    !isDefault
+                      ? servicePricing.variants?.find(
+                          (v) => v.name === pricing,
+                        )
+                      : undefined;
+                  const amount =
+                    variant?.amount ?? servicePricing.amount;
+
+                  return (
+                    <div className="flex items-center justify-between rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
+                      <span className="text-xs font-bold uppercase tracking-[0.2em]">
+                        {isDefault ? "Default Price" : pricing}
+                      </span>
+                      <span className="text-sm font-black">
+                        ₱{amount.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (servicePricing.type === "FABRICATION") {
+                  const variant =
+                    !isDefault
+                      ? servicePricing.variants?.find(
+                          (v) => v.name === pricing,
+                        )
+                      : undefined;
+                  const setupFee =
+                    variant?.setupFee ?? servicePricing.setupFee;
+                  const timeRate =
+                    variant?.timeRate ?? servicePricing.timeRate;
+
+                  return (
+                    <div className="rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
+                      <div className="text-xs font-bold uppercase tracking-[0.2em]">
+                        {isDefault
+                          ? "Default Pricing"
+                          : pricing}
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between text-sm">
+                        <span className="font-medium">
+                          Setup Fee
+                        </span>
+                        <span className="font-black">
+                          ₱{setupFee.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">
+                          Time Rate
+                        </span>
+                        <span className="font-black">
+                          ₱{timeRate.toLocaleString()}/
+                          {servicePricing.unitName}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              }}
             />
           )}
 

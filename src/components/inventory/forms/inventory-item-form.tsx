@@ -34,46 +34,23 @@ const ITEM_CONFIG: Record<
   {
     title: string;
     typeLabel: string;
-    typeOptions: { label: string; value: string }[];
   }
 > = {
   machine: {
     title: "Machine",
     typeLabel: "Machine Type",
-    typeOptions: [
-      { label: "3D Printer", value: "3D Printer" },
-      { label: "CNC Mill", value: "CNC Mill" },
-      { label: "Laser Cutter", value: "Laser Cutter" },
-    ],
   },
   tool: {
     title: "Tool",
     typeLabel: "Tool Category",
-    typeOptions: [
-      { label: "Power Tool", value: "Power Tool" },
-      { label: "Hand Tool", value: "Hand Tool" },
-      { label: "Measurement", value: "Measurement" },
-      { label: "Other", value: "Other" },
-    ],
   },
   room: {
     title: "Room",
     typeLabel: "Room Type",
-    typeOptions: [
-      { label: "Workshop Area", value: "Workshop Area" },
-      { label: "Meeting Room", value: "Meeting Room" },
-      { label: "Storage Room", value: "Storage Room" },
-      { label: "Office", value: "Office" },
-    ],
   },
   misc: {
     title: "Item",
     typeLabel: "Category",
-    typeOptions: [
-      { label: "General", value: "General" },
-      { label: "Consumable", value: "Consumable" },
-      { label: "Other", value: "Other" },
-    ],
   },
 };
 
@@ -114,7 +91,7 @@ export function InventoryItemForm({
   const defaultValues: InventoryItemFormValues = {
     name: initialValues?.name ?? "",
     description: initialValues?.description ?? "",
-    type: initialValues?.type ?? config.typeOptions[0].value,
+    type: initialValues?.type ?? "",
     status: initialValues?.status ?? ResourceStatus.AVAILABLE,
     thumbnail: initialValues?.thumbnail ?? [],
   };
@@ -276,10 +253,9 @@ export function InventoryItemForm({
               <form.AppField
                 name="type"
                 children={(field) => (
-                  <field.SelectInput
+                  <field.TextInput
                     label={config.typeLabel}
-                    placeholder="Select type"
-                    options={config.typeOptions}
+                    placeholder={`Enter ${config.typeLabel.toLowerCase()}`}
                   />
                 )}
               />
