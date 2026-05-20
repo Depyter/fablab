@@ -230,15 +230,15 @@ function WorkshopCard({
     [sessions],
   );
 
+  const now = Date.now();
   const { upcomingCount, totalCount } = useMemo(() => {
-    const now = Date.now();
     return {
       upcomingCount: sessions.filter(
         (s) => s.status !== "cancelled" && s.date >= now,
       ).length,
       totalCount: sessions.length,
     };
-  }, [sessions]);
+  }, [sessions, now]);
 
   return (
     <BrandCard className="flex flex-col">
