@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
 import { withForm } from "@/lib/form-context";
 import {
   addServiceFormOpts,
   type AddServiceFormValues,
 } from "@/types/add-service";
+import { ServiceFormModeContext } from "@/components/services/forms/service-form";
 import { FormSection } from "@/components/ui/form-section";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,8 @@ const isTimeUnit = (value: string): value is TimeUnit =>
 export const PricingForm = withForm({
   ...addServiceFormOpts,
   render: function PricingRender({ form }) {
+    const serviceFormMode = useContext(ServiceFormModeContext);
+    const hideCategorySelector = serviceFormMode !== undefined;
     const pricingValue = form.state.values.pricing;
     const nextVariantKeyRef = useRef(0);
     const createVariantKey = () =>
@@ -71,47 +74,51 @@ export const PricingForm = withForm({
         <form.Field
           name="serviceCategory"
           children={(field) => (
-            <FormSection
-              title="Category & Pricing Model"
-              description="Define what kind of service this is and how it will be priced."
-            >
-              <Field>
-                <FieldLabel htmlFor="serviceCategory">
-                  Service Category
-                </FieldLabel>
-                <Select
-                  value={field.state.value}
-                  onValueChange={(val) => {
-                    if (!isServiceCategory(val)) return;
-
-                    field.handleChange(val);
-                    if (val === "WORKSHOP") {
-                      form.setFieldValue("pricing", {
-                        type: "FIXED",
-                        amount: 0,
-                        variants: [],
-                      });
-                    } else {
-                      form.setFieldValue("pricing", {
-                        type: "FABRICATION",
-                        setupFee: 0,
-                        unitName: "hour",
-                        timeRate: 0,
-                        variants: [],
-                      });
-                    }
-                  }}
+            <>
+              {!hideCategorySelector && (
+                <FormSection
+                  title="Category & Pricing Model"
+                  description="Define what kind of service this is and how it will be priced."
                 >
-                  <SelectTrigger id="serviceCategory">
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="WORKSHOP">Workshop</SelectItem>
-                    <SelectItem value="FABRICATION">Fabrication</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </FormSection>
+                  <Field>
+                    <FieldLabel htmlFor="serviceCategory">
+                      Service Category
+                    </FieldLabel>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(val) => {
+                        if (!isServiceCategory(val)) return;
+
+                        field.handleChange(val);
+                        if (val === "WORKSHOP") {
+                          form.setFieldValue("pricing", {
+                            type: "FIXED",
+                            amount: 0,
+                            variants: [],
+                          });
+                        } else {
+                          form.setFieldValue("pricing", {
+                            type: "FABRICATION",
+                            setupFee: 0,
+                            unitName: "hour",
+                            timeRate: 0,
+                            variants: [],
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="serviceCategory">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="WORKSHOP">Workshop</SelectItem>
+                        <SelectItem value="FABRICATION">Fabrication</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </FormSection>
+              )}
+            </>
           )}
         />
 

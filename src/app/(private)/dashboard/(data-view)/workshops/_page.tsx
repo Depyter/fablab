@@ -15,6 +15,9 @@ import {
   WorkshopEventCard,
   type WorkshopEvent,
 } from "@/components/workshops/workshop-event-card";
+import { Plus, Edit } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { ProjectDetails } from "@/components/projects/project-details";
 import { Calendar, FolderOpen } from "lucide-react";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
@@ -154,6 +157,12 @@ export function WorkshopsPage() {
         {!isClient && (
           <DataViewPageHeader>
             <WorkshopsFilterBar />
+            <Link href="/dashboard/workshops/add-workshop">
+              <Button className="inline-flex h-8 items-center gap-1.5 border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]">
+                <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                Add Workshop
+              </Button>
+            </Link>
           </DataViewPageHeader>
         )}
 
@@ -196,16 +205,29 @@ export function WorkshopsPage() {
                     />
                     <div className="space-y-4">
                       {upcoming.map((event) => (
-                        <WorkshopEventCard
+                        <div
                           key={`${event.serviceId}-${event.startTime}`}
-                          event={event}
-                          readOnly={isClient}
-                          highlight={
-                            serviceId === event.serviceId &&
-                            startTime === event.startTime
-                          }
-                          onOpenProjectDetails={handleOpenProjectDetails}
-                        />
+                          className="relative"
+                        >
+                          <WorkshopEventCard
+                            event={event}
+                            readOnly={isClient}
+                            highlight={
+                              serviceId === event.serviceId &&
+                              startTime === event.startTime
+                            }
+                            onOpenProjectDetails={handleOpenProjectDetails}
+                          />
+                          {!isClient && (
+                            <Link
+                              href={`/dashboard/workshops/${event.serviceSlug}/edit`}
+                              className="absolute top-3 right-3 z-10 inline-flex h-7 items-center gap-1 border-2 border-black bg-white px-2 text-[9px] font-black uppercase tracking-wider text-black shadow-[1px_1px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_#000]"
+                            >
+                              <Edit className="h-3 w-3" strokeWidth={3} />
+                              Edit
+                            </Link>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </section>
@@ -222,12 +244,25 @@ export function WorkshopsPage() {
                     />
                     <div className="space-y-4">
                       {past.map((event) => (
-                        <WorkshopEventCard
+                        <div
                           key={`${event.serviceId}-${event.startTime}`}
-                          event={event}
-                          readOnly
-                          onOpenProjectDetails={handleOpenProjectDetails}
-                        />
+                          className="relative"
+                        >
+                          <WorkshopEventCard
+                            event={event}
+                            readOnly
+                            onOpenProjectDetails={handleOpenProjectDetails}
+                          />
+                          {!isClient && (
+                            <Link
+                              href={`/dashboard/workshops/${event.serviceSlug}/edit`}
+                              className="absolute top-3 right-3 z-10 inline-flex h-7 items-center gap-1 border-2 border-black bg-white px-2 text-[9px] font-black uppercase tracking-wider text-black shadow-[1px_1px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_#000]"
+                            >
+                              <Edit className="h-3 w-3" strokeWidth={3} />
+                              Edit
+                            </Link>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </section>

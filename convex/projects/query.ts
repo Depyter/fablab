@@ -686,138 +686,187 @@ export const getWorkshopEvents = authQuery({
       else projectsByKey.set(key, [p]);
     }
 
-    // ── Iterate through all service schedules + time slots ──────────────
-    const scheduleEvents: Array<{
+    // ── Single pass: collect schedule event templates and unique
+    //    resource / material IDs, filtered to the target date / time range.
+    const allResourceIds = new Set<Id<"resources">>();
+    const allMaterialIds = new Set<Id<"materials">>();
+
+    interface EventTemplate {
       serviceId: Id<"services">;
       serviceName: string;
       serviceSlug: string;
-      date: number;
       startTime: number;
       endTime: number;
       maxSlots: number;
       usedSlots: number;
-      registrationCount: number;
-      cancelledCount: number;
-      statusBreakdown: Record<string, number>;
-      resources?: Id<"resources">[];
-      availableMaterials?: Id<"materials">[];
-      attendees: Array<{
-        projectId: Id<"projects">;
-        userId: Id<"userProfile">;
-        name: string;
-        email: string;
-        status: string;
-        pfpUrl: string | null;
-        createdAt: number;
-        roomId: string | null;
-        threadId: string | null;
-      }>;
-    }> = [];
+      groupProjects: Doc<"projects">[];
+      resourceIds: Id<"resources">[];
+      materialIds: Id<"materials">[];
+    }
+
+    const eventTemplates: EventTemplate[] = [];
 
     for (const service of workshopServices) {
       const cat = service.serviceCategory;
 
       for (const schedule of cat.schedules) {
-        // Filter schedule by date range
+        // ── Date range filter ──────────────────────────────────────────
         if (minTime !== undefined && schedule.date + 86_400_000 < minTime)
           continue;
         if (maxTime !== undefined && schedule.date >= maxTime) continue;
 
         for (const timeSlot of schedule.timeSlots) {
-          // Filter time slot by time range
+          // ── Time range filter ───────────────────────────────────────
           if (minTime !== undefined && timeSlot.startTime < minTime) continue;
           if (maxTime !== undefined && timeSlot.startTime >= maxTime) continue;
-
-          // Filter by args.startTime if provided (calendar click-through)
           if (args.startTime && timeSlot.startTime !== args.startTime) continue;
 
+          // Collect unique IDs while we have the schedule data open
+          for (const rid of timeSlot.resources ?? []) allResourceIds.add(rid);
+          for (const mid of timeSlot.availableMaterials ?? [])
+            allMaterialIds.add(mid);
+
           const key = `${service._id}:${timeSlot.startTime}`;
-          const groupProjects = projectsByKey.get(key) ?? [];
-
-          // Separate active vs cancelled/rejected projects
-          const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
-          const activeProjects = groupProjects.filter(
-            (p) => !TERMINAL_STATUSES.has(p.status),
-          );
-
-          // Build status breakdown (from all projects, including cancelled)
-          const statusBreakdown: Record<string, number> = {};
-          for (const p of groupProjects) {
-            statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
-          }
-
-          // Load attendee profiles + threads for active projects
-          const threadPromises = activeProjects.map((project) =>
-            ctx.db
-              .query("threads")
-              .withIndex("projectId", (q) => q.eq("projectId", project._id))
-              .first(),
-          );
-          const threads = await Promise.all(threadPromises);
-          const threadByProjectId = new Map(
-            threads
-              .filter((t): t is NonNullable<typeof t> => t !== null)
-              .map((t) => [t.projectId as string, t]),
-          );
-
-          const userProfileCache = new Map<string, Doc<"userProfile">>();
-          async function getUserProfile(
-            id: Id<"userProfile">,
-          ): Promise<Doc<"userProfile">> {
-            const key = id as string;
-            const cached = userProfileCache.get(key);
-            if (cached) return cached;
-            const doc = await ctx.db.get(id);
-            if (!doc) throw new ConvexError("User profile not found");
-            userProfileCache.set(key, doc);
-            return doc;
-          }
-
-          const attendees = await Promise.all(
-            activeProjects.map(async (project) => {
-              const profile = await getUserProfile(project.userId);
-              let pfpUrl: string | null = null;
-              if (profile.profilePic) {
-                try {
-                  pfpUrl = await ctx.storage.getUrl(profile.profilePic);
-                } catch {
-                  // Gracefully handle inaccessible storage
-                }
-              }
-              const thread = threadByProjectId.get(project._id as string);
-              return {
-                projectId: project._id,
-                userId: project.userId,
-                name: profile.name,
-                email: profile.email,
-                status: project.status,
-                pfpUrl,
-                createdAt: project._creationTime,
-                roomId: thread?.roomId ?? null,
-                threadId: thread?._id ?? null,
-              };
-            }),
-          );
-
-          scheduleEvents.push({
+          eventTemplates.push({
             serviceId: service._id,
             serviceName: service.name,
             serviceSlug: service.slug,
-            date: getLabDayStartTimestamp(timeSlot.startTime),
             startTime: timeSlot.startTime,
             endTime: timeSlot.endTime,
             maxSlots: timeSlot.maxSlots,
             usedSlots: timeSlot.usedUpSlots ?? 0,
-            registrationCount: activeProjects.length,
-            cancelledCount: groupProjects.length - activeProjects.length,
-            statusBreakdown,
-            resources: timeSlot.resources,
-            availableMaterials: timeSlot.availableMaterials,
-            attendees,
+            groupProjects: projectsByKey.get(key) ?? [],
+            resourceIds: timeSlot.resources ?? [],
+            materialIds: timeSlot.availableMaterials ?? [],
           });
         }
       }
     }
+
+    // ── Batch-fetch resource & material details ────────────────────────
+    const [resourceDocs, materialDocs] = await Promise.all([
+      Promise.all(Array.from(allResourceIds).map((id) => ctx.db.get(id))),
+      Promise.all(Array.from(allMaterialIds).map((id) => ctx.db.get(id))),
+    ]);
+    const resourceMap = new Map(
+      resourceDocs
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map((d) => [d._id, { _id: d._id, name: d.name }]),
+    );
+    const materialMap = new Map(
+      materialDocs
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map((d) => [d._id, { _id: d._id, name: d.name, unit: d.unit }]),
+    );
+
+    // ── Pre-fetch threads and user profiles for all active projects ─────
+    const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+    const allActiveProjects = allProjects.filter(
+      (p) => !TERMINAL_STATUSES.has(p.status),
+    );
+
+    const threadDocs = await Promise.all(
+      allActiveProjects.map((p) =>
+        ctx.db
+          .query("threads")
+          .withIndex("projectId", (q) => q.eq("projectId", p._id))
+          .first(),
+      ),
+    );
+    const threadMap = new Map(
+      threadDocs
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+        .map((t) => [t.projectId!, t]),
+    );
+
+    const uniqueUserIds = Array.from(
+      new Set(allActiveProjects.map((p) => p.userId)),
+    );
+    const userDocs = await Promise.all(
+      uniqueUserIds.map((id) => ctx.db.get(id)),
+    );
+    const userMap = new Map(
+      userDocs
+        .filter((u): u is NonNullable<typeof u> => u !== null)
+        .map((u) => [u._id, u]),
+    );
+
+    const uniqueProfilePics = Array.from(
+      new Set(
+        userDocs
+          .filter(
+            (u): u is NonNullable<typeof u> => u !== null && !!u.profilePic,
+          )
+          .map((u) => u!.profilePic!),
+      ),
+    );
+    const urlPairs = await Promise.all(
+      uniqueProfilePics.map(async (pic) => [
+        pic,
+        await ctx.storage.getUrl(pic),
+      ]),
+    );
+    const urlMap = new Map(urlPairs as [Id<"_storage">, string | null][]);
+
+    // ── Resolve templates into schedule events ──────────────────────────
+    const scheduleEvents = eventTemplates.map((t) => {
+      const activeProjects = t.groupProjects.filter(
+        (p) => !TERMINAL_STATUSES.has(p.status),
+      );
+
+      const statusBreakdown: Record<string, number> = {};
+      for (const p of t.groupProjects) {
+        statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
+      }
+
+      const attendees = activeProjects
+        .map((project) => {
+          const profile = userMap.get(project.userId);
+          if (!profile) return null;
+
+          const thread = threadMap.get(project._id);
+          return {
+            projectId: project._id,
+            userId: project.userId,
+            name: profile.name,
+            email: profile.email,
+            status: project.status,
+            pfpUrl: profile.profilePic
+              ? (urlMap.get(profile.profilePic) ?? null)
+              : null,
+            createdAt: project._creationTime,
+            roomId: thread?.roomId ?? null,
+            threadId: thread?._id ?? null,
+          };
+        })
+        .filter((a): a is NonNullable<typeof a> => a !== null);
+
+      const resolvedResources = Array.from(new Set(t.resourceIds))
+        .map((rid) => resourceMap.get(rid))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined);
+
+      const resolvedMaterials = Array.from(new Set(t.materialIds))
+        .map((mid) => materialMap.get(mid))
+        .filter((m): m is NonNullable<typeof m> => m !== undefined);
+
+      return {
+        serviceId: t.serviceId,
+        serviceName: t.serviceName,
+        serviceSlug: t.serviceSlug,
+        date: getLabDayStartTimestamp(t.startTime),
+        startTime: t.startTime,
+        endTime: t.endTime,
+        maxSlots: t.maxSlots,
+        usedSlots: t.usedSlots,
+        registrationCount: activeProjects.length,
+        cancelledCount: t.groupProjects.length - activeProjects.length,
+        statusBreakdown,
+        resources: resolvedResources.length > 0 ? resolvedResources : undefined,
+        availableMaterials:
+          resolvedMaterials.length > 0 ? resolvedMaterials : undefined,
+        attendees,
+      };
+    });
 
     // ── Sort and split into upcoming / past ──────────────────────────────
     const upcoming = scheduleEvents

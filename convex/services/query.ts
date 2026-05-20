@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { publicQuery } from "../helper";
 import type { Id } from "../_generated/dataModel";
 import { getLabDayBoundsMs } from "../../src/lib/lab-time";
+import { ProjectStatus } from "@convex/constants";
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -171,6 +172,25 @@ export const getBookedTimeSlots = publicQuery({
           )
           .collect();
 
+    // Filter out usages belonging to rejected / cancelled projects so
+    // their time slots don't block new bookings.
+    const excludedProjectIds = new Set<string>();
+    for (const u of usages) {
+      if (excludedProjectIds.has(u.projectId)) continue;
+      const proj = await ctx.db.get(u.projectId);
+      if (
+        proj &&
+        (proj.status === ProjectStatus.REJECTED ||
+          proj.status === ProjectStatus.CANCELLED)
+      ) {
+        excludedProjectIds.add(u.projectId);
+      }
+    }
+
+    const activeUsages = usages.filter(
+      (u) => !excludedProjectIds.has(u.projectId),
+    );
+
     // Deduplicate by time range — a single booked time slot should only
     // appear once even if multiple resourceUsage records exist with the
     // same bounds (e.g., workshop main usage + per-resource usages).
@@ -180,7 +200,7 @@ export const getBookedTimeSlots = publicQuery({
       startTime: number;
       endTime: number;
     }> = [];
-    for (const u of usages) {
+    for (const u of activeUsages) {
       const key = `${u.startTime}:${u.endTime}`;
       if (seen.has(key)) continue;
       seen.add(key);
