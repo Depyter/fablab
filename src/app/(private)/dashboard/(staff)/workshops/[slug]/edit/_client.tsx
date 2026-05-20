@@ -130,6 +130,7 @@ export function EditWorkshopClient({
         status: value.status,
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         fileTypes: value.fileTypes,
+        resources: value.resources as Id<"resources">[],
         images: value.images as Id<"_storage">[],
         samples: value.samples as Id<"_storage">[],
       });

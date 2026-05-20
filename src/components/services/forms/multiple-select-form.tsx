@@ -40,8 +40,13 @@ export function MultipleSelectForm({
 
   const selectedValues = value ?? localValues;
 
+  // Reset select to placeholder after every pick so the user can
+  // immediately select another item (or the same "Add new…" trigger).
+  const [selectKey, setSelectKey] = useState(0);
+
   const addItem = (val: string) => {
     if (val === "__add_new__") {
+      setSelectKey((k) => k + 1);
       onAddNew?.();
       return;
     }
@@ -49,6 +54,7 @@ export function MultipleSelectForm({
       const newValues = [...selectedValues, val];
       if (onChange) onChange(newValues);
       else setLocalValues(newValues);
+      setSelectKey((k) => k + 1);
     }
   };
 
@@ -87,7 +93,7 @@ export function MultipleSelectForm({
         })}
 
         {/* Select to add an item */}
-        <Select onValueChange={addItem}>
+        <Select key={selectKey} onValueChange={addItem}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>

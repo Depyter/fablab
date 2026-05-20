@@ -7,6 +7,12 @@ import { api } from "@convex/_generated/api";
 import { useProfile } from "@/components/sidebar/profile-context";
 import { AddSessionDialog } from "@/components/workshops/add-session-dialog";
 import {
+  WorkshopAttendeeRow,
+  type AttendeeInfo,
+} from "@/components/workshops/workshop-attendee-row";
+import { ProjectDetails } from "@/components/projects/project-details";
+import type { Id } from "@convex/_generated/dataModel";
+import {
   BrandSkeleton,
   BrandCard,
   CapacityBar,
@@ -23,6 +29,8 @@ import {
   Users,
   FolderOpen,
   PackageOpen,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -111,96 +119,6 @@ function ServiceChip({
     >
       {abbr}
     </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Session Row (used in "Upcoming" tab)
-// ---------------------------------------------------------------------------
-
-function SessionRow({
-  session,
-  readOnly,
-  variant = "upcoming",
-}: {
-  session: SessionWithService;
-  readOnly?: boolean;
-  variant?: "upcoming" | "past";
-}) {
-  return (
-    <Link
-      href={readOnly ? "#" : `/dashboard/workshops/${session.serviceSlug}/edit`}
-      className={cn(
-        "group block border-4 border-black bg-white shadow-[6px_6px_0_0_#000] transition-all",
-        !readOnly &&
-          "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_#000]",
-      )}
-    >
-      <div className="flex items-center gap-4 px-5 py-4 sm:px-6">
-        {/* Chip */}
-        <ServiceChip
-          serviceId={session.serviceId}
-          serviceName={session.serviceName}
-        />
-
-        {/* Session info */}
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-black uppercase tracking-tighter text-black">
-            {session.serviceName}
-          </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold text-black/60">
-            <span className="inline-flex items-center gap-1">
-              <Calendar
-                className="h-3.5 w-3.5 text-fab-amber"
-                strokeWidth={2.5}
-              />
-              {formatLabDate(session.date, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-fab-teal" strokeWidth={2.5} />
-              {formatLabTime(session.startTime)} –{" "}
-              {formatLabTime(session.endTime)}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Users
-                className="h-3.5 w-3.5 text-fab-magenta"
-                strokeWidth={2.5}
-              />
-              {session.usedUpSlots}/{session.maxSlots} slots used
-            </span>
-          </div>
-        </div>
-
-        {/* Capacity bar / Completed */}
-        {variant === "past" ? (
-          <div className="hidden shrink-0 sm:block">
-            <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-black/40">
-              Completed
-            </span>
-          </div>
-        ) : (
-          <>
-            <div className="hidden w-36 shrink-0 sm:block">
-              <CapacityBar
-                usedSlots={session.usedUpSlots}
-                maxSlots={session.maxSlots}
-              />
-            </div>
-            {/* Edit arrow */}
-            {!readOnly && (
-              <div className="shrink-0 text-black/30 transition-all group-hover:text-black">
-                <Edit className="h-4 w-4" strokeWidth={3} />
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </Link>
   );
 }
 
@@ -399,17 +317,32 @@ export function WorkshopsPage() {
   const [preselectedServiceId, setPreselectedServiceId] = useState<
     string | undefined
   >(undefined);
+  const [selectedProjectId, setSelectedProjectId] = useState<
+    Id<"projects"> | null
+  >(null);
 
   // ── Data ──────────────────────────────────────────────────────────────
   const upcomingSessions = useQuery(
     api.workshopSessions.query.listUpcoming,
     {},
   );
+  const workshopEvents = useQuery(api.projects.query.getWorkshopEvents, {
+    status: "all",
+  });
   const services = useQuery(api.services.query.getServices);
 
   const workshopServices = useMemo(
     () => services?.filter((s) => s.serviceCategory.type === "WORKSHOP") ?? [],
     [services],
+  );
+
+  const upcomingEvents = useMemo(
+    () => workshopEvents?.upcoming ?? [],
+    [workshopEvents],
+  );
+  const pastEvents = useMemo(
+    () => workshopEvents?.past ?? [],
+    [workshopEvents],
   );
 
   // Build a map of serviceId → upcoming sessions for the "All workshops" tab
@@ -426,7 +359,10 @@ export function WorkshopsPage() {
   }, [upcomingSessions]);
 
   // ── Loading state ─────────────────────────────────────────────────────
-  const isLoading = upcomingSessions === undefined || services === undefined;
+  const isLoading =
+    upcomingSessions === undefined ||
+    workshopEvents === undefined ||
+    services === undefined;
 
   // ── Handlers ──────────────────────────────────────────────────────────
   const openAddSession = useCallback((serviceId?: string) => {
@@ -501,8 +437,12 @@ export function WorkshopsPage() {
               </div>
             ) : activeTab === "upcoming" ? (
               <UpcomingTab
-                sessions={upcomingSessions ?? []}
+                upcomingEvents={upcomingEvents}
+                pastEvents={pastEvents}
                 readOnly={isClient}
+                onOpenProjectDetails={(projectId) =>
+                  setSelectedProjectId(projectId as Id<"projects">)
+                }
               />
             ) : (
               <AllWorkshopsTab
@@ -516,6 +456,16 @@ export function WorkshopsPage() {
         </div>
       </div>
 
+      {/* Project Details Dialog */}
+      <ProjectDetails
+        projectId={selectedProjectId as Id<"projects"> | undefined}
+        open={selectedProjectId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedProjectId(null);
+        }}
+        hideTrigger
+      />
+
       {/* Add Session Dialog */}
       <AddSessionDialog
         open={addDialogOpen}
@@ -527,21 +477,147 @@ export function WorkshopsPage() {
 }
 
 // ---------------------------------------------------------------------------
+// Workshop event type (from getWorkshopEvents)
+// ---------------------------------------------------------------------------
+
+type WorkshopEvent = NonNullable<
+  ReturnType<typeof useQuery<typeof api.projects.query.getWorkshopEvents>>
+>["upcoming"][number];
+
+// ---------------------------------------------------------------------------
+// Expandable Session Card
+// ---------------------------------------------------------------------------
+
+function ExpandableSessionCard({
+  event,
+  readOnly,
+  variant = "upcoming",
+  onOpenProjectDetails,
+}: {
+  event: WorkshopEvent;
+  readOnly: boolean;
+  variant?: "upcoming" | "past";
+  onOpenProjectDetails?: (projectId: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className={cn(
+        "group border-4 border-black bg-white shadow-[6px_6px_0_0_#000] transition-all",
+        variant === "past" ? "opacity-60" : "",
+      )}
+    >
+      {/* Header — clickable to expand */}
+      <button
+        type="button"
+        className="flex w-full items-center gap-4 px-5 py-4 sm:px-6 text-left"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <ServiceChip
+          serviceId={event.serviceId}
+          serviceName={event.serviceName}
+        />
+
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-black uppercase tracking-tighter text-black">
+            {event.serviceName}
+          </h3>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold text-black/60">
+            <span className="inline-flex items-center gap-1">
+              <Calendar
+                className="h-3.5 w-3.5 text-fab-amber"
+                strokeWidth={2.5}
+              />
+              {formatLabDate(event.date, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 text-fab-teal" strokeWidth={2.5} />
+              {formatLabTime(event.startTime)} –{" "}
+              {formatLabTime(event.endTime)}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Users
+                className="h-3.5 w-3.5 text-fab-magenta"
+                strokeWidth={2.5}
+              />
+              {event.registrationCount}/{event.maxSlots} attendees
+            </span>
+          </div>
+        </div>
+
+        {/* Capacity bar / Past indicator */}
+        {variant === "past" ? (
+          <span className="hidden shrink-0 sm:inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-black/40">
+            Completed
+          </span>
+        ) : (
+          <div className="hidden w-36 shrink-0 sm:block">
+            <CapacityBar
+              usedSlots={event.registrationCount}
+              maxSlots={event.maxSlots}
+            />
+          </div>
+        )}
+
+        {/* Expand toggle */}
+        <div className="shrink-0 text-black/30 transition-transform">
+          {expanded ? (
+            <ChevronUp className="h-5 w-5" strokeWidth={3} />
+          ) : (
+            <ChevronDown className="h-5 w-5" strokeWidth={3} />
+          )}
+        </div>
+      </button>
+
+      {/* Attendee list — visible when expanded */}
+      {expanded && (
+        <div className="border-t-4 border-black">
+          {event.attendees.length === 0 ? (
+            <div className="px-5 py-6 text-center sm:px-6">
+              <p className="text-xs font-bold text-black/40">
+                No attendees registered yet.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y-2 divide-black/10">
+              {event.attendees.map((attendee) => (
+                <WorkshopAttendeeRow
+                  key={attendee.projectId}
+                  attendee={attendee}
+                  readOnly={readOnly}
+                  onOpenProjectDetails={onOpenProjectDetails}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Tab: Upcoming
 // ---------------------------------------------------------------------------
 
 function UpcomingTab({
-  sessions,
+  upcomingEvents,
+  pastEvents,
   readOnly,
+  onOpenProjectDetails,
 }: {
-  sessions: SessionWithService[];
+  upcomingEvents: WorkshopEvent[];
+  pastEvents: WorkshopEvent[];
   readOnly: boolean;
+  onOpenProjectDetails?: (projectId: string) => void;
 }) {
-  const pastSessions = useQuery(api.workshopSessions.query.listPast, {
-    limit: 10,
-  });
-
-  if (sessions.length === 0 && (!pastSessions || pastSessions.length === 0)) {
+  if (upcomingEvents.length === 0 && pastEvents.length === 0) {
     return (
       <BrandCard className="px-6 py-16 text-center shadow-[8px_8px_0_0_#000]">
         <div className="flex flex-col items-center justify-center">
@@ -564,37 +640,39 @@ function UpcomingTab({
   return (
     <div className="space-y-6">
       {/* Upcoming sessions */}
-      {sessions.length > 0 && (
+      {upcomingEvents.length > 0 && (
         <div className="space-y-4">
-          {sessions.map((session) => (
-            <SessionRow
-              key={session._id}
-              session={session}
+          {upcomingEvents.map((event) => (
+            <ExpandableSessionCard
+              key={`${event.serviceId}-${event.startTime}`}
+              event={event}
               readOnly={readOnly}
+              onOpenProjectDetails={onOpenProjectDetails}
             />
           ))}
         </div>
       )}
 
       {/* Past sessions divider */}
-      {pastSessions && pastSessions.length > 0 && (
+      {pastEvents.length > 0 && (
         <>
           <div className="flex items-center gap-3">
             <div className="h-0.5 flex-1 bg-black/20" />
             <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.15em] text-black/40">
-              Past sessions (last 7 days)
+              Past sessions
             </span>
             <div className="h-0.5 flex-1 bg-black/20" />
           </div>
 
           {/* Past sessions at reduced opacity */}
-          <div className="space-y-3 opacity-60">
-            {pastSessions.map((session) => (
-              <SessionRow
-                key={session._id}
-                session={session}
+          <div className="space-y-3">
+            {pastEvents.map((event) => (
+              <ExpandableSessionCard
+                key={`${event.serviceId}-${event.startTime}`}
+                event={event}
                 readOnly
                 variant="past"
+                onOpenProjectDetails={onOpenProjectDetails}
               />
             ))}
           </div>

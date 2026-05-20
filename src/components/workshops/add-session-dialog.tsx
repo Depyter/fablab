@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
+import { InlineResourceSelect, InlineMaterialSelect } from "@/components/services/forms/inline-resource-material-select";
 import { toast } from "sonner";
 import { getLabDayStartTimestamp, getLabTimeTimestamp } from "@/lib/lab-time";
 
@@ -37,8 +37,6 @@ export function AddSessionDialog({
   preselectedServiceId,
 }: AddSessionDialogProps) {
   const services = useQuery(api.services.query.getServices);
-  const resources = useQuery(api.resource.query.getResources) ?? [];
-  const materials = useQuery(api.materials.query.getMaterials) ?? [];
   const createSession = useMutation(api.workshopSessions.mutate.create);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -54,15 +52,6 @@ export function AddSessionDialog({
   const [maxSlots, setMaxSlots] = useState("10");
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
-
-  const resourceOptions = resources.map((r) => ({
-    label: r.name,
-    value: r._id,
-  }));
-  const materialOptions = materials.map((m) => ({
-    label: m.name,
-    value: m._id,
-  }));
 
   const reset = () => {
     setServiceId(preselectedServiceId ?? "");
@@ -229,15 +218,13 @@ export function AddSessionDialog({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <MultipleSelectForm
-                options={resourceOptions}
+              <InlineResourceSelect
                 title="Room / Resource"
                 placeholder="Select resources…"
                 value={selectedResources}
                 onChange={setSelectedResources}
               />
-              <MultipleSelectForm
-                options={materialOptions}
+              <InlineMaterialSelect
                 title="Materials"
                 placeholder="Select materials…"
                 value={selectedMaterials}
