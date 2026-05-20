@@ -62,18 +62,10 @@ export function EditServiceClient({
   const initialValues: AddServiceFormValues = {
     name: service.name,
     description: service.description,
-    serviceCategory: service.serviceCategory.type as "WORKSHOP" | "FABRICATION",
+    serviceCategory: "FABRICATION",
     pricing:
-      service.serviceCategory.type === "WORKSHOP"
+      service.serviceCategory.type === "FABRICATION"
         ? {
-            type: "FIXED" as const,
-            amount: service.serviceCategory.amount,
-            variants: (service.serviceCategory.variants ?? []) as Array<{
-              name: string;
-              amount: number;
-            }>,
-          }
-        : {
             type: "FABRICATION" as const,
             setupFee: service.serviceCategory.setupFee,
             unitName: service.serviceCategory.unitName,
@@ -83,6 +75,13 @@ export function EditServiceClient({
               setupFee: number;
               timeRate: number;
             }>,
+          }
+        : {
+            type: "FABRICATION" as const,
+            setupFee: 0,
+            unitName: "hour",
+            timeRate: 0,
+            variants: [],
           },
     status: isServiceStatus(service.status)
       ? service.status
@@ -112,40 +111,24 @@ export function EditServiceClient({
         service: service._id as Id<"services">,
         name: value.name,
         description: value.description,
-        serviceCategory:
-          value.serviceCategory === "WORKSHOP"
-            ? {
-                type: "WORKSHOP",
-                amount:
-                  value.pricing.type === "FIXED" ? value.pricing.amount : 0,
-                variants:
-                  value.pricing.type === "FIXED" &&
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              }
-            : {
-                type: "FABRICATION",
-                availableDays: value.availableDays,
-                materials: value.materials as Id<"materials">[],
-                setupFee:
-                  value.pricing.type === "FABRICATION"
-                    ? value.pricing.setupFee
-                    : 0,
-                unitName:
-                  value.pricing.type === "FABRICATION"
-                    ? value.pricing.unitName
-                    : ("hour" as const),
-                timeRate:
-                  value.pricing.type === "FABRICATION"
-                    ? value.pricing.timeRate
-                    : 0,
-                variants:
-                  value.pricing.type === "FABRICATION" &&
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              },
+        serviceCategory: {
+          type: "FABRICATION",
+          availableDays: value.availableDays,
+          materials: value.materials as Id<"materials">[],
+          setupFee:
+            value.pricing.type === "FABRICATION" ? value.pricing.setupFee : 0,
+          unitName:
+            value.pricing.type === "FABRICATION"
+              ? value.pricing.unitName
+              : ("hour" as const),
+          timeRate:
+            value.pricing.type === "FABRICATION" ? value.pricing.timeRate : 0,
+          variants:
+            value.pricing.type === "FABRICATION" &&
+            value.pricing.variants.length > 0
+              ? value.pricing.variants
+              : undefined,
+        },
         status: value.status,
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         fileTypes: value.fileTypes,
@@ -200,6 +183,7 @@ export function EditServiceClient({
           router.push("/dashboard/services");
         }}
         submitError={submitError}
+        mode="FABRICATION"
       />
       <div className="container mx-auto max-w-6xl px-10 pb-10 -mt-8">
         <div className="mt-12 rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
