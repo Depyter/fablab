@@ -925,7 +925,9 @@ describe("Service mutations and queries", () => {
           date: bookingDay,
         },
       );
-      expect(serviceLevelBookedSlots).toEqual([]);
+      expect(serviceLevelBookedSlots).toEqual([
+        { usageId, startTime: bookingStart, endTime: bookingEnd },
+      ]);
 
       const bookings = await tHarley.query(api.resource.query.getBookings, {
         date: bookingDay,
