@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -17,63 +18,118 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 type UserProfile = Doc<"userProfile"> & {
   profilePicUrl: string | null;
 };
 
+type UserProfilePanelVariant = "dialog" | "sheet";
+
 export function UserProfileDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
   const profile = useQuery(api.users.getUserProfile);
+  const variant: UserProfilePanelVariant = isMobile ? "sheet" : "dialog";
+
+  const content = open ? (
+    profile === undefined ? (
+      <UserProfilePanel variant={variant}>
+        <div className="pt-4 text-sm text-muted-foreground">
+          Loading profile...
+        </div>
+      </UserProfilePanel>
+    ) : profile === null ? (
+      <UserProfilePanel variant={variant}>
+        <div className="pt-4 text-sm text-muted-foreground">
+          Profile unavailable.
+        </div>
+      </UserProfilePanel>
+    ) : (
+      <UserProfileForm
+        key={profile._id}
+        profile={profile}
+        onOpenChange={setOpen}
+        variant={variant}
+      />
+    )
+  ) : null;
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>{children}</SheetTrigger>
+        {content}
+      </Sheet>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      {open ? (
-        profile === undefined ? (
-          <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Edit Profile
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="pt-4 text-sm text-muted-foreground">
-              Loading profile...
-            </div>
-          </DialogContent>
-        ) : profile === null ? (
-          <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Edit Profile
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="pt-4 text-sm text-muted-foreground">
-              Profile unavailable.
-            </div>
-          </DialogContent>
-        ) : (
-          <UserProfileDialogForm
-            key={profile._id}
-            profile={profile}
-            onOpenChange={setOpen}
-          />
-        )
-      ) : null}
+      {content}
     </Dialog>
   );
 }
 
-function UserProfileDialogForm({
+function UserProfilePanel({
+  variant,
+  children,
+}: {
+  variant: UserProfilePanelVariant;
+  children: React.ReactNode;
+}) {
+  const title = (
+    <>
+      <User className="h-5 w-5 text-primary" />
+      Edit Profile
+    </>
+  );
+
+  if (variant === "sheet") {
+    return (
+      <SheetContent
+        side="bottom"
+        overlayClassName="z-[590]"
+        className="z-[600] max-h-[90vh] overflow-y-auto bg-background text-foreground p-0"
+      >
+        <SheetHeader className="border-b border-border/40">
+          <SheetTitle className="flex items-center gap-2 text-lg font-black uppercase tracking-tighter">
+            {title}
+          </SheetTitle>
+        </SheetHeader>
+        <div className="px-6 pb-6">{children}</div>
+      </SheetContent>
+    );
+  }
+
+  return (
+    <DialogContent
+      overlayClassName="z-[590]"
+      className="z-[600] sm:max-w-md bg-background text-foreground border-border"
+    >
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">{title}</DialogTitle>
+      </DialogHeader>
+      {children}
+    </DialogContent>
+  );
+}
+
+function UserProfileForm({
   profile,
   onOpenChange,
+  variant,
 }: {
   profile: UserProfile;
   onOpenChange: (open: boolean) => void;
+  variant: UserProfilePanelVariant;
 }) {
   const updateProfile = useMutation(api.users.updateProfile);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
@@ -160,14 +216,7 @@ function UserProfileDialogForm({
   const hasChanges = name !== profile.name || pendingFile !== null;
 
   return (
-    <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" />
-          Edit Profile
-        </DialogTitle>
-      </DialogHeader>
-
+    <UserProfilePanel variant={variant}>
       <div className="flex flex-col gap-6 pt-4">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
@@ -268,6 +317,6 @@ function UserProfileDialogForm({
           </Button>
         </div>
       </div>
-    </DialogContent>
+    </UserProfilePanel>
   );
 }
