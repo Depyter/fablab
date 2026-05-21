@@ -196,7 +196,7 @@ export function ServiceForm({
               children={(field) => (
                 <>
                   <FileUpload
-                    title="Thumbnail"
+                    title="Thumbnail *"
                     accept="*/*"
                     value={initialImages}
                     onFilesChange={(files) =>

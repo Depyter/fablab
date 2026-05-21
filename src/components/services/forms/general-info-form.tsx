@@ -36,6 +36,7 @@ export const GeneralInfoForm = withForm({
               <field.TextInput
                 label="Service Name"
                 placeholder="Enter service name..."
+                required
               />
             )}
           />
@@ -52,6 +53,7 @@ export const GeneralInfoForm = withForm({
                 placeholder="Description of service..."
                 rows={6}
                 className="min-h-24 resize-none"
+                required
               />
             )}
           />

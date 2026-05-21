@@ -26,6 +26,25 @@ export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
 
 const fieldComponents = {
+  RequiredLabel: ({
+    label,
+    required,
+  }: {
+    label: string;
+    required?: boolean;
+  }) => (
+    <>
+      {label}
+      {required ? (
+        <>
+          <span aria-hidden="true" className="ml-1 text-fab-magenta">
+            *
+          </span>
+          <span className="sr-only"> (required)</span>
+        </>
+      ) : null}
+    </>
+  ),
   TextInput: (props: {
     label: string;
     placeholder?: string;
@@ -34,7 +53,12 @@ const fieldComponents = {
     const field = useFieldContext<string>();
     return (
       <Field>
-        <FieldLabel htmlFor={field.name}>{props.label}</FieldLabel>
+        <FieldLabel htmlFor={field.name}>
+          <fieldComponents.RequiredLabel
+            label={props.label}
+            required={props.required}
+          />
+        </FieldLabel>
         <Input
           id={field.name}
           placeholder={props.placeholder}
@@ -63,7 +87,12 @@ const fieldComponents = {
     const field = useFieldContext<string>();
     return (
       <Field>
-        <FieldLabel htmlFor={field.name}>{props.label}</FieldLabel>
+        <FieldLabel htmlFor={field.name}>
+          <fieldComponents.RequiredLabel
+            label={props.label}
+            required={props.required}
+          />
+        </FieldLabel>
         <Textarea
           id={field.name}
           placeholder={props.placeholder}
@@ -95,7 +124,12 @@ const fieldComponents = {
     const field = useFieldContext<number>();
     return (
       <Field>
-        <FieldLabel htmlFor={field.name}>{props.label}</FieldLabel>
+        <FieldLabel htmlFor={field.name}>
+          <fieldComponents.RequiredLabel
+            label={props.label}
+            required={props.required}
+          />
+        </FieldLabel>
         <Input
           id={field.name}
           type="number"
@@ -141,11 +175,17 @@ const fieldComponents = {
     label: string;
     placeholder?: string;
     options: { label: string; value: string }[];
+    required?: boolean;
   }) => {
     const field = useFieldContext<string>();
     return (
       <Field>
-        <FieldLabel htmlFor={field.name}>{props.label}</FieldLabel>
+        <FieldLabel htmlFor={field.name}>
+          <fieldComponents.RequiredLabel
+            label={props.label}
+            required={props.required}
+          />
+        </FieldLabel>
         <Select
           value={field.state.value}
           onValueChange={(val) => field.handleChange(val)}
