@@ -312,7 +312,10 @@ export const PricingForm = withForm({
                               });
                             }}
                           >
-                            <SelectTrigger id="fabricationUnitName" className="w-full">
+                            <SelectTrigger
+                              id="fabricationUnitName"
+                              className="w-full"
+                            >
                               <SelectValue placeholder="Select unit" />
                             </SelectTrigger>
                             <SelectContent>

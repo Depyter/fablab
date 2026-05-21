@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 import { api, internal } from "../convex/_generated/api";
+import { DataModel } from "../convex/_generated/dataModel";
 import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
@@ -36,7 +37,9 @@ describe("workshop lifecycle edge cases", () => {
     return { t, tClient, tAdmin };
   }
 
-  async function createWorkshopService(tAdmin: TestConvexForDataModel) {
+  async function createWorkshopService(
+    tAdmin: TestConvexForDataModel<DataModel>,
+  ) {
     return await tAdmin.mutation(api.services.mutate.addService, {
       name: "3D Printing Workshop",
       images: [],
