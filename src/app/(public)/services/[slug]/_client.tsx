@@ -83,17 +83,17 @@ export function ServiceDetailClient({
     return service.serviceCategory.setupFee;
   };
 
-  const getRatePerHour = () => {
+  const getRegularRate = () => {
     if (service === null) return 0;
     if (service.serviceCategory.type === "WORKSHOP") {
       return service.serviceCategory.amount;
     }
 
-    const rawRate = service.serviceCategory.timeRate;
-    const unitName = service.serviceCategory.unitName;
-    if (unitName === "minute") return rawRate * 60;
-    if (unitName === "day") return rawRate / 24;
-    return rawRate;
+    // const rawRate = service.serviceCategory.timeRate;
+    // const unitName = service.serviceCategory.unitName;
+    // if (unitName === "minute") return rawRate * 60;
+    // if (unitName === "day") return rawRate / 24;
+    return service.serviceCategory.timeRate;
   };
 
   if (service === null) {
@@ -314,10 +314,10 @@ export function ServiceDetailClient({
 
                 <div className="border-2 border-black bg-background p-4 sm:p-5 sm:text-right">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/50">
-                    Rate Per Hour
+                    Rate Per {service.serviceCategory.unitName}
                   </p>
                   <p className="mt-2 text-2xl font-black tracking-tight text-foreground">
-                    ₱{getRatePerHour().toLocaleString()}
+                    ₱{getRegularRate()}
                   </p>
 
                   {service.serviceCategory.type === "FABRICATION" &&
