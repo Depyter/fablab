@@ -326,6 +326,10 @@ export function getLabTimeBlock(args: { startTime: number; endTime: number }) {
   };
 }
 
+export function formatLabCurrency(value: number) {
+  return value.toLocaleString("en-US");
+}
+
 export function isSameLabMonth(left: Date | number, right: Date | number) {
   const leftParts = getParts(left);
   const rightParts = getParts(right);

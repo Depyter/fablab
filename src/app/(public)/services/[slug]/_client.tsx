@@ -1,14 +1,15 @@
 "use client";
 
 import gsap from "gsap";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, Preloaded, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { ArrowLeft, CirclePercent } from "lucide-react";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
 import Link from "next/link";
 import { BookingDialog } from "@/components/booking/dialog-form";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
+import type { WorkshopSchedule } from "@/components/booking/workshop-time-slot-picker";
 import posthog from "posthog-js";
 
 /**
@@ -61,6 +62,33 @@ export function ServiceDetailClient({
     service?.serviceCategory.type === "FABRICATION"
       ? [...(service.serviceCategory.availableDays ?? [])].sort((a, b) => a - b)
       : [];
+
+  const workshopSessions = useQuery(
+    api.workshopSessions.query.listByService,
+    service?.serviceCategory.type === "WORKSHOP" && service !== null
+      ? { serviceId: service._id }
+      : "skip",
+  );
+
+  const groupedSchedules = useMemo((): WorkshopSchedule[] | undefined => {
+    if (!workshopSessions) return undefined;
+    if (workshopSessions.length === 0) return [];
+    const dateMap = new Map<number, WorkshopSchedule>();
+    for (const session of workshopSessions) {
+      let entry = dateMap.get(session.date);
+      if (!entry) {
+        entry = { date: session.date, timeSlots: [] };
+        dateMap.set(session.date, entry);
+      }
+      entry.timeSlots.push({
+        startTime: session.startTime,
+        endTime: session.endTime,
+        maxSlots: session.maxSlots,
+        usedUpSlots: session.usedUpSlots,
+      });
+    }
+    return Array.from(dateMap.values());
+  }, [workshopSessions]);
 
   const getFabricationDays = () => {
     return sortedFabricationDays.map((day) => {
@@ -204,13 +232,14 @@ export function ServiceDetailClient({
               )}
 
               {service.serviceCategory.type === "WORKSHOP" &&
-                service.serviceCategory.schedules?.length > 0 && (
+                groupedSchedules &&
+                groupedSchedules.length > 0 && (
                   <div>
                     <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] text-foreground/50">
                       Available Sessions
                     </p>
                     <div className="space-y-3">
-                      {service.serviceCategory.schedules.map((schedule) => (
+                      {groupedSchedules.map((schedule) => (
                         <div
                           key={schedule.date}
                           className="border-2 border-black bg-background p-4"
@@ -254,14 +283,6 @@ export function ServiceDetailClient({
                                 <span className="text-foreground/50">
                                   {slot.maxSlots} slot
                                   {slot.maxSlots !== 1 ? "s" : ""}
-                                  {slot.resources &&
-                                    slot.resources.length > 0 && (
-                                      <>
-                                        {" "}
-                                        · {slot.resources.length} resource
-                                        {slot.resources.length !== 1 ? "s" : ""}
-                                      </>
-                                    )}
                                 </span>
                               </div>
                             ))}
@@ -375,11 +396,7 @@ export function ServiceDetailClient({
                       }
                 }
                 serviceCategory={service.serviceCategory.type}
-                schedules={
-                  service.serviceCategory.type === "WORKSHOP"
-                    ? service.serviceCategory.schedules
-                    : undefined
-                }
+                schedules={groupedSchedules}
               />
             </div>
           </div>

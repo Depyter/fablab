@@ -24,6 +24,7 @@ import type * as helper from "../helper.js";
 import type * as http from "../http.js";
 import type * as materials_mutate from "../materials/mutate.js";
 import type * as materials_query from "../materials/query.js";
+import type * as moderation from "../moderation.js";
 import type * as presence from "../presence.js";
 import type * as projects_helper from "../projects/helper.js";
 import type * as projects_mutate from "../projects/mutate.js";
@@ -36,6 +37,8 @@ import type * as resource_query from "../resource/query.js";
 import type * as services_mutate from "../services/mutate.js";
 import type * as services_query from "../services/query.js";
 import type * as users from "../users.js";
+import type * as workshopSessions_mutate from "../workshopSessions/mutate.js";
+import type * as workshopSessions_query from "../workshopSessions/query.js";
 
 import type {
   ApiFromModules,
@@ -60,6 +63,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "materials/mutate": typeof materials_mutate;
   "materials/query": typeof materials_query;
+  moderation: typeof moderation;
   presence: typeof presence;
   "projects/helper": typeof projects_helper;
   "projects/mutate": typeof projects_mutate;
@@ -72,6 +76,8 @@ declare const fullApi: ApiFromModules<{
   "services/mutate": typeof services_mutate;
   "services/query": typeof services_query;
   users: typeof users;
+  "workshopSessions/mutate": typeof workshopSessions_mutate;
+  "workshopSessions/query": typeof workshopSessions_query;
 }>;
 
 /**

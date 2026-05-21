@@ -1,5 +1,8 @@
 import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
+import { internalAction, internalQuery } from "../_generated/server";
+import { internal } from "../_generated/api";
+import { FileStatus } from "../constants";
 
 export const sendMessage = authMutation({
   args: {
@@ -10,15 +13,32 @@ export const sendMessage = authMutation({
   },
   rateLimit: "sendMessage",
   handler: async (ctx, args) => {
-    await ctx.db.insert("messages", {
+    // Filter out any attachment that has already been flagged by moderation.
+    let cleanFiles = args.files;
+    if (args.files && args.files.length > 0) {
+      const fileStatuses = await Promise.all(
+        args.files.map(async (storageId) => {
+          const f = await ctx.db
+            .query("files")
+            .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+            .first();
+          return f?.status === FileStatus.FLAGGED ? null : storageId;
+        }),
+      );
+      cleanFiles = fileStatuses.filter(Boolean) as typeof args.files;
+    }
+
+    const messageId = await ctx.db.insert("messages", {
       content: args.content,
-      file: args.files,
+      file: cleanFiles && cleanFiles.length > 0 ? cleanFiles : undefined,
       sender: ctx.profile._id,
       room: args.room,
       threadId: args.threadId,
     });
 
-    if (args.files && args.files.length > 0) claimFiles(ctx, args.files);
+    if (cleanFiles && cleanFiles.length > 0) {
+      await claimFiles(ctx, cleanFiles);
+    }
 
     const now = Date.now();
 
@@ -33,6 +53,16 @@ export const sendMessage = authMutation({
       lastMessageAt: now,
       messageCount: (thread?.messageCount ?? 0) + 1,
     });
+
+    // Schedule async moderation for the message text and any attached files.
+    // Only schedule when OPENAI_API_KEY is configured — in test environments
+    // (or without a key) the scheduler run would fail and leak unhandled
+    // rejections in convex-test's fake database.
+    if (process.env.OPENAI_API_KEY) {
+      await ctx.scheduler.runAfter(0, internal.chat.mutate.moderateMessage, {
+        messageId,
+      });
+    }
   },
 });
 
@@ -165,5 +195,70 @@ export const removeMember = authMutation({
     }
 
     await ctx.db.delete(existing._id);
+  },
+});
+
+// ── Internal: moderation helpers for messages ─────────────────────────────
+
+export const getMessageInternal = internalQuery({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.messageId);
+  },
+});
+
+export const moderateMessage = internalAction({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const message = await ctx.runQuery(
+      internal.chat.mutate.getMessageInternal,
+      { messageId: args.messageId },
+    );
+    if (!message) return;
+
+    const payload: Array<
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string } }
+    > = [];
+
+    // Submit the message text if it's non-empty.
+    if (message.content.trim()) {
+      payload.push({ type: "text", text: message.content });
+    }
+
+    // Submit attached file names (text) and image URLs for visual moderation.
+    if (message.file && message.file.length > 0) {
+      const fileRecords = await Promise.all(
+        message.file.map((storageId) =>
+          ctx.runQuery(internal.files.getFileByStorageId, { storageId }),
+        ),
+      );
+
+      for (const fileRecord of fileRecords) {
+        if (!fileRecord) continue;
+        payload.push({ type: "text", text: fileRecord.originalName });
+        if (fileRecord.type.startsWith("image/")) {
+          const url = await ctx.storage.getUrl(fileRecord.storageId);
+          if (url) {
+            payload.push({
+              type: "image_url",
+              image_url: { url },
+            });
+          }
+        }
+      }
+    }
+
+    if (payload.length === 0) return;
+
+    const result = await ctx.runAction(internal.moderation.moderateContent, {
+      items: payload,
+    });
+
+    await ctx.runMutation(internal.moderation.handleMessageModerationResult, {
+      messageId: args.messageId,
+      flagged: result.flagged,
+      categories: result.categories,
+    });
   },
 });

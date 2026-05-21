@@ -259,12 +259,6 @@ describe("Project and Chat functionality", () => {
           type: "WORKSHOP",
           amount: 500,
           variants: [{ name: "Student", amount: 350 }],
-          schedules: [
-            {
-              date,
-              timeSlots: [{ startTime, endTime, maxSlots: 2 }],
-            },
-          ],
         },
         requirements: [],
         fileTypes: [],
@@ -306,16 +300,14 @@ describe("Project and Chat functionality", () => {
           .query("userProfile")
           .withIndex("by_userId", (q) => q.eq("userId", "1"))
           .first();
-        const userAera = await ctx.db
-          .query("userProfile")
-          .withIndex("by_userId", (q) => q.eq("userId", "2"))
-          .first();
         const project = await ctx.db.get(projectId);
         const usage = await ctx.db
           .query("resourceUsage")
           .withIndex("by_project", (q) => q.eq("projectId", projectId))
           .first();
         const service = await ctx.db.get(serviceId);
+
+        expect(project!.status).toBe("pending");
         const room = await ctx.db.query("rooms").collect();
         const members = await ctx.db.query("roomMembers").collect();
         const thread = await ctx.db.query("threads").collect();
@@ -358,12 +350,6 @@ describe("Project and Chat functionality", () => {
         });
 
         expect(service?.serviceCategory.type).toBe("WORKSHOP");
-        if (!service || service.serviceCategory.type !== "WORKSHOP") {
-          throw new Error("Expected workshop service");
-        }
-        expect(
-          service.serviceCategory.schedules[0].timeSlots[0].usedUpSlots,
-        ).toBe(1);
 
         expect(room.length).toBe(1);
         expect(room[0].color).toBe("yellow");
@@ -621,12 +607,6 @@ describe("Project and Chat functionality", () => {
         serviceCategory: {
           type: "WORKSHOP",
           amount: 400,
-          schedules: [
-            {
-              date,
-              timeSlots: [{ startTime, endTime, maxSlots: 5 }],
-            },
-          ],
         },
         requirements: [],
         fileTypes: [],
@@ -674,12 +654,6 @@ describe("Project and Chat functionality", () => {
         expect(usage).toBeNull();
 
         expect(service?.serviceCategory.type).toBe("WORKSHOP");
-        if (!service || service.serviceCategory.type !== "WORKSHOP") {
-          throw new Error("Expected workshop service");
-        }
-        expect(
-          service.serviceCategory.schedules[0].timeSlots[0].usedUpSlots,
-        ).toBe(0);
       });
     });
 
@@ -790,12 +764,6 @@ describe("Project and Chat functionality", () => {
         serviceCategory: {
           type: "WORKSHOP",
           amount: 250,
-          schedules: [
-            {
-              date,
-              timeSlots: [{ startTime, endTime, maxSlots: 3 }],
-            },
-          ],
         },
         requirements: [],
         fileTypes: [],
@@ -834,20 +802,10 @@ describe("Project and Chat functionality", () => {
           .query("resourceUsage")
           .withIndex("by_project", (q) => q.eq("projectId", projectId))
           .first();
-        const service = await ctx.db.get(serviceId);
-
         expect(project!.status).toBe("rejected");
         expect(project!.totalInvoice).toBeUndefined();
         expect(project!.pricingSnapshot).toBeUndefined();
         expect(usage).toBeNull();
-
-        if (!service || service.serviceCategory.type !== "WORKSHOP") {
-          throw new Error("Expected workshop service");
-        }
-
-        expect(
-          service.serviceCategory.schedules[0].timeSlots[0].usedUpSlots,
-        ).toBe(0);
       });
     });
 
@@ -1034,12 +992,6 @@ describe("Project and Chat functionality", () => {
         serviceCategory: {
           type: "WORKSHOP",
           amount: 500,
-          schedules: [
-            {
-              date,
-              timeSlots: [{ startTime, endTime, maxSlots: 2 }],
-            },
-          ],
         },
         requirements: [],
         fileTypes: [],
@@ -3151,7 +3103,6 @@ describe("Project and Chat functionality", () => {
       const pastStartTime = pastDate + 9 * HOUR_MS;
       const pastEndTime = pastStartTime + 2 * HOUR_MS;
 
-      // Create workshop service with three schedules
       await tAera.mutation(api.services.mutate.addService, {
         name: "Test Workshop",
         images: [],
@@ -3159,38 +3110,6 @@ describe("Project and Chat functionality", () => {
         serviceCategory: {
           type: "WORKSHOP",
           amount: 500,
-          schedules: [
-            {
-              date: futureDate,
-              timeSlots: [
-                {
-                  startTime: futureStartTime,
-                  endTime: futureEndTime,
-                  maxSlots: 10,
-                },
-              ],
-            },
-            {
-              date: futureDate2,
-              timeSlots: [
-                {
-                  startTime: futureStartTime2,
-                  endTime: futureEndTime2,
-                  maxSlots: 5,
-                },
-              ],
-            },
-            {
-              date: pastDate,
-              timeSlots: [
-                {
-                  startTime: pastStartTime,
-                  endTime: pastEndTime,
-                  maxSlots: 3,
-                },
-              ],
-            },
-          ],
         },
         requirements: [],
         fileTypes: [],
@@ -3206,6 +3125,31 @@ describe("Project and Chat functionality", () => {
           .first();
         if (!service) throw new Error("Service not found after creation");
         return service._id;
+      });
+
+      // Create workshop sessions matching the project bookings
+      await tAera.mutation(api.workshopSessions.mutate.create, {
+        serviceId,
+        date: futureDate,
+        startTime: futureStartTime,
+        endTime: futureEndTime,
+        maxSlots: 10,
+      });
+
+      await tAera.mutation(api.workshopSessions.mutate.create, {
+        serviceId,
+        date: futureDate2,
+        startTime: futureStartTime2,
+        endTime: futureEndTime2,
+        maxSlots: 10,
+      });
+
+      await tAera.mutation(api.workshopSessions.mutate.create, {
+        serviceId,
+        date: pastDate,
+        startTime: pastStartTime,
+        endTime: pastEndTime,
+        maxSlots: 10,
       });
 
       // Authenticated contexts for each attendee

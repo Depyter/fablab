@@ -211,6 +211,9 @@ export function MaterialForm({
                     )
                   }
                   onUploadingChange={handleThumbnailUploading}
+                  onUploadError={(error) => {
+                    toast.error(error.message || "Failed to upload file");
+                  }}
                 />
               )}
             />

@@ -6,18 +6,21 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import {
-  toMutationWorkshopSchedules,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import { type AddServiceFormValues } from "@/types/add-service";
 import { toast } from "sonner";
 import { ServiceForm } from "@/components/services/forms/service-form";
 
-const WORKSHOP_INITIAL_VALUES: AddServiceFormValues = {
+const FABRICATION_INITIAL_VALUES: AddServiceFormValues = {
   name: "",
   description: "",
-  serviceCategory: "WORKSHOP",
-  pricing: { type: "FIXED" as const, amount: 0, variants: [] },
+  serviceCategory: "FABRICATION",
+  pricing: {
+    type: "FABRICATION" as const,
+    setupFee: 0,
+    unitName: "hour",
+    timeRate: 0,
+    variants: [],
+  },
   status: "Available",
   images: [],
   samples: [],
@@ -26,10 +29,9 @@ const WORKSHOP_INITIAL_VALUES: AddServiceFormValues = {
   resources: [],
   materials: [],
   availableDays: [],
-  schedules: [],
 };
 
-export default function AddWorkshopPage() {
+export function AddServiceClient() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -51,18 +53,27 @@ export default function AddWorkshopPage() {
         resources: value.resources as Id<"resources">[],
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         serviceCategory: {
-          type: "WORKSHOP",
-          schedules: toMutationWorkshopSchedules(value.schedules),
-          amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
+          type: "FABRICATION",
+          availableDays: value.availableDays,
+          materials: value.materials as Id<"materials">[],
+          setupFee:
+            value.pricing.type === "FABRICATION" ? value.pricing.setupFee : 0,
+          unitName:
+            value.pricing.type === "FABRICATION"
+              ? value.pricing.unitName
+              : ("hour" as const),
+          timeRate:
+            value.pricing.type === "FABRICATION" ? value.pricing.timeRate : 0,
           variants:
-            value.pricing.type === "FIXED" && value.pricing.variants.length > 0
+            value.pricing.type === "FABRICATION" &&
+            value.pricing.variants.length > 0
               ? value.pricing.variants
               : undefined,
         },
       });
 
-      toast.success("Workshop added!");
-      router.push("/dashboard/workshops");
+      toast.success("Fabrication service added successfully!");
+      router.push("/dashboard/services");
       return true;
     } catch (error) {
       const message =
@@ -70,7 +81,7 @@ export default function AddWorkshopPage() {
           ? String(error.data)
           : error instanceof Error
             ? error.message
-            : "Failed to add workshop.";
+            : "Failed to add service.";
       setSubmitError(message);
       toast.error(message);
       return false;
@@ -78,30 +89,26 @@ export default function AddWorkshopPage() {
   };
 
   const handleDiscard = async (formValues: AddServiceFormValues) => {
+    const { images, samples } = formValues;
     const orphans = [
-      ...(formValues.images as Id<"_storage">[]),
-      ...(formValues.samples as Id<"_storage">[]),
+      ...(images as Id<"_storage">[]),
+      ...(samples as Id<"_storage">[]),
     ];
     if (orphans.length > 0) {
       await deleteOrphanedFiles({ storageIds: orphans });
     }
     setSubmitError(null);
-    router.push("/dashboard/workshops");
+    router.push("/dashboard/services");
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <ServiceForm
-          title="Add New Workshop"
-          initialValues={WORKSHOP_INITIAL_VALUES}
-          onSubmit={handleSubmit}
-          onDiscard={handleDiscard}
-          submitError={submitError}
-          mode="WORKSHOP"
-          backHref="/dashboard/workshops"
-        />
-      </div>
-    </div>
+    <ServiceForm
+      title="Add Fabrication Service"
+      initialValues={FABRICATION_INITIAL_VALUES}
+      onSubmit={handleSubmit}
+      onDiscard={handleDiscard}
+      submitError={submitError}
+      mode="FABRICATION"
+    />
   );
 }

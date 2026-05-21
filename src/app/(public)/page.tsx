@@ -231,7 +231,7 @@ export default function HomePage() {
           </h1>
 
           <div className="flex flex-col items-center justify-center gap-8 pt-8 sm:flex-row">
-            <ActionButton href="/services">Start A Project</ActionButton>
+            <ActionButton href="/services">Book a Service</ActionButton>
           </div>
         </div>
       </section>
@@ -297,7 +297,7 @@ export default function HomePage() {
       {/* Call to Action */}
       <CtaSection
         title="Ready to Build?"
-        buttonLabel="Start a Project"
+        buttonLabel="Book a Service"
         buttonHref="/login"
         className="lg:p-48"
       />

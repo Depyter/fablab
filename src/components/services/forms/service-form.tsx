@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, createContext } from "react";
+import * as React from "react";
+import { useState, createContext } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/action-dialog";
+import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
-import { useQuery } from "convex/react";
-import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 
 import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
-import { WorkshopScheduleForm } from "@/components/services/forms/workshop-schedule-form";
 import { PricingForm } from "@/components/services/forms/pricing-form";
 import { RequirementsForm } from "@/components/services/forms/requirements-form";
 import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
@@ -19,7 +19,22 @@ import { FormSection } from "@/components/ui/form-section";
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { AddServiceFormValues } from "@/types/add-service";
-import { ServiceStatus, FILE_CATEGORIES } from "@convex/constants";
+import {
+  ServiceStatus,
+  type ServiceStatusType,
+  FILE_CATEGORIES,
+} from "@convex/constants";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  InlineResourceSelect,
+  InlineMaterialSelect,
+} from "@/components/services/forms/inline-resource-material-select";
 
 const acceptedFileTypeOptions = Object.keys(FILE_CATEGORIES).map(
   (category) => ({
@@ -52,6 +67,8 @@ export interface ServiceFormProps {
   mode?: "WORKSHOP" | "FABRICATION";
   /** Override the back button destination. */
   backHref?: string;
+  /** Optional content rendered at the bottom of the scrollable area. */
+  footer?: React.ReactNode;
 }
 
 export function ServiceForm({
@@ -64,32 +81,12 @@ export function ServiceForm({
   submitError,
   mode,
   backHref = "/dashboard/services",
+  footer,
 }: ServiceFormProps) {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
-
-  const resourcesQuery = useQuery(api.resource.query.getResources) || [];
-  const resourceOptions = resourcesQuery.map((r) => ({
-    label: r.name,
-    value: r._id,
-  }));
-
-  const materialsQuery = useQuery(api.materials.query.getMaterials) || [];
-  const materialOptions = materialsQuery.map((m) => ({
-    label: m.name,
-    value: m._id,
-  }));
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const form = useAppForm({
     defaultValues: initialValues,
@@ -101,72 +98,66 @@ export function ServiceForm({
 
   return (
     <ServiceFormModeContext.Provider value={mode}>
-      <main className="container mx-auto max-w-6xl p-10">
-        {/* Top Navigation & Actions */}
-        <header
-          className={`sticky top-0 z-10 flex items-center justify-between pt-3 mb-8 bg-background pb-4 ${
-            isScrolled ? "border-b border-gray-200" : "border-b-0"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <Link href={backHref}>
+      <DataViewPageHeader>
+        <Link href={backHref}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 border-2 border-black bg-white text-black shrink-0"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={4} />
+          </Button>
+        </Link>
+        <h1 className="text-sm font-black uppercase tracking-wider text-black truncate">
+          {title}
+        </h1>
+        <div className="ml-auto flex items-center gap-2">
+          {submitError && (
+            <p className="text-xs text-red-500 max-w-40 text-right hidden sm:block">
+              {submitError}
+            </p>
+          )}
+          <ActionDialog
+            onConfirm={async () => {
+              await onDiscard(form.state.values);
+              form.reset();
+            }}
+            title="Discard changes?"
+            description="Are you sure you want to discard your changes? This cannot be undone."
+            baseActionText="Discard"
+            confirmButtonText="Confirm Discard"
+            className="h-9 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black"
+          />
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
               <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 border-gray-200 rounded-lg"
+                type="button"
+                className="h-9 border-2 border-black bg-fab-teal px-4 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-60"
+                disabled={
+                  !canSubmit ||
+                  isSubmitting ||
+                  hasUploadsInProgress ||
+                  isSuccess
+                }
+                onClick={() => form.handleSubmit()}
               >
-                <ChevronLeft className="h-5 w-5" />
+                {isSubmitting || isSuccess
+                  ? "Saving..."
+                  : hasUploadsInProgress
+                    ? "Uploading..."
+                    : "Save"}
               </Button>
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {submitError && (
-              <p className="text-sm text-red-500 max-w-xs text-right">
-                {submitError}
-              </p>
             )}
-            <ActionDialog
-              onConfirm={async () => {
-                await onDiscard(form.state.values);
-                form.reset();
-              }}
-              title="Discard changes?"
-              description="Are you sure you want to discard your changes? This cannot be undone."
-              baseActionText="Discard"
-              confirmButtonText="Confirm Discard"
-              className="bg-[#F1F1F1] text-gray-600 hover:bg-gray-200 px-6 font-medium rounded-lg"
-            />
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
-                <Button
-                  type="button"
-                  className="bg-[#1A8A7E] hover:bg-[#156E65] px-8 font-medium rounded-lg"
-                  disabled={
-                    !canSubmit ||
-                    isSubmitting ||
-                    hasUploadsInProgress ||
-                    isSuccess
-                  }
-                  onClick={() => form.handleSubmit()}
-                >
-                  {isSubmitting || isSuccess
-                    ? "Saving..."
-                    : hasUploadsInProgress
-                      ? "Uploading..."
-                      : "Save Service"}
-                </Button>
-              )}
-            />
-          </div>
-        </header>
+          />
+        </div>
+      </DataViewPageHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-8">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-8 gap-8">
           {/* Left Content */}
           <div className="lg:col-span-5 space-y-5">
             <GeneralInfoForm form={form} />
-            {mode !== "FABRICATION" && <WorkshopScheduleForm form={form} />}
             <PricingForm form={form} />
             <RequirementsForm form={form} />
 
@@ -184,6 +175,9 @@ export function ServiceForm({
                     )
                   }
                   onUploadingChange={setSamplesUploading}
+                  onUploadError={(error) => {
+                    toast.error(error.message || "Failed to upload file");
+                  }}
                 />
               )}
             />
@@ -211,6 +205,9 @@ export function ServiceForm({
                       )
                     }
                     onUploadingChange={setThumbnailUploading}
+                    onUploadError={(error) => {
+                      toast.error(error.message || "Failed to upload file");
+                    }}
                   />
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-xs text-red-500 mt-1">
@@ -221,70 +218,83 @@ export function ServiceForm({
               )}
             />
 
-            <form.Subscribe
-              selector={(state) => state.values.serviceCategory}
-              children={(serviceCategory) =>
-                (mode ?? serviceCategory) === "FABRICATION" ? (
-                  <>
-                    <form.Field
-                      name="resources"
-                      children={(field) => (
-                        <MultipleSelectForm
-                          options={resourceOptions}
-                          title="Resources"
-                          placeholder="Select resources..."
-                          value={field.state.value || []}
-                          onChange={field.handleChange}
-                        />
-                      )}
-                    />
+            {/* Resources, File Types & Status — grouped */}
+            <FormSection title="Resources &amp; Settings">
+              {/* Resources — available for all service types as defaults */}
+              <form.Field
+                name="resources"
+                children={(field) => (
+                  <InlineResourceSelect
+                    value={field.state.value || []}
+                    onChange={field.handleChange}
+                  />
+                )}
+              />
+
+              {/* Materials — FABRICATION only */}
+              <form.Subscribe
+                selector={(state) => state.values.serviceCategory}
+                children={(serviceCategory) =>
+                  (mode ?? serviceCategory) === "FABRICATION" ? (
                     <form.Field
                       name="materials"
                       children={(field) => (
-                        <MultipleSelectForm
-                          options={materialOptions}
-                          title="Allowed Materials"
-                          placeholder="Select materials..."
+                        <InlineMaterialSelect
                           value={field.state.value || []}
                           onChange={field.handleChange}
                         />
                       )}
                     />
-                  </>
-                ) : null
-              }
-            />
+                  ) : null
+                }
+              />
 
-            <form.Field
-              name="fileTypes"
-              children={(field) => (
-                <MultipleSelectForm
-                  options={acceptedFileTypeOptions}
-                  title="Accepted File Types"
-                  placeholder="Select file type..."
-                  value={field.state.value}
-                  onChange={field.handleChange}
-                />
-              )}
-            />
+              <form.Field
+                name="fileTypes"
+                children={(field) => (
+                  <MultipleSelectForm
+                    compact
+                    options={acceptedFileTypeOptions}
+                    title="Accepted File Types"
+                    placeholder="Select file type..."
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
+              />
 
-            <form.AppField
-              name="status"
-              children={(field) => (
-                <div className="w-full sm:max-w-3xl">
-                  <FormSection title="Status">
-                    <field.SelectInput
-                      label=""
-                      placeholder="Select status..."
-                      options={statusOptions}
-                    />
-                  </FormSection>
-                </div>
-              )}
-            />
+              <form.AppField
+                name="status"
+                children={(field) => (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                      Status
+                    </label>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(val) =>
+                        field.handleChange(val as ServiceStatusType)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
+            </FormSection>
           </div>
         </div>
-      </main>
+        {footer && <div className="mt-8 mx-auto max-w-6xl">{footer}</div>}
+      </div>
     </ServiceFormModeContext.Provider>
   );
 }

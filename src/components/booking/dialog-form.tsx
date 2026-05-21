@@ -204,27 +204,11 @@ export function BookingDialog({
     [serviceCategory, serviceId, serviceName, createProject, loginHref, router],
   );
 
-  const defaultFormValues: BookingDetailsFormValues = {
-    serviceType:
-      serviceCategory === "WORKSHOP"
-        ? FulfillmentMode.FULL_SERVICE
-        : FulfillmentMode.SELF_SERVICE,
-    name: "",
-    description: "",
-    notes: "",
-    material: ProjectMaterial.PROVIDE_OWN,
-    pricing: "Default",
-    requestedMaterialIds: [],
-    dateTime: {
-      date: undefined,
-      startTime: "",
-      endTime: "",
-      originalDate: undefined,
-      originalStartTime: undefined,
-      originalEndTime: undefined,
-    },
-    files: [],
-  };
+  const initialPricingDefault =
+    pricingVariants.length > 0
+      ? (pricingVariants.find((v) => !v.name.toUpperCase().includes("UP"))
+          ?.name ?? pricingVariants[0].name)
+      : "";
 
   const form = useAppForm({
     defaultValues: {
@@ -236,7 +220,7 @@ export function BookingDialog({
       description: "",
       notes: "",
       material: ProjectMaterial.PROVIDE_OWN,
-      pricing: "",
+      pricing: initialPricingDefault,
       requestedMaterialIds: [],
       dateTime: {
         date: undefined,
@@ -395,6 +379,7 @@ export function BookingDialog({
               serviceMaterials={serviceMaterials}
               hasUpPricing={hasUpPricing}
               pricingVariants={pricingVariants}
+              servicePricing={servicePricing}
               serviceCategory={serviceCategory}
               schedules={schedules}
               bookedTimeBlocks={bookedTimeBlocks}

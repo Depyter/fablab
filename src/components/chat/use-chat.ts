@@ -10,7 +10,7 @@ import {
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { UploadedFile } from "@/components/file-upload";
+import type { UploadedFile, UploadingFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
 import { toast } from "sonner";
 import posthog from "posthog-js";
@@ -28,6 +28,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     PendingAttachment[]
   >([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   // Increment to remount FileUpload (resets its internal state)
   const [fileUploadKey, setFileUploadKey] = useState(0);
   // Pre-populated files passed to the remounted FileUpload so existing
@@ -194,8 +195,15 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
       });
     } catch (error) {
       console.error("Failed to send message:", error);
+      // Don't surface raw ConvexError messages to the user — map them to
+      // user-friendly text.
+      const rawMessage =
+        error instanceof Error ? error.message : "Failed to send message";
+      const isContentPolicy = rawMessage.includes("content policies");
       toast.error(
-        error instanceof Error ? error.message : "Failed to send message",
+        isContentPolicy
+          ? "Your message couldn't be sent because it may contain inappropriate content."
+          : "Failed to send message. Please try again.",
       );
       // Restore text; files need to be re-attached (they were already uploaded)
       setInput(content);
@@ -221,7 +229,19 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   };
 
   const handleUploadError = (error: Error) => {
-    toast.error(error.message || "Failed to upload file");
+    // Log the raw error for debugging (especially ConvexErrors from trackUpload).
+    console.error("Chat upload error:", error);
+
+    // Sanitize moderation-related errors so raw ConvexError text doesn't
+    // leak into the toast.
+    const isContentPolicy =
+      error.message?.includes("content policies") ||
+      error.message?.includes("flagged by content moderation");
+    toast.error(
+      isContentPolicy
+        ? "A file you attached was removed because it may contain inappropriate content."
+        : error.message || "Failed to upload file",
+    );
   };
 
   const removeAttachment = (index: number) => {
@@ -247,6 +267,10 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     (!!input.trim() || pendingAttachments.length > 0);
   const sortedMessages = [...messages].reverse();
 
+  const handleUploadingFilesChange = useCallback((files: UploadingFile[]) => {
+    setUploadingFiles(files);
+  }, []);
+
   return {
     input,
     setInput,
@@ -256,6 +280,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     canSend,
     isUploading,
     setIsUploading,
+    uploadingFiles,
     pendingAttachments,
     fileUploadKey,
     fileUploadInitialFiles,
@@ -266,6 +291,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     handleKeyPress,
     handleFilesChange,
     handleUploadError,
+    handleUploadingFilesChange,
     removeAttachment,
   };
 }

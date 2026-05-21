@@ -66,14 +66,6 @@ async function setupReportFixture() {
     serviceCategory: {
       type: "WORKSHOP",
       amount: 500,
-      schedules: [
-        {
-          date: Date.now() + DAY_MS,
-          timeSlots: [
-            { startTime: 9 * HOUR_MS, endTime: 12 * HOUR_MS, maxSlots: 10 },
-          ],
-        },
-      ],
     },
     requirements: [],
     fileTypes: [],

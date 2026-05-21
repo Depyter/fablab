@@ -200,18 +200,19 @@ export const createProject = authMutation({
 
       // ── Slot-level resource usages ───────────────────────────────────
       // Create a resourceUsage record for each resource configured on the
-      // matched time slot. Each project in the slot gets its own set so
+      // matched workshop session. Each project in the slot gets its own set so
       // that cancellation cleanup works independently per project.
       const wsCategory = service.serviceCategory;
       if (wsCategory.type === "WORKSHOP") {
-        const wsSchedule = wsCategory.schedules.find(
-          (s) => s.date === booking.date,
-        );
-        const wsTimeSlot = wsSchedule?.timeSlots.find(
-          (t) => t.startTime === booking.startTime,
-        );
+        const wsSession = await ctx.db
+          .query("workshopSessions")
+          .withIndex("by_serviceId_startTime", (q) =>
+            q.eq("serviceId", args.service).eq("startTime", booking.startTime),
+          )
+          .filter((q) => q.eq(q.field("date"), booking.date))
+          .first();
 
-        for (const resourceId of wsTimeSlot?.resources ?? []) {
+        for (const resourceId of wsSession?.resources ?? []) {
           await ctx.db.insert("resourceUsage", {
             projectId,
             service: args.service,

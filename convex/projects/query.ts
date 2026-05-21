@@ -629,56 +629,76 @@ export const getWorkshopEvents = authQuery({
       return splitUpcomingPast(events, todayStart);
     }
 
-    // ── For staff: start from workshop service schedules ─────────────────
-    // Load all services and filter to workshops in memory
-    const allServices = await ctx.db.query("services").collect();
-    let workshopServices = allServices.filter(
-      (s): s is Doc<"services"> & { serviceCategory: { type: "WORKSHOP" } } =>
-        s.serviceCategory.type === "WORKSHOP",
-    );
-
-    // Filter by serviceId if provided (calendar click-through)
-    if (args.serviceId) {
-      workshopServices = workshopServices.filter(
-        (s) => s._id === args.serviceId,
-      );
+    // ── For staff: start from workshop sessions ────────────────────────
+    // Load all workshop sessions in the time range
+    let allSessions: Doc<"workshopSessions">[];
+    if (minTime !== undefined) {
+      allSessions = await ctx.db
+        .query("workshopSessions")
+        .withIndex("by_startTime", (q) => q.gte("startTime", minTime))
+        .collect();
+    } else if (maxTime !== undefined) {
+      allSessions = await ctx.db
+        .query("workshopSessions")
+        .withIndex("by_startTime", (q) => q.lt("startTime", maxTime))
+        .collect();
+    } else {
+      allSessions = await ctx.db.query("workshopSessions").collect();
     }
 
-    if (workshopServices.length === 0) {
+    // Filter by serviceId / startTime if provided
+    if (args.serviceId) {
+      allSessions = allSessions.filter((s) => s.serviceId === args.serviceId);
+    }
+    if (args.startTime) {
+      allSessions = allSessions.filter((s) => s.startTime === args.startTime);
+    }
+
+    if (allSessions.length === 0) {
       return { upcoming: [], past: [] };
     }
 
-    // Load all workshop projects in time range for batch matching
-    let allProjects: Doc<"projects">[] = [];
-    if (status !== "upcoming" || true) {
-      // Always load projects to enrich slots that have registrations
-      allProjects = await ctx.db
-        .query("projects")
-        .withIndex("by_type_bookingStartTime", (q) => {
-          if (minTime !== undefined) {
-            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
-          }
-          if (maxTime !== undefined) {
-            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
-          }
-          return q.eq("type", "WORKSHOP");
-        })
-        .collect();
+    // Batch-fetch service names for all sessions
+    const uniqueServiceIds = [...new Set(allSessions.map((s) => s.serviceId))];
+    const serviceDocs = await Promise.all(
+      uniqueServiceIds.map((id) => ctx.db.get(id)),
+    );
+    const serviceMap = new Map(
+      serviceDocs
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map((d) => [d._id, { name: d.name, slug: d.slug }]),
+    );
 
-      // Also filter by serviceId / startTime on the project side
-      if (args.serviceId) {
-        allProjects = allProjects.filter((p) => p.service === args.serviceId);
-      }
-      if (args.startTime) {
-        allProjects = allProjects.filter(
-          (p) => p.bookingStartTime === args.startTime,
-        );
-      }
+    // Load all workshop projects in time range for batch matching
+    const allProjects: Doc<"projects">[] = await ctx.db
+      .query("projects")
+      .withIndex("by_type_bookingStartTime", (q) => {
+        if (minTime !== undefined) {
+          return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
+        }
+        if (maxTime !== undefined) {
+          return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
+        }
+        return q.eq("type", "WORKSHOP");
+      })
+      .collect();
+
+    // Also filter by serviceId / startTime on the project side
+    let filteredProjects = allProjects;
+    if (args.serviceId) {
+      filteredProjects = filteredProjects.filter(
+        (p) => p.service === args.serviceId,
+      );
+    }
+    if (args.startTime) {
+      filteredProjects = filteredProjects.filter(
+        (p) => p.bookingStartTime === args.startTime,
+      );
     }
 
     // Build a map from (serviceId:bookingStartTime) → projects
     const projectsByKey = new Map<string, Doc<"projects">[]>();
-    for (const p of allProjects) {
+    for (const p of filteredProjects) {
       if (p.bookingStartTime == null) continue;
       const key = `${p.service}:${p.bookingStartTime}`;
       const existing = projectsByKey.get(key);
@@ -686,12 +706,13 @@ export const getWorkshopEvents = authQuery({
       else projectsByKey.set(key, [p]);
     }
 
-    // ── Single pass: collect schedule event templates and unique
+    // ── Single pass: collect session event templates and unique
     //    resource / material IDs, filtered to the target date / time range.
     const allResourceIds = new Set<Id<"resources">>();
     const allMaterialIds = new Set<Id<"materials">>();
 
     interface EventTemplate {
+      sessionId: Id<"workshopSessions">;
       serviceId: Id<"services">;
       serviceName: string;
       serviceSlug: string;
@@ -706,41 +727,28 @@ export const getWorkshopEvents = authQuery({
 
     const eventTemplates: EventTemplate[] = [];
 
-    for (const service of workshopServices) {
-      const cat = service.serviceCategory;
+    for (const session of allSessions) {
+      const serviceInfo = serviceMap.get(session.serviceId);
 
-      for (const schedule of cat.schedules) {
-        // ── Date range filter ──────────────────────────────────────────
-        if (minTime !== undefined && schedule.date + 86_400_000 < minTime)
-          continue;
-        if (maxTime !== undefined && schedule.date >= maxTime) continue;
+      // Collect unique IDs while we have the session data open
+      for (const rid of session.resources ?? []) allResourceIds.add(rid);
+      for (const mid of session.availableMaterials ?? [])
+        allMaterialIds.add(mid);
 
-        for (const timeSlot of schedule.timeSlots) {
-          // ── Time range filter ───────────────────────────────────────
-          if (minTime !== undefined && timeSlot.startTime < minTime) continue;
-          if (maxTime !== undefined && timeSlot.startTime >= maxTime) continue;
-          if (args.startTime && timeSlot.startTime !== args.startTime) continue;
-
-          // Collect unique IDs while we have the schedule data open
-          for (const rid of timeSlot.resources ?? []) allResourceIds.add(rid);
-          for (const mid of timeSlot.availableMaterials ?? [])
-            allMaterialIds.add(mid);
-
-          const key = `${service._id}:${timeSlot.startTime}`;
-          eventTemplates.push({
-            serviceId: service._id,
-            serviceName: service.name,
-            serviceSlug: service.slug,
-            startTime: timeSlot.startTime,
-            endTime: timeSlot.endTime,
-            maxSlots: timeSlot.maxSlots,
-            usedSlots: timeSlot.usedUpSlots ?? 0,
-            groupProjects: projectsByKey.get(key) ?? [],
-            resourceIds: timeSlot.resources ?? [],
-            materialIds: timeSlot.availableMaterials ?? [],
-          });
-        }
-      }
+      const key = `${session.serviceId}:${session.startTime}`;
+      eventTemplates.push({
+        sessionId: session._id,
+        serviceId: session.serviceId,
+        serviceName: serviceInfo?.name ?? "Unknown Workshop",
+        serviceSlug: serviceInfo?.slug ?? "",
+        startTime: session.startTime,
+        endTime: session.endTime,
+        maxSlots: session.maxSlots,
+        usedSlots: session.usedUpSlots,
+        groupProjects: projectsByKey.get(key) ?? [],
+        resourceIds: session.resources ?? [],
+        materialIds: session.availableMaterials ?? [],
+      });
     }
 
     // ── Batch-fetch resource & material details ────────────────────────
@@ -850,6 +858,7 @@ export const getWorkshopEvents = authQuery({
         .filter((m): m is NonNullable<typeof m> => m !== undefined);
 
       return {
+        sessionId: t.sessionId,
         serviceId: t.serviceId,
         serviceName: t.serviceName,
         serviceSlug: t.serviceSlug,
