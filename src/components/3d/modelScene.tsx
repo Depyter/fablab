@@ -246,9 +246,8 @@ export default function ModelScene({
       <ambientLight intensity={0.6} />
       <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
       <pointLight position={[0, 10, 0]} intensity={0.5} color="#3b82f6" />
-      <Environment preset="studio" />
-
       <Suspense fallback={null}>
+        <Environment preset="studio" />
         {isSTL && (
           <STLModel
             fileUrl={fileUrl}
