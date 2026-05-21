@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import {
 import {
   WorkshopTimeSlotPicker,
   type WorkshopTimeSlotValue,
+  type WorkshopSchedule,
 } from "@/components/booking/workshop-time-slot-picker";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -95,15 +96,6 @@ export interface RequestedMaterial {
 
 export interface ServiceCategoryWorkshop {
   type: "WORKSHOP";
-  schedules: Array<{
-    date: number;
-    timeSlots: Array<{
-      startTime: number;
-      endTime: number;
-      maxSlots: number;
-      usedUpSlots?: number;
-    }>;
-  }>;
   amount: number;
   variants?: Array<{ name: string; amount: number }>;
 }
@@ -365,6 +357,14 @@ function UsageScheduleEditor({
   onChange,
 }: UsageScheduleEditorProps) {
   const dateValue = parseDraftDate(draft.date);
+
+  const workshopSessions = useQuery(
+    api.workshopSessions.query.listByService,
+    service.serviceCategory.type === "WORKSHOP"
+      ? { serviceId: service._id }
+      : "skip",
+  );
+
   const bookedSlots = useQuery(
     api.services.query.getBookedTimeSlots,
     service.serviceCategory.type === "FABRICATION" && dateValue
@@ -387,6 +387,25 @@ function UsageScheduleEditor({
     ...peerTimeBlocks,
   ];
 
+  const groupedSchedules = useMemo((): WorkshopSchedule[] => {
+    if (!workshopSessions) return [];
+    const dateMap = new Map<number, WorkshopSchedule>();
+    for (const session of workshopSessions) {
+      let entry = dateMap.get(session.date);
+      if (!entry) {
+        entry = { date: session.date, timeSlots: [] };
+        dateMap.set(session.date, entry);
+      }
+      entry.timeSlots.push({
+        startTime: session.startTime,
+        endTime: session.endTime,
+        maxSlots: session.maxSlots,
+        usedUpSlots: session.usedUpSlots,
+      });
+    }
+    return Array.from(dateMap.values());
+  }, [workshopSessions]);
+
   if (service.serviceCategory.type === "WORKSHOP") {
     return (
       <WorkshopTimeSlotPicker
@@ -396,7 +415,7 @@ function UsageScheduleEditor({
           endTime: draft.endTime,
         }}
         onChange={onChange}
-        schedules={service.serviceCategory.schedules}
+        schedules={groupedSchedules}
       />
     );
   }

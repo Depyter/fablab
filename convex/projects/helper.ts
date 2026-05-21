@@ -392,18 +392,19 @@ export async function createWorkshopUsage(
   pricingSnapshot: UsagePricingSnapshot,
   initialMaterialIds?: Id<"materials">[],
 ): Promise<Id<"resourceUsage">> {
-  // Capacity check against the schedule time slot
+  // Capacity check against the workshop session
   if (service.serviceCategory.type === "WORKSHOP") {
-    const schedule = service.serviceCategory.schedules.find(
-      (s) => s.date === booking.date,
-    );
-    const timeSlot = schedule?.timeSlots.find(
-      (t) => t.startTime === booking.startTime,
-    );
+    const session = await ctx.db
+      .query("workshopSessions")
+      .withIndex("by_serviceId_startTime", (q) =>
+        q.eq("serviceId", service._id).eq("startTime", booking.startTime),
+      )
+      .filter((q) => q.eq(q.field("date"), booking.date))
+      .first();
     if (
-      timeSlot &&
-      timeSlot.maxSlots > 0 &&
-      (timeSlot.usedUpSlots ?? 0) >= timeSlot.maxSlots
+      session &&
+      session.maxSlots > 0 &&
+      session.usedUpSlots >= session.maxSlots
     ) {
       throw new ConvexError("This workshop timeslot is fully booked.");
     }
@@ -473,23 +474,18 @@ export async function incrementWorkshopSlot(
 ): Promise<void> {
   if (service.serviceCategory.type !== "WORKSHOP") return;
 
-  const updatedSchedules = service.serviceCategory.schedules.map((s) => {
-    if (s.date !== booking.date) return s;
-    return {
-      ...s,
-      timeSlots: s.timeSlots.map((t) => {
-        if (t.startTime !== booking.startTime) return t;
-        return { ...t, usedUpSlots: (t.usedUpSlots || 0) + 1 };
-      }),
-    };
-  });
-
-  await ctx.db.patch(service._id, {
-    serviceCategory: {
-      ...service.serviceCategory,
-      schedules: updatedSchedules,
-    },
-  });
+  const session = await ctx.db
+    .query("workshopSessions")
+    .withIndex("by_serviceId_startTime", (q) =>
+      q.eq("serviceId", service._id).eq("startTime", booking.startTime),
+    )
+    .filter((q) =>
+      q.eq(q.field("date"), getLabDayStartTimestamp(booking.startTime)),
+    )
+    .first();
+  if (session) {
+    await ctx.db.patch(session._id, { usedUpSlots: session.usedUpSlots + 1 });
+  }
 }
 
 export async function decrementWorkshopSlot(
@@ -499,27 +495,18 @@ export async function decrementWorkshopSlot(
 ): Promise<void> {
   if (service.serviceCategory.type !== "WORKSHOP") return;
 
-  const slotStartTime = usage.startTime;
-
-  // Match schedule by finding the one that owns this time slot
-  const updatedSchedules = service.serviceCategory.schedules.map((s) => {
-    const hasSlot = s.timeSlots.some((t) => t.startTime === slotStartTime);
-    if (!hasSlot) return s;
-    return {
-      ...s,
-      timeSlots: s.timeSlots.map((t) => {
-        if (t.startTime !== slotStartTime) return t;
-        return { ...t, usedUpSlots: Math.max(0, (t.usedUpSlots || 0) - 1) };
-      }),
-    };
-  });
-
-  await ctx.db.patch(service._id, {
-    serviceCategory: {
-      ...service.serviceCategory,
-      schedules: updatedSchedules,
-    },
-  });
+  const session = await ctx.db
+    .query("workshopSessions")
+    .withIndex("by_serviceId_startTime", (q) =>
+      q.eq("serviceId", service._id).eq("startTime", usage.startTime),
+    )
+    .filter((q) =>
+      q.eq(q.field("date"), getLabDayStartTimestamp(usage.startTime)),
+    )
+    .first();
+  if (session && session.usedUpSlots > 0) {
+    await ctx.db.patch(session._id, { usedUpSlots: session.usedUpSlots - 1 });
+  }
 }
 
 // ============================================================================
@@ -847,17 +834,25 @@ export async function applyStatusChange(
   ) {
     const service = await ctx.db.get(project.service);
     if (service && service.serviceCategory.type === "WORKSHOP") {
-      const schedule = service.serviceCategory.schedules.find(
-        (s) => s.date === getLabDayStartTimestamp(project.bookingStartTime!),
-      );
-      const timeSlot = schedule?.timeSlots.find(
-        (t) => t.startTime === project.bookingStartTime!,
-      );
+      const session = await ctx.db
+        .query("workshopSessions")
+        .withIndex("by_serviceId_startTime", (q) =>
+          q
+            .eq("serviceId", project.service)
+            .eq("startTime", project.bookingStartTime!),
+        )
+        .filter((q) =>
+          q.eq(
+            q.field("date"),
+            getLabDayStartTimestamp(project.bookingStartTime!),
+          ),
+        )
+        .first();
 
       if (
-        timeSlot &&
-        timeSlot.maxSlots > 0 &&
-        (timeSlot.usedUpSlots ?? 0) >= timeSlot.maxSlots
+        session &&
+        session.maxSlots > 0 &&
+        session.usedUpSlots >= session.maxSlots
       ) {
         throw new ConvexError(
           "Cannot reactivate — this workshop timeslot is fully booked.",
@@ -912,7 +907,7 @@ export async function applyStatusChange(
       );
 
       // Re-create slot-level resource usages (rooms, machines)
-      for (const resourceId of timeSlot?.resources ?? []) {
+      for (const resourceId of session?.resources ?? []) {
         await ctx.db.insert("resourceUsage", {
           projectId: project._id,
           service: project.service,
@@ -1312,20 +1307,19 @@ export async function buildEventsFromGroups(
 
     if (service.serviceCategory.type === "WORKSHOP") {
       const projectDate = getLabDayStartTimestamp(bookingStartTime);
-      const schedule = service.serviceCategory.schedules.find(
-        (s) => s.date === projectDate,
-      );
-      if (schedule) {
-        const timeSlot = schedule.timeSlots.find(
-          (ts) => ts.startTime === bookingStartTime,
-        );
-        if (timeSlot) {
-          endTime = timeSlot.endTime;
-          maxSlots = timeSlot.maxSlots;
-          usedSlots = timeSlot.usedUpSlots ?? 0;
-          resources = timeSlot.resources;
-          availableMaterials = timeSlot.availableMaterials;
-        }
+      const session = await ctx.db
+        .query("workshopSessions")
+        .withIndex("by_serviceId_startTime", (q) =>
+          q.eq("serviceId", service._id).eq("startTime", bookingStartTime),
+        )
+        .filter((q) => q.eq(q.field("date"), projectDate))
+        .first();
+      if (session) {
+        endTime = session.endTime;
+        maxSlots = session.maxSlots;
+        usedSlots = session.usedUpSlots;
+        resources = session.resources;
+        availableMaterials = session.availableMaterials;
       }
     }
 

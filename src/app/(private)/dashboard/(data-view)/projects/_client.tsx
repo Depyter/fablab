@@ -101,6 +101,7 @@ function ProjectListRow({
     >
       <div className="h-10 w-14 rounded-md overflow-hidden shrink-0 bg-muted">
         {project.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={project.coverUrl}
             alt={project.name}

@@ -1,7 +1,7 @@
 "use client";
 
 import type * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -49,11 +49,7 @@ export function DataViewPageHeader({
             aria-label={open ? "Close Sidebar" : "Open Sidebar"}
             className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-white text-black"
           >
-            {open ? (
-              <ChevronLeft className="size-4" strokeWidth={4} />
-            ) : (
-              <ChevronRight className="size-4" strokeWidth={4} />
-            )}
+            <PanelLeft className="h-4 w-4" />
           </button>
           <div className="flex flex-1 min-w-0 items-center gap-2 overflow-hidden">
             {children}

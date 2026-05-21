@@ -2,9 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useConvex } from "convex/react";
+import { useUploadFiles } from "@/lib/use-upload-files";
 import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
+import type { Id } from "@convex/_generated/dataModel";
 import { resolveFileType } from "./utils";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
+import { toast } from "sonner";
 
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
@@ -21,6 +25,7 @@ export interface UseFileUploadOptions {
   onFilesChange?: (files: UploadedFile[]) => void;
   onRemoveFile?: (file: UploadedFile) => void;
   onUploadingChange?: (isUploading: boolean) => void;
+  onUploadingFilesChange?: (files: UploadingFile[]) => void;
 }
 
 export interface UseFileUploadReturn {
@@ -53,6 +58,7 @@ export function useFileUpload({
   onFilesChange,
   onRemoveFile,
   onUploadingChange,
+  onUploadingFilesChange,
 }: UseFileUploadOptions = {}): UseFileUploadReturn {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>(value);
@@ -70,6 +76,15 @@ export function useFileUpload({
     return previewUrlMapRef.current.get(file);
   }, []);
 
+  /** Revoke and clean up the blob URL for a single file. Idempotent. */
+  const revokePreviewUrl = useCallback((file: File) => {
+    const url = previewUrlMapRef.current.get(file);
+    if (url) {
+      URL.revokeObjectURL(url);
+      previewUrlMapRef.current.delete(file);
+    }
+  }, []);
+
   // Revoke all object URLs on unmount.
   useEffect(() => {
     const map = previewUrlMapRef.current;
@@ -83,9 +98,16 @@ export function useFileUpload({
   const trackUpload = useMutation(api.files.trackUpload);
   const convex = useConvex();
 
+  // ── UploadStuff headless hook (local implementation) ────────────────────
+  // Replaces @xixixao/uploadstuff/react. Uploads are already serialized
+  // by drainUploadQueue below; the hook also generates one URL per file
+  // internally (avoids single-use-URL sharing bugs).
+  const { startUpload } = useUploadFiles(generateUploadUrl);
+
   // Stable refs so effects never need callbacks in their dependency arrays.
   const onUploadingChangeRef = useRef(onUploadingChange);
   const onFilesChangeRef = useRef(onFilesChange);
+  const onUploadingFilesChangeRef = useRef(onUploadingFilesChange);
 
   useEffect(() => {
     onUploadingChangeRef.current = onUploadingChange;
@@ -96,10 +118,18 @@ export function useFileUpload({
   }, [onFilesChange]);
 
   useEffect(() => {
+    onUploadingFilesChangeRef.current = onUploadingFilesChange;
+  }, [onUploadingFilesChange]);
+
+  useEffect(() => {
     const isUploading = uploadingFiles.some(
       (f) => f.status === "uploading" || f.status === "pending",
     );
     onUploadingChangeRef.current?.(isUploading);
+  }, [uploadingFiles]);
+
+  useEffect(() => {
+    onUploadingFilesChangeRef.current?.(uploadingFiles);
   }, [uploadingFiles]);
 
   // Skip the first render so we don't call onFilesChange with the initial
@@ -113,6 +143,78 @@ export function useFileUpload({
     onFilesChangeRef.current?.(uploadedFiles);
   }, [uploadedFiles]);
 
+  // ── Moderation polling ──────────────────────────────────────────────────
+  // After a file is uploaded, the backend schedules an async moderation check.
+  // We poll getFileStatus for each uploaded file to detect when it gets flagged.
+  // Track storage IDs that have already been checked to avoid redundant queries.
+  const moderatedIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const filesToCheck = uploadedFiles.filter(
+      (f) => !moderatedIdsRef.current.has(f.storageId),
+    );
+    if (filesToCheck.length === 0) return;
+
+    let cancelled = false;
+
+    const checkFiles = async () => {
+      const results = await Promise.all(
+        filesToCheck.map(async (f) => {
+          try {
+            const status = await convex.query(api.files.getFileStatus, {
+              storageId: f.storageId as Id<"_storage">,
+            });
+            return { storageId: f.storageId, status, file: f };
+          } catch {
+            return { storageId: f.storageId, status: null, file: f };
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      for (const { storageId, status } of results) {
+        moderatedIdsRef.current.add(storageId);
+
+        if (status?.status === "flagged") {
+          const detail = status.moderationCategory
+            ? ` (${status.moderationCategory})`
+            : "";
+          toast.error(
+            `"${status.fileName}" was removed — it violates content policies.${detail}`,
+          );
+
+          // Remove the flagged file from the uploaded list.
+          setUploadedFiles((prev) =>
+            prev.filter((f) => f.storageId !== storageId),
+          );
+
+          // Notify parent via the error callback.
+          onUploadError?.(
+            new Error(
+              `"${status.fileName}" was flagged by content moderation.`,
+            ),
+            new File([], status.fileName),
+          );
+        }
+      }
+    };
+
+    checkFiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [uploadedFiles, convex, onUploadError]);
+
+  // ── Upload queue ──────────────────────────────────────────────────────────
+  // uploadstuff v0.0.5 shares a single `fileProgress` ref across concurrent
+  // `startUpload` calls and clears it in `finally`. Serializing uploads
+  // (processing files one at a time) avoids the resulting data race and
+  // ensures `onUploadProgress` always reflects the single in-flight file.
+  const uploadQueueRef = useRef<File[]>([]);
+  const processingRef = useRef(false);
+
   const uploadFile = useCallback(
     async (file: File) => {
       const mimeType = resolveFileType(file);
@@ -123,6 +225,7 @@ export function useFileUpload({
         !allowedTypes.includes(mimeType)
       ) {
         const error = new Error(`File type ${mimeType} is not allowed`);
+        revokePreviewUrl(file);
         setUploadingFiles((prev) =>
           prev.map((f) =>
             f.file === file
@@ -136,6 +239,7 @@ export function useFileUpload({
 
       if (file.size > maxFileSizeMB * 1024 * 1024) {
         const error = new Error(`File size exceeds ${maxFileSizeMB}MB`);
+        revokePreviewUrl(file);
         setUploadingFiles((prev) =>
           prev.map((f) =>
             f.file === file
@@ -154,35 +258,66 @@ export function useFileUpload({
       );
 
       try {
-        const uploadUrl = await generateUploadUrl();
-
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": mimeType },
-          body: file,
+        // Upload the file via XMLHttpRequest for native progress events.
+        // Each file gets its own short-lived Convex upload URL.
+        const results = await startUpload([file], {
+          onUploadProgress: (p: number) => {
+            setUploadingFiles((prev) =>
+              prev.map((f) =>
+                f.file === file && p > f.progress ? { ...f, progress: p } : f,
+              ),
+            );
+          },
         });
 
-        if (!result.ok) {
-          throw new Error(`Upload failed: ${result.statusText}`);
-        }
+        const targetResult = results[0];
+        const { storageId } = targetResult.response;
 
-        const { storageId } = await result.json();
-
+        // Persist metadata in our Convex schema.
         await trackUpload({
           originalName: file.name,
           type: mimeType,
-          upload: storageId,
+          upload: storageId as Id<"_storage">,
         });
 
         // Fetch the permanent server-hosted URL, then revoke the blob URL.
-        const permanentUrl = await convex.query(api.files.getUrl, {
-          storageId,
-        });
-        const blobUrl = previewUrlMapRef.current.get(file);
-        if (blobUrl) {
-          URL.revokeObjectURL(blobUrl);
-          previewUrlMapRef.current.delete(file);
+        // getUrl may throw ConvexError if the file was already flagged by
+        // the async moderation check — treat that as a normal moderation
+        // outcome rather than a raw error.
+        let permanentUrl: string | null = null;
+        try {
+          permanentUrl = await convex.query(api.files.getUrl, {
+            storageId: storageId as Id<"_storage">,
+          });
+        } catch (urlError) {
+          // Moderation flagged the file before we could fetch the URL.
+          // Don't re-throw — let the moderation polling effect handle the
+          // toast and removal. Mark this file so it gets polled immediately.
+          if (
+            urlError instanceof Error &&
+            urlError.message.includes("content policies")
+          ) {
+            // Clear the upload progress and let the moderation watcher take over.
+            setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
+            revokePreviewUrl(file);
+            // Still add to uploadedFiles so the moderation polling effect
+            // can find it and show the proper toast.
+            setUploadedFiles((prev) => [
+              ...prev,
+              {
+                storageId,
+                fileName: file.name,
+                fileType: mimeType,
+                fileSize: file.size,
+                uploadedAt: new Date(),
+              },
+            ]);
+            return;
+          }
+          throw urlError;
         }
+
+        revokePreviewUrl(file);
 
         const uploadedFile: UploadedFile = {
           storageId,
@@ -209,8 +344,12 @@ export function useFileUpload({
           setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
         }, 2000);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Upload failed";
+        const rateLimitMsg = getRateLimitErrorMessage(error);
+        const errorMessage = rateLimitMsg
+          ? rateLimitMsg
+          : error instanceof Error
+            ? error.message
+            : "Upload failed";
 
         setUploadingFiles((prev) =>
           prev.map((f) =>
@@ -221,13 +360,19 @@ export function useFileUpload({
         );
 
         onUploadError?.(
-          error instanceof Error ? error : new Error("Upload failed"),
+          error instanceof Error ? error : new Error(errorMessage),
           file,
         );
+
+        // Auto-remove errored files so they don't accumulate forever.
+        setTimeout(() => {
+          revokePreviewUrl(file);
+          setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
+        }, 5000);
       }
     },
     [
-      generateUploadUrl,
+      startUpload,
       trackUpload,
       convex,
       maxFileSizeMB,
@@ -237,6 +382,20 @@ export function useFileUpload({
       onUploadError,
     ],
   );
+
+  const drainUploadQueue = useCallback(async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+
+    try {
+      while (uploadQueueRef.current.length > 0) {
+        const file = uploadQueueRef.current.shift()!;
+        await uploadFile(file);
+      }
+    } finally {
+      processingRef.current = false;
+    }
+  }, [uploadFile]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -267,7 +426,8 @@ export function useFileUpload({
       setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
 
       if (autoUpload) {
-        fileArray.forEach((file) => uploadFile(file));
+        uploadQueueRef.current.push(...fileArray);
+        drainUploadQueue();
       }
     },
     [
@@ -314,19 +474,20 @@ export function useFileUpload({
     [disabled, handleFiles],
   );
 
-  const removeUploadingFile = useCallback((index: number) => {
-    setUploadingFiles((prev) => {
-      const uf = prev[index];
-      if (uf) {
-        const url = previewUrlMapRef.current.get(uf.file);
-        if (url) {
-          URL.revokeObjectURL(url);
-          previewUrlMapRef.current.delete(uf.file);
-        }
-      }
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
+  const removeUploadingFile = useCallback(
+    (index: number) => {
+      setUploadingFiles((prev) => {
+        const uf = prev[index];
+        if (!uf) return prev;
+        revokePreviewUrl(uf.file);
+        // Remove by File reference rather than by index, so a stale
+        // `index` from a click handler doesn't target the wrong file
+        // when auto-dismiss timeouts have already shifted the array.
+        return prev.filter((f) => f.file !== uf.file);
+      });
+    },
+    [revokePreviewUrl],
+  );
 
   const previousUploadedFilesRef = useRef<UploadedFile[]>(value);
   // Keep track of files being deleted to prevent double-invocation of onRemoveFile
@@ -362,22 +523,22 @@ export function useFileUpload({
   }, [uploadedFiles, onRemoveFile]);
 
   const removeUploadedFile = useCallback((index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev) => {
+      const uf = prev[index];
+      if (!uf) return prev;
+      // Remove by storageId rather than by index — same stale-index
+      // defence as removeUploadingFile above.
+      return prev.filter((f) => f.storageId !== uf.storageId);
+    });
   }, []);
 
   const clearAll = useCallback(() => {
     setUploadingFiles((prev) => {
-      prev.forEach((uf) => {
-        const url = previewUrlMapRef.current.get(uf.file);
-        if (url) {
-          URL.revokeObjectURL(url);
-          previewUrlMapRef.current.delete(uf.file);
-        }
-      });
+      prev.forEach((uf) => revokePreviewUrl(uf.file));
       return [];
     });
     setUploadedFiles([]);
-  }, []);
+  }, [revokePreviewUrl]);
 
   const triggerFileSelect = useCallback(() => {
     if (!disabled) fileInputRef.current?.click();

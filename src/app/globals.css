@@ -23,6 +23,9 @@
   --color-fab-magenta: var(--fab-magenta);
   --color-fab-amber: var(--fab-amber);
   --color-fab-purple: var(--fab-purple);
+
+  /* ── Loading animations ─────────────────────────────────────────── */
+  --animate-indeterminate-bar: indeterminate-bar 1.5s ease-in-out infinite;
   --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -190,6 +193,22 @@
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     color: var(--fab-text-primary);
+  }
+}
+
+/* ── Indeterminate progress bar (model viewer) ──────────────────────────── */
+@keyframes indeterminate-bar {
+  0% {
+    transform: translateX(-100%);
+    width: 40%;
+  }
+  50% {
+    transform: translateX(0%);
+    width: 60%;
+  }
+  100% {
+    transform: translateX(300%);
+    width: 40%;
   }
 }
 

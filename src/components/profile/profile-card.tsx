@@ -7,6 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { ConvexError } from "convex/values";
 import { toast } from "sonner";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -201,6 +202,12 @@ function UserProfileForm({
       setIsSaving(false);
       onOpenChange(false);
     } catch (error) {
+      const rateLimitMsg = getRateLimitErrorMessage(error);
+      if (rateLimitMsg) {
+        toast.error(rateLimitMsg);
+        setIsSaving(false);
+        return;
+      }
       const message =
         error instanceof ConvexError
           ? String(error.data)
@@ -226,6 +233,7 @@ function UserProfileForm({
               className="h-16 w-16 rounded-full bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {previewSrc ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={previewSrc}
                   alt={name || profile.name}

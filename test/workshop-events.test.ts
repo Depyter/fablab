@@ -73,20 +73,6 @@ describe("getWorkshopEvents — resource & material resolution", () => {
       serviceCategory: {
         type: "WORKSHOP",
         amount: 500,
-        schedules: [
-          {
-            date,
-            timeSlots: [
-              {
-                startTime,
-                endTime,
-                maxSlots: 10,
-                resources: [resourceId],
-                availableMaterials: [materialId],
-              },
-            ],
-          },
-        ],
       },
       requirements: [],
       fileTypes: [],
@@ -97,6 +83,17 @@ describe("getWorkshopEvents — resource & material resolution", () => {
     const serviceId = await t.run(async (ctx) => {
       const service = await ctx.db.query("services").first();
       return service!._id;
+    });
+
+    // Create a workshop session so getWorkshopEvents finds this slot
+    await tAdmin.mutation(api.workshopSessions.mutate.create, {
+      serviceId,
+      date,
+      startTime,
+      endTime,
+      maxSlots: 10,
+      resources: [resourceId],
+      availableMaterials: [materialId],
     });
 
     // ── Create a project for the slot ────────────────────────────────────
@@ -180,12 +177,6 @@ describe("getWorkshopEvents — resource & material resolution", () => {
       serviceCategory: {
         type: "WORKSHOP",
         amount: 300,
-        schedules: [
-          {
-            date,
-            timeSlots: [{ startTime, endTime, maxSlots: 5 }],
-          },
-        ],
       },
       requirements: [],
       fileTypes: [],
@@ -196,6 +187,15 @@ describe("getWorkshopEvents — resource & material resolution", () => {
     const serviceId = await t.run(async (ctx) => {
       const service = await ctx.db.query("services").first();
       return service!._id;
+    });
+
+    // Create a workshop session so getWorkshopEvents finds this slot
+    await tAdmin.mutation(api.workshopSessions.mutate.create, {
+      serviceId,
+      date,
+      startTime,
+      endTime,
+      maxSlots: 10,
     });
 
     await tClient.mutation(api.projects.mutate.createProject, {
@@ -283,19 +283,6 @@ describe("getWorkshopEvents — resource & material resolution", () => {
       serviceCategory: {
         type: "WORKSHOP",
         amount: 400,
-        schedules: [
-          {
-            date,
-            timeSlots: [
-              {
-                startTime,
-                endTime,
-                maxSlots: 10,
-                resources: [keptResourceId, deletedResourceId],
-              },
-            ],
-          },
-        ],
       },
       requirements: [],
       fileTypes: [],
@@ -306,6 +293,16 @@ describe("getWorkshopEvents — resource & material resolution", () => {
     const serviceId = await t.run(async (ctx) => {
       const service = await ctx.db.query("services").first();
       return service!._id;
+    });
+
+    // Create a workshop session so getWorkshopEvents finds this slot
+    await tAdmin.mutation(api.workshopSessions.mutate.create, {
+      serviceId,
+      date,
+      startTime,
+      endTime,
+      maxSlots: 10,
+      resources: [keptResourceId, deletedResourceId],
     });
 
     // Delete one resource directly to simulate a stale reference

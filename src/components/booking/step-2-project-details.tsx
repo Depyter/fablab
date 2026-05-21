@@ -13,19 +13,24 @@ import {
 } from "@/components/ui/select";
 import { RadioGroupChoiceCard } from "./select-option-form";
 import { DateTimePicker } from "@/components/booking/date-time-picker";
-import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
+
 import { FileUpload } from "@/components/file-upload";
 import { ChevronLeft } from "lucide-react";
 import type { AppFormApi } from "@/lib/form-context";
 import { toast } from "sonner";
 import posthog from "posthog-js";
-import { getLabTimeRangeTimestamps, getCurrentTimestamp } from "@/lib/lab-time";
+import {
+  getLabTimeRangeTimestamps,
+  getCurrentTimestamp,
+  formatLabCurrency,
+} from "@/lib/lab-time";
 import type { UploadedFile } from "../file-upload/types";
 import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { WorkshopSchedule } from "./workshop-time-slot-picker";
+import type { ServicePricing } from "@/lib/project-pricing";
 import {
   ProjectMaterial,
   type FulfillmentModeType,
@@ -73,6 +78,7 @@ export function Step2ProjectDetails({
   serviceMaterials,
   hasUpPricing,
   pricingVariants = EMPTY_PRICING_VARIANTS,
+  servicePricing,
   serviceCategory,
   schedules,
   bookedTimeBlocks,
@@ -96,6 +102,7 @@ export function Step2ProjectDetails({
   }>;
   hasUpPricing: boolean;
   pricingVariants?: PricingVariantOption[];
+  servicePricing?: ServicePricing;
   serviceCategory?: string;
   schedules?: WorkshopSchedule[];
   bookedTimeBlocks?: { start: string; end: string }[];
@@ -218,7 +225,15 @@ export function Step2ProjectDetails({
                     <Input
                       id="name-1"
                       value={field.state.value}
-                      onBlur={field.handleBlur}
+                      onBlur={(e) => {
+                        field.handleBlur();
+                        if (e.target.value.trim()) {
+                          posthog.capture("booking_project_name_entered", {
+                            service_name: serviceName,
+                            service_category: serviceCategory,
+                          });
+                        }
+                      }}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
                       placeholder="e.g. Custom Cup"
@@ -241,7 +256,18 @@ export function Step2ProjectDetails({
                     <Textarea
                       id="description-1"
                       value={field.state.value}
-                      onBlur={field.handleBlur}
+                      onBlur={(e) => {
+                        field.handleBlur();
+                        if (e.target.value.trim()) {
+                          posthog.capture(
+                            "booking_project_description_entered",
+                            {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                            },
+                          );
+                        }
+                      }}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
                       className="min-h-20 resize-none md:min-h-32"
@@ -266,7 +292,15 @@ export function Step2ProjectDetails({
                 <Textarea
                   id="notes-1"
                   value={field.state.value}
-                  onBlur={field.handleBlur}
+                  onBlur={(e) => {
+                    field.handleBlur();
+                    if (e.target.value.trim()) {
+                      posthog.capture("booking_notes_entered", {
+                        service_name: serviceName,
+                        service_category: serviceCategory,
+                      });
+                    }
+                  }}
                   onChange={(e) => field.handleChange(e.target.value)}
                   className="min-h-12 resize-none md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
@@ -288,7 +322,14 @@ export function Step2ProjectDetails({
                   </Label>
                   <Select
                     value={field.state.value}
-                    onValueChange={(val) => field.handleChange(val)}
+                    onValueChange={(val) => {
+                      field.handleChange(val);
+                      posthog.capture("booking_pricing_tier_selected", {
+                        service_name: serviceName,
+                        service_category: serviceCategory,
+                        pricing_tier: val,
+                      });
+                    }}
                     required
                   >
                     <SelectTrigger
@@ -298,16 +339,74 @@ export function Step2ProjectDetails({
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Default">Default Pricing</SelectItem>
+                      <SelectItem value="Default">Regular Rate</SelectItem>
                       {pricingVariants.map((v) => (
                         <SelectItem key={v.name} value={v.name}>
-                          {v.name}
+                          {v.name} Rate
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </Field>
               )}
+            />
+          )}
+
+          {servicePricing && (
+            <form.Subscribe
+              selector={(state) => state.values.pricing}
+              children={(pricing) => {
+                const isDefault = !pricing || pricing === "Default";
+
+                if (servicePricing.type === "WORKSHOP") {
+                  const variant = !isDefault
+                    ? servicePricing.variants?.find((v) => v.name === pricing)
+                    : undefined;
+                  const amount = variant?.amount ?? servicePricing.amount;
+
+                  return (
+                    <div className="flex items-center justify-between rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
+                      <span className="text-xs font-bold uppercase tracking-[0.2em]">
+                        {isDefault ? "Default Price" : pricing}
+                      </span>
+                      <span className="text-sm font-black">
+                        ₱{formatLabCurrency(amount)}
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (servicePricing.type === "FABRICATION") {
+                  const variant = !isDefault
+                    ? servicePricing.variants?.find((v) => v.name === pricing)
+                    : undefined;
+                  const setupFee = variant?.setupFee ?? servicePricing.setupFee;
+                  const timeRate = variant?.timeRate ?? servicePricing.timeRate;
+
+                  return (
+                    <div className="rounded-lg border-2 border-black bg-background p-3 shadow-[2px_2px_0_0_#000]">
+                      <div className="text-xs font-bold uppercase tracking-[0.2em]">
+                        {isDefault ? "Default Pricing" : pricing}
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between text-sm">
+                        <span className="font-medium">Setup Fee</span>
+                        <span className="font-black">
+                          ₱{formatLabCurrency(setupFee)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">Time Rate</span>
+                        <span className="font-black">
+                          ₱{formatLabCurrency(timeRate)}/
+                          {servicePricing.unitName}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              }}
             />
           )}
 
@@ -330,6 +429,11 @@ export function Step2ProjectDetails({
                       onValueChange={(val) => {
                         if (isProjectMaterial(val)) {
                           field.handleChange(val);
+                          posthog.capture("booking_material_selected", {
+                            service_name: serviceName,
+                            service_category: serviceCategory,
+                            material_option: val,
+                          });
                         }
                       }}
                     />
@@ -371,11 +475,29 @@ export function Step2ProjectDetails({
                                             ...selected,
                                             m._id,
                                           ]);
+                                          posthog.capture(
+                                            "booking_lab_material_added",
+                                            {
+                                              service_name: serviceName,
+                                              service_category: serviceCategory,
+                                              material_id: m._id,
+                                              material_name: m.name,
+                                            },
+                                          );
                                         } else {
                                           field.handleChange(
                                             selected.filter(
                                               (id) => id !== m._id,
                                             ),
+                                          );
+                                          posthog.capture(
+                                            "booking_lab_material_removed",
+                                            {
+                                              service_name: serviceName,
+                                              service_category: serviceCategory,
+                                              material_id: m._id,
+                                              material_name: m.name,
+                                            },
                                           );
                                         }
                                       }}
@@ -419,7 +541,11 @@ export function Step2ProjectDetails({
               return (
                 <>
                   {serviceCategory === "WORKSHOP" ? (
-                    <field.WorkshopTimeSlotPicker schedules={schedules} />
+                    <field.WorkshopTimeSlotPicker
+                      schedules={schedules}
+                      serviceName={serviceName}
+                      serviceCategory={serviceCategory}
+                    />
                   ) : is3DPrinting ? (
                     <>
                       <div className="flex flex-col gap-1">
@@ -434,6 +560,32 @@ export function Step2ProjectDetails({
                           endTime: dateTimeValue.endTime,
                         }}
                         onChange={(val) => {
+                          if (val.date && val.date !== dateTimeValue.date) {
+                            posthog.capture("booking_date_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                            });
+                          }
+                          if (
+                            val.startTime &&
+                            val.startTime !== dateTimeValue.startTime
+                          ) {
+                            posthog.capture("booking_start_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              start_time: val.startTime,
+                            });
+                          }
+                          if (
+                            val.endTime &&
+                            val.endTime !== dateTimeValue.endTime
+                          ) {
+                            posthog.capture("booking_end_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              end_time: val.endTime,
+                            });
+                          }
                           field.handleChange({
                             ...dateTimeValue,
                             ...val,
@@ -457,6 +609,32 @@ export function Step2ProjectDetails({
                           endTime: dateTimeValue.endTime,
                         }}
                         onChange={(val) => {
+                          if (val.date && val.date !== dateTimeValue.date) {
+                            posthog.capture("booking_date_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                            });
+                          }
+                          if (
+                            val.startTime &&
+                            val.startTime !== dateTimeValue.startTime
+                          ) {
+                            posthog.capture("booking_start_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              start_time: val.startTime,
+                            });
+                          }
+                          if (
+                            val.endTime &&
+                            val.endTime !== dateTimeValue.endTime
+                          ) {
+                            posthog.capture("booking_end_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              end_time: val.endTime,
+                            });
+                          }
                           field.handleChange({
                             ...dateTimeValue,
                             ...val,
@@ -505,12 +683,12 @@ export function Step2ProjectDetails({
         </FieldGroup>
       </div>
 
-      <div className="mt-4 flex shrink-0 items-center justify-end gap-2 border-t-4 border-black pt-4">
+      <div className="mt-4 flex shrink-0 flex-col gap-2 border-t-4 border-black pt-4 sm:flex-row sm:items-center sm:justify-end">
         {serviceCategory !== "WORKSHOP" && (
           <button
             type="button"
             onClick={onPrev}
-            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-none border-2 border-black bg-background px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-none border-2 border-black bg-background px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none sm:w-auto"
           >
             <ChevronLeft className="size-4" strokeWidth={3} />
             Back
@@ -519,7 +697,7 @@ export function Step2ProjectDetails({
         <button
           type="submit"
           disabled={isUploading}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50 sm:w-auto"
         >
           Review & Estimate
         </button>

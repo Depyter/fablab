@@ -482,7 +482,7 @@ export function ReportExportButton({ data }: ReportExportButtonProps) {
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download className="size-4" strokeWidth={3} />
           <span className="hidden sm:inline">Export</span>

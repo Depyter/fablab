@@ -7,14 +7,12 @@ import { DetailCard } from "./detail-card";
 interface WorkshopPricingSummaryProps {
   project: ProjectData;
   receipt?: ProjectData["receipt"];
-  status?: string;
   onMarkPaid?: () => void;
 }
 
 export function WorkshopPricingSummary({
   project,
   receipt,
-  status,
   onMarkPaid,
 }: WorkshopPricingSummaryProps) {
   const service = project.service;

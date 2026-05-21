@@ -8,7 +8,14 @@ import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportExportButton } from "@/components/reports/report-export";
 import type { Id } from "@convex/_generated/dataModel";
 import { getCurrentTimestamp } from "@/lib/lab-time";
-import { ReportsClient } from "./_client";
+import { ReportsClient, REPORT_TABS, type ReportTabValue } from "./_client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface HeaderData {
   metrics: {
@@ -67,15 +74,36 @@ function ReportsPageHeader({
   onDateFromChange,
   onDateToChange,
   exportData,
+  activeTab,
+  onTabChange,
 }: {
   dateFrom: number;
   dateTo: number;
   onDateFromChange: (value: number) => void;
   onDateToChange: (value: number) => void;
   exportData: HeaderData | null;
+  activeTab: ReportTabValue;
+  onTabChange: (value: ReportTabValue) => void;
 }) {
   return (
     <DataViewPageHeader hideBorder>
+      <div className="sm:hidden">
+        <Select
+          value={activeTab}
+          onValueChange={(value) => onTabChange(value as ReportTabValue)}
+        >
+          <SelectTrigger className="h-9 w-[150px] border-2 border-black bg-white text-[10px] font-black uppercase tracking-wider text-black">
+            <SelectValue placeholder="Section" />
+          </SelectTrigger>
+          <SelectContent>
+            {REPORT_TABS.map((tab) => (
+              <SelectItem key={tab.value} value={tab.value}>
+                {tab.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="flex-1" />
       <ReportDateRange
         dateFrom={dateFrom}
@@ -115,6 +143,7 @@ function useMonthRange() {
 
 export function ReportsPageContent() {
   const { dateFrom, dateTo, setDateFrom, setDateTo } = useMonthRange();
+  const [activeTab, setActiveTab] = React.useState<ReportTabValue>("overview");
 
   const metrics = useQuery(api.reports.query.getReportMetrics, {
     dateFrom,
@@ -147,6 +176,8 @@ export function ReportsPageContent() {
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         exportData={exportData}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
       <ReportsClient
         dateFrom={dateFrom}
@@ -154,6 +185,8 @@ export function ReportsPageContent() {
         metrics={metrics}
         revenue={revenue}
         downtime={downtime}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
     </div>
   );

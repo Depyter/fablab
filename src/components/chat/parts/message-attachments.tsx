@@ -4,6 +4,7 @@ import { is3DModel } from "@/components/3d/modelViewer";
 import { MediaGallery, type MediaFile } from "@/components/chat/media-gallery";
 import { FileAttachmentCard } from "@/components/chat/file-attachment";
 import { MessageFile } from "../types";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // FileGallery — gallery for generic file attachments (PDF, docs, etc.)
@@ -27,7 +28,10 @@ function FileGallery({ files }: { files: MessageFile[] }) {
         href={f.fileUrl}
         fileName={fileName}
         fileType={f.fileType}
-        className={isStacked ? "" : "mt-1"}
+        className={cn(
+          "rounded-none border-2 border-black bg-white shadow-[3px_3px_0_0_#000] transition-transform hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none",
+          isStacked ? "" : "mt-1",
+        )}
       />
     );
   };

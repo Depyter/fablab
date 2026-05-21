@@ -26,13 +26,17 @@ function ChatThreadLink({
   const href = `/dashboard/chat/${roomId}/${thread._id}`;
   const isThreadActive = pathname === href;
   const hasUnreads = Boolean(thread.unreadCount && thread.unreadCount > 0);
+  const paddingClass = isArchived ? "pl-8" : "pl-5";
 
   return (
     <Link
       href={href}
       className={cn(
-        "group relative flex items-center gap-2 transition-colors duration-150",
-        isArchived ? "pl-11 pr-3 py-2" : "pl-7 pr-3 py-2",
+        "group relative flex items-center gap-2 pr-3 py-2 transition-colors border-l-2 border-transparent",
+        paddingClass,
+        isThreadActive
+          ? "bg-[var(--fab-amber-light)] font-bold"
+          : "hover:bg-[var(--fab-chat-thread-hover)]",
       )}
       onClick={() =>
         posthog.capture("chat_thread_opened", {
@@ -43,27 +47,6 @@ function ChatThreadLink({
           is_archived: isArchived,
         })
       }
-      style={
-        isThreadActive
-          ? {
-              background: "var(--fab-amber-light)",
-              borderLeft: "4px solid var(--fab-amber)",
-              paddingLeft: isArchived
-                ? "calc(2.75rem - 4px)"
-                : "calc(1.75rem - 4px)",
-            }
-          : undefined
-      }
-      onMouseEnter={(e) => {
-        if (!isThreadActive) {
-          e.currentTarget.style.background = "var(--fab-chat-thread-hover)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isThreadActive) {
-          e.currentTarget.style.background = "transparent";
-        }
-      }}
     >
       <Hash
         className="h-4 w-4 shrink-0"
@@ -102,10 +85,7 @@ function ChatThreadLink({
       </span>
 
       {hasUnreads && !isThreadActive ? (
-        <div
-          className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white"
-          style={{ background: "var(--fab-magenta)" }}
-        >
+        <div className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-none border border-black bg-[var(--fab-magenta)] px-1.5 text-[9px] font-bold text-white">
           {thread.unreadCount}
         </div>
       ) : null}
@@ -159,15 +139,11 @@ export function ChatSidebarContent({
   if (roomList.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.12em]"
-          style={{
-            color: "var(--fab-text-dim)",
-            fontFamily: "var(--font-body)",
-          }}
-        >
-          No conversations found
-        </p>
+        <div className="border-2 border-black bg-white px-6 py-5 shadow-[4px_4px_0_0_#000]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fab-text-dim)] font-body">
+            No conversations found
+          </p>
+        </div>
       </div>
     );
   }
@@ -187,41 +163,28 @@ export function ChatSidebarContent({
           .filter((thread) => !assignedOnly || filterProjectThread(thread));
 
         return (
-          <div key={roomId} className="flex flex-col">
+          <div
+            key={roomId}
+            className="mx-2 my-2 flex flex-col border-2 border-black bg-white rounded-lg hover:bg-fab-amber-light transition-colors"
+          >
             <div
               onClick={(event) => toggleRoom(event, roomId)}
-              className="group relative mx-1 flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 transition-colors"
+              className="group relative flex cursor-pointer flex-col gap-0.5 px-3 py-2"
               style={{ fontFamily: "var(--font-body)" }}
-              onMouseEnter={(event) => {
-                event.currentTarget.style.background =
-                  "var(--fab-chat-thread-hover)";
-              }}
-              onMouseLeave={(event) => {
-                event.currentTarget.style.background = "transparent";
-              }}
             >
               <div className="flex w-full min-w-0 items-center gap-2">
-                <div
-                  className="rounded p-0.5 -ml-1 shrink-0 transition-colors"
-                  style={{ color: "var(--fab-text-dim)" }}
-                >
+                <div className=" p-0.5 -ml-1 shrink-0 text-[var(--fab-text-dim)] transition-colors">
                   {collapsedRooms[roomId] ? (
                     <ChevronRight className="h-5 w-5" />
                   ) : (
                     <ChevronDown className="h-5 w-5" />
                   )}
                 </div>
-                <span
-                  className="flex-1 truncate font-body text-[15px] font-medium leading-tight"
-                  style={{ color: "var(--fab-text-primary)" }}
-                >
+                <span className="flex-1 truncate font-body text-[15px] font-medium leading-tight text-[var(--fab-text-primary)]">
                   {room.name}
                 </span>
                 {room.unreadCount !== undefined && room.unreadCount > 0 ? (
-                  <div
-                    className="mr-1 h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: "var(--fab-magenta)" }}
-                  />
+                  <div className="mr-1 h-1.5 w-1.5 shrink-0 rounded-none border border-black bg-[var(--fab-magenta)]" />
                 ) : null}
                 {room.name ? (
                   <RoomSettingsDialog
@@ -234,49 +197,38 @@ export function ChatSidebarContent({
 
             {activeThreads.length + archivedThreads.length > 0 &&
             !collapsedRooms[roomId] ? (
-              <div className="relative flex flex-col pb-2">
-                {activeThreads.map((thread) => (
-                  <ChatThreadLink
-                    key={thread._id}
-                    roomId={roomId}
-                    roomName={room.name}
-                    thread={thread}
-                    isArchived={false}
-                  />
-                ))}
+              <div className="relative flex flex-col">
+                <div className="flex flex-col divide-y divide-black/20">
+                  {activeThreads.map((thread) => (
+                    <ChatThreadLink
+                      key={thread._id}
+                      roomId={roomId}
+                      roomName={room.name}
+                      thread={thread}
+                      isArchived={false}
+                    />
+                  ))}
+                </div>
 
                 {archivedThreads.length > 0 ? (
-                  <div className="mt-1 flex flex-col">
+                  <div className="flex flex-col border-t border-black/30">
                     <button
                       onClick={(event) => toggleArchived(event, roomId)}
-                      className="mx-1 flex items-center gap-2 rounded-md py-1.5 pl-7 pr-3 transition-colors"
-                      style={{
-                        color: "var(--fab-text-dim)",
-                        fontFamily: "var(--font-body)",
-                      }}
-                      onMouseEnter={(event) => {
-                        event.currentTarget.style.background =
-                          "rgba(80,60,160,0.06)";
-                      }}
-                      onMouseLeave={(event) => {
-                        event.currentTarget.style.background = "transparent";
-                      }}
+                      className="flex items-center gap-2 bg-[var(--fab-bg-main)] px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-[var(--fab-text-dim)] transition-colors hover:bg-[var(--fab-amber-light)]"
+                      style={{ fontFamily: "var(--font-body)" }}
                     >
                       {expandedArchived[roomId] ? (
                         <ChevronDown className="h-4 w-4 shrink-0" />
                       ) : (
                         <ChevronRight className="h-4 w-4 shrink-0" />
                       )}
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--fab-text-dim)" }}
-                      >
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fab-text-dim)]">
                         Archived
                       </span>
                     </button>
 
                     {expandedArchived[roomId] ? (
-                      <div className="mt-0.5 flex flex-col">
+                      <div className="flex flex-col divide-y divide-black/20">
                         {archivedThreads.map((thread) => (
                           <ChatThreadLink
                             key={thread._id}

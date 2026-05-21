@@ -88,11 +88,6 @@ export default function HomePage() {
           rotation: () => gsap.utils.random(1, 10),
         });
 
-        gsap.set(
-          chars.filter((_, i) => i % 4 === 0),
-          { rotation: 180 },
-        );
-
         const tl = gsap.timeline({
           defaults: {
             ease: "power3.out",
@@ -102,12 +97,12 @@ export default function HomePage() {
         // everyone except M fixes fully
         tl.to(otherChars, {
           rotation: 0,
-          duration: 0.4,
+          x: 0,
+          duration: 0.3,
           stagger: 0.07,
         });
 
         tl.to(otherChars, {
-          x: 0,
           y: 0,
           duration: 0.5,
           stagger: 0.03,
@@ -231,7 +226,7 @@ export default function HomePage() {
           </h1>
 
           <div className="flex flex-col items-center justify-center gap-8 pt-8 sm:flex-row">
-            <ActionButton href="/login">Start A Project</ActionButton>
+            <ActionButton href="/services">Book a Service</ActionButton>
           </div>
         </div>
       </section>
@@ -297,7 +292,7 @@ export default function HomePage() {
       {/* Call to Action */}
       <CtaSection
         title="Ready to Build?"
-        buttonLabel="Start a Project"
+        buttonLabel="Book a Service"
         buttonHref="/login"
         className="lg:p-48"
       />

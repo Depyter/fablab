@@ -9,6 +9,7 @@ import {
   getLabDayStart,
   isSameLabDay,
 } from "@/lib/lab-time";
+import posthog from "posthog-js";
 
 export interface WorkshopTimeSlotValue {
   date: Date | undefined;
@@ -35,6 +36,8 @@ export interface WorkshopTimeSlotPickerProps {
   value: WorkshopTimeSlotValue;
   onChange: (value: WorkshopTimeSlotValue) => void;
   schedules?: WorkshopSchedule[];
+  serviceName?: string;
+  serviceCategory?: string;
 }
 
 const EMPTY_WORKSHOP_SCHEDULES: WorkshopSchedule[] = [];
@@ -43,6 +46,8 @@ export function WorkshopTimeSlotPicker({
   value,
   onChange,
   schedules = EMPTY_WORKSHOP_SCHEDULES,
+  serviceName,
+  serviceCategory,
 }: WorkshopTimeSlotPickerProps) {
   return (
     <>
@@ -86,14 +91,25 @@ export function WorkshopTimeSlotPicker({
                       key={`${schedule.date}-${slot.startTime}-${slot.endTime}`}
                       onClick={() => {
                         if (isFull) return;
-                        onChange({
+                        const newValue = {
                           date: getLabDayStart(schedule.date),
                           startTime: startFormatted,
                           endTime: endFormatted,
                           originalDate: schedule.date,
                           originalStartTime: slot.startTime,
                           originalEndTime: slot.endTime,
+                        };
+                        posthog.capture("booking_workshop_slot_selected", {
+                          service_name: serviceName,
+                          service_category: serviceCategory,
+                          workshop_date: schedule.date,
+                          start_time: startFormatted,
+                          end_time: endFormatted,
+                          available_slots:
+                            slot.maxSlots - (slot.usedUpSlots || 0),
+                          max_slots: slot.maxSlots,
                         });
+                        onChange(newValue);
                       }}
                       className={`rounded-lg border-2 p-4 shadow-[2px_2px_0_0_#000] transition-all ${
                         isFull

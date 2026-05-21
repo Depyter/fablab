@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Loader2,
   Paperclip,
+  ShieldAlert,
 } from "lucide-react";
 import { useFileUpload } from "./use-file-upload";
 import {
@@ -107,6 +108,19 @@ function UploadedThumb({ uf, size }: { uf: UploadedFile; size: "sm" | "md" }) {
   const dim = size === "sm" ? "h-10 w-10" : "h-14 w-14";
   const iconSize = size === "sm" ? "h-5 w-5" : "h-8 w-8";
 
+  // Flagged by moderation — show a warning icon instead of any content.
+  if (uf.moderationStatus === "flagged") {
+    return (
+      <div
+        className={`${dim} rounded-md flex items-center justify-center shrink-0`}
+        style={{ background: "rgba(239,68,68,0.12)" }}
+        title={uf.moderationCategory ?? "Content policy violation"}
+      >
+        <ShieldAlert className={`${iconSize} text-red-500/80`} />
+      </div>
+    );
+  }
+
   if (uf.fileType.startsWith("image/") && uf.url) {
     return (
       <div className={`${dim} rounded-md overflow-hidden bg-muted shrink-0`}>
@@ -142,6 +156,7 @@ export function FileUpload({
   onFilesChange,
   onRemoveFile,
   onUploadingChange,
+  onUploadingFilesChange,
   maxFiles = 10,
   maxFileSizeMB = 100,
   accept,
@@ -181,6 +196,7 @@ export function FileUpload({
     onFilesChange,
     onRemoveFile,
     onUploadingChange,
+    onUploadingFilesChange,
   });
 
   const readableAllowedTypes =
@@ -257,7 +273,26 @@ export function FileUpload({
                   size="sm"
                   getFilePreviewUrl={getFilePreviewUrl}
                 />
-                <span className="flex-1 truncate">{file.file.name}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="truncate block">{file.file.name}</span>
+                  {file.status === "uploading" && (
+                    <div className="mt-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-150 ease-out"
+                            style={{
+                              width: `${Math.max(file.progress, 5)}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-[9px] font-medium tabular-nums text-muted-foreground">
+                          {file.progress}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -336,6 +371,23 @@ export function FileUpload({
                   <p className="text-sm font-medium truncate">
                     {file.file.name}
                   </p>
+                  {file.status === "uploading" && (
+                    <div className="mt-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-150 ease-out"
+                            style={{
+                              width: `${Math.max(file.progress, 5)}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-[9px] font-medium tabular-nums text-muted-foreground">
+                          {file.progress}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   {file.status === "error" && (
                     <p className="text-xs text-destructive">{file.error}</p>
                   )}
@@ -487,6 +539,23 @@ export function FileUpload({
                     <p className="text-xs text-muted-foreground">
                       {formatFileSize(uploadingFile.file.size)}
                     </p>
+                    {uploadingFile.status === "uploading" && (
+                      <div className="mt-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all duration-200 ease-out"
+                              style={{
+                                width: `${Math.max(uploadingFile.progress, 5)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
+                            {uploadingFile.progress}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {uploadingFile.status === "error" && (
                       <p className="text-xs text-destructive mt-1">
                         {uploadingFile.error}

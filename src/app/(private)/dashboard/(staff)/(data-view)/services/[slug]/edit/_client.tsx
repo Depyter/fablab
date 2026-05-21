@@ -7,10 +7,7 @@ import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { useMutation, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  toMutationWorkshopSchedules,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import { type AddServiceFormValues } from "@/types/add-service";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
 import { ConvexError } from "convex/values";
@@ -65,18 +62,10 @@ export function EditServiceClient({
   const initialValues: AddServiceFormValues = {
     name: service.name,
     description: service.description,
-    serviceCategory: service.serviceCategory.type as "WORKSHOP" | "FABRICATION",
+    serviceCategory: "FABRICATION",
     pricing:
-      service.serviceCategory.type === "WORKSHOP"
+      service.serviceCategory.type === "FABRICATION"
         ? {
-            type: "FIXED" as const,
-            amount: service.serviceCategory.amount,
-            variants: (service.serviceCategory.variants ?? []) as Array<{
-              name: string;
-              amount: number;
-            }>,
-          }
-        : {
             type: "FABRICATION" as const,
             setupFee: service.serviceCategory.setupFee,
             unitName: service.serviceCategory.unitName,
@@ -86,6 +75,13 @@ export function EditServiceClient({
               setupFee: number;
               timeRate: number;
             }>,
+          }
+        : {
+            type: "FABRICATION" as const,
+            setupFee: 0,
+            unitName: "hour",
+            timeRate: 0,
+            variants: [],
           },
     status: isServiceStatus(service.status)
       ? service.status
@@ -106,10 +102,6 @@ export function EditServiceClient({
       service.serviceCategory.type === "FABRICATION"
         ? (service.serviceCategory.availableDays ?? [])
         : [],
-    schedules:
-      service.serviceCategory.type === "WORKSHOP"
-        ? service.serviceCategory.schedules
-        : [],
   };
 
   const handleSubmit = async (value: AddServiceFormValues) => {
@@ -119,41 +111,24 @@ export function EditServiceClient({
         service: service._id as Id<"services">,
         name: value.name,
         description: value.description,
-        serviceCategory:
-          value.serviceCategory === "WORKSHOP"
-            ? {
-                type: "WORKSHOP",
-                schedules: toMutationWorkshopSchedules(value.schedules),
-                amount:
-                  value.pricing.type === "FIXED" ? value.pricing.amount : 0,
-                variants:
-                  value.pricing.type === "FIXED" &&
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              }
-            : {
-                type: "FABRICATION",
-                availableDays: value.availableDays,
-                materials: value.materials as Id<"materials">[],
-                setupFee:
-                  value.pricing.type === "FABRICATION"
-                    ? value.pricing.setupFee
-                    : 0,
-                unitName:
-                  value.pricing.type === "FABRICATION"
-                    ? value.pricing.unitName
-                    : ("hour" as const),
-                timeRate:
-                  value.pricing.type === "FABRICATION"
-                    ? value.pricing.timeRate
-                    : 0,
-                variants:
-                  value.pricing.type === "FABRICATION" &&
-                  value.pricing.variants.length > 0
-                    ? value.pricing.variants
-                    : undefined,
-              },
+        serviceCategory: {
+          type: "FABRICATION",
+          availableDays: value.availableDays,
+          materials: value.materials as Id<"materials">[],
+          setupFee:
+            value.pricing.type === "FABRICATION" ? value.pricing.setupFee : 0,
+          unitName:
+            value.pricing.type === "FABRICATION"
+              ? value.pricing.unitName
+              : ("hour" as const),
+          timeRate:
+            value.pricing.type === "FABRICATION" ? value.pricing.timeRate : 0,
+          variants:
+            value.pricing.type === "FABRICATION" &&
+            value.pricing.variants.length > 0
+              ? value.pricing.variants
+              : undefined,
+        },
         status: value.status,
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         fileTypes: value.fileTypes,
@@ -197,20 +172,19 @@ export function EditServiceClient({
   };
 
   return (
-    <>
-      <ServiceForm
-        title={`Edit ${service.name}`}
-        initialValues={initialValues}
-        initialImages={initialImages}
-        initialSamples={initialSamples}
-        onSubmit={handleSubmit}
-        onDiscard={() => {
-          router.push("/dashboard/services");
-        }}
-        submitError={submitError}
-      />
-      <div className="container mx-auto max-w-6xl px-10 pb-10 -mt-8">
-        <div className="mt-12 rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+    <ServiceForm
+      title={`Edit ${service.name}`}
+      initialValues={initialValues}
+      initialImages={initialImages}
+      initialSamples={initialSamples}
+      onSubmit={handleSubmit}
+      onDiscard={() => {
+        router.push("/dashboard/services");
+      }}
+      submitError={submitError}
+      mode="FABRICATION"
+      footer={
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="font-semibold text-destructive">Danger Zone</h3>
             <p className="text-sm text-muted-foreground">
@@ -227,7 +201,7 @@ export function EditServiceClient({
             className="bg-destructive text-white hover:bg-destructive/90"
           />
         </div>
-      </div>
-    </>
+      }
+    />
   );
 }

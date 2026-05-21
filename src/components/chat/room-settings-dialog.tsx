@@ -7,6 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { UserRole } from "@convex/constants";
 import { ConvexError } from "convex/values";
 import { toast } from "sonner";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 import { UserPlus, UserMinus, Search, Settings } from "lucide-react";
 
 import {
@@ -53,6 +54,11 @@ export function RoomSettingsDialog({
       await addMember({ roomId, userId });
       toast.success("Member added to workspace");
     } catch (error) {
+      const rateLimitMsg = getRateLimitErrorMessage(error);
+      if (rateLimitMsg) {
+        toast.error(rateLimitMsg);
+        return;
+      }
       const message =
         error instanceof ConvexError
           ? String(error.data)
@@ -68,6 +74,11 @@ export function RoomSettingsDialog({
       await removeMember({ roomId, userId });
       toast.success("Member removed from workspace");
     } catch (error) {
+      const rateLimitMsg = getRateLimitErrorMessage(error);
+      if (rateLimitMsg) {
+        toast.error(rateLimitMsg);
+        return;
+      }
       const message =
         error instanceof ConvexError
           ? String(error.data)
@@ -85,6 +96,11 @@ export function RoomSettingsDialog({
       toast.success("Workspace name updated");
       setIsOpen(false);
     } catch (error) {
+      const rateLimitMsg = getRateLimitErrorMessage(error);
+      if (rateLimitMsg) {
+        toast.error(rateLimitMsg);
+        return;
+      }
       const message =
         error instanceof ConvexError
           ? String(error.data)

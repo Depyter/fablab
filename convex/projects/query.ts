@@ -4,11 +4,7 @@ import { Id, Doc } from "../_generated/dataModel";
 import { QueryCtx } from "../_generated/server";
 import { UserRole } from "../constants";
 import { authQuery } from "../helper";
-import {
-  buildProjectGroups,
-  buildEventsFromGroups,
-  splitUpcomingPast,
-} from "./helper";
+
 import {
   addLabDays,
   endOfLabMonth,
@@ -603,82 +599,319 @@ export const getWorkshopEvents = authQuery({
     const { role, _id: callerId } = ctx.profile;
     const isPrivileged = role === UserRole.ADMIN || role === UserRole.MAKER;
 
-    // ── For clients: query their own workshop projects only ────────────────
+    // ── For clients: discover upcoming + see own attended past ──────────
     if (!isPrivileged) {
-      // Use the same indexed query but filtered to the caller's userId
+      // 1. Fetch the client's own workshop projects (all time, all statuses)
       const myProjects = await ctx.db
         .query("projects")
-        .withIndex("by_type_bookingStartTime", (q) => {
-          if (minTime !== undefined) {
-            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
-          }
-          if (maxTime !== undefined) {
-            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
-          }
-          return q.eq("type", "WORKSHOP");
-        })
+        .withIndex("by_type_bookingStartTime", (q) => q.eq("type", "WORKSHOP"))
         .filter((q) => q.eq(q.field("userId"), callerId))
         .collect();
 
-      const groups = buildProjectGroups(
-        myProjects,
-        args.serviceId,
-        args.startTime,
+      // Build maps from (serviceId:bookingStartTime) → client's project
+      const myProjectBySessionKey = new Map<string, Doc<"projects">>();
+      const attendedSessionKeys = new Set<string>();
+      for (const p of myProjects) {
+        if (p.bookingStartTime == null || p.service == null) continue;
+        const key = `${p.service}:${p.bookingStartTime}`;
+        myProjectBySessionKey.set(key, p);
+        // Past attended sessions are those with bookingStartTime < todayStart
+        if (p.bookingStartTime < todayStart) {
+          attendedSessionKeys.add(key);
+        }
+      }
+
+      // 2. Fetch workshop sessions in the requested time range
+      let sessions: Doc<"workshopSessions">[] = [];
+
+      if (status === "upcoming" || status === "all") {
+        sessions = await ctx.db
+          .query("workshopSessions")
+          .withIndex("by_startTime", (q) => q.gte("startTime", todayStart))
+          .filter((q) => q.neq(q.field("status"), "cancelled"))
+          .order("asc")
+          .take(100);
+      }
+
+      // 3. For past: only include sessions where the client registered
+      if (
+        (status === "past" || status === "all") &&
+        attendedSessionKeys.size > 0
+      ) {
+        const allPastSessions = await ctx.db
+          .query("workshopSessions")
+          .withIndex("by_startTime", (q) => q.lt("startTime", todayStart))
+          .filter((q) => q.neq(q.field("status"), "cancelled"))
+          .order("desc")
+          .take(200);
+
+        const attendedPast = allPastSessions.filter((s) =>
+          attendedSessionKeys.has(`${s.serviceId}:${s.startTime}`),
+        );
+        sessions = [...sessions, ...attendedPast];
+      }
+
+      // Apply optional filters
+      if (args.serviceId) {
+        sessions = sessions.filter((s) => s.serviceId === args.serviceId);
+      }
+      if (args.startTime) {
+        sessions = sessions.filter((s) => s.startTime === args.startTime);
+      }
+
+      if (sessions.length === 0) {
+        return { upcoming: [], past: [] };
+      }
+
+      // 4. Fetch service names for all sessions
+      const uniqueServiceIds = [...new Set(sessions.map((s) => s.serviceId))];
+      const serviceDocs = await Promise.all(
+        uniqueServiceIds.map((id) => ctx.db.get(id)),
       );
-      const events = await buildEventsFromGroups(ctx, groups);
-      return splitUpcomingPast(events, todayStart);
+      const serviceMap = new Map(
+        serviceDocs
+          .filter((d): d is NonNullable<typeof d> => d !== null)
+          .map((d) => [d._id, { name: d.name, slug: d.slug }]),
+      );
+
+      // 5. Collect resource & material IDs from all sessions
+      const allResourceIds = new Set<Id<"resources">>();
+      const allMaterialIds = new Set<Id<"materials">>();
+
+      for (const s of sessions) {
+        for (const rid of s.resources ?? []) allResourceIds.add(rid);
+        for (const mid of s.availableMaterials ?? []) allMaterialIds.add(mid);
+      }
+
+      // 6. Batch-fetch resource & material details
+      const [resourceDocs, materialDocs] = await Promise.all([
+        Promise.all(Array.from(allResourceIds).map((id) => ctx.db.get(id))),
+        Promise.all(Array.from(allMaterialIds).map((id) => ctx.db.get(id))),
+      ]);
+      const resourceMap = new Map(
+        resourceDocs
+          .filter((d): d is NonNullable<typeof d> => d !== null)
+          .map((d) => [d._id, { _id: d._id, name: d.name }]),
+      );
+      const materialMap = new Map(
+        materialDocs
+          .filter((d): d is NonNullable<typeof d> => d !== null)
+          .map((d) => [d._id, { _id: d._id, name: d.name }]),
+      );
+
+      // 7. Pre-fetch the client's profile and threads for attendee data
+      const clientProfile = await ctx.db.get(callerId);
+      let clientPfpUrl: string | null = null;
+      if (clientProfile?.profilePic) {
+        try {
+          clientPfpUrl = await ctx.storage.getUrl(clientProfile.profilePic);
+        } catch {
+          // Gracefully handle inaccessible storage
+        }
+      }
+
+      // Collect client's active projects for thread lookups
+      const TERMINAL_STATUSES = new Set(["cancelled", "rejected"]);
+      const myActiveProjects = myProjects.filter(
+        (p) => !TERMINAL_STATUSES.has(p.status),
+      );
+      const threadDocs = await Promise.all(
+        myActiveProjects.map((p) =>
+          ctx.db
+            .query("threads")
+            .withIndex("projectId", (q) => q.eq("projectId", p._id))
+            .first(),
+        ),
+      );
+      const threadByProjectId = new Map<string, (typeof threadDocs)[number]>(
+        myActiveProjects.map((p, i) => [p._id as string, threadDocs[i]]),
+      );
+
+      // 8. Build events from sessions with only the client as attendee
+      const events: Array<{
+        sessionId: Id<"workshopSessions">;
+        serviceId: Id<"services">;
+        serviceName: string;
+        serviceSlug: string;
+        date: number;
+        startTime: number;
+        endTime: number;
+        maxSlots: number;
+        usedSlots: number;
+        registrationCount: number;
+        cancelledCount: number;
+        statusBreakdown: Record<string, number>;
+        resources?: Array<{ _id: Id<"resources">; name: string }> | undefined;
+        availableMaterials?:
+          | Array<{ _id: Id<"materials">; name: string }>
+          | undefined;
+        attendees: Array<{
+          projectId: Id<"projects">;
+          userId: Id<"userProfile">;
+          name: string;
+          email: string;
+          status: string;
+          pfpUrl: string | null;
+          createdAt: number;
+          roomId: string | null;
+          threadId: string | null;
+        }>;
+      }> = [];
+
+      for (const session of sessions) {
+        const serviceInfo = serviceMap.get(session.serviceId);
+
+        // Resolve resources & materials for this session
+        const resolvedResources = Array.from(new Set(session.resources ?? []))
+          .map((rid) => resourceMap.get(rid))
+          .filter((r): r is NonNullable<typeof r> => r !== undefined);
+
+        const resolvedMaterials = Array.from(
+          new Set(session.availableMaterials ?? []),
+        )
+          .map((mid) => materialMap.get(mid))
+          .filter((m): m is NonNullable<typeof m> => m !== undefined);
+
+        // Find the client's project for this session (if any)
+        const sessionKey = `${session.serviceId}:${session.startTime}`;
+        const myProject = myProjectBySessionKey.get(sessionKey);
+
+        // Build attendee list — only the client themselves
+        const attendees: (typeof events)[number]["attendees"] = [];
+        if (
+          myProject &&
+          !TERMINAL_STATUSES.has(myProject.status) &&
+          clientProfile
+        ) {
+          const thread = threadByProjectId.get(myProject._id as string);
+          attendees.push({
+            projectId: myProject._id,
+            userId: myProject.userId,
+            name: clientProfile.name,
+            email: clientProfile.email,
+            status: myProject.status,
+            pfpUrl: clientPfpUrl,
+            createdAt: myProject._creationTime,
+            roomId: thread?.roomId ?? null,
+            threadId: thread?._id ?? null,
+          });
+        }
+
+        // Build status breakdown from just the client's project
+        const statusBreakdown: Record<string, number> = {};
+        if (myProject) {
+          statusBreakdown[myProject.status] = 1;
+        }
+
+        events.push({
+          sessionId: session._id,
+          serviceId: session.serviceId,
+          serviceName: serviceInfo?.name ?? "Unknown Workshop",
+          serviceSlug: serviceInfo?.slug ?? "",
+          date: getLabDayStartTimestamp(session.startTime),
+          startTime: session.startTime,
+          endTime: session.endTime,
+          maxSlots: session.maxSlots,
+          usedSlots: session.usedUpSlots,
+          registrationCount: attendees.length,
+          cancelledCount: myProject
+            ? TERMINAL_STATUSES.has(myProject.status)
+              ? 1
+              : 0
+            : 0,
+          statusBreakdown,
+          resources:
+            resolvedResources.length > 0 ? resolvedResources : undefined,
+          availableMaterials:
+            resolvedMaterials.length > 0 ? resolvedMaterials : undefined,
+          attendees,
+        });
+      }
+
+      // 9. Sort and split into upcoming / past
+      const upcoming = events
+        .filter((e) => e.startTime >= todayStart)
+        .sort((a, b) => a.startTime - b.startTime)
+        .slice(0, 50);
+
+      const past = events
+        .filter((e) => e.startTime < todayStart)
+        .sort((a, b) => b.startTime - a.startTime)
+        .slice(0, 50);
+
+      return { upcoming, past };
     }
 
-    // ── For staff: start from workshop service schedules ─────────────────
-    // Load all services and filter to workshops in memory
-    const allServices = await ctx.db.query("services").collect();
-    let workshopServices = allServices.filter(
-      (s): s is Doc<"services"> & { serviceCategory: { type: "WORKSHOP" } } =>
-        s.serviceCategory.type === "WORKSHOP",
-    );
+    // ── For staff: start from workshop sessions ────────────────────────
+    // Load all workshop sessions in the time range
+    let allSessions: Doc<"workshopSessions">[];
+    if (minTime !== undefined) {
+      allSessions = await ctx.db
+        .query("workshopSessions")
+        .withIndex("by_startTime", (q) => q.gte("startTime", minTime))
+        .collect();
+    } else if (maxTime !== undefined) {
+      allSessions = await ctx.db
+        .query("workshopSessions")
+        .withIndex("by_startTime", (q) => q.lt("startTime", maxTime))
+        .collect();
+    } else {
+      allSessions = await ctx.db.query("workshopSessions").collect();
+    }
 
-    // Filter by serviceId if provided (calendar click-through)
+    // Filter by serviceId / startTime if provided
     if (args.serviceId) {
-      workshopServices = workshopServices.filter(
-        (s) => s._id === args.serviceId,
-      );
+      allSessions = allSessions.filter((s) => s.serviceId === args.serviceId);
+    }
+    if (args.startTime) {
+      allSessions = allSessions.filter((s) => s.startTime === args.startTime);
     }
 
-    if (workshopServices.length === 0) {
+    if (allSessions.length === 0) {
       return { upcoming: [], past: [] };
     }
 
-    // Load all workshop projects in time range for batch matching
-    let allProjects: Doc<"projects">[] = [];
-    if (status !== "upcoming" || true) {
-      // Always load projects to enrich slots that have registrations
-      allProjects = await ctx.db
-        .query("projects")
-        .withIndex("by_type_bookingStartTime", (q) => {
-          if (minTime !== undefined) {
-            return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
-          }
-          if (maxTime !== undefined) {
-            return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
-          }
-          return q.eq("type", "WORKSHOP");
-        })
-        .collect();
+    // Batch-fetch service names for all sessions
+    const uniqueServiceIds = [...new Set(allSessions.map((s) => s.serviceId))];
+    const serviceDocs = await Promise.all(
+      uniqueServiceIds.map((id) => ctx.db.get(id)),
+    );
+    const serviceMap = new Map(
+      serviceDocs
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map((d) => [d._id, { name: d.name, slug: d.slug }]),
+    );
 
-      // Also filter by serviceId / startTime on the project side
-      if (args.serviceId) {
-        allProjects = allProjects.filter((p) => p.service === args.serviceId);
-      }
-      if (args.startTime) {
-        allProjects = allProjects.filter(
-          (p) => p.bookingStartTime === args.startTime,
-        );
-      }
+    // Load all workshop projects in time range for batch matching
+    const allProjects: Doc<"projects">[] = await ctx.db
+      .query("projects")
+      .withIndex("by_type_bookingStartTime", (q) => {
+        if (minTime !== undefined) {
+          return q.eq("type", "WORKSHOP").gte("bookingStartTime", minTime);
+        }
+        if (maxTime !== undefined) {
+          return q.eq("type", "WORKSHOP").lt("bookingStartTime", maxTime);
+        }
+        return q.eq("type", "WORKSHOP");
+      })
+      .collect();
+
+    // Also filter by serviceId / startTime on the project side
+    let filteredProjects = allProjects;
+    if (args.serviceId) {
+      filteredProjects = filteredProjects.filter(
+        (p) => p.service === args.serviceId,
+      );
+    }
+    if (args.startTime) {
+      filteredProjects = filteredProjects.filter(
+        (p) => p.bookingStartTime === args.startTime,
+      );
     }
 
     // Build a map from (serviceId:bookingStartTime) → projects
     const projectsByKey = new Map<string, Doc<"projects">[]>();
-    for (const p of allProjects) {
+    for (const p of filteredProjects) {
       if (p.bookingStartTime == null) continue;
       const key = `${p.service}:${p.bookingStartTime}`;
       const existing = projectsByKey.get(key);
@@ -686,12 +919,13 @@ export const getWorkshopEvents = authQuery({
       else projectsByKey.set(key, [p]);
     }
 
-    // ── Single pass: collect schedule event templates and unique
+    // ── Single pass: collect session event templates and unique
     //    resource / material IDs, filtered to the target date / time range.
     const allResourceIds = new Set<Id<"resources">>();
     const allMaterialIds = new Set<Id<"materials">>();
 
     interface EventTemplate {
+      sessionId: Id<"workshopSessions">;
       serviceId: Id<"services">;
       serviceName: string;
       serviceSlug: string;
@@ -706,41 +940,28 @@ export const getWorkshopEvents = authQuery({
 
     const eventTemplates: EventTemplate[] = [];
 
-    for (const service of workshopServices) {
-      const cat = service.serviceCategory;
+    for (const session of allSessions) {
+      const serviceInfo = serviceMap.get(session.serviceId);
 
-      for (const schedule of cat.schedules) {
-        // ── Date range filter ──────────────────────────────────────────
-        if (minTime !== undefined && schedule.date + 86_400_000 < minTime)
-          continue;
-        if (maxTime !== undefined && schedule.date >= maxTime) continue;
+      // Collect unique IDs while we have the session data open
+      for (const rid of session.resources ?? []) allResourceIds.add(rid);
+      for (const mid of session.availableMaterials ?? [])
+        allMaterialIds.add(mid);
 
-        for (const timeSlot of schedule.timeSlots) {
-          // ── Time range filter ───────────────────────────────────────
-          if (minTime !== undefined && timeSlot.startTime < minTime) continue;
-          if (maxTime !== undefined && timeSlot.startTime >= maxTime) continue;
-          if (args.startTime && timeSlot.startTime !== args.startTime) continue;
-
-          // Collect unique IDs while we have the schedule data open
-          for (const rid of timeSlot.resources ?? []) allResourceIds.add(rid);
-          for (const mid of timeSlot.availableMaterials ?? [])
-            allMaterialIds.add(mid);
-
-          const key = `${service._id}:${timeSlot.startTime}`;
-          eventTemplates.push({
-            serviceId: service._id,
-            serviceName: service.name,
-            serviceSlug: service.slug,
-            startTime: timeSlot.startTime,
-            endTime: timeSlot.endTime,
-            maxSlots: timeSlot.maxSlots,
-            usedSlots: timeSlot.usedUpSlots ?? 0,
-            groupProjects: projectsByKey.get(key) ?? [],
-            resourceIds: timeSlot.resources ?? [],
-            materialIds: timeSlot.availableMaterials ?? [],
-          });
-        }
-      }
+      const key = `${session.serviceId}:${session.startTime}`;
+      eventTemplates.push({
+        sessionId: session._id,
+        serviceId: session.serviceId,
+        serviceName: serviceInfo?.name ?? "Unknown Workshop",
+        serviceSlug: serviceInfo?.slug ?? "",
+        startTime: session.startTime,
+        endTime: session.endTime,
+        maxSlots: session.maxSlots,
+        usedSlots: session.usedUpSlots,
+        groupProjects: projectsByKey.get(key) ?? [],
+        resourceIds: session.resources ?? [],
+        materialIds: session.availableMaterials ?? [],
+      });
     }
 
     // ── Batch-fetch resource & material details ────────────────────────
@@ -850,6 +1071,7 @@ export const getWorkshopEvents = authQuery({
         .filter((m): m is NonNullable<typeof m> => m !== undefined);
 
       return {
+        sessionId: t.sessionId,
         serviceId: t.serviceId,
         serviceName: t.serviceName,
         serviceSlug: t.serviceSlug,

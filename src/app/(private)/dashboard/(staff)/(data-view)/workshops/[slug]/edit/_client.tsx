@@ -7,10 +7,7 @@ import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
 import { useMutation, Preloaded } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  toMutationWorkshopSchedules,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import { type AddServiceFormValues } from "@/types/add-service";
 import type { UploadedFile } from "@/components/file-upload/types";
 import { ActionDialog } from "@/components/action-dialog";
 import { ConvexError } from "convex/values";
@@ -95,7 +92,6 @@ export function EditWorkshopClient({
     resources: [],
     materials: [],
     availableDays: [],
-    schedules: service.serviceCategory.schedules,
   };
 
   const handleDeleteService = async () => {
@@ -125,7 +121,6 @@ export function EditWorkshopClient({
         description: value.description,
         serviceCategory: {
           type: "WORKSHOP",
-          schedules: toMutationWorkshopSchedules(value.schedules),
           amount: value.pricing.type === "FIXED" ? value.pricing.amount : 0,
           variants:
             value.pricing.type === "FIXED" && value.pricing.variants.length > 0
@@ -135,6 +130,7 @@ export function EditWorkshopClient({
         status: value.status,
         requirements: value.requirements.filter((r) => r.trim() !== ""),
         fileTypes: value.fileTypes,
+        resources: value.resources as Id<"resources">[],
         images: value.images as Id<"_storage">[],
         samples: value.samples as Id<"_storage">[],
       });
@@ -156,20 +152,18 @@ export function EditWorkshopClient({
   };
 
   return (
-    <>
-      <ServiceForm
-        title={`Edit ${service.name}`}
-        initialValues={initialValues}
-        initialImages={initialImages}
-        initialSamples={initialSamples}
-        onSubmit={handleSubmit}
-        onDiscard={() => router.push("/dashboard/workshops")}
-        submitError={submitError}
-        mode="WORKSHOP"
-        backHref="/dashboard/workshops"
-      />
-      <div className="container mx-auto max-w-6xl px-10 pb-10 -mt-8">
-        <div className="mt-12 rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+    <ServiceForm
+      title={`Edit ${service.name}`}
+      initialValues={initialValues}
+      initialImages={initialImages}
+      initialSamples={initialSamples}
+      onSubmit={handleSubmit}
+      onDiscard={() => router.push("/dashboard/workshops")}
+      submitError={submitError}
+      mode="WORKSHOP"
+      backHref="/dashboard/workshops"
+      footer={
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="font-semibold text-destructive">Danger Zone</h3>
             <p className="text-sm text-muted-foreground">
@@ -186,7 +180,7 @@ export function EditWorkshopClient({
             className="bg-destructive text-white hover:bg-destructive/90"
           />
         </div>
-      </div>
-    </>
+      }
+    />
   );
 }

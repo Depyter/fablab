@@ -10,6 +10,7 @@ import { useProfile } from "@/components/sidebar/profile-context";
 import { ChatSidebarContent } from "./chat-sidebar-content";
 import { ChatSidebarRoomsLoading } from "./chat-loading";
 import { ChatSidebarShell } from "./chat-sidebar-shell";
+import { cn } from "@/lib/utils";
 
 export function ChatSidebar({ className }: { className?: string }) {
   const profile = useProfile();
@@ -21,9 +22,15 @@ export function ChatSidebar({ className }: { className?: string }) {
 
   const headerEnd = showToggle ? (
     <Button
-      variant={assignedOnly ? "default" : "outline"}
+      variant="outline"
       size="sm"
-      className="h-7 shrink-0 gap-1 px-2 text-xs"
+      className={cn(
+        "h-7 shrink-0 gap-1 px-2 text-[10px] font-black uppercase tracking-[0.16em] rounded-none border-2 border-black shadow-[2px_2px_0_0_#000] transition-transform",
+        assignedOnly
+          ? "bg-[var(--fab-amber)] text-[var(--fab-text-primary)] hover:bg-[var(--fab-amber)]"
+          : "bg-white text-[var(--fab-text-primary)] hover:bg-[var(--fab-bg-main)]",
+        "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none",
+      )}
       onClick={() => setAssignedOnly((prev) => !prev)}
     >
       <UserCheck className="h-3.5 w-3.5" />

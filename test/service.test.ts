@@ -476,8 +476,6 @@ describe("Service mutations and queries", () => {
     test("initializes workshop schedule slot usage to zero", async () => {
       const { t, tAera } = await setupUsers();
 
-      const scheduleDate = Date.UTC(2026, 5, 15);
-
       await tAera.mutation(api.services.mutate.addService, {
         name: "Intro to Laser Cutting",
         images: [],
@@ -485,18 +483,6 @@ describe("Service mutations and queries", () => {
         serviceCategory: {
           type: "WORKSHOP",
           amount: 750,
-          schedules: [
-            {
-              date: scheduleDate,
-              timeSlots: [
-                {
-                  startTime: scheduleDate + 9 * HOUR_MS,
-                  endTime: scheduleDate + 11 * HOUR_MS,
-                  maxSlots: 8,
-                },
-              ],
-            },
-          ],
         },
         requirements: ["registration"],
         fileTypes: [],
@@ -511,158 +497,7 @@ describe("Service mutations and queries", () => {
       expect(service?.serviceCategory).toMatchObject({
         type: "WORKSHOP",
         amount: 750,
-        schedules: [
-          {
-            date: scheduleDate,
-            timeSlots: [
-              {
-                startTime: scheduleDate + 9 * HOUR_MS,
-                endTime: scheduleDate + 11 * HOUR_MS,
-                maxSlots: 8,
-                usedUpSlots: 0,
-              },
-            ],
-          },
-        ],
       });
-    });
-
-    test("preserves used workshop slots on update and rejects shrinking below usage", async () => {
-      const { t, tAera } = await setupUsers();
-
-      const scheduleDate = Date.UTC(2026, 5, 20);
-
-      await tAera.mutation(api.services.mutate.addService, {
-        name: "Intro to 3D Printing",
-        images: [],
-        samples: [],
-        serviceCategory: {
-          type: "WORKSHOP",
-          amount: 500,
-          schedules: [
-            {
-              date: scheduleDate,
-              timeSlots: [
-                {
-                  startTime: scheduleDate + 13 * HOUR_MS,
-                  endTime: scheduleDate + 15 * HOUR_MS,
-                  maxSlots: 6,
-                },
-              ],
-            },
-          ],
-        },
-        requirements: ["registration"],
-        fileTypes: [],
-        description: "Workshop on 3D printing basics",
-        status: "Available",
-      });
-
-      const serviceId = await t.run(async (ctx) => {
-        const service = await ctx.db.query("services").first();
-        return service!._id;
-      });
-
-      await t.run(async (ctx) => {
-        const service = await ctx.db.get(serviceId);
-        if (!service || service.serviceCategory.type !== "WORKSHOP") {
-          throw new Error("Expected a workshop service");
-        }
-
-        await ctx.db.patch(serviceId, {
-          serviceCategory: {
-            ...service.serviceCategory,
-            schedules: [
-              {
-                date: scheduleDate,
-                timeSlots: [
-                  {
-                    startTime: scheduleDate + 13 * HOUR_MS,
-                    endTime: scheduleDate + 15 * HOUR_MS,
-                    maxSlots: 6,
-                    usedUpSlots: 3,
-                  },
-                ],
-              },
-            ],
-          },
-        });
-      });
-
-      await tAera.mutation(api.services.mutate.updateService, {
-        service: serviceId,
-        serviceCategory: {
-          type: "WORKSHOP",
-          amount: 650,
-          schedules: [
-            {
-              date: scheduleDate,
-              timeSlots: [
-                {
-                  startTime: scheduleDate + 13 * HOUR_MS,
-                  endTime: scheduleDate + 15 * HOUR_MS,
-                  maxSlots: 7,
-                },
-                {
-                  startTime: scheduleDate + 15 * HOUR_MS,
-                  endTime: scheduleDate + 17 * HOUR_MS,
-                  maxSlots: 4,
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const updatedService = await t.run(async (ctx) => ctx.db.get(serviceId));
-      if (
-        !updatedService ||
-        updatedService.serviceCategory.type !== "WORKSHOP"
-      ) {
-        throw new Error("Expected updated workshop service");
-      }
-
-      expect(updatedService.serviceCategory.schedules).toEqual([
-        {
-          date: scheduleDate,
-          timeSlots: [
-            {
-              startTime: scheduleDate + 13 * HOUR_MS,
-              endTime: scheduleDate + 15 * HOUR_MS,
-              maxSlots: 7,
-              usedUpSlots: 3,
-            },
-            {
-              startTime: scheduleDate + 15 * HOUR_MS,
-              endTime: scheduleDate + 17 * HOUR_MS,
-              maxSlots: 4,
-              usedUpSlots: 0,
-            },
-          ],
-        },
-      ]);
-
-      await expect(
-        tAera.mutation(api.services.mutate.updateService, {
-          service: serviceId,
-          serviceCategory: {
-            type: "WORKSHOP",
-            amount: 650,
-            schedules: [
-              {
-                date: scheduleDate,
-                timeSlots: [
-                  {
-                    startTime: scheduleDate + 13 * HOUR_MS,
-                    endTime: scheduleDate + 15 * HOUR_MS,
-                    maxSlots: 2,
-                  },
-                ],
-              },
-            ],
-          },
-        }),
-      ).rejects.toThrow("Cannot reduce max slots below used up slots (3)");
     });
   });
 

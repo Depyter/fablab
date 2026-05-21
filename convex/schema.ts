@@ -24,8 +24,13 @@ export default defineSchema({
     status: v.union(
       v.literal(FileStatus.CLAIMED),
       v.literal(FileStatus.ORPHANED),
+      v.literal(FileStatus.FLAGGED),
     ),
     uploadedBy: v.optional(v.id("userProfile")),
+    /** Comma-separated list of violated moderation categories (e.g. "harassment,violence"). */
+    moderationCategory: v.optional(v.string()),
+    /** Timestamp (ms) when moderation completed. */
+    moderatedAt: v.optional(v.number()),
   })
     .index("by_storageId", ["storageId"])
     .index("status", ["status"]),
@@ -50,24 +55,6 @@ export default defineSchema({
     serviceCategory: v.union(
       v.object({
         type: v.literal("WORKSHOP"),
-        schedules: v.array(
-          v.object({
-            date: v.number(),
-            timeSlots: v.array(
-              v.object({
-                startTime: v.number(),
-                endTime: v.number(),
-                maxSlots: v.number(),
-                usedUpSlots: v.optional(v.number()),
-                // Resources this time slot consumes (rooms, machines)
-                resources: v.optional(v.array(v.id("resources"))),
-                // Materials available for participants to select
-                availableMaterials: v.optional(v.array(v.id("materials"))),
-              }),
-            ),
-          }),
-        ),
-        // Pricing: one-time flat payment
         amount: v.number(),
         variants: v.optional(
           v.array(v.object({ name: v.string(), amount: v.number() })),
@@ -258,6 +245,10 @@ export default defineSchema({
     notes: v.string(),
     searchText: v.string(),
     archivalDeadline: v.optional(v.number()),
+    /** Comma-separated list of violated moderation categories. */
+    moderationCategory: v.optional(v.string()),
+    /** Timestamp (ms) when moderation completed. */
+    moderatedAt: v.optional(v.number()),
   })
     .index("by_userProfile", ["userId"])
     .index("by_status", ["status"])
@@ -269,6 +260,29 @@ export default defineSchema({
       searchField: "searchText",
       filterFields: ["status"],
     }),
+
+  // --------------------------------------------------------
+  // 6. WORKSHOP SESSIONS: Individual scheduled occurrences of a workshop service
+  // --------------------------------------------------------
+  workshopSessions: defineTable({
+    serviceId: v.id("services"),
+    date: v.number(),
+    startTime: v.number(),
+    endTime: v.number(),
+    maxSlots: v.number(),
+    usedUpSlots: v.number(),
+    resources: v.optional(v.array(v.id("resources"))),
+    availableMaterials: v.optional(v.array(v.id("materials"))),
+    status: v.union(
+      v.literal("active"),
+      v.literal("cancelled"),
+      v.literal("completed"),
+    ),
+  })
+    .index("by_serviceId", ["serviceId"])
+    .index("by_startTime", ["startTime"])
+    .index("by_serviceId_startTime", ["serviceId", "startTime"])
+    .index("by_status", ["status"]),
 
   receipts: defineTable({
     receiptString: v.string(),
@@ -325,6 +339,10 @@ export default defineSchema({
     sender: v.union(v.string(), v.id("userProfile")),
     room: v.id("rooms"),
     threadId: v.id("threads"),
+    moderationStatus: v.optional(
+      v.union(v.literal("clean"), v.literal("flagged")),
+    ),
+    moderationCategory: v.optional(v.string()),
   })
     .index("by_room_and_thread", ["room", "threadId"])
     .searchIndex("search_content", {

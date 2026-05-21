@@ -72,26 +72,14 @@ export function ServiceDetailClient({
   };
 
   const getPricingDisplays = (cat: typeof service.serviceCategory) => {
-    const displays = [];
+    const displays: Array<{
+      label: string;
+      price: number;
+      unit: string;
+      isUp: boolean;
+    }> = [];
 
-    if (cat.type === "WORKSHOP") {
-      displays.push({
-        label: "Regular Price",
-        price: cat.amount,
-        unit: "fixed",
-        isUp: false,
-      });
-      if (cat.variants) {
-        for (const variant of cat.variants) {
-          displays.push({
-            label: `${variant.name} Price`,
-            price: variant.amount,
-            unit: "fixed",
-            isUp: true,
-          });
-        }
-      }
-    } else if (cat.type === "FABRICATION") {
+    if (cat.type === "FABRICATION") {
       displays.push({
         label: "Regular Base",
         price: cat.setupFee,

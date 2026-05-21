@@ -4,6 +4,7 @@ import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { FileUpload } from "@/components/file-upload/file-upload";
 import { UploadedFile } from "@/components/file-upload/types";
 import { DetailCard } from "./detail-card";
+import { toast } from "sonner";
 
 interface ResolvedFile {
   url?: string | null;
@@ -64,6 +65,9 @@ export function AttachmentsCard({
         <FileUpload
           value={editFiles}
           onFilesChange={setEditFiles}
+          onUploadError={(error) => {
+            toast.error(error.message || "Failed to upload file");
+          }}
           variant="minimal"
           title="Add files"
           multiple
