@@ -96,7 +96,7 @@ export function InlineResourceSelect({
                     key={opt.type}
                     type="button"
                     onClick={() => setResourceType(opt.type)}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-black bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
                   >
                     <Plus className="h-3 w-3" />
                     {opt.label}

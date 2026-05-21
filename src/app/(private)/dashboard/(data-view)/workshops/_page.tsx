@@ -420,14 +420,14 @@ export function WorkshopsPage() {
           {!isClient && (
             <div className="flex shrink-0 items-center gap-2">
               <Link href="/dashboard/workshops/add-workshop">
-                <Button className="inline-flex h-8 items-center gap-1.5 border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]">
+                <Button className="inline-flex h-8 items-center gap-1.5 border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none">
                   <Plus className="h-3.5 w-3.5" strokeWidth={3} />
                   Add Workshop
                 </Button>
               </Link>
               <Button
                 onClick={() => openAddSession()}
-                className="inline-flex h-8 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_#000]"
+                className="inline-flex h-8 items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
               >
                 <Plus className="h-3.5 w-3.5" strokeWidth={3} />
                 Add Session

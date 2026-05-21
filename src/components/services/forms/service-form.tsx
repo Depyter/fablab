@@ -125,7 +125,7 @@ export function ServiceForm({
             title="Discard changes?"
             description="Are you sure you want to discard your changes? This cannot be undone."
             baseActionText="Discard"
-            confirmButtonText="Confirm Discard"
+            confirmButtonText="Confirm"
             className="h-9 border-2 border-black bg-white px-5 text-[12px] font-black uppercase tracking-wider text-black"
           />
           <form.Subscribe
