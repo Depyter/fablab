@@ -118,7 +118,11 @@ const fieldComponents = {
       </Field>
     );
   },
-  WorkshopTimeSlotPicker: (props: { schedules?: WorkshopSchedule[] }) => {
+  WorkshopTimeSlotPicker: (props: {
+    schedules?: WorkshopSchedule[];
+    serviceName?: string;
+    serviceCategory?: string;
+  }) => {
     const field = useFieldContext<WorkshopTimeSlotValue>();
     return (
       <>
@@ -126,6 +130,8 @@ const fieldComponents = {
           value={field.state.value}
           onChange={field.handleChange}
           schedules={props.schedules}
+          serviceName={props.serviceName}
+          serviceCategory={props.serviceCategory}
         />
         {field.state.meta.errors?.length > 0 && (
           <FieldError

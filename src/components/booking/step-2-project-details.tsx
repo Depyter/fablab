@@ -225,7 +225,15 @@ export function Step2ProjectDetails({
                     <Input
                       id="name-1"
                       value={field.state.value}
-                      onBlur={field.handleBlur}
+                      onBlur={(e) => {
+                        field.handleBlur();
+                        if (e.target.value.trim()) {
+                          posthog.capture("booking_project_name_entered", {
+                            service_name: serviceName,
+                            service_category: serviceCategory,
+                          });
+                        }
+                      }}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
                       placeholder="e.g. Custom Cup"
@@ -248,7 +256,18 @@ export function Step2ProjectDetails({
                     <Textarea
                       id="description-1"
                       value={field.state.value}
-                      onBlur={field.handleBlur}
+                      onBlur={(e) => {
+                        field.handleBlur();
+                        if (e.target.value.trim()) {
+                          posthog.capture(
+                            "booking_project_description_entered",
+                            {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                            },
+                          );
+                        }
+                      }}
                       onChange={(e) => field.handleChange(e.target.value)}
                       required
                       className="min-h-20 resize-none md:min-h-32"
@@ -273,7 +292,15 @@ export function Step2ProjectDetails({
                 <Textarea
                   id="notes-1"
                   value={field.state.value}
-                  onBlur={field.handleBlur}
+                  onBlur={(e) => {
+                    field.handleBlur();
+                    if (e.target.value.trim()) {
+                      posthog.capture("booking_notes_entered", {
+                        service_name: serviceName,
+                        service_category: serviceCategory,
+                      });
+                    }
+                  }}
                   onChange={(e) => field.handleChange(e.target.value)}
                   className="min-h-12 resize-none md:min-h-24"
                   placeholder="Color preferences, dimensional tolerances..."
@@ -295,7 +322,14 @@ export function Step2ProjectDetails({
                   </Label>
                   <Select
                     value={field.state.value}
-                    onValueChange={(val) => field.handleChange(val)}
+                    onValueChange={(val) => {
+                      field.handleChange(val);
+                      posthog.capture("booking_pricing_tier_selected", {
+                        service_name: serviceName,
+                        service_category: serviceCategory,
+                        pricing_tier: val,
+                      });
+                    }}
                     required
                   >
                     <SelectTrigger
@@ -395,6 +429,11 @@ export function Step2ProjectDetails({
                       onValueChange={(val) => {
                         if (isProjectMaterial(val)) {
                           field.handleChange(val);
+                          posthog.capture("booking_material_selected", {
+                            service_name: serviceName,
+                            service_category: serviceCategory,
+                            material_option: val,
+                          });
                         }
                       }}
                     />
@@ -436,11 +475,29 @@ export function Step2ProjectDetails({
                                             ...selected,
                                             m._id,
                                           ]);
+                                          posthog.capture(
+                                            "booking_lab_material_added",
+                                            {
+                                              service_name: serviceName,
+                                              service_category: serviceCategory,
+                                              material_id: m._id,
+                                              material_name: m.name,
+                                            },
+                                          );
                                         } else {
                                           field.handleChange(
                                             selected.filter(
                                               (id) => id !== m._id,
                                             ),
+                                          );
+                                          posthog.capture(
+                                            "booking_lab_material_removed",
+                                            {
+                                              service_name: serviceName,
+                                              service_category: serviceCategory,
+                                              material_id: m._id,
+                                              material_name: m.name,
+                                            },
                                           );
                                         }
                                       }}
@@ -484,7 +541,11 @@ export function Step2ProjectDetails({
               return (
                 <>
                   {serviceCategory === "WORKSHOP" ? (
-                    <field.WorkshopTimeSlotPicker schedules={schedules} />
+                    <field.WorkshopTimeSlotPicker
+                      schedules={schedules}
+                      serviceName={serviceName}
+                      serviceCategory={serviceCategory}
+                    />
                   ) : is3DPrinting ? (
                     <>
                       <div className="flex flex-col gap-1">
@@ -499,6 +560,32 @@ export function Step2ProjectDetails({
                           endTime: dateTimeValue.endTime,
                         }}
                         onChange={(val) => {
+                          if (val.date && val.date !== dateTimeValue.date) {
+                            posthog.capture("booking_date_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                            });
+                          }
+                          if (
+                            val.startTime &&
+                            val.startTime !== dateTimeValue.startTime
+                          ) {
+                            posthog.capture("booking_start_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              start_time: val.startTime,
+                            });
+                          }
+                          if (
+                            val.endTime &&
+                            val.endTime !== dateTimeValue.endTime
+                          ) {
+                            posthog.capture("booking_end_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              end_time: val.endTime,
+                            });
+                          }
                           field.handleChange({
                             ...dateTimeValue,
                             ...val,
@@ -522,6 +609,32 @@ export function Step2ProjectDetails({
                           endTime: dateTimeValue.endTime,
                         }}
                         onChange={(val) => {
+                          if (val.date && val.date !== dateTimeValue.date) {
+                            posthog.capture("booking_date_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                            });
+                          }
+                          if (
+                            val.startTime &&
+                            val.startTime !== dateTimeValue.startTime
+                          ) {
+                            posthog.capture("booking_start_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              start_time: val.startTime,
+                            });
+                          }
+                          if (
+                            val.endTime &&
+                            val.endTime !== dateTimeValue.endTime
+                          ) {
+                            posthog.capture("booking_end_time_selected", {
+                              service_name: serviceName,
+                              service_category: serviceCategory,
+                              end_time: val.endTime,
+                            });
+                          }
                           field.handleChange({
                             ...dateTimeValue,
                             ...val,

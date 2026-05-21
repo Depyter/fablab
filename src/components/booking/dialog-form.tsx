@@ -86,6 +86,20 @@ export function BookingDialog({
   const [step, setStep] = useState<Step>(
     serviceCategory === "WORKSHOP" ? 2 : 1,
   );
+
+  const trackStepViewed = (newStep: Step) => {
+    posthog.capture("booking_step_viewed", {
+      service_id: serviceId,
+      service_name: serviceName,
+      service_category: serviceCategory,
+      step: newStep,
+    });
+  };
+
+  const changeStep = (newStep: Step) => {
+    setStep(newStep);
+    trackStepViewed(newStep);
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -265,13 +279,22 @@ export function BookingDialog({
 
   const handleNextStep = (e?: React.FormEvent) => {
     e?.preventDefault();
-    setStep((prev) => (prev < 3 ? prev + 1 : prev) as Step);
+    const nextStep = (step < 3 ? step + 1 : step) as Step;
+    changeStep(nextStep);
   };
 
   const handlePrevStep = () => {
     const minStep = serviceCategory === "WORKSHOP" ? 2 : 1;
     if (step > minStep) {
-      setStep((prev) => (prev - 1) as Step);
+      const prevStep = (step - 1) as Step;
+      posthog.capture("booking_step_back_clicked", {
+        service_id: serviceId,
+        service_name: serviceName,
+        service_category: serviceCategory,
+        from_step: step,
+        to_step: prevStep,
+      });
+      changeStep(prevStep);
     }
   };
 
@@ -285,9 +308,21 @@ export function BookingDialog({
     if (open) {
       // Reset form when opening
       form.reset();
+      posthog.capture("booking_dialog_opened", {
+        service_id: serviceId,
+        service_name: serviceName,
+        service_category: serviceCategory,
+      });
+      trackStepViewed(serviceCategory === "WORKSHOP" ? 2 : 1);
     } else {
       // Reset state on close
       form.reset();
+      posthog.capture("booking_dialog_closed", {
+        service_id: serviceId,
+        service_name: serviceName,
+        service_category: serviceCategory,
+        last_step: step,
+      });
       setTimeout(() => {
         setStep(serviceCategory === "WORKSHOP" ? 2 : 1);
         setIsSubmitting(false);
@@ -300,13 +335,31 @@ export function BookingDialog({
   const handleManualClose = () => {
     // Check if form has any inputs
     if (hasFormInputs(form.state.values)) {
+      posthog.capture("booking_dialog_discard_attempted", {
+        service_id: serviceId,
+        service_name: serviceName,
+        service_category: serviceCategory,
+        last_step: step,
+      });
       setShowConfirmClose(true);
     } else {
+      posthog.capture("booking_dialog_closed", {
+        service_id: serviceId,
+        service_name: serviceName,
+        service_category: serviceCategory,
+        last_step: step,
+      });
       setIsOpen(false);
     }
   };
 
   const handleConfirmClose = () => {
+    posthog.capture("booking_dialog_discard_confirmed", {
+      service_id: serviceId,
+      service_name: serviceName,
+      service_category: serviceCategory,
+      last_step: step,
+    });
     form.reset();
     setShowConfirmClose(false);
     setIsOpen(false);
@@ -319,7 +372,7 @@ export function BookingDialog({
       return;
     }
 
-    posthog.capture("booking_dialog_opened", {
+    posthog.capture("booking_create_clicked", {
       service_id: serviceId,
       service_name: serviceName,
       service_category: serviceCategory,
@@ -407,6 +460,8 @@ export function BookingDialog({
                 children={([canSubmit, formIsSubmitting]) => (
                   <EstimateProjectDetails
                     serviceName={serviceName}
+                    serviceId={serviceId}
+                    serviceCategory={serviceCategory}
                     data={{
                       ...form.state.values,
                       files: form.state.values.files,

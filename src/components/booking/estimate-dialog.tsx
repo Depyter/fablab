@@ -7,6 +7,7 @@ import {
 
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
+import posthog from "posthog-js";
 
 import { FieldSeparator } from "@/components/ui/field";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
@@ -45,6 +46,8 @@ export type BookingFormValues = {
 
 interface EstimateProjectDetailsProps {
   serviceName: string;
+  serviceId?: string;
+  serviceCategory?: string;
   data: BookingFormValues;
   servicePricing?: ServicePricing;
   serviceMaterials?: Array<{
@@ -61,6 +64,8 @@ interface EstimateProjectDetailsProps {
 
 export function EstimateProjectDetails({
   serviceName,
+  serviceId,
+  serviceCategory,
   data,
   servicePricing,
   serviceMaterials,
@@ -71,7 +76,28 @@ export function EstimateProjectDetails({
   const [isChecked, setIsChecked] = useState(false);
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsChecked(e.target.checked);
+    const checked = e.target.checked;
+    setIsChecked(checked);
+    posthog.capture("booking_terms_toggled", {
+      service_id: serviceId,
+      service_name: serviceName,
+      service_category: serviceCategory,
+      accepted: checked,
+    });
+  };
+
+  const handleSubmitClick = () => {
+    posthog.capture("booking_submit_clicked", {
+      service_id: serviceId,
+      service_name: serviceName,
+      service_category: serviceCategory,
+      service_type: data.serviceType,
+      material_option: data.material,
+      file_count: data.files.length,
+      has_date: !!data.dateTime.date,
+      has_start_time: !!data.dateTime.startTime,
+      has_end_time: !!data.dateTime.endTime,
+    });
   };
 
   const durationMins = getDurationMinutesFromTimeRange(
@@ -363,6 +389,7 @@ export function EstimateProjectDetails({
         </button>
         <button
           type="submit"
+          onClick={handleSubmitClick}
           disabled={isSubmitting || canSubmit === false || !isChecked}
           className="inline-flex h-9 w-full items-center justify-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50 sm:w-auto"
         >
