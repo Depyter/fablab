@@ -511,6 +511,3 @@ export function ReportExportButton({ data }: ReportExportButtonProps) {
     </Popover>
   );
 }
-er>
-  );
-}
