@@ -1,6 +1,10 @@
 import { ConvexError, v } from "convex/values";
 import { authMutation, authQuery } from "./helper";
-import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "./constants";
+import {
+  ALLOWED_MIME_TYPES,
+  MAX_FILE_SIZE_BYTES,
+  FileStatus,
+} from "./constants";
 import { internalAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 
@@ -75,7 +79,7 @@ export const getUrl = authQuery({
     if (!file) throw new ConvexError("File not found.");
 
     // Block access to files flagged by moderation.
-    if (file.status === "flagged") {
+    if (file.status === FileStatus.FLAGGED) {
       throw new ConvexError(
         "This file was removed for violating content policies.",
       );

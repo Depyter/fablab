@@ -2,6 +2,7 @@ import { v, ConvexError } from "convex/values";
 import { authMutation, claimFiles } from "../helper";
 import { internalAction, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { FileStatus } from "../constants";
 
 export const sendMessage = authMutation({
   args: {
@@ -21,7 +22,7 @@ export const sendMessage = authMutation({
             .query("files")
             .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
             .first();
-          return f?.status === "flagged" ? null : storageId;
+          return f?.status === FileStatus.FLAGGED ? null : storageId;
         }),
       );
       cleanFiles = fileStatuses.filter(Boolean) as typeof args.files;
@@ -29,7 +30,7 @@ export const sendMessage = authMutation({
 
     const messageId = await ctx.db.insert("messages", {
       content: args.content,
-      file: cleanFiles,
+      file: cleanFiles && cleanFiles.length > 0 ? cleanFiles : undefined,
       sender: ctx.profile._id,
       room: args.room,
       threadId: args.threadId,

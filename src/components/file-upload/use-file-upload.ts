@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useConvex } from "convex/react";
-import { useUploadFiles } from "@xixixao/uploadstuff/react";
+import { useUploadFiles } from "@/lib/use-upload-files";
 import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
 import type { Id } from "@convex/_generated/dataModel";
@@ -97,38 +97,11 @@ export function useFileUpload({
   const trackUpload = useMutation(api.files.trackUpload);
   const convex = useConvex();
 
-  // ── UploadStuff headless hook ─────────────────────────────────────────────
-  // Manages the Convex file-orchestration loop (short-lived URL,
-  // chunking, binary stream) and provides upload progress callbacks.
-  //
-  // We intentionally omit onUploadBegin because uploadFile already
-  // sets status to "uploading" by File reference *before* calling
-  // startUpload. Matching by fileName would incorrectly mutate files
-  // with duplicate names (e.g. revert "success" back to "uploading").
-  //
-  // onUploadProgress fires with an aggregate 0-100 value across all
-  // concurrently uploading files. Since we serialize uploads (one file
-  // at a time via the queue below), the aggregate IS the per-file
-  // progress. The `p > f.progress` guard ensures monotonic updates
-  // in case the library ever fires reordered events.
-  const { startUpload } = useUploadFiles(generateUploadUrl, {
-    onUploadProgress: (p: number) => {
-      setUploadingFiles((prev) =>
-        prev.map((f) =>
-          f.status === "uploading" && p > f.progress
-            ? { ...f, progress: p }
-            : f,
-        ),
-      );
-    },
-    onUploadError: (e: unknown) => {
-      // Capture the real error so we can surface it in the results.length===0
-      // path below instead of a generic placeholder.
-      const message = e instanceof Error ? e.message : String(e);
-      lastUploadErrorRef.current = message;
-      console.error("UploadStuff internal error:", e);
-    },
-  });
+  // ── UploadStuff headless hook (local implementation) ────────────────────
+  // Replaces @xixixao/uploadstuff/react. Uploads are already serialized
+  // by drainUploadQueue below; the hook also generates one URL per file
+  // internally (avoids single-use-URL sharing bugs).
+  const { startUpload } = useUploadFiles(generateUploadUrl);
 
   // Stable refs so effects never need callbacks in their dependency arrays.
   const onUploadingChangeRef = useRef(onUploadingChange);
@@ -240,7 +213,6 @@ export function useFileUpload({
   // ensures `onUploadProgress` always reflects the single in-flight file.
   const uploadQueueRef = useRef<File[]>([]);
   const processingRef = useRef(false);
-  const lastUploadErrorRef = useRef<string | null>(null);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -285,49 +257,20 @@ export function useFileUpload({
       );
 
       try {
-        // Uploadstuff handles the full Convex orchestration loop:
-        //  1. Acquires short-lived upload URL
-        //  2. Chunks/sends the binary stream (via XMLHttpRequest for
-        //     native progress events)
-        //  3. Returns the standard UploadFileResponse payload
-        const results = await startUpload([file]);
-
-        // startUpload swallows errors internally and returns [] on failure.
-        if (results.length === 0) {
-          const cause = lastUploadErrorRef.current;
-          lastUploadErrorRef.current = null;
-          const errorMessage = cause ?? "Upload failed — no response received";
-          setUploadingFiles((prev) =>
-            prev.map((f) =>
-              f.file === file
-                ? { ...f, status: "error" as const, error: errorMessage }
-                : f,
-            ),
-          );
-          onUploadError?.(new Error(errorMessage), file);
-
-          // Auto-remove errored files after a delay so they don't
-          // accumulate in the UI forever.
-          setTimeout(() => {
-            revokePreviewUrl(file);
-            setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
-          }, 5000);
-          return;
-        }
-
-        lastUploadErrorRef.current = null; // clear on success
+        // Upload the file via XMLHttpRequest for native progress events.
+        // Each file gets its own short-lived Convex upload URL.
+        const results = await startUpload([file], {
+          onUploadProgress: (p: number) => {
+            setUploadingFiles((prev) =>
+              prev.map((f) =>
+                f.file === file && p > f.progress ? { ...f, progress: p } : f,
+              ),
+            );
+          },
+        });
 
         const targetResult = results[0];
-
-        // Runtime guard: uploadstuff types `response` as `unknown`.
-        // Validate the shape before trusting the cast.
-        const response = targetResult.response as Partial<{
-          storageId: string;
-        }> | null;
-        const storageId = response?.storageId;
-        if (typeof storageId !== "string") {
-          throw new Error("Upload succeeded but response is missing storageId");
-        }
+        const { storageId } = targetResult.response;
 
         // Persist metadata in our Convex schema.
         await trackUpload({

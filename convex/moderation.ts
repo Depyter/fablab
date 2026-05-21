@@ -1,21 +1,21 @@
 import { v } from "convex/values";
 import { internalAction, internalMutation } from "./_generated/server";
 import OpenAI from "openai";
-import { MODERATION_CATEGORY_LABELS } from "./constants";
+import { MODERATION_CATEGORY_LABELS, FileStatus } from "./constants";
 
 // ---------------------------------------------------------------------------
 // OpenAI client — instantiated lazily so the module doesn't fail at import
 // time when OPENAI_API_KEY is missing from the environment.
 // ---------------------------------------------------------------------------
 
-let _openai: OpenAI | null = null;
+let openaiClient: OpenAI | null = null;
 function getOpenAI(): OpenAI {
-  if (!_openai) {
-    _openai = new OpenAI({
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
   }
-  return _openai;
+  return openaiClient;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,8 +112,14 @@ export const handleFileModerationResult = internalMutation({
       await ctx.storage.delete(file.storageId);
       // Mark database record as flagged with metadata.
       await ctx.db.patch(args.fileId, {
-        status: "flagged",
+        status: FileStatus.FLAGGED,
         moderationCategory: args.categories,
+        moderatedAt: Date.now(),
+      });
+    } else {
+      // Mark as clean so the frontend can differentiate "not yet
+      // moderated" from "moderated and clean".
+      await ctx.db.patch(args.fileId, {
         moderatedAt: Date.now(),
       });
     }
