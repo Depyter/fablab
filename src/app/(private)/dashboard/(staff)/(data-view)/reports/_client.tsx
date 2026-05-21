@@ -9,6 +9,16 @@ import { ReportRevenueSection } from "@/components/reports/report-revenue-sectio
 import { ReportOverviewSection } from "@/components/reports/report-overview-section";
 import type { Id } from "@convex/_generated/dataModel";
 
+export const REPORT_TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "projects", label: "Projects" },
+  { value: "resources", label: "Resources" },
+  { value: "materials", label: "Materials" },
+  { value: "revenue", label: "Revenue" },
+] as const;
+
+export type ReportTabValue = (typeof REPORT_TABS)[number]["value"];
+
 interface ReportsClientProps {
   dateFrom: number;
   dateTo: number;
@@ -64,27 +74,32 @@ interface ReportsClientProps {
         bookingCount: number;
       }>
     | undefined;
+  activeTab: ReportTabValue;
+  onTabChange: (value: ReportTabValue) => void;
 }
 
 export function ReportsClient({
   metrics,
   revenue,
   downtime,
+  activeTab,
+  onTabChange,
 }: ReportsClientProps) {
   const isLoading =
     metrics === undefined || revenue === undefined || downtime === undefined;
 
   return (
     <Tabs
-      defaultValue="overview"
+      value={activeTab}
+      onValueChange={(value) => onTabChange(value as ReportTabValue)}
       className="w-full flex flex-col min-h-0 flex-1"
     >
-      <BrandTabsList>
-        <BrandTabsTrigger value="overview">Overview</BrandTabsTrigger>
-        <BrandTabsTrigger value="projects">Projects</BrandTabsTrigger>
-        <BrandTabsTrigger value="resources">Resources</BrandTabsTrigger>
-        <BrandTabsTrigger value="materials">Materials</BrandTabsTrigger>
-        <BrandTabsTrigger value="revenue">Revenue</BrandTabsTrigger>
+      <BrandTabsList className="hidden sm:flex">
+        {REPORT_TABS.map((tab) => (
+          <BrandTabsTrigger key={tab.value} value={tab.value}>
+            {tab.label}
+          </BrandTabsTrigger>
+        ))}
       </BrandTabsList>
 
       <TabsContent
