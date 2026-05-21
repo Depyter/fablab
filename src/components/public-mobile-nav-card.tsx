@@ -185,7 +185,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
             aria-modal="true"
             aria-labelledby="public-mobile-nav-title"
             className={cn(
-              "relative flex max-h-[calc(100svh-5rem)] origin-top-right flex-col overflow-hidden rounded-[2.35rem] border-4 border-black bg-background p-4 shadow-[12px_12px_0_0_#000]",
+              "relative flex max-h-[calc(100svh-5rem)] origin-top-right flex-col overflow-hidden rounded-[2.35rem] border-4 border-black bg-background p-4 shadow-[12px_12px_0_0_#000] opacity-0",
               open ? "pointer-events-auto" : "pointer-events-none",
             )}
           >
