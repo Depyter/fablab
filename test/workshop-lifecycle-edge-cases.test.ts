@@ -5,6 +5,7 @@ import { api, internal } from "../convex/_generated/api";
 import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
+import { TestConvexForDataModel } from "convex-test";
 
 process.env.RESEND_TEST_MODE = "true";
 process.env.RESEND_API_KEY ??= "test-api-key";
@@ -35,7 +36,7 @@ describe("workshop lifecycle edge cases", () => {
     return { t, tClient, tAdmin };
   }
 
-  async function createWorkshopService(tAdmin: any) {
+  async function createWorkshopService(tAdmin: TestConvexForDataModel) {
     return await tAdmin.mutation(api.services.mutate.addService, {
       name: "3D Printing Workshop",
       images: [],
@@ -62,29 +63,35 @@ describe("workshop lifecycle edge cases", () => {
     const endTime = startTime + 2 * HOUR_MS;
 
     // 1. Create a session
-    const sessionId = await tAdmin.mutation(api.workshopSessions.mutate.create, {
-      serviceId,
-      date: dayStart,
-      startTime,
-      endTime,
-      maxSlots: 10,
-    });
-
-    // 2. Client books the workshop
-    const { projectId } = await tClient.mutation(api.projects.mutate.createProject, {
-      name: "My Workshop Project",
-      description: "I want to learn 3D printing",
-      fulfillmentMode: "self-service",
-      material: "provide-own",
-      service: serviceId,
-      pricing: "Default",
-      notes: "None",
-      booking: {
+    const sessionId = await tAdmin.mutation(
+      api.workshopSessions.mutate.create,
+      {
+        serviceId,
+        date: dayStart,
         startTime,
         endTime,
-        date: dayStart,
+        maxSlots: 10,
       },
-    });
+    );
+
+    // 2. Client books the workshop
+    const { projectId } = await tClient.mutation(
+      api.projects.mutate.createProject,
+      {
+        name: "My Workshop Project",
+        description: "I want to learn 3D printing",
+        fulfillmentMode: "self-service",
+        material: "provide-own",
+        service: serviceId,
+        pricing: "Default",
+        notes: "None",
+        booking: {
+          startTime,
+          endTime,
+          date: dayStart,
+        },
+      },
+    );
 
     // Verify project is pending and session has 1 slot used
     let project = await t.run(async (ctx) => ctx.db.get(projectId));
