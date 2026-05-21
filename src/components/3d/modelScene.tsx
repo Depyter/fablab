@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useCallback, useState, Suspense } from "react";
 import { useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, Center, useGLTF } from "@react-three/drei";
+import {
+  PerspectiveCamera,
+  OrbitControls,
+  Environment,
+  Center,
+  useGLTF,
+  GizmoHelper,
+  GizmoViewport,
+} from "@react-three/drei";
 import { STLLoader, OBJLoader } from "three-stdlib";
 import * as THREE from "three";
 import { type Vector3, type ModelData, computeModelData } from "./utils";
@@ -22,12 +30,15 @@ interface ModelSceneProps {
   fileUrl: string;
   format?: ModelFormat | null;
   onData?: (data: ModelData) => void;
+  clippingPlanes?: THREE.Plane[];
+  showHelpers?: boolean;
 }
 
 interface ModelProps {
   fileUrl: string;
   onZoomConfig: (cfg: ZoomConfig) => void;
   onData?: (data: ModelData) => void;
+  clippingPlanes?: THREE.Plane[];
 }
 
 // ---------------------------------------------------------------------------
@@ -98,7 +109,7 @@ function extractFromObject3D(object: THREE.Object3D): {
 // Per-format model components
 // ---------------------------------------------------------------------------
 
-function STLModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
+function STLModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps) {
   const geometry = useLoader(STLLoader, fileUrl);
 
   const { position, zoomConfig, data } = useMemo(() => {
@@ -134,12 +145,19 @@ function STLModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
       rotation={[-Math.PI / 2, 0, 0]}
       position={position}
     >
-      <meshStandardMaterial color="#888888" roughness={0.5} metalness={0.4} />
+      <meshStandardMaterial
+        color="#888888"
+        roughness={0.5}
+        metalness={0.4}
+        clippingPlanes={clippingPlanes}
+        clipShadows={true}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   );
 }
 
-function GLTFModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
+function GLTFModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps) {
   const { scene } = useGLTF(fileUrl);
 
   // Clone so the cached GLTF scene isn't mutated by other renders.
@@ -164,6 +182,23 @@ function GLTFModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
     onData?.(data);
   }, [zoomConfig, data, onZoomConfig, onData]);
 
+  // Apply clipping planes reactively to all materials in the scene
+  useEffect(() => {
+    clonedScene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          if (mat) {
+            mat.clippingPlanes = clippingPlanes || [];
+            mat.clipShadows = true;
+            mat.side = THREE.DoubleSide;
+            mat.needsUpdate = true;
+          }
+        });
+      }
+    });
+  }, [clonedScene, clippingPlanes]);
+
   return (
     <Center bottom>
       <primitive object={clonedScene} />
@@ -171,7 +206,7 @@ function GLTFModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
   );
 }
 
-function OBJModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
+function OBJModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps) {
   const obj = useLoader(OBJLoader, fileUrl);
 
   // Clone so the cached OBJ group isn't mutated between renders.
@@ -211,11 +246,72 @@ function OBJModel({ fileUrl, onZoomConfig, onData }: ModelProps) {
     onData?.(data);
   }, [zoomConfig, data, onZoomConfig, onData]);
 
+  // Apply clipping planes reactively to all materials in the object
+  useEffect(() => {
+    clonedObj.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          if (mat) {
+            mat.clippingPlanes = clippingPlanes || [];
+            mat.clipShadows = true;
+            mat.side = THREE.DoubleSide;
+            mat.needsUpdate = true;
+          }
+        });
+      }
+    });
+  }, [clonedObj, clippingPlanes]);
+
   return (
     <Center bottom>
       <primitive object={clonedObj} />
     </Center>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Clipping Plane Helper Component
+// ---------------------------------------------------------------------------
+interface ClippingPlaneHelperProps {
+  plane: THREE.Plane;
+  size: number;
+}
+
+function getPlaneColor(plane: THREE.Plane): THREE.Color {
+  const nx = Math.abs(plane.normal.x);
+  const ny = Math.abs(plane.normal.y);
+  const nz = Math.abs(plane.normal.z);
+
+  if (nx > ny && nx > nz) {
+    return new THREE.Color("#06b6d4"); // Cyan for X
+  }
+  if (ny > nx && ny > nz) {
+    return new THREE.Color("#eab308"); // Yellow for Y
+  }
+  return new THREE.Color("#ef4444"); // Red for Z
+}
+
+function ClippingPlaneHelper({ plane, size }: ClippingPlaneHelperProps) {
+  const helper = useMemo(() => {
+    const color = getPlaneColor(plane);
+    const hp = new THREE.PlaneHelper(plane, size, color);
+    hp.traverse((child) => {
+      if (child instanceof THREE.Line || child instanceof THREE.Mesh) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          if (mat) {
+            mat.polygonOffset = true;
+            mat.polygonOffsetFactor = 1;
+            mat.polygonOffsetUnits = 1;
+          }
+        });
+      }
+    });
+    return hp;
+  }, [plane, size]);
+
+  return <primitive object={helper} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +322,8 @@ export default function ModelScene({
   fileUrl,
   format,
   onData,
+  clippingPlanes,
+  showHelpers = true,
 }: ModelSceneProps) {
   const [zoomConfig, setZoomConfig] = useState<ZoomConfig>({
     minDistance: 1,
@@ -241,8 +339,18 @@ export default function ModelScene({
   // Default to STL for unknown/null format (existing behaviour).
   const isSTL = !isGLTF && !isOBJ;
 
+  // Compute standard helper size dynamically from the zoom settings
+  const helperSize = Math.max(zoomConfig.minDistance * 5, 20);
+
   return (
     <>
+      <PerspectiveCamera
+        makeDefault
+        position={[60, 80, 120]}
+        fov={50}
+        near={Math.max(zoomConfig.minDistance / 5, 0.5)}
+        far={zoomConfig.maxDistance * 1.5}
+      />
       <ambientLight intensity={0.6} />
       <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
       <pointLight position={[0, 10, 0]} intensity={0.5} color="#3b82f6" />
@@ -253,6 +361,7 @@ export default function ModelScene({
             fileUrl={fileUrl}
             onZoomConfig={handleZoomConfig}
             onData={onData}
+            clippingPlanes={clippingPlanes}
           />
         )}
         {isGLTF && (
@@ -260,6 +369,7 @@ export default function ModelScene({
             fileUrl={fileUrl}
             onZoomConfig={handleZoomConfig}
             onData={onData}
+            clippingPlanes={clippingPlanes}
           />
         )}
         {isOBJ && (
@@ -267,8 +377,18 @@ export default function ModelScene({
             fileUrl={fileUrl}
             onZoomConfig={handleZoomConfig}
             onData={onData}
+            clippingPlanes={clippingPlanes}
           />
         )}
+        {showHelpers &&
+          clippingPlanes &&
+          clippingPlanes.map((plane, idx) => (
+            <ClippingPlaneHelper
+              key={`helper-${idx}`}
+              plane={plane}
+              size={helperSize}
+            />
+          ))}
       </Suspense>
 
       <OrbitControls
@@ -285,6 +405,16 @@ export default function ModelScene({
           RIGHT: THREE.MOUSE.PAN,
         }}
       />
+
+      <GizmoHelper
+        alignment="top-right"
+        margin={[80, 80]}
+      >
+        <GizmoViewport
+          axisColors={["#06b6d4", "#eab308", "#ef4444"]} // cyan for X, yellow for Y, red for Z
+          labelColor="white"
+        />
+      </GizmoHelper>
     </>
   );
 }

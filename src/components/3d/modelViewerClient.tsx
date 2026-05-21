@@ -5,7 +5,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 
 import { Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Focus } from "lucide-react";
+import { Focus, Scissors } from "lucide-react";
 import * as THREE from "three";
 import type { ModelData } from "./utils";
 import { Button } from "@/components/ui/button";
@@ -123,6 +123,8 @@ function CameraAnimator({
 // ModelContent — extracted so it can be keyed on fileUrl for a fresh mount
 // (avoids calling setState in an effect to reset loading state).
 // ---------------------------------------------------------------------------
+const MIN_THICKNESS_RATIO = 0.002; // 0.2% of model dimension to prevent thin slice rendering artifacts
+
 function ModelContent({
   fileUrl,
   format,
@@ -136,6 +138,13 @@ function ModelContent({
   } | null>(null);
 
   const [modelData, setModelData] = useState<ModelData | null>(null);
+  const [showClippingPanel, setShowClippingPanel] = useState(false);
+  const [clippingConfig, setClippingConfig] = useState({
+    x: { enabled: false, value: 0, dir: -1 },
+    y: { enabled: false, value: 0, dir: -1 },
+    z: { enabled: false, value: 0, dir: -1 },
+    showHelpers: true,
+  });
 
   const loadingPhase: "convex" | "three" | "done" = !modelData
     ? "three"
@@ -159,14 +168,166 @@ function ModelContent({
       ] ?? COMPLEXITY_LEVELS[3])
     : null;
 
+  // Compute bounding box dimensions and limits normalized in world space
+  const worldBounds = useMemo(() => {
+    if (!modelData) return null;
+    const localX = modelData.boundingBox.max.x - modelData.boundingBox.min.x;
+    const localY = modelData.boundingBox.max.y - modelData.boundingBox.min.y;
+    const localZ = modelData.boundingBox.max.z - modelData.boundingBox.min.z;
+
+    if (format === "stl") {
+      // STL is rotated in STLModel: rotation={[-Math.PI / 2, 0, 0]}
+      // local X -> world X
+      // local Y -> world Z
+      // local Z -> world Y
+      return {
+        xMin: -localX / 2,
+        xMax: localX / 2,
+        yMin: 0,
+        yMax: localZ,
+        zMin: -localY / 2,
+        zMax: localY / 2,
+      };
+    } else {
+      // GLTF/OBJ are bottomed at Y = 0 and centered on X/Z
+      return {
+        xMin: -localX / 2,
+        xMax: localX / 2,
+        yMin: 0,
+        yMax: localY,
+        zMin: -localZ / 2,
+        zMax: localZ / 2,
+      };
+    }
+  }, [modelData, format]);
+
+  // Use a ref for worldBounds to ensure event handlers always have the latest value
+  // without needing to be recreated on every render (though they currently are).
+  const worldBoundsRef = useRef(worldBounds);
+  useEffect(() => {
+    worldBoundsRef.current = worldBounds;
+  }, [worldBounds]);
+
+  const hasInitializedRef = useRef(false);
+
+  // Proactively set clipping slider initial values once worldBounds are calculated
+  useEffect(() => {
+    if (worldBounds && !hasInitializedRef.current) {
+      setClippingConfig({
+        x: {
+          enabled: false,
+          value: (worldBounds.xMin + worldBounds.xMax) / 2,
+          dir: -1,
+        },
+        y: {
+          enabled: false,
+          value: (worldBounds.yMin + worldBounds.yMax) / 2,
+          dir: -1,
+        },
+        z: {
+          enabled: false,
+          value: (worldBounds.zMin + worldBounds.zMax) / 2,
+          dir: -1,
+        },
+        showHelpers: true,
+      });
+      hasInitializedRef.current = true;
+    }
+  }, [worldBounds]);
+
+  // Construct active THREE.Plane objects based on state
+  const activePlanes = useMemo(() => {
+    if (!modelData || !worldBounds) return [];
+
+    const planes: THREE.Plane[] = [];
+
+    if (clippingConfig.x.enabled) {
+      const normal = new THREE.Vector3(clippingConfig.x.dir, 0, 0);
+      const constant =
+        clippingConfig.x.dir === -1
+          ? clippingConfig.x.value
+          : -clippingConfig.x.value;
+      planes.push(new THREE.Plane(normal, constant));
+    }
+
+    if (clippingConfig.y.enabled) {
+      const normal = new THREE.Vector3(0, clippingConfig.y.dir, 0);
+      const constant =
+        clippingConfig.y.dir === -1
+          ? clippingConfig.y.value
+          : -clippingConfig.y.value;
+      planes.push(new THREE.Plane(normal, constant));
+    }
+
+    if (clippingConfig.z.enabled) {
+      const normal = new THREE.Vector3(0, 0, clippingConfig.z.dir);
+      const constant =
+        clippingConfig.z.dir === -1
+          ? clippingConfig.z.value
+          : -clippingConfig.z.value;
+      planes.push(new THREE.Plane(normal, constant));
+    }
+
+    return planes;
+  }, [clippingConfig, modelData, worldBounds]);
+
+  const handleAxisToggle = (axis: "x" | "y" | "z", enabled: boolean) => {
+    setClippingConfig((prev) => ({
+      ...prev,
+      [axis]: { ...prev[axis], enabled },
+    }));
+  };
+
+  const handleAxisInvert = (axis: "x" | "y" | "z") => {
+    setClippingConfig((prev) => {
+      const newDir = prev[axis].dir === -1 ? 1 : -1;
+      let newValue = prev[axis].value;
+
+      const bounds = worldBoundsRef.current;
+      if (bounds) {
+        const min = bounds[`${axis}Min` as keyof typeof bounds];
+        const max = bounds[`${axis}Max` as keyof typeof bounds];
+        const L = max - min;
+        const minThickness = L * MIN_THICKNESS_RATIO;
+
+        if (newDir === -1) {
+          newValue = Math.max(min + minThickness, Math.min(max, newValue));
+        } else {
+          newValue = Math.max(min, Math.min(max - minThickness, newValue));
+        }
+      }
+
+      return {
+        ...prev,
+        [axis]: { ...prev[axis], dir: newDir, value: newValue },
+      };
+    });
+  };
+
+  const handleAxisValueChange = (axis: "x" | "y" | "z", value: number) => {
+    setClippingConfig((prev) => ({
+      ...prev,
+      [axis]: { ...prev[axis], value },
+    }));
+  };
+
   return (
     <>
       <LoadingOverlay phase={loadingPhase} />
 
-      <Canvas shadows camera={{ position: [60, 80, 120], fov: 50 }}>
+      <Canvas
+        shadows
+        gl={{ localClippingEnabled: true }}
+      >
         <CameraAnimator action={cameraAction} />
         <Suspense fallback={null}>
-          <ModelScene fileUrl={fileUrl} format={format} onData={setModelData} />
+          <ModelScene
+            fileUrl={fileUrl}
+            format={format}
+            onData={setModelData}
+            clippingPlanes={activePlanes}
+            showHelpers={clippingConfig.showHelpers}
+          />
         </Suspense>
       </Canvas>
 
@@ -226,21 +387,186 @@ function ModelContent({
       )}
 
       {loadingPhase === "done" && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            triggerCameraAction("recenter");
+          }}
+          className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 h-8 rounded-full px-4 text-xs font-semibold inline-flex items-center justify-center gap-1.5 bg-fab-teal text-white hover:bg-(--fab-teal)/90 shadow-md transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer select-none outline-none shrink-0 border-0"
+          title="Recenter"
+        >
+          <Focus className="h-3.5 w-3.5 shrink-0" />
+          Recenter
+        </button>
+      )}
+
+      {/* Floating clipping plane toggle button */}
+      {loadingPhase === "done" && (
         <Button
           variant="default"
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
-            triggerCameraAction("recenter");
+            setShowClippingPanel(!showClippingPanel);
           }}
-          className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 h-8 rounded-full px-4 text-xs font-semibold gap-1.5 bg-fab-teal text-white hover:bg-(--fab-teal)/90 shadow-md transition-[background-color,box-shadow] duration-200 hover:translate-x-0 hover:translate-y-0 hover:shadow-md"
-          title="Recenter"
+          className={cn(
+            "absolute bottom-3 right-3 z-10 h-8 w-8 rounded-full p-0 shadow-md border transition-all duration-200 hover:scale-105 active:scale-95",
+            showClippingPanel
+              ? "bg-fab-teal border-fab-teal text-white hover:bg-(--fab-teal)/90"
+              : "bg-black/60 border-white/10 text-white hover:bg-black/80 hover:text-white",
+          )}
+          title="Cross Sections"
         >
-          <Focus className="h-3.5 w-3.5" />
-          Recenter
+          <Scissors className="h-3.5 w-3.5" />
         </Button>
       )}
+
+      {/* Floating clipping planes control panel */}
+      {loadingPhase === "done" && showClippingPanel && worldBounds && (
+        <div className="absolute bottom-13 right-3 z-10 w-72 rounded-2xl border border-white/10 bg-black/85 p-4 shadow-xl backdrop-blur-md flex flex-col gap-3.5 select-none animate-in fade-in slide-in-from-bottom-2 duration-200 text-white">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/90 flex items-center gap-1.5">
+              <Scissors className="h-3.5 w-3.5 text-fab-teal" />
+              Cross Sections
+            </span>
+            <label className="flex items-center gap-1.5 text-[9px] font-semibold text-white/50 cursor-pointer hover:text-white/80 transition-colors">
+              <input
+                type="checkbox"
+                checked={clippingConfig.showHelpers}
+                onChange={(e) =>
+                  setClippingConfig((prev) => ({
+                    ...prev,
+                    showHelpers: e.target.checked,
+                  }))
+                }
+                className="rounded border-white/20 bg-white/5 text-fab-teal focus:ring-0 focus:ring-offset-0 h-3 w-3 cursor-pointer"
+              />
+              Show Planes
+            </label>
+          </div>
+
+          <AxisControl
+            axis="x"
+            label="X Plane"
+            colorClass="text-fab-teal"
+            accentClass="accent-fab-teal"
+            config={clippingConfig.x}
+            bounds={{ min: worldBounds.xMin, max: worldBounds.xMax }}
+            onToggle={(enabled) => handleAxisToggle("x", enabled)}
+            onInvert={() => handleAxisInvert("x")}
+            onChange={(val) => handleAxisValueChange("x", val)}
+          />
+
+          <AxisControl
+            axis="y"
+            label="Y Plane"
+            colorClass="text-fab-amber"
+            accentClass="accent-fab-amber"
+            config={clippingConfig.y}
+            bounds={{ min: worldBounds.yMin, max: worldBounds.yMax }}
+            onToggle={(enabled) => handleAxisToggle("y", enabled)}
+            onInvert={() => handleAxisInvert("y")}
+            onChange={(val) => handleAxisValueChange("y", val)}
+          />
+
+          <AxisControl
+            axis="z"
+            label="Z Plane"
+            colorClass="text-fab-magenta"
+            accentClass="accent-fab-magenta"
+            config={clippingConfig.z}
+            bounds={{ min: worldBounds.zMin, max: worldBounds.zMax }}
+            onToggle={(enabled) => handleAxisToggle("z", enabled)}
+            onInvert={() => handleAxisInvert("z")}
+            onChange={(val) => handleAxisValueChange("z", val)}
+          />
+        </div>
+      )}
     </>
+  );
+}
+
+interface AxisControlProps {
+  axis: "x" | "y" | "z";
+  label: string;
+  colorClass: string;
+  accentClass: string;
+  config: { enabled: boolean; value: number; dir: number };
+  bounds: { min: number; max: number };
+  onToggle: (enabled: boolean) => void;
+  onInvert: () => void;
+  onChange: (value: number) => void;
+}
+
+function AxisControl({
+  label,
+  colorClass,
+  accentClass,
+  config,
+  bounds,
+  onToggle,
+  onInvert,
+  onChange,
+}: AxisControlProps) {
+  const { min, max } = bounds;
+  const L = max - min;
+  const minThickness = L * MIN_THICKNESS_RATIO;
+  const sliderMin = config.dir === -1 ? min + minThickness : min;
+  const sliderMax = config.dir === -1 ? max : max - minThickness;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-[10px] font-medium text-white/80">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.enabled}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="rounded border-white/20 bg-white/5 text-fab-teal focus:ring-0 focus:ring-offset-0 h-3.5 w-3.5 cursor-pointer"
+          />
+          <span
+            className={cn(
+              "font-bold uppercase tracking-wider",
+              config.enabled && colorClass,
+            )}
+          >
+            {label}
+          </span>
+        </div>
+        {config.enabled && (
+          <button
+            onClick={onInvert}
+            className={cn(
+              "text-[9px] font-bold uppercase tracking-wider hover:opacity-80 transition-opacity cursor-pointer",
+              colorClass,
+            )}
+            title="Toggle kept side"
+          >
+            {config.dir === -1 ? "Keep Min" : "Keep Max"}
+          </button>
+        )}
+      </div>
+
+      {config.enabled && (
+        <div className="flex items-center gap-3">
+          <input
+            type="range"
+            min={sliderMin}
+            max={sliderMax}
+            step={L / 200}
+            value={config.value}
+            onChange={(e) => onChange(parseFloat(e.target.value))}
+            className={cn(
+              "flex-1 h-1 rounded-lg bg-white/10 appearance-none cursor-pointer focus:outline-hidden",
+              accentClass,
+            )}
+          />
+          <span className="text-[10px] font-mono text-white/60 tabular-nums w-12 text-right">
+            {(config.value / 10).toFixed(1)} cm
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
