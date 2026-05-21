@@ -261,7 +261,7 @@ export function ServiceDetailClient({
                                 key={i}
                                 className="inline-flex flex-col gap-1 border border-black bg-sidebar-accent/30 px-3 py-2 text-[10px]"
                               >
-                                <span className="font-bold uppercase tracking-[0.1em]">
+                                <span className="font-bold uppercase tracking-widest">
                                   {new Date(slot.startTime).toLocaleTimeString(
                                     "en-US",
                                     {
@@ -335,10 +335,10 @@ export function ServiceDetailClient({
 
                 <div className="border-2 border-black bg-background p-4 sm:p-5 sm:text-right">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/50">
-                    Rate Per {service.serviceCategory.unitName}
+                    Rate Per {fabricationUnitName ?? "Session"}
                   </p>
                   <p className="mt-2 text-2xl font-black tracking-tight text-foreground">
-                    ₱{getRegularRate()}
+                    ₱{getRegularRate().toLocaleString()}
                   </p>
 
                   {service.serviceCategory.type === "FABRICATION" &&
