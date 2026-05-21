@@ -298,10 +298,10 @@ export function Step2ProjectDetails({
                       <SelectValue placeholder="Select Pricing Tier" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Default">Default Pricing</SelectItem>
+                      <SelectItem value="Default">Regular Rate</SelectItem>
                       {pricingVariants.map((v) => (
                         <SelectItem key={v.name} value={v.name}>
-                          {v.name}
+                          {v.name} Rate
                         </SelectItem>
                       ))}
                     </SelectContent>
