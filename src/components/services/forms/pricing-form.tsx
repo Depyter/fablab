@@ -296,7 +296,7 @@ export const PricingForm = withForm({
                   {/* ── FABRICATION ─────────────────────────────────────── */}
                   {pricingType === "FABRICATION" && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(120px,160px)_minmax(0,1fr)_minmax(0,1fr)]">
                         <Field>
                           <FieldLabel htmlFor="fabricationUnitName">
                             Time Unit
@@ -312,7 +312,7 @@ export const PricingForm = withForm({
                               });
                             }}
                           >
-                            <SelectTrigger id="fabricationUnitName">
+                            <SelectTrigger id="fabricationUnitName" className="w-full">
                               <SelectValue placeholder="Select unit" />
                             </SelectTrigger>
                             <SelectContent>

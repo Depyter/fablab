@@ -99,7 +99,7 @@ export function ServiceForm({
   return (
     <ServiceFormModeContext.Provider value={mode}>
       <DataViewPageHeader>
-        <Link href={backHref}>
+        {/*<Link href={backHref}>
           <Button
             variant="outline"
             size="icon"
@@ -107,7 +107,7 @@ export function ServiceForm({
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={4} />
           </Button>
-        </Link>
+        </Link>*/}
         <h1 className="text-sm font-black uppercase tracking-wider text-black truncate">
           {title}
         </h1>
@@ -126,14 +126,14 @@ export function ServiceForm({
             description="Are you sure you want to discard your changes? This cannot be undone."
             baseActionText="Discard"
             confirmButtonText="Confirm Discard"
-            className="h-9 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black"
+            className="h-9 border-2 border-black bg-white px-5 text-[12px] font-black uppercase tracking-wider text-black"
           />
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
               <Button
                 type="button"
-                className="h-9 border-2 border-black bg-fab-teal px-4 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-60"
+                className="h-9 border-2 border-black bg-fab-teal px-5 text-[12px] font-black uppercase rounded-lg tracking-wider text-white disabled:opacity-60"
                 disabled={
                   !canSubmit ||
                   isSubmitting ||
