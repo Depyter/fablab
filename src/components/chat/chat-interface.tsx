@@ -53,19 +53,11 @@ function getInitials(name: string): string {
 
 function ThreadTitle({ title }: { title?: string }) {
   return (
-    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-      <div className="h-6 w-6 rounded-lg flex items-center justify-center shrink-0">
-        <Hash
-          className="h-3.5 w-3.5"
-          style={{ color: "var(--fab-text-primary)" }}
-        />
+    <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="h-6 w-6 rounded-none flex items-center justify-center shrink-0">
+        <Hash className="h-3.5 w-3.5 text-[var(--fab-text-primary)]" />
       </div>
-      <span
-        className="font-mono text-[18px] font-semibold truncate"
-        style={{
-          color: "var(--fab-text-primary)",
-        }}
-      >
+      <span className="font-mono text-[17px] font-black tracking-tight truncate text-[var(--fab-text-primary)]">
         {title ?? "channel"}
       </span>
     </div>
@@ -102,14 +94,7 @@ function ArchivalBanner({ threadId }: { threadId: Id<"threads"> }) {
   if (!deadlineDate) return null;
 
   return (
-    <div
-      className="flex shrink-0 items-center gap-2 px-4 py-2 text-xs"
-      style={{
-        background: "var(--fab-amber-light)",
-        borderBottom: "1px solid var(--fab-border-md)",
-        color: "var(--fab-text-primary)",
-      }}
-    >
+    <div className="flex shrink-0 items-center gap-2 px-4 py-2 text-[11px] font-semibold text-[var(--fab-text-primary)] border-b-2 border-black bg-[var(--fab-amber-light)]">
       <Clock className="h-3.5 w-3.5 shrink-0" />
       <span>
         This project has been marked as <strong>{statusLabel}</strong>. Thread
@@ -151,28 +136,16 @@ export function ChatInterface({
   } = useChat({ roomId, threadId });
 
   return (
-    <div
-      className="relative flex h-full min-h-0 flex-col overflow-hidden"
-      style={{ background: "var(--fab-bg-main)" }}
-    >
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--fab-bg-main)]">
       {/* ── Sticky channel header ────────────────────────────────────────── */}
-      <div
-        className="sticky top-0 z-10 flex items-center gap-3 px-4 h-14 shrink-0"
-        style={{
-          background:
-            "linear-gradient(to right, rgba(250,249,255,0.96), rgba(232,228,251,0.85))",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid var(--fab-border-md)",
-          WebkitBackdropFilter: "blur(12px)",
-        }}
-      >
+      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 h-14 shrink-0 border-b-2 border-black bg-white">
         {/* Back button — mobile only */}
         {showBackButton && (
           <Button
             variant="ghost"
             size="icon"
             asChild
-            className="md:hidden -ml-2 shrink-0"
+            className="md:hidden -ml-2 shrink-0 rounded-none border-2 border-black bg-white "
           >
             <Link href="/dashboard/chat">
               <ArrowLeft className="h-5 w-5" />
@@ -197,14 +170,7 @@ export function ChatInterface({
       {/* ── Grid background ───────────────────────────────────────────────── */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(var(--fab-grid) 1px, transparent 1px),
-            linear-gradient(90deg, var(--fab-grid) 1px, transparent 1px)
-          `,
-          backgroundSize: "28px 28px",
-        }}
+        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(var(--fab-grid)_1px,transparent_1px),linear-gradient(90deg,var(--fab-grid)_1px,transparent_1px)] [background-size:28px_28px]"
       />
 
       {/* ------------------------------------------------------------------ */}
@@ -212,7 +178,7 @@ export function ChatInterface({
       {/* ------------------------------------------------------------------ */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4 relative z-2"
+        className="flex-1 overflow-y-auto px-2 py-4 sm:px-3 md:px-4 relative z-[1]"
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehavior: "contain",
@@ -222,30 +188,18 @@ export function ChatInterface({
           <ChatMessagesSkeletonList />
         ) : messages.length === 0 ? (
           <div className="flex justify-center items-center h-full">
-            <span
-              className="text-[10px] font-bold uppercase tracking-widest"
-              style={{
-                color: "var(--fab-text-dim)",
-                fontFamily: "var(--font-body)",
-              }}
-            >
-              No messages yet
-            </span>
+            <div className="border-2 border-black bg-white px-6 py-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[var(--fab-text-dim)]">
+                No messages yet
+              </span>
+            </div>
           </div>
         ) : (
           <>
             <div ref={topSentinelRef} aria-hidden="true" className="h-px" />
 
             {status === "LoadingMore" && (
-              <div
-                className="sticky top-0 z-10 flex items-center justify-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest shadow backdrop-blur-sm mx-auto w-fit"
-                style={{
-                  background: "rgba(255,255,255,0.85)",
-                  color: "var(--fab-text-muted)",
-                  border: "1px solid var(--fab-border-md)",
-                  fontFamily: "var(--font-body)",
-                }}
-              >
+              <div className="sticky top-0 z-10 mx-auto flex w-fit items-center justify-center gap-2 border-2 border-black bg-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--fab-text-muted)]">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading older messages…
               </div>
@@ -253,13 +207,7 @@ export function ChatInterface({
 
             {status === "Exhausted" && (
               <div className="flex justify-center pb-5">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest"
-                  style={{
-                    color: "var(--fab-text-dim)",
-                    fontFamily: "var(--font-body)",
-                  }}
-                >
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--fab-text-dim)]">
                   Beginning of conversation
                 </span>
               </div>
@@ -296,29 +244,15 @@ export function ChatInterface({
               // ── Date separator ─────────────────────────────────────────
               const DateSeparator = showSeparator ? (
                 <div className="flex items-center gap-4 my-8">
-                  <div
-                    className="h-px flex-1 opacity-40"
-                    style={{ background: "var(--fab-teal)" }}
-                  />
-                  <span
-                    className="rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em]"
-                    style={{
-                      background: "var(--fab-chat-system-pill)",
-                      border: "1px solid var(--fab-border)",
-                      color: "var(--fab-magenta)",
-                      fontFamily: "var(--font-body)",
-                    }}
-                  >
+                  <div className="h-[2px] flex-1 bg-black" />
+                  <span className="border-2 border-black bg-[var(--fab-amber-light)] px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--fab-text-primary)] ">
                     {new Date(message._creationTime).toLocaleDateString([], {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
                     })}
                   </span>
-                  <div
-                    className="h-px flex-1 opacity-40"
-                    style={{ background: "var(--fab-teal)" }}
-                  />
+                  <div className="h-[2px] flex-1 bg-black" />
                 </div>
               ) : null;
 
@@ -330,7 +264,7 @@ export function ChatInterface({
 
                     <div
                       className={cn(
-                        "group flex items-start gap-3 rounded-sm px-4 transition-colors",
+                        "group flex items-start gap-2 px-2 transition-colors sm:gap-3 sm:px-3 md:px-4",
                         isFirstInGroup ? "mt-2" : "mt-0.5",
                       )}
                       style={{
@@ -343,7 +277,7 @@ export function ChatInterface({
                         style={{ marginTop: isFirstInGroup ? 2 : 0 }}
                       >
                         {isFirstInGroup ? (
-                          <div className="flex size-8.5 items-center justify-center overflow-hidden rounded-xl">
+                          <div className="flex size-8.5 items-center justify-center overflow-hidden rounded-none border-2 border-black bg-white">
                             <Image
                               src="/fablab.jpg"
                               alt="System"
@@ -353,13 +287,7 @@ export function ChatInterface({
                             />
                           </div>
                         ) : (
-                          <span
-                            className="flex w-full items-center justify-end pt-1 text-[9px] leading-none tabular-nums opacity-0 transition-opacity group-hover:opacity-100"
-                            style={{
-                              color: "var(--fab-text-dim)",
-                              fontFamily: "var(--font-body)",
-                            }}
-                          >
+                          <span className="flex w-full items-center justify-end pt-1 text-[9px] leading-none tabular-nums opacity-0 transition-opacity group-hover:opacity-100 text-[var(--fab-text-dim)]">
                             {new Date(message._creationTime).toLocaleTimeString(
                               [],
                               {
@@ -374,28 +302,13 @@ export function ChatInterface({
                       <div className="flex max-w-2xl min-w-0 flex-1 flex-col">
                         {isFirstInGroup ? (
                           <div className="mb-0.5 flex items-baseline gap-2">
-                            <span
-                              className="text-[14px] font-bold leading-snug"
-                              style={{
-                                fontFamily: "var(--font-body)",
-                                color: "var(--fab-text-primary)",
-                              }}
-                            >
+                            <span className="text-[14px] font-black leading-snug text-[var(--fab-text-primary)]">
                               System
                             </span>
-                            <span
-                              className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] leading-none font-black uppercase tracking-wider text-amber-700"
-                              style={{ fontFamily: "var(--font-body)" }}
-                            >
+                            <span className="border-2 border-black bg-amber-100 px-1.5 py-0.5 text-[9px] leading-none font-black uppercase tracking-wider text-amber-700">
                               System
                             </span>
-                            <span
-                              className="text-[11px] tabular-nums"
-                              style={{
-                                color: "var(--fab-text-dim)",
-                                fontFamily: "var(--font-body)",
-                              }}
-                            >
+                            <span className="text-[11px] tabular-nums text-[var(--fab-text-dim)]">
                               {new Date(
                                 message._creationTime,
                               ).toLocaleTimeString([], {
@@ -412,12 +325,7 @@ export function ChatInterface({
                               showTimeId === message._id ? null : message._id,
                             )
                           }
-                          className="rounded-2xl px-3 py-2 text-sm leading-relaxed cursor-pointer"
-                          style={{
-                            color: "var(--fab-text-muted)",
-                            fontFamily: "var(--font-body)",
-                            background: "var(--fab-chat-system-bg)",
-                          }}
+                          className="rounded-md border-2 border-black bg-[var(--fab-chat-system-bg)] px-3 py-2 text-sm leading-relaxed text-[var(--fab-text-muted)] cursor-pointer"
                         >
                           <SystemMessageCard
                             content={message.content}
@@ -426,13 +334,7 @@ export function ChatInterface({
                         </div>
 
                         {showTimeId === message._id && (
-                          <span
-                            className="text-[10px] mt-1.5 font-bold uppercase tracking-widest opacity-50"
-                            style={{
-                              color: "var(--fab-text-dim)",
-                              fontFamily: "var(--font-body)",
-                            }}
-                          >
+                          <span className="text-[10px] mt-1.5 font-black uppercase tracking-widest opacity-50 text-[var(--fab-text-dim)]">
                             {new Date(message._creationTime).toLocaleTimeString(
                               [],
                               { hour: "2-digit", minute: "2-digit" },
@@ -456,20 +358,13 @@ export function ChatInterface({
                   {/* Full-width Slack-style row */}
                   <div
                     className={cn(
-                      "group flex items-start gap-3 px-4 rounded-sm transition-colors",
+                      "group flex items-start gap-2 px-2 transition-colors hover:bg-[var(--fab-amber-light)] sm:gap-3 sm:px-3 md:px-4",
                       isFirstInGroup ? "mt-2" : "mt-0.5",
                     )}
                     style={{
                       paddingTop: isFirstInGroup ? 4 : 0,
                       paddingBottom: isFirstInGroup ? 1 : 0,
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(15, 168, 150, 0.04)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
                   >
                     {/* Avatar column — fixed 34px width */}
                     <div
@@ -478,11 +373,11 @@ export function ChatInterface({
                     >
                       {isFirstInGroup ? (
                         <div
-                          className="flex items-center justify-center overflow-hidden text-white text-[11px] font-bold select-none"
+                          className="flex items-center justify-center overflow-hidden text-white text-[11px] font-bold select-none border-2 border-black"
                           style={{
                             width: 34,
                             height: 34,
-                            borderRadius: 8,
+                            borderRadius: 0,
                             background: message.senderProfilePicUrl
                               ? "transparent"
                               : avatarColor,
@@ -493,7 +388,7 @@ export function ChatInterface({
                               src={message.senderProfilePicUrl}
                               alt={message.sender}
                               className="h-full w-full object-cover"
-                              style={{ borderRadius: 8 }}
+                              style={{ borderRadius: 0 }}
                             />
                           ) : (
                             initials || <User className="h-4 w-4 opacity-80" />
@@ -520,7 +415,7 @@ export function ChatInterface({
                     </div>
 
                     {/* Content column */}
-                    <div className="flex flex-col flex-1 min-w-0 max-w-2xl bg-(--fab-bg-main)/50">
+                    <div className="flex flex-col flex-1 min-w-0 max-w-2xl">
                       {/* Header row: name + timestamp — first message in group only */}
                       {isFirstInGroup ? (
                         <div className="flex items-baseline gap-2 mb-0.5">
@@ -537,7 +432,7 @@ export function ChatInterface({
                           </span>
                           {"senderRole" in message && message.senderRole && (
                             <span
-                              className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md leading-none"
+                              className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-none border-2 border-black leading-none"
                               style={{
                                 background:
                                   message.senderRole === "admin"
@@ -584,8 +479,10 @@ export function ChatInterface({
                         }}
                       >
                         {message.content && (
-                          <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                          <div className=" px-3 py-2">
+                            <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
                           </div>
                         )}
 
@@ -610,14 +507,8 @@ export function ChatInterface({
       {/* Input area — sticky bottom                                          */}
       {/* ------------------------------------------------------------------ */}
       <div
-        className="sticky bottom-0 z-10 px-4 pt-2 shrink-0"
-        style={{
-          background: "rgba(250,249,255,0.92)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          borderTop: "1px solid var(--fab-border)",
-          paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)",
-        }}
+        className="sticky bottom-0 z-10 px-4 pt-2 shrink-0 border-t-2 border-black bg-white"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
       >
         {/* ── Pending attachments ───────────────────────────────────────── */}
         {(pendingAttachments.length > 0 || isUploading) && (
@@ -647,26 +538,7 @@ export function ChatInterface({
         )}
 
         {/* ── Input container ───────────────────────────────────────────── */}
-        <div
-          className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] transition-all"
-          style={{
-            background: "#ffffff",
-            border: "1px solid var(--fab-border-md)",
-            boxShadow: "0 1px 4px rgba(80,60,160,0.06)",
-          }}
-          onFocusCapture={(e) => {
-            (e.currentTarget as HTMLDivElement).style.border =
-              "1px solid rgba(15,168,150,0.5)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow =
-              "0 0 0 3px rgba(15,168,150,0.08)";
-          }}
-          onBlurCapture={(e) => {
-            (e.currentTarget as HTMLDivElement).style.border =
-              "1px solid var(--fab-border-md)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow =
-              "0 1px 4px rgba(80,60,160,0.06)";
-          }}
-        >
+        <div className="flex items-center gap-2 px-2 py-1.5 border-2 border-black bg-white shadow-[4px_4px_0_0_#000] rounded-none transition-all focus-within:translate-x-0.5 focus-within:translate-y-0.5 focus-within:shadow-none">
           <FileUpload
             key={fileUploadKey}
             title="Attach files"
@@ -707,17 +579,13 @@ export function ChatInterface({
             onClick={handleSendMessage}
             disabled={!canSend}
             aria-label="Send message"
-            className="flex items-center justify-center shrink-0 transition-all duration-150 hover:scale-105"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 7,
-              background: canSend ? "var(--fab-teal)" : "transparent",
-              color: canSend ? "#ffffff" : "var(--fab-text-dim)",
-              cursor: canSend ? "pointer" : "not-allowed",
-              border: "none",
-              outline: "none",
-            }}
+            className={cn(
+              "flex items-center justify-center shrink-0 transition-transform border-2 border-black shadow-[2px_2px_0_0_#000]",
+              "h-8 w-8 rounded-none",
+              canSend
+                ? "bg-[var(--fab-teal)] text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
+                : "bg-white text-[var(--fab-text-dim)] cursor-not-allowed",
+            )}
           >
             <Send className="h-4 w-4" />
           </button>

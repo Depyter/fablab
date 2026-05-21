@@ -231,7 +231,7 @@ export default function HomePage() {
           </h1>
 
           <div className="flex flex-col items-center justify-center gap-8 pt-8 sm:flex-row">
-            <ActionButton href="/login">Start A Project</ActionButton>
+            <ActionButton href="/services">Start A Project</ActionButton>
           </div>
         </div>
       </section>
