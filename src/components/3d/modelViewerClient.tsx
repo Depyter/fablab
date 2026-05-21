@@ -14,12 +14,16 @@ import { getModelFormat } from "./modelViewer";
 const ModelScene = dynamic(() => import("./modelScene"), { ssr: false });
 
 const COMPLEXITY_LEVELS = {
-  1: { label: "Calm", color: "var(--fab-teal)" },
-  2: { label: "Steady", color: "var(--fab-teal-light)" },
-  3: { label: "Tuned", color: "var(--fab-amber)" },
-  4: { label: "Detailed", color: "var(--fab-magenta-light)" },
-  5: { label: "Wild", color: "var(--fab-magenta)" },
+  low: { label: "Low", color: "var(--fab-teal)" },
+  medium: { label: "Medium", color: "var(--fab-amber)" },
+  high: { label: "High", color: "var(--fab-magenta)" },
 } as const;
+
+const tierToLevel = (tier: number): keyof typeof COMPLEXITY_LEVELS => {
+  if (tier <= 2) return "low";
+  if (tier === 3) return "medium";
+  return "high";
+};
 
 // ---------------------------------------------------------------------------
 // LoadingOverlay — rendered *outside* the Canvas so it covers the whole card.
@@ -163,9 +167,7 @@ function ModelContent({
       }
     : null;
   const complexity = modelData
-    ? (COMPLEXITY_LEVELS[
-        modelData.complexityTier as keyof typeof COMPLEXITY_LEVELS
-      ] ?? COMPLEXITY_LEVELS[3])
+    ? COMPLEXITY_LEVELS[tierToLevel(modelData.complexityTier)]
     : null;
 
   // Compute bounding box dimensions and limits normalized in world space
@@ -315,10 +317,7 @@ function ModelContent({
     <>
       <LoadingOverlay phase={loadingPhase} />
 
-      <Canvas
-        shadows
-        gl={{ localClippingEnabled: true }}
-      >
+      <Canvas shadows gl={{ localClippingEnabled: true }}>
         <CameraAnimator action={cameraAction} />
         <Suspense fallback={null}>
           <ModelScene
@@ -333,53 +332,28 @@ function ModelContent({
 
       {/* Model stats pills — only shown once fully loaded */}
       {loadingPhase === "done" && modelData && dimensions && complexity && (
-        <div className="absolute top-3 left-3 right-3 z-10 flex gap-2">
-          <div className="flex flex-1 sm:flex-none items-center h-8 rounded-full border border-(--fab-border-md) bg-white/90 px-3 shadow-sm backdrop-blur-md gap-2 text-[11px] font-semibold text-(--fab-text-primary) whitespace-nowrap">
-            <span className="text-(--fab-text-dim) font-bold uppercase tracking-widest text-[9px]">
+        <div className="absolute top-6 left-3 z-10 flex flex-col items-start gap-1 w-max">
+          {/* Vol / Size pill */}
+          <div className="flex items-center h-7 rounded-full border border-(--fab-border-md) bg-white/90 px-2.5 shadow-sm backdrop-blur-md gap-1.5 text-[10px] font-semibold text-(--fab-text-primary) whitespace-nowrap">
+            <span className="text-(--fab-text-dim) font-bold uppercase tracking-wider text-[9px]">
               Vol
             </span>
             <span className="tabular-nums">
               {(modelData.volume / 1000).toFixed(1)} cm³
             </span>
-            <div className="w-px h-3.5 bg-(--fab-border-md)" />
-            <span className="text-(--fab-text-dim) font-bold uppercase tracking-widest text-[9px]">
-              Size
-            </span>
+            <div className="w-px h-3 bg-(--fab-border-md) shrink-0" />
             <span className="tabular-nums">
               {toCm(dimensions.x)}×{toCm(dimensions.y)}×{toCm(dimensions.z)} cm
             </span>
           </div>
 
-          <div className="flex flex-1 sm:flex-none items-center justify-center h-8 rounded-full border border-(--fab-border-md) bg-white/90 px-3 shadow-sm backdrop-blur-md gap-2 whitespace-nowrap">
-            <div className="flex items-end gap-px">
-              {Array.from({ length: 5 }, (_, index) => {
-                const tier = index + 1;
-                const active = index < modelData.complexityTier;
-                const tierColor =
-                  COMPLEXITY_LEVELS[tier as keyof typeof COMPLEXITY_LEVELS]
-                    .color;
-                return (
-                  <span
-                    key={`complexity-bar-${tier}`}
-                    className="w-2.5 rounded-full transition-opacity border"
-                    style={{
-                      height: `${5 + index * 2}px`,
-                      background: active
-                        ? tierColor
-                        : "color-mix(in srgb, var(--fab-border-md) 60%, white)",
-                      opacity: active ? 1 : 0.5,
-                    }}
-                  />
-                );
-              })}
-            </div>
+          {/* Complexity pill */}
+          <div className="flex items-center h-7 rounded-full border border-(--fab-border-md) bg-white/90 px-2.5 shadow-sm backdrop-blur-md gap-1.5 text-[10px] font-semibold text-(--fab-text-primary) whitespace-nowrap">
             <span
-              className="rounded-lg px-1.25 py-px text-[9px] font-bold uppercase tracking-[0.06em]"
-              style={{
-                background: `color-mix(in srgb, ${complexity.color} 20%, white)`,
-                color: complexity.color,
-              }}
-            >
+              className="inline-block h-2 w-2 rounded-full shrink-0"
+              style={{ background: complexity.color }}
+            />
+            <span className="text-(--fab-text-dim) font-bold uppercase tracking-wider text-[9px]">
               {complexity.label}
             </span>
           </div>
