@@ -351,12 +351,12 @@ export function EstimateProjectDetails({
         </Card>
       </div>
 
-      <div className="shrink-0 mt-4 flex items-center justify-end gap-2 pt-4">
+      <div className="shrink-0 mt-4 flex flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={onBack}
           disabled={isSubmitting}
-          className="inline-flex h-9 w-fit items-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 border-2 border-black bg-white px-3 text-[10px] font-black uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50 sm:w-auto"
         >
           <ChevronLeft className="size-4" strokeWidth={3} />
           Back
@@ -364,7 +364,7 @@ export function EstimateProjectDetails({
         <button
           type="submit"
           disabled={isSubmitting || canSubmit === false || !isChecked}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 border-2 border-black bg-fab-magenta px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50 sm:w-auto"
         >
           {isSubmitting ? "Submitting..." : "Submit Project Request"}
         </button>

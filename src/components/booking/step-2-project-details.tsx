@@ -505,12 +505,12 @@ export function Step2ProjectDetails({
         </FieldGroup>
       </div>
 
-      <div className="mt-4 flex shrink-0 items-center justify-end gap-2 border-t-4 border-black pt-4">
+      <div className="mt-4 flex shrink-0 flex-col gap-2 border-t-4 border-black pt-4 sm:flex-row sm:items-center sm:justify-end">
         {serviceCategory !== "WORKSHOP" && (
           <button
             type="button"
             onClick={onPrev}
-            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-none border-2 border-black bg-background px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-none border-2 border-black bg-background px-3 text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none sm:w-auto"
           >
             <ChevronLeft className="size-4" strokeWidth={3} />
             Back
@@ -519,7 +519,7 @@ export function Step2ProjectDetails({
         <button
           type="submit"
           disabled={isUploading}
-          className="inline-flex h-9 items-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 border-2 border-black bg-fab-magenta px-3 text-[10px] font-black uppercase tracking-wider text-white shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-50 sm:w-auto"
         >
           Review & Estimate
         </button>
