@@ -229,6 +229,9 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   };
 
   const handleUploadError = (error: Error) => {
+    // Log the raw error for debugging (especially ConvexErrors from trackUpload).
+    console.error("Chat upload error:", error);
+
     // Sanitize moderation-related errors so raw ConvexError text doesn't
     // leak into the toast.
     const isContentPolicy =

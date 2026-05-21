@@ -240,6 +240,9 @@ export function InventoryItemForm({
                     field.handleChange(files.map((f) => f.storageId))
                   }
                   onUploadingChange={handleThumbnailUploading}
+                  onUploadError={(error) => {
+                    toast.error(error.message || "Failed to upload file");
+                  }}
                 />
               )}
             />

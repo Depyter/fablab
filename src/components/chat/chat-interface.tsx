@@ -659,8 +659,17 @@ export function ChatInterface({
                   return (
                     <div
                       key={`err-${uf.file.name}-${uf.file.size}-${i}`}
-                      className="flex items-center gap-2 px-0.5"
+                      className="flex items-center gap-1.5 px-0.5"
                     >
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider shrink-0"
+                        style={{
+                          color: "var(--fab-text-dim)",
+                          fontFamily: "var(--font-body)",
+                        }}
+                      >
+                        {uf.file.name}
+                      </span>
                       <span
                         className="text-[9px] font-bold leading-tight truncate"
                         style={{

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/action-dialog";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import type { Id } from "@/../convex/_generated/dataModel";
 
@@ -174,6 +175,9 @@ export function ServiceForm({
                     )
                   }
                   onUploadingChange={setSamplesUploading}
+                  onUploadError={(error) => {
+                    toast.error(error.message || "Failed to upload file");
+                  }}
                 />
               )}
             />
@@ -201,6 +205,9 @@ export function ServiceForm({
                       )
                     }
                     onUploadingChange={setThumbnailUploading}
+                    onUploadError={(error) => {
+                      toast.error(error.message || "Failed to upload file");
+                    }}
                   />
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-xs text-red-500 mt-1">
