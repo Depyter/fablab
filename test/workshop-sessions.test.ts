@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 import { api, internal } from "../convex/_generated/api";
+import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
 
@@ -473,7 +474,7 @@ describe("workshopSessions", () => {
     expect(session!.status).toBe("completed");
     // Fields not in the update should remain unchanged
     expect(session!.startTime).toBe(startTime);
-    expect(session!.date).toBe(futureDate);
+    expect(session!.date).toBe(getLabDayStartTimestamp(futureDate));
   });
 
   test("update prevents reducing maxSlots below usedUpSlots", async () => {

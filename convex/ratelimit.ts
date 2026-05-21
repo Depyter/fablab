@@ -9,10 +9,12 @@ const RATE_LIMITS = {
     period: MINUTE,
     capacity: 10,
   },
-  // 30 upload URL requests/min per user, bursts of up to 10 extra
+  // 30 file-track commits/min per user, bursts of up to 10 extra.
+  // (generateUploadUrl is not rate-limited — only the final trackUpload
+  //  commit consumes a token.)
   uploadFiles: {
     kind: "token bucket" as const,
-    rate: 60,
+    rate: 30,
     period: MINUTE,
     capacity: 10,
   },

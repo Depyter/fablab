@@ -112,7 +112,7 @@ export const addService = authMutation({
       args.serviceCategory.type === "FABRICATION"
         ? normalizeFabricationCategory(args.serviceCategory)
         : args.serviceCategory;
-    await ctx.db.insert("services", {
+    const serviceId = await ctx.db.insert("services", {
       name: args.name,
       slug: slugify(args.name),
       images: args.images,
@@ -127,6 +127,8 @@ export const addService = authMutation({
 
     if (args.images.length > 0) claimFiles(ctx, args.images);
     if (args.samples.length > 0) claimFiles(ctx, args.samples);
+
+    return serviceId;
   },
 });
 

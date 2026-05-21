@@ -116,7 +116,10 @@ export const createProject = authMutation({
     await validateFileTypes(ctx, args.files ?? [], service);
 
     // ── 3. Validate booking window ────────────────────────────────────────────
-    const booking: BookingWindow = args.booking;
+    const booking: BookingWindow = {
+      ...args.booking,
+      date: getLabDayStartTimestamp(args.booking.startTime),
+    };
     validateBookingTiming(booking);
     await validateFabricationAvailability(ctx, args.service, service, booking);
 
@@ -209,7 +212,9 @@ export const createProject = authMutation({
           .withIndex("by_serviceId_startTime", (q) =>
             q.eq("serviceId", args.service).eq("startTime", booking.startTime),
           )
-          .filter((q) => q.eq(q.field("date"), booking.date))
+          .filter((q) =>
+            q.eq(q.field("date"), getLabDayStartTimestamp(booking.startTime)),
+          )
           .first();
 
         for (const resourceId of wsSession?.resources ?? []) {

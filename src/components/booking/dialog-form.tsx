@@ -29,6 +29,7 @@ import {
   getLabTimeRangeTimestamps,
 } from "@/lib/lab-time";
 import { buildCurrentPath, buildLoginHref } from "@/lib/auth-redirect";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 import posthog from "posthog-js";
 
 type BookingServiceMaterial = {
@@ -194,6 +195,11 @@ export function BookingDialog({
           toast.error("You must be logged in to create a booking.");
           setIsOpen(false);
           router.push(loginHref);
+          return;
+        }
+        const rateLimitMsg = getRateLimitErrorMessage(error);
+        if (rateLimitMsg) {
+          toast.error(rateLimitMsg);
           return;
         }
         toast.error(

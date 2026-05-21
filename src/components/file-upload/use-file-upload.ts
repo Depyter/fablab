@@ -7,6 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
 import type { Id } from "@convex/_generated/dataModel";
 import { resolveFileType } from "./utils";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 import { toast } from "sonner";
 
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
@@ -343,8 +344,12 @@ export function useFileUpload({
           setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
         }, 2000);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Upload failed";
+        const rateLimitMsg = getRateLimitErrorMessage(error);
+        const errorMessage = rateLimitMsg
+          ? rateLimitMsg
+          : error instanceof Error
+            ? error.message
+            : "Upload failed";
 
         setUploadingFiles((prev) =>
           prev.map((f) =>
@@ -355,7 +360,7 @@ export function useFileUpload({
         );
 
         onUploadError?.(
-          error instanceof Error ? error : new Error("Upload failed"),
+          error instanceof Error ? error : new Error(errorMessage),
           file,
         );
 

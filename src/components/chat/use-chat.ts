@@ -13,6 +13,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { UploadedFile, UploadingFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
 import { toast } from "sonner";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 import posthog from "posthog-js";
 
 interface UseChatOptions {
@@ -195,6 +196,15 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
       });
     } catch (error) {
       console.error("Failed to send message:", error);
+
+      // Rate-limit errors get a dedicated, actionable toast.
+      const rateLimitMsg = getRateLimitErrorMessage(error);
+      if (rateLimitMsg) {
+        toast.error(rateLimitMsg);
+        setInput(content);
+        return;
+      }
+
       // Don't surface raw ConvexError messages to the user — map them to
       // user-friendly text.
       const rawMessage =

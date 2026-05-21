@@ -3,7 +3,9 @@ import { authMutation } from "../helper";
 import {
   sendProjectSystemMessage,
   scheduleProjectUpdateEmail,
+  applyStatusChange,
 } from "../projects/helper";
+import { getLabDayStartTimestamp } from "../../src/lib/lab-time";
 
 // ─── Create a new session for a workshop service ───────────────────────────
 // Inherits defaults (resources, materials) from the service unless overridden.
@@ -40,7 +42,7 @@ export const create = authMutation({
 
     return ctx.db.insert("workshopSessions", {
       serviceId: args.serviceId,
-      date: args.date,
+      date: getLabDayStartTimestamp(args.date),
       startTime: args.startTime,
       endTime: args.endTime,
       maxSlots: args.maxSlots,
@@ -57,6 +59,7 @@ export const update = authMutation({
   role: ["admin", "maker"],
   args: {
     sessionId: v.id("workshopSessions"),
+    date: v.optional(v.number()),
     startTime: v.optional(v.number()),
     endTime: v.optional(v.number()),
     maxSlots: v.optional(v.number()),
@@ -77,6 +80,8 @@ export const update = authMutation({
 
     const updates: Record<string, unknown> = {};
 
+    if (patches.date !== undefined)
+      updates.date = getLabDayStartTimestamp(patches.date);
     if (patches.startTime !== undefined) updates.startTime = patches.startTime;
     if (patches.endTime !== undefined) updates.endTime = patches.endTime;
 
@@ -136,8 +141,9 @@ export const updateAndNotify = authMutation({
       updates.endTime = patches.endTime;
     }
     if (patches.date !== undefined) {
-      if (patches.date !== session.date) hasScheduleChange = true;
-      updates.date = patches.date;
+      const normalizedDate = getLabDayStartTimestamp(patches.date);
+      if (normalizedDate !== session.date) hasScheduleChange = true;
+      updates.date = normalizedDate;
     }
     if (patches.maxSlots !== undefined) {
       if (patches.maxSlots < session.usedUpSlots) {
@@ -249,7 +255,37 @@ export const cancel = authMutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new ConvexError("Session not found.");
+    if (session.status === "cancelled") return;
+
     await ctx.db.patch(args.sessionId, { status: "cancelled" });
+
+    // Find all projects for this session
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_type_bookingStartTime", (q) =>
+        q.eq("type", "WORKSHOP").eq("bookingStartTime", session.startTime),
+      )
+      .filter((q) => q.eq(q.field("service"), session.serviceId))
+      .collect();
+
+    const activeProjects = projects.filter(
+      (p) => !["cancelled", "rejected"].includes(p.status),
+    );
+
+    if (activeProjects.length === 0) return;
+
+    const service = await ctx.db.get(session.serviceId);
+    const svcName = service?.name ?? "Workshop";
+    const lines = [
+      `**Workshop Session Cancelled: ${svcName}**`,
+      `This session has been cancelled by the staff. Your project has been automatically cancelled.`,
+    ];
+
+    for (const project of activeProjects) {
+      const logLines = await applyStatusChange(ctx, project, "cancelled");
+      await sendProjectSystemMessage(ctx, project._id, [...lines, ...logLines]);
+      await scheduleProjectUpdateEmail(ctx, project._id);
+    }
   },
 });
 

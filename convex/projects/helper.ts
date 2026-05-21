@@ -479,7 +479,9 @@ export async function incrementWorkshopSlot(
     .withIndex("by_serviceId_startTime", (q) =>
       q.eq("serviceId", service._id).eq("startTime", booking.startTime),
     )
-    .filter((q) => q.eq(q.field("date"), booking.date))
+    .filter((q) =>
+      q.eq(q.field("date"), getLabDayStartTimestamp(booking.startTime)),
+    )
     .first();
   if (session) {
     await ctx.db.patch(session._id, { usedUpSlots: session.usedUpSlots + 1 });

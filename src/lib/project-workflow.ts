@@ -45,7 +45,7 @@ export const WORKSHOP_WORKFLOW: ProjectWorkflow = {
     paid: "Paid",
     completed: "Attended",
   },
-  payableStatuses: ["approved", "paid", "completed", "claimed"],
+  payableStatuses: ["approved", "paid", "completed"],
   transitions: {
     pending: ["approved", "rejected", "cancelled"],
     approved: ["pending", "completed", "paid", "cancelled"],

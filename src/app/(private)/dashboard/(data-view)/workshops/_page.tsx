@@ -146,10 +146,12 @@ function WorkshopCard({
   const upcomingCount = activeSessions.length;
   const totalCount = sessions.length;
 
+  const editUrl = `/dashboard/workshops/${service.slug}/edit`;
+
   return (
     <BrandCard className="flex flex-col">
       {/* Cover */}
-      <Link href={`/dashboard/workshops/${service.slug}/edit`}>
+      {readOnly ? (
         <div className="relative h-36 w-full overflow-hidden bg-black/5">
           {service.imageUrls[0] ? (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -166,26 +168,47 @@ function WorkshopCard({
               />
             </div>
           )}
-          {/* Edit badge */}
-          {!readOnly && (
+        </div>
+      ) : (
+        <Link href={editUrl}>
+          <div className="relative h-36 w-full overflow-hidden bg-black/5">
+            {service.imageUrls[0] ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={service.imageUrls[0]}
+                alt={service.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-fab-amber/10">
+                <PackageOpen
+                  className="h-10 w-10 text-black/20"
+                  strokeWidth={1.5}
+                />
+              </div>
+            )}
+            {/* Edit badge */}
             <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 border-2 border-black bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider shadow-[1px_1px_0_0_#000]">
               <Edit className="h-2.5 w-2.5" strokeWidth={3} />
               Edit
             </span>
-          )}
-        </div>
-      </Link>
+          </div>
+        </Link>
+      )}
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-4">
-        <Link
-          href={`/dashboard/workshops/${service.slug}/edit`}
-          className="group"
-        >
-          <h3 className="text-base font-black uppercase tracking-tighter text-black transition-colors group-hover:text-fab-teal">
+        {readOnly ? (
+          <h3 className="text-base font-black uppercase tracking-tighter text-black">
             {service.name}
           </h3>
-        </Link>
+        ) : (
+          <Link href={editUrl} className="group">
+            <h3 className="text-base font-black uppercase tracking-tighter text-black transition-colors group-hover:text-fab-teal">
+              {service.name}
+            </h3>
+          </Link>
+        )}
         {service.description && (
           <p className="mt-1.5 line-clamp-2 text-xs font-bold leading-relaxed text-black/60">
             {service.description}
@@ -222,23 +245,36 @@ function WorkshopCard({
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
             {upcomingSessions.length > 0 ? (
-              upcomingSessions.map((s) => (
-                <Link
-                  key={s._id}
-                  href={
-                    readOnly ? "#" : `/dashboard/workshops/${service.slug}/edit`
-                  }
-                  className="inline-flex items-center gap-1 border-2 border-black bg-fab-amber/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[1px_1px_0_0_#000]"
-                >
-                  <Calendar className="h-2.5 w-2.5" strokeWidth={3} />
-                  {formatLabDate(s.date, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                  {" · "}
-                  {formatLabTime(s.startTime)}
-                </Link>
-              ))
+              upcomingSessions.map((s) =>
+                readOnly ? (
+                  <span
+                    key={s._id}
+                    className="inline-flex items-center gap-1 border-2 border-black bg-fab-amber/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-black"
+                  >
+                    <Calendar className="h-2.5 w-2.5" strokeWidth={3} />
+                    {formatLabDate(s.date, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {" · "}
+                    {formatLabTime(s.startTime)}
+                  </span>
+                ) : (
+                  <Link
+                    key={s._id}
+                    href={editUrl}
+                    className="inline-flex items-center gap-1 border-2 border-black bg-fab-amber/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[1px_1px_0_0_#000]"
+                  >
+                    <Calendar className="h-2.5 w-2.5" strokeWidth={3} />
+                    {formatLabDate(s.date, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {" · "}
+                    {formatLabTime(s.startTime)}
+                  </Link>
+                ),
+              )
             ) : (
               <span className="text-[10px] font-bold text-black/30">
                 No upcoming sessions
