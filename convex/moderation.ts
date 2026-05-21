@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation } from "./_generated/server";
+import { internalAction, internalMutation, action } from "./_generated/server";
 import OpenAI from "openai";
 import { MODERATION_CATEGORY_LABELS, FileStatus } from "./constants";
 
@@ -151,6 +151,67 @@ export const handleMessageModerationResult = internalMutation({
       await ctx.db.patch(args.messageId, {
         moderationStatus: "clean",
       });
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Pre-flight validation action — call from the frontend *before* creating
+// a booking/project so flagged content is caught before any side effects.
+// ---------------------------------------------------------------------------
+
+export const validateBookingText = action({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    notes: v.string(),
+  },
+  handler: async (ctx, args): Promise<ModerationResult> => {
+    // If the API key isn't configured, allow everything through.
+    if (!process.env.OPENAI_API_KEY) {
+      return { flagged: false, categories: "" };
+    }
+
+    const items: Array<
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string } }
+    > = [];
+
+    if (args.name.trim()) items.push({ type: "text", text: args.name });
+    if (args.description.trim())
+      items.push({ type: "text", text: args.description });
+    if (args.notes.trim()) items.push({ type: "text", text: args.notes });
+
+    if (items.length === 0) return { flagged: false, categories: "" };
+
+    try {
+      const openai = getOpenAI();
+      const response = await openai.moderations.create({
+        model: "omni-moderation-latest",
+        input: items,
+      });
+
+      const result = response.results[0];
+      if (!result || !result.flagged) {
+        return { flagged: false, categories: "" };
+      }
+
+      const flaggedCategories: string[] = [];
+      const cats = result.categories as unknown as Record<string, boolean>;
+      for (const [key, val] of Object.entries(cats)) {
+        if (val) {
+          flaggedCategories.push(MODERATION_CATEGORY_LABELS[key] ?? key);
+        }
+      }
+
+      return {
+        flagged: true,
+        categories: flaggedCategories.join(", "),
+      };
+    } catch (error) {
+      console.error("Booking text validation failed:", error);
+      // Fail open — don't block bookings when the API is down.
+      return { flagged: false, categories: "" };
     }
   },
 });

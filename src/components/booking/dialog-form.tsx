@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { useStore } from "@tanstack/react-form";
-import { useMutation, useQuery, useConvexAuth } from "convex/react";
+import { useMutation, useAction, useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import {
@@ -106,6 +106,7 @@ export function BookingDialog({
   const [isSuccess, setIsSuccess] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
+  const validateBookingText = useAction(api.moderation.validateBookingText);
   const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
 
   const isUnauthenticatedBookingError = (error: unknown) => {
@@ -170,9 +171,33 @@ export function BookingDialog({
           return;
         }
 
+        // ── Pre-flight moderation check ──────────────────────────────────
+        // Validate user-generated text BEFORE creating the project so we
+        // never have to roll back side effects (thread, room, usage, slots).
+        const name = value.name || `${serviceName} Booking`;
+        const description = value.description || `Booking for ${serviceName}`;
+        const notes = value.notes || "";
+
+        const moderation = await validateBookingText({
+          name,
+          description,
+          notes,
+        });
+
+        if (moderation.flagged) {
+          const detail = moderation.categories
+            ? ` (${moderation.categories})`
+            : "";
+          toast.error(
+            `Your booking couldn't be submitted because the text may violate content policies.${detail}`,
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
         const { roomId, threadId } = await createProject({
-          name: value.name || `${serviceName} Booking`,
-          description: value.description || `Booking for ${serviceName}`,
+          name,
+          description,
           fulfillmentMode: value.serviceType,
           material: value.material,
           materialIds: value.requestedMaterialIds as Id<"materials">[],
@@ -221,7 +246,15 @@ export function BookingDialog({
         );
       }
     },
-    [serviceCategory, serviceId, serviceName, createProject, loginHref, router],
+    [
+      serviceCategory,
+      serviceId,
+      serviceName,
+      createProject,
+      validateBookingText,
+      loginHref,
+      router,
+    ],
   );
 
   const initialPricingDefault =

@@ -245,6 +245,10 @@ export default defineSchema({
     notes: v.string(),
     searchText: v.string(),
     archivalDeadline: v.optional(v.number()),
+    /** Comma-separated list of violated moderation categories. */
+    moderationCategory: v.optional(v.string()),
+    /** Timestamp (ms) when moderation completed. */
+    moderatedAt: v.optional(v.number()),
   })
     .index("by_userProfile", ["userId"])
     .index("by_status", ["status"])
