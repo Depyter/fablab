@@ -137,6 +137,7 @@ export function ChatInterface({
     canSend,
     isUploading,
     setIsUploading,
+    uploadingFiles,
     pendingAttachments,
     fileUploadKey,
     fileUploadInitialFiles,
@@ -147,6 +148,7 @@ export function ChatInterface({
     handleKeyPress,
     handleFilesChange,
     handleUploadError,
+    handleUploadingFilesChange,
     removeAttachment,
   } = useChat({ roomId, threadId });
 
@@ -584,16 +586,34 @@ export function ChatInterface({
                           fontFamily: "var(--font-body)",
                         }}
                       >
-                        {message.content && (
-                          <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
-                          </div>
-                        )}
+                        {message.moderationStatus === "flagged" ? (
+                          <span
+                            className="italic"
+                            style={{
+                              color: "var(--fab-text-dim)",
+                              borderLeft: "3px solid rgba(239,68,68,0.4)",
+                              paddingLeft: 10,
+                            }}
+                          >
+                            This message was removed for violating content
+                            policies.
+                          </span>
+                        ) : (
+                          <>
+                            {message.content && (
+                              <div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-inherit prose-a:text-inherit">
+                                <ReactMarkdown>{message.content}</ReactMarkdown>
+                              </div>
+                            )}
 
-                        {messageFiles.length > 0 && (
-                          <div className={cn(message.content ? "mt-2" : "")}>
-                            <MessageAttachments files={messageFiles} />
-                          </div>
+                            {messageFiles.length > 0 && (
+                              <div
+                                className={cn(message.content ? "mt-2" : "")}
+                              >
+                                <MessageAttachments files={messageFiles} />
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -627,23 +647,66 @@ export function ChatInterface({
               attachments={pendingAttachments}
               onRemove={removeAttachment}
             />
-            {isUploading && (
-              <div className="flex items-center gap-1.5 px-0.5">
-                <Loader2
-                  className="h-3 w-3 animate-spin"
-                  style={{ color: "var(--fab-teal)" }}
-                />
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest"
-                  style={{
-                    color: "var(--fab-teal)",
-                    fontFamily: "var(--font-body)",
-                  }}
-                >
-                  Uploading…
-                </span>
-              </div>
-            )}
+            {uploadingFiles
+              .filter(
+                (f) =>
+                  f.status === "uploading" ||
+                  f.status === "pending" ||
+                  f.status === "error",
+              )
+              .map((uf, i) => {
+                if (uf.status === "error") {
+                  return (
+                    <div
+                      key={`err-${uf.file.name}-${uf.file.size}-${i}`}
+                      className="flex items-center gap-2 px-0.5"
+                    >
+                      <span
+                        className="text-[9px] font-bold leading-tight truncate"
+                        style={{
+                          color: "var(--fab-magenta)",
+                          fontFamily: "var(--font-body)",
+                        }}
+                      >
+                        {uf.error || "Upload failed"}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const pct = Math.max(uf.progress, 2);
+                return (
+                  <div
+                    key={`${uf.file.name}-${uf.file.size}-${i}`}
+                    className="flex items-center gap-2 px-0.5"
+                  >
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all duration-200 ease-out"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: "var(--fab-teal)",
+                        }}
+                      />
+                    </div>
+                    <span
+                      className="text-[9px] font-bold tabular-nums shrink-0"
+                      style={{ color: "var(--fab-teal)" }}
+                    >
+                      {uf.progress}%
+                    </span>
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-widest truncate max-w-[100px]"
+                      style={{
+                        color: "var(--fab-text-dim)",
+                        fontFamily: "var(--font-body)",
+                      }}
+                    >
+                      {uf.file.name}
+                    </span>
+                  </div>
+                );
+              })}
           </div>
         )}
 
@@ -680,6 +743,7 @@ export function ChatInterface({
             onFilesChange={handleFilesChange}
             onUploadError={handleUploadError}
             onUploadingChange={setIsUploading}
+            onUploadingFilesChange={handleUploadingFilesChange}
             onUploadComplete={(file) => {
               posthog.capture("chat_file_attached", {
                 room_id: roomId,

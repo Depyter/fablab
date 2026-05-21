@@ -24,6 +24,7 @@ import type * as helper from "../helper.js";
 import type * as http from "../http.js";
 import type * as materials_mutate from "../materials/mutate.js";
 import type * as materials_query from "../materials/query.js";
+import type * as moderation from "../moderation.js";
 import type * as presence from "../presence.js";
 import type * as projects_helper from "../projects/helper.js";
 import type * as projects_mutate from "../projects/mutate.js";
@@ -62,6 +63,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "materials/mutate": typeof materials_mutate;
   "materials/query": typeof materials_query;
+  moderation: typeof moderation;
   presence: typeof presence;
   "projects/helper": typeof projects_helper;
   "projects/mutate": typeof projects_mutate;

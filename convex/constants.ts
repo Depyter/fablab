@@ -1,7 +1,25 @@
 export const FileStatus = {
   CLAIMED: "claimed",
   ORPHANED: "orphaned",
+  FLAGGED: "flagged",
 } as const;
+
+/** User-facing labels for each moderation category returned by the OpenAI Moderation API. */
+export const MODERATION_CATEGORY_LABELS: Record<string, string> = {
+  harassment: "harassing content",
+  "harassment/threatening": "threatening harassment",
+  hate: "hateful content",
+  "hate/threatening": "threatening hate",
+  illicit: "illicit content",
+  "illicit/violent": "violent illicit content",
+  "self-harm": "self-harm content",
+  "self-harm/instructions": "self-harm instructions",
+  "self-harm/intent": "self-harm intent",
+  sexual: "sexual content",
+  "sexual/minors": "sexual content involving minors",
+  violence: "violent content",
+  "violence/graphic": "graphic violence",
+};
 
 export const ServiceStatus = {
   AVAILABLE: "Available",

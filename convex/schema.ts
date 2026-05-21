@@ -24,8 +24,13 @@ export default defineSchema({
     status: v.union(
       v.literal(FileStatus.CLAIMED),
       v.literal(FileStatus.ORPHANED),
+      v.literal(FileStatus.FLAGGED),
     ),
     uploadedBy: v.optional(v.id("userProfile")),
+    /** Comma-separated list of violated moderation categories (e.g. "harassment,violence"). */
+    moderationCategory: v.optional(v.string()),
+    /** Timestamp (ms) when moderation completed. */
+    moderatedAt: v.optional(v.number()),
   })
     .index("by_storageId", ["storageId"])
     .index("status", ["status"]),
@@ -330,6 +335,10 @@ export default defineSchema({
     sender: v.union(v.string(), v.id("userProfile")),
     room: v.id("rooms"),
     threadId: v.id("threads"),
+    moderationStatus: v.optional(
+      v.union(v.literal("clean"), v.literal("flagged")),
+    ),
+    moderationCategory: v.optional(v.string()),
   })
     .index("by_room_and_thread", ["room", "threadId"])
     .searchIndex("search_content", {

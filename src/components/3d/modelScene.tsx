@@ -109,7 +109,12 @@ function extractFromObject3D(object: THREE.Object3D): {
 // Per-format model components
 // ---------------------------------------------------------------------------
 
-function STLModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps) {
+function STLModel({
+  fileUrl,
+  onZoomConfig,
+  onData,
+  clippingPlanes,
+}: ModelProps) {
   const geometry = useLoader(STLLoader, fileUrl);
 
   const { position, zoomConfig, data } = useMemo(() => {
@@ -157,7 +162,12 @@ function STLModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps)
   );
 }
 
-function GLTFModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps) {
+function GLTFModel({
+  fileUrl,
+  onZoomConfig,
+  onData,
+  clippingPlanes,
+}: ModelProps) {
   const { scene } = useGLTF(fileUrl);
 
   // Clone so the cached GLTF scene isn't mutated by other renders.
@@ -186,7 +196,9 @@ function GLTFModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps
   useEffect(() => {
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
         materials.forEach((mat) => {
           if (mat) {
             mat.clippingPlanes = clippingPlanes || [];
@@ -206,7 +218,12 @@ function GLTFModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps
   );
 }
 
-function OBJModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps) {
+function OBJModel({
+  fileUrl,
+  onZoomConfig,
+  onData,
+  clippingPlanes,
+}: ModelProps) {
   const obj = useLoader(OBJLoader, fileUrl);
 
   // Clone so the cached OBJ group isn't mutated between renders.
@@ -250,7 +267,9 @@ function OBJModel({ fileUrl, onZoomConfig, onData, clippingPlanes }: ModelProps)
   useEffect(() => {
     clonedObj.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
         materials.forEach((mat) => {
           if (mat) {
             mat.clippingPlanes = clippingPlanes || [];
@@ -298,7 +317,9 @@ function ClippingPlaneHelper({ plane, size }: ClippingPlaneHelperProps) {
     const hp = new THREE.PlaneHelper(plane, size, color);
     hp.traverse((child) => {
       if (child instanceof THREE.Line || child instanceof THREE.Mesh) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
         materials.forEach((mat) => {
           if (mat) {
             mat.polygonOffset = true;
@@ -406,10 +427,7 @@ export default function ModelScene({
         }}
       />
 
-      <GizmoHelper
-        alignment="top-right"
-        margin={[80, 80]}
-      >
+      <GizmoHelper alignment="top-right" margin={[80, 80]}>
         <GizmoViewport
           axisColors={["#06b6d4", "#eab308", "#ef4444"]} // cyan for X, yellow for Y, red for Z
           labelColor="white"

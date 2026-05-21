@@ -5,6 +5,10 @@ export interface UploadedFile {
   fileSize: number;
   uploadedAt: Date;
   url?: string;
+  /** Moderation status — set by the file-upload hook when polling the backend. */
+  moderationStatus?: "clean" | "flagged";
+  /** Human-readable comma-separated list of violated categories. */
+  moderationCategory?: string;
 }
 
 export interface UploadingFile {
@@ -24,6 +28,8 @@ export interface FileUploadProps {
   onRemoveFile?: (file: UploadedFile) => void | Promise<void>;
   /** Called whenever the in-progress upload state changes. `true` means at least one upload is still pending/uploading. */
   onUploadingChange?: (isUploading: boolean) => void;
+  /** Called whenever the list of in-progress uploading files changes, so consumers can render progress indicators. */
+  onUploadingFilesChange?: (files: UploadingFile[]) => void;
   maxFiles?: number;
   maxFileSizeMB?: number;
   accept?: string;
