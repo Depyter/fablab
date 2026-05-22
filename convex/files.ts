@@ -4,6 +4,7 @@ import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES,
   FileStatus,
+  CONTENT_POLICY_ERROR,
 } from "./constants";
 import { internalAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -79,9 +80,7 @@ export const getUrl = authQuery({
 
     // Block access to files flagged by moderation.
     if (file.status === FileStatus.FLAGGED) {
-      throw new ConvexError(
-        "This file was removed for violating content policies.",
-      );
+      throw new ConvexError(CONTENT_POLICY_ERROR);
     }
 
     // If uploadedBy is set, only the original uploader may fetch the URL.
@@ -132,6 +131,32 @@ export const getFileStatus = authQuery({
       moderationCategory: file.moderationCategory,
       fileName: file.originalName,
     };
+  },
+});
+
+/** Batch status query — reactive subscription for the frontend moderation
+ * watcher. Takes an array of storage IDs and returns status for all of them.
+ * Re-runs reactively whenever any of the underlying file documents change. */
+export const getFileStatuses = authQuery({
+  args: { storageIds: v.array(v.id("_storage")) },
+  handler: async (ctx, args) => {
+    if (args.storageIds.length === 0) return [];
+    const results = await Promise.all(
+      args.storageIds.map(async (storageId) => {
+        const file = await ctx.db
+          .query("files")
+          .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+          .first();
+        if (!file) return null;
+        return {
+          storageId,
+          status: file.status,
+          moderationCategory: file.moderationCategory,
+          fileName: file.originalName,
+        };
+      }),
+    );
+    return results.filter(Boolean) as NonNullable<(typeof results)[number]>[];
   },
 });
 

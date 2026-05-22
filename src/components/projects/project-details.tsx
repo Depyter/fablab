@@ -13,7 +13,7 @@ import {
 import { XIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { toast } from "sonner";
 import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
@@ -255,6 +255,7 @@ export function ProjectDetails({
   const updateOwnProjectDetails = useMutation(
     api.projects.mutate.updateOwnProjectDetails,
   );
+  const validateBookingText = useAction(api.moderation.validateBookingText);
   const role = useQuery(
     api.users.getRole,
     shouldLoadDialogData ? {} : "skip",
@@ -324,6 +325,22 @@ export function ProjectDetails({
     files?: string[];
   }) => {
     try {
+      // ── Pre-flight moderation check for updated text fields ───────────
+      if (args.description !== undefined || args.notes !== undefined) {
+        const moderation = await validateBookingText({
+          name: project?.name ?? "",
+          description: args.description ?? project?.description ?? "",
+          notes: args.notes ?? project?.notes ?? "",
+        });
+
+        if (moderation.flagged) {
+          toast.error(
+            "Your changes couldn't be saved because the text may violate content policies.",
+          );
+          return false;
+        }
+      }
+
       await updateOwnProjectDetails({
         projectId,
         ...args,

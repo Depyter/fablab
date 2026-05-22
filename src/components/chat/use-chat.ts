@@ -14,6 +14,7 @@ import type { UploadedFile, UploadingFile } from "@/components/file-upload";
 import { PendingAttachment } from "./types";
 import { toast } from "sonner";
 import { getRateLimitErrorMessage } from "@/lib/rate-limit";
+import { CONTENT_POLICY_ERROR } from "@convex/constants";
 import posthog from "posthog-js";
 
 interface UseChatOptions {
@@ -209,7 +210,9 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
       // user-friendly text.
       const rawMessage =
         error instanceof Error ? error.message : "Failed to send message";
-      const isContentPolicy = rawMessage.includes("content policies");
+      const isContentPolicy =
+        rawMessage.includes(CONTENT_POLICY_ERROR) ||
+        rawMessage.includes("flagged by content moderation");
       toast.error(
         isContentPolicy
           ? "Your message couldn't be sent because it may contain inappropriate content."
@@ -245,7 +248,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     // Sanitize moderation-related errors so raw ConvexError text doesn't
     // leak into the toast.
     const isContentPolicy =
-      error.message?.includes("content policies") ||
+      error.message?.includes(CONTENT_POLICY_ERROR) ||
       error.message?.includes("flagged by content moderation");
     toast.error(
       isContentPolicy
