@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -140,19 +140,63 @@ export function DataViewSearchField({
   className?: string;
 }) {
   const [searchDraft, setSearchDraft] = React.useState(search);
-  const debouncedSearch = useDebounce(searchDraft, 250);
+  const [isFocused, setIsFocused] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
+  // When focused use the local draft; otherwise show the external `search` prop.
+  const displayedValue = isFocused ? searchDraft : search;
+  const debouncedDisplayed = useDebounce(displayedValue, 250);
+
+  // Propagate debounced displayed value to parent (canonical search state).
   React.useEffect(() => {
-    if (debouncedSearch === search) return;
-    onSearchChange(debouncedSearch);
-  }, [debouncedSearch, onSearchChange, search]);
+    if (debouncedDisplayed === search) return;
+    onSearchChange(debouncedDisplayed);
+  }, [debouncedDisplayed, onSearchChange, search]);
+
+  const handleFocus = () => {
+    // Initialize draft from external prop when the user starts editing.
+    setSearchDraft(search);
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    // Flush immediately on blur so users who type then leave still get their final value.
+    if (searchDraft !== search) {
+      onSearchChange(searchDraft);
+    }
+  };
+
+  const handleClear = () => {
+    setSearchDraft("");
+    onSearchChange("");
+    // Do not programmatically focus to avoid clobbering draft initialization races.
+  };
 
   return (
-    <Input
-      value={searchDraft}
-      onChange={(event) => setSearchDraft(event.target.value)}
-      placeholder={placeholder}
-      className={cn("min-w-0 flex-1 max-w-xs", className)}
-    />
+    <div ref={containerRef} className={cn("relative flex-1 min-w-0")}>
+      <Input
+        value={displayedValue}
+        onChange={(event) => setSearchDraft(event.target.value)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={cn(
+          "min-w-0 flex-1 max-w-xs",
+          className,
+          displayedValue ? "pr-10" : "",
+        )}
+      />
+      {displayedValue ? (
+        <button
+          type="button"
+          aria-label="Clear search"
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-none border-2 border-black bg-white text-black"
+        >
+          <X className="h-3 w-3" strokeWidth={3} />
+        </button>
+      ) : null}
+    </div>
   );
 }
