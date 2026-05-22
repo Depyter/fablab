@@ -254,6 +254,7 @@ export function useFileUpload({
         // Upload the file via XMLHttpRequest for native progress events.
         // Each file gets its own short-lived Convex upload URL.
         const results = await startUpload([file], {
+          contentType: mimeType,
           onUploadProgress: (p: number) => {
             setUploadingFiles((prev) =>
               prev.map((f) =>
