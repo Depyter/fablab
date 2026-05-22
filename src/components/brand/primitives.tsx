@@ -639,7 +639,7 @@ export function BrandSearchField({
   return (
     <div className={cn("relative flex-1 min-w-0", className)}>
       <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40 z-10"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40 z-10"
         strokeWidth={3}
       />
       <DataViewSearchField

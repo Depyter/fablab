@@ -108,14 +108,15 @@ export const handleFileModerationResult = internalMutation({
     if (!file) return;
 
     if (args.flagged) {
-      // Purge the unsafe file from Convex Storage.
-      await ctx.storage.delete(file.storageId);
-      // Mark database record as flagged with metadata.
+      // Mark database record as flagged first (atomic), then purge storage.
       await ctx.db.patch(args.fileId, {
         status: FileStatus.FLAGGED,
         moderationCategory: args.categories,
         moderatedAt: Date.now(),
       });
+      // Delete from storage after the DB record is updated — if this fails
+      // the file is still marked flagged and `getUrl` blocks access.
+      await ctx.storage.delete(file.storageId);
     } else {
       // Mark as clean so the frontend can differentiate "not yet
       // moderated" from "moderated and clean".
@@ -188,7 +189,7 @@ export const validateBookingText = action({
       const openai = getOpenAI();
       const response = await openai.moderations.create({
         model: "omni-moderation-latest",
-        input: items,
+        input: items as OpenAI.ModerationCreateParams["input"],
       });
 
       const result = response.results[0];

@@ -185,11 +185,8 @@ export function BookingDialog({
         });
 
         if (moderation.flagged) {
-          const detail = moderation.categories
-            ? ` (${moderation.categories})`
-            : "";
           toast.error(
-            `Your booking couldn't be submitted because the text may violate content policies.${detail}`,
+            "Your booking couldn't be submitted. Please review your project name, description, and notes, then try again.",
           );
           setIsSubmitting(false);
           return;
@@ -198,12 +195,12 @@ export function BookingDialog({
         const { roomId, threadId } = await createProject({
           name,
           description,
+          notes,
           fulfillmentMode: value.serviceType,
           material: value.material,
           materialIds: value.requestedMaterialIds as Id<"materials">[],
           service: serviceId,
           pricing: value.pricing,
-          notes: value.notes,
           files: value.files.map((f) => f.storageId as Id<"_storage">),
           booking: {
             date: bookingDateTs,
