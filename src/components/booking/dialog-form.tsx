@@ -423,7 +423,7 @@ export function BookingDialog({
         </Button>
 
         <DialogContent
-          className="top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-2 border-black bg-background p-4 shadow-[2px_2px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]"
+          className="top-0 left-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-2 border-black bg-background p-4 shadow-[2px_2px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]"
           onCloseButtonClick={handleManualClose}
         >
           {step === 1 && serviceCategory !== "WORKSHOP" && (
@@ -477,7 +477,7 @@ export function BookingDialog({
 
           {step === 3 && (
             <form
-              className="w-full flex flex-col h-full min-h-0"
+              className="w-full flex flex-col h-full max-h-full overflow-hidden"
               onSubmit={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

@@ -34,6 +34,11 @@ export interface UploadFileResponse {
 export interface StartUploadOptions {
   /** Fires repeatedly during a single file's upload (0–100). */
   onUploadProgress?: (percent: number) => void;
+  /** MIME type to send as the Content-Type header. If omitted, falls back
+   * to file.type, then to "application/octet-stream". Always pass the
+   * resolved MIME type from resolveFileType() — browser-reported file.type
+   * is unreliable (empty on Linux, missing for .stl on Windows). */
+  contentType?: string;
 }
 
 export function useUploadFiles(generateUploadUrl: () => Promise<string>) {
@@ -130,7 +135,7 @@ function uploadOne(
     xhr.open("POST", url);
     xhr.setRequestHeader(
       "Content-Type",
-      file.type || "application/octet-stream",
+      options?.contentType || file.type || "application/octet-stream",
     );
     xhr.send(file);
   });
