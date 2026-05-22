@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useMutation, useConvex } from "convex/react";
+import { useMutation, useQuery, useConvex } from "convex/react";
 import { useUploadFiles } from "@/lib/use-upload-files";
 import { api } from "@convex/_generated/api";
 import type { UploadedFile, UploadingFile } from "./types";
 import type { Id } from "@convex/_generated/dataModel";
 import { resolveFileType } from "./utils";
-import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 import { toast } from "sonner";
+import { CONTENT_POLICY_ERROR } from "@convex/constants";
 
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
@@ -143,69 +143,62 @@ export function useFileUpload({
     onFilesChangeRef.current?.(uploadedFiles);
   }, [uploadedFiles]);
 
-  // ── Moderation polling ──────────────────────────────────────────────────
-  // After a file is uploaded, the backend schedules an async moderation check.
-  // We poll getFileStatus for each uploaded file to detect when it gets flagged.
-  // Track storage IDs that have already been checked to avoid redundant queries.
-  const moderatedIdsRef = useRef<Set<string>>(new Set());
+  // ── Moderation watcher (reactive subscription) ──────────────────────────
+  // After a file is uploaded the backend schedules an async moderation check
+  // via ctx.scheduler.runAfter(0, …). We use a reactive `useQuery` — when
+  // moderation patches the file status to "flagged" in the database, the
+  // query re-runs and we detect the change without polling.
+  //
+  // We subscribe to ALL uploaded file IDs (not just unchecked ones) so the
+  // query stays reactive for every file. `toastedIdsRef` prevents duplicate
+  // toasts when the same file transitions to "flagged" across re-renders.
 
+  const storageIdsForQuery = uploadedFiles.map(
+    (f) => f.storageId as Id<"_storage">,
+  );
+
+  const statuses = useQuery(
+    api.files.getFileStatuses,
+    storageIdsForQuery.length > 0 ? { storageIds: storageIdsForQuery } : "skip",
+  );
+
+  const toastedIdsRef = useRef<Set<string>>(new Set());
+
+  // When the subscription fires, check for newly-flagged files and show toasts.
   useEffect(() => {
-    const filesToCheck = uploadedFiles.filter(
-      (f) => !moderatedIdsRef.current.has(f.storageId),
-    );
-    if (filesToCheck.length === 0) return;
+    if (!statuses || statuses.length === 0) return;
 
-    let cancelled = false;
+    for (const entry of statuses) {
+      if (toastedIdsRef.current.has(entry.storageId)) continue;
 
-    const checkFiles = async () => {
-      const results = await Promise.all(
-        filesToCheck.map(async (f) => {
-          try {
-            const status = await convex.query(api.files.getFileStatus, {
-              storageId: f.storageId as Id<"_storage">,
-            });
-            return { storageId: f.storageId, status, file: f };
-          } catch {
-            return { storageId: f.storageId, status: null, file: f };
-          }
-        }),
-      );
+      if (entry.status === "flagged") {
+        toastedIdsRef.current.add(entry.storageId);
 
-      if (cancelled) return;
+        // Remove the flagged file from the uploaded list.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setUploadedFiles((prev) =>
+          prev.filter((f) => f.storageId !== entry.storageId),
+        );
 
-      for (const { storageId, status } of results) {
-        moderatedIdsRef.current.add(storageId);
-
-        if (status?.status === "flagged") {
-          const detail = status.moderationCategory
-            ? ` (${status.moderationCategory})`
+        // Notify the parent so it can show its own context-appropriate
+        // toast (e.g. chat shows a chat-specific message).  Fall back to
+        // a default toast if the parent doesn't provide a handler.
+        if (onUploadError) {
+          onUploadError(
+            new Error(`"${entry.fileName}" was flagged by content moderation.`),
+            new File([], entry.fileName),
+          );
+        } else {
+          const detail = entry.moderationCategory
+            ? ` (${entry.moderationCategory})`
             : "";
           toast.error(
-            `"${status.fileName}" was removed — it violates content policies.${detail}`,
-          );
-
-          // Remove the flagged file from the uploaded list.
-          setUploadedFiles((prev) =>
-            prev.filter((f) => f.storageId !== storageId),
-          );
-
-          // Notify parent via the error callback.
-          onUploadError?.(
-            new Error(
-              `"${status.fileName}" was flagged by content moderation.`,
-            ),
-            new File([], status.fileName),
+            `"${entry.fileName}" was removed — it violates content policies.${detail}`,
           );
         }
       }
-    };
-
-    checkFiles();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [uploadedFiles, convex, onUploadError]);
+    }
+  }, [statuses, onUploadError]);
 
   // ── Upload queue ──────────────────────────────────────────────────────────
   // uploadstuff v0.0.5 shares a single `fileProgress` ref across concurrent
@@ -291,16 +284,20 @@ export function useFileUpload({
           });
         } catch (urlError) {
           // Moderation flagged the file before we could fetch the URL.
-          // Don't re-throw — let the moderation polling effect handle the
-          // toast and removal. Mark this file so it gets polled immediately.
+          // Don't re-throw — let the moderation watcher handle the
+          // toast and removal.
           if (
             urlError instanceof Error &&
-            urlError.message.includes("content policies")
+            urlError.message === CONTENT_POLICY_ERROR
           ) {
             // Clear the upload progress and let the moderation watcher take over.
             setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
-            revokePreviewUrl(file);
-            // Still add to uploadedFiles so the moderation polling effect
+            const blobUrl = previewUrlMapRef.current.get(file);
+            if (blobUrl) {
+              URL.revokeObjectURL(blobUrl);
+              previewUrlMapRef.current.delete(file);
+            }
+            // Still add to uploadedFiles so the moderation watcher
             // can find it and show the proper toast.
             setUploadedFiles((prev) => [
               ...prev,
@@ -317,7 +314,11 @@ export function useFileUpload({
           throw urlError;
         }
 
-        revokePreviewUrl(file);
+        const blobUrl = previewUrlMapRef.current.get(file);
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl);
+          previewUrlMapRef.current.delete(file);
+        }
 
         const uploadedFile: UploadedFile = {
           storageId,
@@ -344,12 +345,8 @@ export function useFileUpload({
           setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
         }, 2000);
       } catch (error) {
-        const rateLimitMsg = getRateLimitErrorMessage(error);
-        const errorMessage = rateLimitMsg
-          ? rateLimitMsg
-          : error instanceof Error
-            ? error.message
-            : "Upload failed";
+        const errorMessage =
+          error instanceof Error ? error.message : "Upload failed";
 
         setUploadingFiles((prev) =>
           prev.map((f) =>
@@ -360,15 +357,9 @@ export function useFileUpload({
         );
 
         onUploadError?.(
-          error instanceof Error ? error : new Error(errorMessage),
+          error instanceof Error ? error : new Error("Upload failed"),
           file,
         );
-
-        // Auto-remove errored files so they don't accumulate forever.
-        setTimeout(() => {
-          revokePreviewUrl(file);
-          setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
-        }, 5000);
       }
     },
     [
@@ -382,20 +373,6 @@ export function useFileUpload({
       onUploadError,
     ],
   );
-
-  const drainUploadQueue = useCallback(async () => {
-    if (processingRef.current) return;
-    processingRef.current = true;
-
-    try {
-      while (uploadQueueRef.current.length > 0) {
-        const file = uploadQueueRef.current.shift()!;
-        await uploadFile(file);
-      }
-    } finally {
-      processingRef.current = false;
-    }
-  }, [uploadFile]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -426,8 +403,7 @@ export function useFileUpload({
       setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
 
       if (autoUpload) {
-        uploadQueueRef.current.push(...fileArray);
-        drainUploadQueue();
+        fileArray.forEach((file) => uploadFile(file));
       }
     },
     [
@@ -478,12 +454,8 @@ export function useFileUpload({
     (index: number) => {
       setUploadingFiles((prev) => {
         const uf = prev[index];
-        if (!uf) return prev;
-        revokePreviewUrl(uf.file);
-        // Remove by File reference rather than by index, so a stale
-        // `index` from a click handler doesn't target the wrong file
-        // when auto-dismiss timeouts have already shifted the array.
-        return prev.filter((f) => f.file !== uf.file);
+        if (uf) revokePreviewUrl(uf.file);
+        return prev.filter((_, i) => i !== index);
       });
     },
     [revokePreviewUrl],
@@ -523,13 +495,7 @@ export function useFileUpload({
   }, [uploadedFiles, onRemoveFile]);
 
   const removeUploadedFile = useCallback((index: number) => {
-    setUploadedFiles((prev) => {
-      const uf = prev[index];
-      if (!uf) return prev;
-      // Remove by storageId rather than by index — same stale-index
-      // defence as removeUploadingFile above.
-      return prev.filter((f) => f.storageId !== uf.storageId);
-    });
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const clearAll = useCallback(() => {
@@ -543,6 +509,25 @@ export function useFileUpload({
   const triggerFileSelect = useCallback(() => {
     if (!disabled) fileInputRef.current?.click();
   }, [disabled]);
+
+  const drainUploadQueue = useCallback(async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+
+    try {
+      while (uploadQueueRef.current.length > 0) {
+        const next = uploadQueueRef.current.shift();
+        if (next) await uploadFile(next);
+      }
+    } finally {
+      processingRef.current = false;
+    }
+  }, [uploadFile]);
+
+  // whenever new files are enqueued, kick off the drain
+  useEffect(() => {
+    drainUploadQueue();
+  }, [drainUploadQueue]);
 
   return {
     uploadingFiles,

@@ -21,6 +21,11 @@ export const MODERATION_CATEGORY_LABELS: Record<string, string> = {
   "violence/graphic": "graphic violence",
 };
 
+/** Error message thrown by getUrl when a file has been flagged by moderation.
+ * The frontend matches against this string to detect moderation errors. */
+export const CONTENT_POLICY_ERROR =
+  "This file was removed for violating content policies.";
+
 export const ServiceStatus = {
   AVAILABLE: "Available",
   UNAVAILABLE: "Unavailable",
