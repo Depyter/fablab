@@ -40,19 +40,25 @@ export const trackUpload = authMutation({
       );
     }
 
-    const contentType = metadata.contentType ?? "application/octet-stream";
+    // Prefer the client-resolved MIME type (args.type comes from
+    // resolveFileType which maps file extensions via EXT_MIME).
+    // metadata.contentType is the Content-Type header sent during the
+    // POST — unreliable across OS/browsers (e.g. empty for .stl on
+    // Windows, blank for many types on Linux).
+    const resolvedType =
+      args.type || metadata.contentType || "application/octet-stream";
 
-    if (!ALLOWED_MIME_TYPES.has(contentType)) {
+    if (!ALLOWED_MIME_TYPES.has(resolvedType)) {
       await ctx.storage.delete(args.upload);
       throw new ConvexError(
-        `File type "${contentType}" is not supported. Please upload an image, video, 3D model, or document.`,
+        `File type "${resolvedType}" is not supported. Please upload an image, video, 3D model, or document.`,
       );
     }
 
     const fileId = await ctx.db.insert("files", {
       originalName: args.originalName,
       storageId: args.upload,
-      type: contentType,
+      type: resolvedType,
       status: "orphaned",
       uploadedBy: ctx.profile._id,
     });
