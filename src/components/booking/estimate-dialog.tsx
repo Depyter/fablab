@@ -130,7 +130,7 @@ export function EstimateProjectDetails({
   const isBuyFromLab = data.material === "buy-from-lab";
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full max-h-full overflow-hidden flex-col">
       <DialogHeader className="shrink-0 border-black px-2 pb-4 sm:px-0">
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Review & Estimate
@@ -140,7 +140,7 @@ export function EstimateProjectDetails({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="-mx-4 flex-1 overflow-y-auto px-4 py-1 no-scrollbar">
+      <div className="-mx-4 flex-1 overflow-y-auto overscroll-contain px-4 py-1 no-scrollbar">
         <Card className="rounded-lg border-2 border-black bg-background py-4">
           <div className="divide-y">
             {/* Service Summary */}
@@ -377,7 +377,7 @@ export function EstimateProjectDetails({
         </Card>
       </div>
 
-      <div className="shrink-0 mt-4 flex flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-end">
+      <div className="shrink-0 mt-4 flex flex-col gap-2 pt-4 pb-6 sm:pb-0 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={onBack}

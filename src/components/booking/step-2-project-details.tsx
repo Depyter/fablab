@@ -167,7 +167,10 @@ export function Step2ProjectDetails({
   };
 
   return (
-    <form onSubmit={handleNext} className="flex flex-col h-full min-h-0">
+    <form
+      onSubmit={handleNext}
+      className="flex flex-col h-full max-h-full overflow-hidden"
+    >
       <DialogHeader className="shrink-0 px-2 pb-4 sm:px-0">
         <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
           Book {serviceName}
@@ -200,7 +203,7 @@ export function Step2ProjectDetails({
         )}
       </div>
 
-      <div className="-mx-4 flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
+      <div className="-mx-4 flex-1 overflow-y-auto overscroll-contain px-4 py-2 no-scrollbar">
         <FieldGroup>
           <div className="flex flex-col gap-2 mb-2">
             <Label className="font-black uppercase tracking-tighter text-base">
@@ -683,7 +686,7 @@ export function Step2ProjectDetails({
         </FieldGroup>
       </div>
 
-      <div className="mt-4 flex shrink-0 flex-col gap-2 border-t-4 border-black pt-4 sm:flex-row sm:items-center sm:justify-end">
+      <div className="mt-4 flex shrink-0 flex-col gap-2 border-t-4 border-black pt-4 pb-6 sm:pb-0 sm:flex-row sm:items-center sm:justify-end">
         {serviceCategory !== "WORKSHOP" && (
           <button
             type="button"
