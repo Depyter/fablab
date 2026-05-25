@@ -667,6 +667,9 @@ export function Step2ProjectDetails({
                     field.handleChange(val);
                   }}
                   onUploadingChange={onUploadingChange}
+                  onUploadError={(error) => {
+                    toast.error(error.message || "Failed to upload file");
+                  }}
                   onUploadComplete={(file: UploadedFile) => {
                     posthog.capture("booking_file_uploaded", {
                       service_name: serviceName,

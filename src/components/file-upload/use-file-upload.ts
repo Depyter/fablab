@@ -293,11 +293,7 @@ export function useFileUpload({
           ) {
             // Clear the upload progress and let the moderation watcher take over.
             setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
-            const blobUrl = previewUrlMapRef.current.get(file);
-            if (blobUrl) {
-              URL.revokeObjectURL(blobUrl);
-              previewUrlMapRef.current.delete(file);
-            }
+            revokePreviewUrl(file);
             // Still add to uploadedFiles so the moderation watcher
             // can find it and show the proper toast.
             setUploadedFiles((prev) => [
@@ -361,6 +357,12 @@ export function useFileUpload({
           error instanceof Error ? error : new Error("Upload failed"),
           file,
         );
+
+        // Auto-remove errored files and revoke their preview URLs.
+        setTimeout(() => {
+          revokePreviewUrl(file);
+          setUploadingFiles((prev) => prev.filter((f) => f.file !== file));
+        }, 5000);
       }
     },
     [
@@ -404,7 +406,8 @@ export function useFileUpload({
       setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
 
       if (autoUpload) {
-        fileArray.forEach((file) => uploadFile(file));
+        uploadQueueRef.current.push(...fileArray);
+        drainUploadQueue();
       }
     },
     [
@@ -455,8 +458,12 @@ export function useFileUpload({
     (index: number) => {
       setUploadingFiles((prev) => {
         const uf = prev[index];
-        if (uf) revokePreviewUrl(uf.file);
-        return prev.filter((_, i) => i !== index);
+        if (!uf) return prev;
+        revokePreviewUrl(uf.file);
+        // Remove by File reference, not by index — avoids the class of
+        // bugs where an auto-dismiss timeout shifts the array between
+        // the render that captured `index` and the actual state update.
+        return prev.filter((f) => f.file !== uf.file);
       });
     },
     [revokePreviewUrl],
@@ -496,7 +503,11 @@ export function useFileUpload({
   }, [uploadedFiles, onRemoveFile]);
 
   const removeUploadedFile = useCallback((index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev) => {
+      const uf = prev[index];
+      if (!uf) return prev;
+      return prev.filter((f) => f.storageId !== uf.storageId);
+    });
   }, []);
 
   const clearAll = useCallback(() => {

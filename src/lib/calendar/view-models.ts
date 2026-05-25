@@ -51,7 +51,7 @@ function buildServiceMachines(
   return services.map((service) => ({
     id: service._id,
     name: service.name,
-    href: `/services/${service.name}`,
+    href: `/dashboard/services/${service.slug}`,
     status:
       service.status === ServiceStatus.UNAVAILABLE
         ? ResourceStatus.UNAVAILABLE
