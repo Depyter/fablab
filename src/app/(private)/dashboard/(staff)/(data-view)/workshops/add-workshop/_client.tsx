@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -33,10 +33,28 @@ export function AddWorkshopClient() {
   const deleteOrphanedFiles = useMutation(
     api.services.mutate.deleteOrphanedFiles,
   );
+  const validateTextContent = useAction(api.moderation.validateTextContent);
 
   const handleSubmit = async (value: AddServiceFormValues) => {
     setSubmitError(null);
     try {
+      // ── Pre-flight moderation check ──────────────────────────────────
+      const moderation = await validateTextContent({
+        texts: [
+          value.name,
+          value.description,
+          ...value.requirements.filter((r) => r.trim() !== ""),
+        ].filter((t) => t.trim().length > 0),
+      });
+
+      if (moderation.flagged) {
+        const msg =
+          "Unable to save. The name, description, or requirements may violate content policies.";
+        setSubmitError(msg);
+        toast.error(msg);
+        return false;
+      }
+
       await addService({
         name: value.name,
         description: value.description,

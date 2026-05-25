@@ -106,7 +106,7 @@ export function BookingDialog({
   const [isSuccess, setIsSuccess] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
-  const validateBookingText = useAction(api.moderation.validateBookingText);
+  const validateTextContent = useAction(api.moderation.validateTextContent);
   const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
 
   const isUnauthenticatedBookingError = (error: unknown) => {
@@ -178,15 +178,24 @@ export function BookingDialog({
         const description = value.description || `Booking for ${serviceName}`;
         const notes = value.notes || "";
 
-        const moderation = await validateBookingText({
-          name,
-          description,
-          notes,
+        const moderation = await validateTextContent({
+          texts: [name, description, notes].filter((t) => t.trim().length > 0),
         });
 
         if (moderation.flagged) {
           toast.error(
             "Your booking couldn't be submitted. Please review your project name, description, and notes, then try again.",
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
+        // ── Wait for file moderation ───────────────────────────────────
+        // Async moderation runs after upload — files may not be checked yet.
+        // Block submission until all attached files are cleared.
+        if (value.files.some((f) => f.moderationStatus == null)) {
+          toast.error(
+            "Your files are still being checked. Please wait a moment and try again.",
           );
           setIsSubmitting(false);
           return;
@@ -248,7 +257,7 @@ export function BookingDialog({
       serviceId,
       serviceName,
       createProject,
-      validateBookingText,
+      validateTextContent,
       loginHref,
       router,
     ],

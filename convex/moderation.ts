@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, action } from "./_generated/server";
 import OpenAI from "openai";
 import { MODERATION_CATEGORY_LABELS, FileStatus } from "./constants";
+import { customAction } from "convex-helpers/server/customFunctions";
 
 // ---------------------------------------------------------------------------
 // OpenAI client — instantiated lazily so the module doesn't fail at import
@@ -158,30 +159,22 @@ export const handleMessageModerationResult = internalMutation({
 
 // ---------------------------------------------------------------------------
 // Pre-flight validation action — call from the frontend *before* creating
-// a booking/project so flagged content is caught before any side effects.
+// or updating an entity so flagged content is caught before any side effects.
 // ---------------------------------------------------------------------------
 
-export const validateBookingText = action({
+export const validateTextContent = action({
   args: {
-    name: v.string(),
-    description: v.string(),
-    notes: v.string(),
+    texts: v.array(v.string()),
   },
-  handler: async (ctx, args): Promise<ModerationResult> => {
+  handler: async (_ctx, args): Promise<ModerationResult> => {
     // If the API key isn't configured, allow everything through.
     if (!process.env.OPENAI_API_KEY) {
       return { flagged: false, categories: "" };
     }
 
-    const items: Array<
-      | { type: "text"; text: string }
-      | { type: "image_url"; image_url: { url: string } }
-    > = [];
-
-    if (args.name.trim()) items.push({ type: "text", text: args.name });
-    if (args.description.trim())
-      items.push({ type: "text", text: args.description });
-    if (args.notes.trim()) items.push({ type: "text", text: args.notes });
+    const items = args.texts
+      .filter((t) => t.trim().length > 0)
+      .map((text) => ({ type: "text" as const, text }));
 
     if (items.length === 0) return { flagged: false, categories: "" };
 
@@ -189,7 +182,7 @@ export const validateBookingText = action({
       const openai = getOpenAI();
       const response = await openai.moderations.create({
         model: "omni-moderation-latest",
-        input: items as OpenAI.ModerationCreateParams["input"],
+        input: items,
       });
 
       const result = response.results[0];
@@ -210,8 +203,8 @@ export const validateBookingText = action({
         categories: flaggedCategories.join(", "),
       };
     } catch (error) {
-      console.error("Booking text validation failed:", error);
-      // Fail open — don't block bookings when the API is down.
+      console.error("Text content validation failed:", error);
+      // Fail open — don't block when the API is down.
       return { flagged: false, categories: "" };
     }
   },

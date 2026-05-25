@@ -17,6 +17,7 @@ import {
   FulfillmentModeType,
 } from "@convex/constants";
 import { getWorkflow, getStatusLabel } from "@/lib/project-type-meta";
+import { toast } from "sonner";
 
 export type ProjectData = NonNullable<
   (typeof api.projects.query.getProject)["_returnType"]
@@ -90,6 +91,15 @@ export function ProjectDetailsContent({
 
   async function saveEdit() {
     if (!onUpdateDetails) return;
+
+    // Block save if any attached file is still pending moderation.
+    if (editFiles.some((f) => f.moderationStatus == null)) {
+      toast.error(
+        "Your files are still being checked. Please wait a moment and try again.",
+      );
+      return;
+    }
+
     setIsSaving(true);
     try {
       const didUpdate: {

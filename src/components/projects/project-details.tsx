@@ -255,7 +255,7 @@ export function ProjectDetails({
   const updateOwnProjectDetails = useMutation(
     api.projects.mutate.updateOwnProjectDetails,
   );
-  const validateBookingText = useAction(api.moderation.validateBookingText);
+  const validateTextContent = useAction(api.moderation.validateTextContent);
   const role = useQuery(
     api.users.getRole,
     shouldLoadDialogData ? {} : "skip",
@@ -327,10 +327,11 @@ export function ProjectDetails({
     try {
       // ── Pre-flight moderation check for updated text fields ───────────
       if (args.description !== undefined || args.notes !== undefined) {
-        const moderation = await validateBookingText({
-          name: project?.name ?? "",
-          description: args.description ?? project?.description ?? "",
-          notes: args.notes ?? project?.notes ?? "",
+        const moderation = await validateTextContent({
+          texts: [
+            args.description ?? project?.description ?? "",
+            args.notes ?? project?.notes ?? "",
+          ].filter((t) => t.trim().length > 0),
         });
 
         if (moderation.flagged) {

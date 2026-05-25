@@ -70,6 +70,10 @@ export const trackUpload = authMutation({
       await ctx.scheduler.runAfter(0, internal.files.moderateFileUpload, {
         fileId,
       });
+    } else {
+      // Pre-clear files when moderation is unavailable so the frontend
+      // doesn't block submissions waiting for a moderator that never runs.
+      await ctx.db.patch(fileId, { moderatedAt: Date.now() });
     }
   },
 });
@@ -135,6 +139,7 @@ export const getFileStatus = authQuery({
     return {
       status: file.status,
       moderationCategory: file.moderationCategory,
+      moderatedAt: file.moderatedAt,
       fileName: file.originalName,
     };
   },
@@ -158,6 +163,7 @@ export const getFileStatuses = authQuery({
           storageId,
           status: file.status,
           moderationCategory: file.moderationCategory,
+          moderatedAt: file.moderatedAt,
           fileName: file.originalName,
         };
       }),

@@ -11,7 +11,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 
@@ -49,6 +49,7 @@ export function MaterialForm({
   const addMaterial = useMutation(api.materials.mutate.addMaterial);
   const updateMaterial = useMutation(api.materials.mutate.updateMaterial);
   const deleteMaterial = useMutation(api.materials.mutate.deleteMaterial);
+  const validateTextContent = useAction(api.moderation.validateTextContent);
 
   const handleThumbnailUploading = (isUploading: boolean) =>
     setThumbnailUploading(isUploading);
@@ -69,6 +70,21 @@ export function MaterialForm({
   const form = useAppForm({
     defaultValues,
     onSubmit: async ({ value }) => {
+      // ── Pre-flight moderation check ──────────────────────────────────
+      const moderation = await validateTextContent({
+        texts: [value.name, value.category, value.color].filter(
+          (t) => t.trim().length > 0,
+        ),
+      });
+
+      if (moderation.flagged) {
+        toast.error(
+          "Unable to save. The name, category, or color may violate content policies.",
+          { position: "top-center" },
+        );
+        return;
+      }
+
       const actionPromise = isEdit
         ? updateMaterial({
             id: initialValues?._id as Id<"materials">,
