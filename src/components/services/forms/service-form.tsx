@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/action-dialog";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
 import type { Id } from "@/../convex/_generated/dataModel";

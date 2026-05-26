@@ -10,7 +10,7 @@ import { ArrowLeft, PhilippinePeso, CirclePercent } from "lucide-react";
 import { ActionDialog } from "@/components/action-dialog";
 import { useMutation } from "convex/react";
 import { PriceTile } from "@/components/services/price-tile";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { useRouter } from "next/navigation";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";

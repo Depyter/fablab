@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import posthog from "posthog-js";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";

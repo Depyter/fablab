@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ManageCard } from "@/components/manage/manage-card";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 interface ServiceCardProps {
   // required

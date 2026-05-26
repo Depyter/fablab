@@ -6,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { authClient } from "../lib/auth-client";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { getSafeReturnTo } from "@/lib/auth-redirect";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 export function SignUpForm({
   className,
@@ -20,8 +18,6 @@ export function SignUpForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const redirectTo = getSafeReturnTo(searchParams.get("redirectTo"));
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -44,7 +40,7 @@ export function SignUpForm({
         name,
         email,
         password,
-        callbackURL: redirectTo,
+        callbackURL: "/",
       });
 
       if (result?.error) {
@@ -71,7 +67,7 @@ export function SignUpForm({
           <p className="text-muted-foreground text-sm">
             This is a preview environment. Sign up with email or{" "}
             <Link
-              href={`/login${searchParams.toString() ? `?${searchParams.toString()}` : ""}`}
+              to={"/login"}
               className="underline underline-offset-4 hover:text-primary"
             >
               sign in

@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Menu, X } from "lucide-react";
@@ -196,7 +194,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
                 {primaryItems.map((item) => (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     onClick={closeMenu}
                     tabIndex={open ? 0 : -1}
                     className={cn(mobileNavLinkClass, item.mobileClassName)}

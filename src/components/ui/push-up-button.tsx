@@ -1,5 +1,3 @@
-"use client";
-
 import type {
   ButtonHTMLAttributes,
   FocusEventHandler,
@@ -7,7 +5,7 @@ import type {
   Ref,
 } from "react";
 import { useRef } from "react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
@@ -139,7 +137,7 @@ export function GsapArrowButton({
     return (
       <Link
         ref={rootRef as Ref<HTMLAnchorElement>}
-        href={href}
+        to={href}
         className={sharedClassName}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

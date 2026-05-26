@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Loader2, Send, User, Hash, ArrowLeft, Clock } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

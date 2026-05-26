@@ -1,10 +1,6 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { usePathname, useSearchParams } from "next/navigation";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
-import { buildCurrentPath, buildLoginHref } from "@/lib/auth-redirect";
 
 type PublicNavAuthProps = {
   dashboardClassName: string;
@@ -21,10 +17,6 @@ export function PublicNavAuth({
   onNavigate,
   compact = false,
 }: PublicNavAuthProps) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
-
   const renderLabel = (label: string) =>
     compact ? (
       <span className="block text-center text-base font-black uppercase leading-none tracking-tighter">
@@ -41,7 +33,7 @@ export function PublicNavAuth({
       </AuthLoading>
       <Authenticated>
         <Link
-          href="/dashboard/chat"
+          to="/dashboard/chat"
           className={`cursor-pointer ${dashboardClassName}`}
           onClick={onNavigate}
         >
@@ -49,8 +41,9 @@ export function PublicNavAuth({
         </Link>
       </Authenticated>
       <Unauthenticated>
+        {/* login redirection can be better handled in tanstack start*/}
         <Link
-          href={loginHref}
+          to={"/"}
           className={`cursor-pointer ${loginClassName}`}
           onClick={onNavigate}
         >

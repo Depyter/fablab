@@ -1,13 +1,13 @@
-"use client";
-
 import { useRef } from "react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { CtaSection } from "@/components/cta-section";
 import { CtaButton } from "@/components/cta-button";
+import { createFileRoute } from "@tanstack/react-router";
 
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+export const Route = createFileRoute("/_public/")({
+  component: Home,
+});
 
 const MARQUEE_COPY_KEYS = ["copy-0", "copy-1", "copy-2", "copy-3"];
 
@@ -58,7 +58,7 @@ function SplitWord({ word }: { word: string }) {
   );
 }
 
-export default function HomePage() {
+function Home() {
   const stripRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLElement>(null);
 
@@ -182,22 +182,25 @@ export default function HomePage() {
   );
 
   /* ── Marquee ticker (GSAP-native) ── */
-  useGSAP(() => {
-    const strip = stripRef.current;
-    if (!strip) return;
+  useGSAP(
+    () => {
+      const strip = stripRef.current;
+      if (!strip) return;
 
-    const halfWidth = strip.scrollWidth / 2;
+      const halfWidth = strip.scrollWidth / 2;
 
-    gsap.to(strip, {
-      x: -halfWidth,
-      duration: 120,
-      ease: "none",
-      repeat: -1,
-      modifiers: {
-        x: (x) => `${parseFloat(x) % halfWidth}px`,
-      },
-    });
-  });
+      gsap.to(strip, {
+        x: -halfWidth,
+        duration: 120,
+        ease: "none",
+        repeat: -1,
+        modifiers: {
+          x: (x) => `${parseFloat(x) % halfWidth}px`,
+        },
+      });
+    },
+    { scope: pageRef },
+  );
 
   const marqueeText =
     "3D Printing • Laser Cutting • CNC Milling • 3D Scanning • Workshops • Pottery • Vacuum Forming • ";

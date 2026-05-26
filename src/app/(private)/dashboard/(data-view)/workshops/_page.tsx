@@ -30,7 +30,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------

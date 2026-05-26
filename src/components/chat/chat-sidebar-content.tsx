@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { usePathname } from "next/navigation";
 import { Hash, ChevronDown, ChevronRight } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";

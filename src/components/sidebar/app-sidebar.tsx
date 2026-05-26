@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import {
   Sidebar,
   SidebarFooter,

@@ -6,7 +6,7 @@ import { api } from "@/../convex/_generated/api";
 import { ArrowLeft, CirclePercent } from "lucide-react";
 import { ServiceGallery } from "@/components/services/image-carousel";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { BookingDialog } from "@/components/booking/dialog-form";
 import { useEffect, useRef, useMemo } from "react";
 import type { WorkshopSchedule } from "@/components/booking/workshop-time-slot-picker";

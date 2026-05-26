@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { usePathname } from "next/navigation";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 

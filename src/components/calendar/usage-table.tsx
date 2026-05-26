@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import type { Id } from "@convex/_generated/dataModel";
 

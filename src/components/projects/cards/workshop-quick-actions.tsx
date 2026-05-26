@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { CheckCheck, CreditCard, XCircle, MessageSquare } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { ProjectStatusType } from "@convex/constants";
 import { getStatusLabel } from "@/lib/project-type-meta";

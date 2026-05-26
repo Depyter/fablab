@@ -6,7 +6,7 @@ import { api } from "@/../convex/_generated/api";
 import { ServiceCard } from "@/components/services/service-card";
 import { PackageOpen, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { DataViewContent } from "@/components/manage/data-view";
 import {
   getSearchParam,
