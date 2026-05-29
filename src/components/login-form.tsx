@@ -1,11 +1,9 @@
-"use client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { authClient } from "../lib/auth-client";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { getSafeReturnTo } from "@/lib/auth-redirect";
+import { Route } from "@/app/_public/login";
 
 export function LoginForm({
   className,
@@ -13,8 +11,8 @@ export function LoginForm({
 }: React.ComponentProps<"form">) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const redirectTo = getSafeReturnTo(searchParams.get("redirectTo"));
+
+  const { redirect } = Route.useSearch();
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -22,7 +20,7 @@ export function LoginForm({
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: new URL(redirectTo, window.location.origin).toString(),
+        callbackURL: redirect,
       });
       if (result?.error) {
         setError(result.error.message ?? "Google sign in failed.");

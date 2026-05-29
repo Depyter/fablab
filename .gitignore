@@ -13,9 +13,9 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# vite
+.output
+.tanstack
 
 # production
 /build

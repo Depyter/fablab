@@ -35,7 +35,6 @@ export function PublicNavbar() {
               alt="FabLab Logo"
               width={125}
               height={43}
-              priority
               className="h-8 w-auto sm:h-12"
             />
           </Link>
@@ -58,7 +57,6 @@ export function PublicNavbar() {
           <PublicNavAuth
             dashboardClassName="inline-flex items-center bg-fab-magenta px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
             loginClassName="inline-flex items-center bg-fab-teal px-6 py-2 text-xl font-black uppercase tracking-tighter text-white transition-all hover:bg-fab-amber"
-            loadingClassName="h-10 w-24 bg-gray-200"
           />
         </nav>
       </div>

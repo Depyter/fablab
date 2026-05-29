@@ -16,13 +16,13 @@
     "incremental": true,
     "plugins": [
       {
-        "name": "next"
-      }
+        "name": "next",
+      },
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@convex/*": ["./convex/*"]
-    }
+      "@convex/*": ["./convex/*"],
+    },
   },
   "include": [
     "next-env.d.ts",
@@ -32,7 +32,8 @@
     "src/**/*.tsx",
     "test/**/*.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "src/app/_private/dashboard/_data-view/_staff/workshops",
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

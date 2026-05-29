@@ -1,0 +1,193 @@
+"use client";
+
+import * as React from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
+import { ReportDateRange } from "@/components/reports/report-date-range";
+import { ReportExportButton } from "@/components/reports/report-export";
+import type { Id } from "@convex/_generated/dataModel";
+import { getCurrentTimestamp } from "@/lib/lab-time";
+import { ReportsClient, REPORT_TABS, type ReportTabValue } from "./_client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface HeaderData {
+  metrics: {
+    projectCount: number;
+    projectCountByStatus: Record<string, number> | null;
+    workshopCount: number;
+    totalRevenue: number;
+    totalMaterialCost: number;
+    topServices: Array<{
+      serviceId: Id<"services">;
+      serviceName: string;
+      projectCount: number;
+    }> | null;
+    resourceUtilization: Array<{
+      resourceId: Id<"resources"> | null;
+      name: string;
+      totalBookedMinutes: number;
+    }> | null;
+    materialUsage: Array<{
+      materialId: Id<"materials">;
+      name: string;
+      unit: string;
+      totalUsed: number;
+      totalCost: number;
+      currentStock: number;
+    }> | null;
+  } | null;
+  revenue: {
+    monthly: Array<{
+      year: number;
+      month: number;
+      revenue: number;
+      count: number;
+    }> | null;
+    byService: Array<{
+      serviceId: Id<"services">;
+      serviceName: string;
+      revenue: number;
+      count: number;
+    }> | null;
+  } | null;
+  downtime: Array<{
+    resourceId: Id<"resources">;
+    name: string;
+    category: string;
+    currentStatus: string;
+    isUnderMaintenance: boolean;
+    totalDowntimeMinutes: number;
+    bookingCount: number;
+  }> | null;
+}
+
+function ReportsPageHeader({
+  dateFrom,
+  dateTo,
+  onDateFromChange,
+  onDateToChange,
+  exportData,
+  activeTab,
+  onTabChange,
+}: {
+  dateFrom: number;
+  dateTo: number;
+  onDateFromChange: (value: number) => void;
+  onDateToChange: (value: number) => void;
+  exportData: HeaderData | null;
+  activeTab: ReportTabValue;
+  onTabChange: (value: ReportTabValue) => void;
+}) {
+  return (
+    <DataViewPageHeader hideBorder>
+      <div className="sm:hidden">
+        <Select
+          value={activeTab}
+          onValueChange={(value) => onTabChange(value as ReportTabValue)}
+        >
+          <SelectTrigger className="h-9 w-[150px] border-2 border-black bg-white text-[10px] font-black uppercase tracking-wider text-black">
+            <SelectValue placeholder="Section" />
+          </SelectTrigger>
+          <SelectContent>
+            {REPORT_TABS.map((tab) => (
+              <SelectItem key={tab.value} value={tab.value}>
+                {tab.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1" />
+      <ReportDateRange
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={onDateFromChange}
+        onDateToChange={onDateToChange}
+      />
+      {exportData && (
+        <ReportExportButton
+          data={{
+            ...exportData,
+            dateFrom,
+            dateTo,
+          }}
+        />
+      )}
+    </DataViewPageHeader>
+  );
+}
+
+function getMonthStart() {
+  const d = new Date();
+  d.setDate(d.getDate() - 30);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function useMonthRange() {
+  const now = React.useMemo(() => getCurrentTimestamp(), []);
+  const monthStart = React.useMemo(() => getMonthStart(), []);
+
+  const [dateFrom, setDateFrom] = React.useState(monthStart);
+  const [dateTo, setDateTo] = React.useState(now);
+
+  return { dateFrom, dateTo, setDateFrom, setDateTo };
+}
+
+export function ReportsPageContent() {
+  const { dateFrom, dateTo, setDateFrom, setDateTo } = useMonthRange();
+  const [activeTab, setActiveTab] = React.useState<ReportTabValue>("overview");
+
+  const metrics = useQuery(api.reports.query.getReportMetrics, {
+    dateFrom,
+    dateTo,
+  });
+  const revenue = useQuery(api.reports.query.getRevenueBreakdown, {
+    dateFrom,
+    dateTo,
+  });
+  const downtime = useQuery(api.reports.query.getResourceDowntime, {
+    dateFrom,
+    dateTo,
+  });
+
+  const dataLoaded =
+    metrics !== undefined && revenue !== undefined && downtime !== undefined;
+  const exportData: HeaderData | null = dataLoaded
+    ? {
+        metrics: metrics as HeaderData["metrics"],
+        revenue: revenue as HeaderData["revenue"],
+        downtime: downtime as HeaderData["downtime"],
+      }
+    : null;
+
+  return (
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-background">
+      <ReportsPageHeader
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
+        exportData={exportData}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+      <ReportsClient
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        metrics={metrics}
+        revenue={revenue}
+        downtime={downtime}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+    </div>
+  );
+}

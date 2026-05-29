@@ -1,26 +1,14 @@
-import { redirect } from "next/navigation";
+import { createFileRoute } from "@tanstack/react-router";
+import { Image } from "@unpic/react";
 import { SignUpForm } from "@/components/signup-form";
-import Image from "next/image";
-import { LoginRedirect } from "@/components/login-redirect";
 
-/**
- * The sign-up page is only available in preview and local dev environments.
- * In production, email/password auth is disabled server-side, so this page
- * would show a broken form. We redirect to login instead.
- *
- * This check mirrors isPreviewEnvironment() in convex/auth.ts.
- */
-export default function SignUpPage() {
-  const env = process.env.NEXTJS_ENV;
-  const isPreview = env === "preview" || env === "development";
+export const Route = createFileRoute("/_public/signup")({
+  component: RouteComponent,
+});
 
-  if (!isPreview) {
-    redirect("/login");
-  }
-
+function RouteComponent() {
   return (
     <div className="grid min-h-svh lg:grid-cols-3">
-      <LoginRedirect />
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">

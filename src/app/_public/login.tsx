@@ -1,24 +1,25 @@
-import { redirect } from "next/navigation";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { Image } from "@unpic/react";
 import { LoginForm } from "@/components/login-form";
-import Image from "next/image";
-import { LoginRedirect } from "@/components/login-redirect";
+import { z } from "zod";
+export const Route = createFileRoute("/_public/login")({
+  component: RouteComponent,
+  validateSearch: z.object({
+    redirect: z.string().optional().catch("/dashboard/chat"),
+  }),
+  beforeLoad: ({}) => {
+    const env = process.env.VITE_ENV;
+    const isPreview = env === "preview" || env === "development";
 
-/**
- * In preview and local dev environments, email/password auth replaces OAuth.
- * Redirect to the signup page which handles both sign-up and sign-in.
- * Production continues to use the Google OAuth flow.
- */
-export default function LoginPage() {
-  const env = process.env.NEXTJS_ENV;
-  const isPreview = env === "preview" || env === "development";
+    if (isPreview) {
+      throw redirect({ to: "/signup" });
+    }
+  },
+});
 
-  if (isPreview) {
-    redirect("/signup");
-  }
-
+function RouteComponent() {
   return (
     <div className="grid min-h-svh lg:grid-cols-3">
-      <LoginRedirect />
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">

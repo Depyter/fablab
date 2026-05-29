@@ -9,86 +9,285 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './app/__root'
-import { Route as PublicRouteImport } from './app/_public'
+import { Route as PublicRouteRouteImport } from './app/_public/route'
+import { Route as PrivateRouteRouteImport } from './app/_private/route'
 import { Route as PublicIndexRouteImport } from './app/_public/index'
+import { Route as PublicSignupRouteImport } from './app/_public/signup'
+import { Route as PublicLoginRouteImport } from './app/_public/login'
+import { Route as PrivateDashboardRouteRouteImport } from './app/_private/dashboard/route'
 import { Route as PublicServicesIndexRouteImport } from './app/_public/services/index'
-import { Route as PublicLoginIndexRouteImport } from './app/_public/login/index'
 import { Route as ApiAuthSplatRouteImport } from './app/api/auth/$'
-import { Route as privateDashboardChatIndexRouteImport } from './app/(private)/dashboard/chat/index'
+import { Route as PublicServicesSlugRouteImport } from './app/_public/services/$slug'
+import { Route as PrivateDashboardChatRouteRouteImport } from './app/_private/dashboard/chat/route'
+import { Route as PrivateDashboardDataViewRouteRouteImport } from './app/_private/dashboard/_data-view/route'
+import { Route as PrivateDashboardDataViewWorkshopsRouteImport } from './app/_private/dashboard/_data-view/workshops'
+import { Route as PrivateDashboardDataViewProjectsRouteImport } from './app/_private/dashboard/_data-view/projects'
+import { Route as PrivateDashboardDataViewCalendarRouteImport } from './app/_private/dashboard/_data-view/calendar'
+import { Route as PrivateDashboardDataViewStaffRouteRouteImport } from './app/_private/dashboard/_data-view/_staff/route'
+import { Route as PrivateDashboardDataViewStaffReportsRouteImport } from './app/_private/dashboard/_data-view/_staff/reports'
+import { Route as PrivateDashboardDataViewStaffInventoryRouteImport } from './app/_private/dashboard/_data-view/_staff/inventory'
+import { Route as PrivateDashboardDataViewStaffServicesIndexRouteImport } from './app/_private/dashboard/_data-view/_staff/services/index'
+import { Route as PrivateDashboardDataViewStaffWorkshopsAddRouteImport } from './app/_private/dashboard/_data-view/_staff/workshops/add'
+import { Route as PrivateDashboardDataViewStaffServicesAddRouteImport } from './app/_private/dashboard/_data-view/_staff/services/add'
+import { Route as PrivateDashboardDataViewStaffWorkshopsSlugEditRouteImport } from './app/_private/dashboard/_data-view/_staff/workshops/$slug.edit'
+import { Route as PrivateDashboardDataViewStaffServicesSlugEditRouteImport } from './app/_private/dashboard/_data-view/_staff/services/$slug.edit'
 
-const PublicRoute = PublicRouteImport.update({
+const PublicRouteRoute = PublicRouteRouteImport.update({
   id: '/_public',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivateRouteRoute = PrivateRouteRouteImport.update({
+  id: '/_private',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PublicIndexRoute = PublicIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => PublicRoute,
+  getParentRoute: () => PublicRouteRoute,
+} as any)
+const PublicSignupRoute = PublicSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => PublicRouteRoute,
+} as any)
+const PublicLoginRoute = PublicLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => PublicRouteRoute,
+} as any)
+const PrivateDashboardRouteRoute = PrivateDashboardRouteRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => PrivateRouteRoute,
 } as any)
 const PublicServicesIndexRoute = PublicServicesIndexRouteImport.update({
   id: '/services/',
   path: '/services/',
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicLoginIndexRoute = PublicLoginIndexRouteImport.update({
-  id: '/login/',
-  path: '/login/',
-  getParentRoute: () => PublicRoute,
+  getParentRoute: () => PublicRouteRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const privateDashboardChatIndexRoute =
-  privateDashboardChatIndexRouteImport.update({
-    id: '/(private)/dashboard/chat/',
-    path: '/dashboard/chat/',
-    getParentRoute: () => rootRouteImport,
+const PublicServicesSlugRoute = PublicServicesSlugRouteImport.update({
+  id: '/services/$slug',
+  path: '/services/$slug',
+  getParentRoute: () => PublicRouteRoute,
+} as any)
+const PrivateDashboardChatRouteRoute =
+  PrivateDashboardChatRouteRouteImport.update({
+    id: '/chat',
+    path: '/chat',
+    getParentRoute: () => PrivateDashboardRouteRoute,
+  } as any)
+const PrivateDashboardDataViewRouteRoute =
+  PrivateDashboardDataViewRouteRouteImport.update({
+    id: '/_data-view',
+    getParentRoute: () => PrivateDashboardRouteRoute,
+  } as any)
+const PrivateDashboardDataViewWorkshopsRoute =
+  PrivateDashboardDataViewWorkshopsRouteImport.update({
+    id: '/workshops',
+    path: '/workshops',
+    getParentRoute: () => PrivateDashboardDataViewRouteRoute,
+  } as any)
+const PrivateDashboardDataViewProjectsRoute =
+  PrivateDashboardDataViewProjectsRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => PrivateDashboardDataViewRouteRoute,
+  } as any)
+const PrivateDashboardDataViewCalendarRoute =
+  PrivateDashboardDataViewCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => PrivateDashboardDataViewRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffRouteRoute =
+  PrivateDashboardDataViewStaffRouteRouteImport.update({
+    id: '/_staff',
+    getParentRoute: () => PrivateDashboardDataViewRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffReportsRoute =
+  PrivateDashboardDataViewStaffReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffInventoryRoute =
+  PrivateDashboardDataViewStaffInventoryRouteImport.update({
+    id: '/inventory',
+    path: '/inventory',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffServicesIndexRoute =
+  PrivateDashboardDataViewStaffServicesIndexRouteImport.update({
+    id: '/services/',
+    path: '/services/',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffWorkshopsAddRoute =
+  PrivateDashboardDataViewStaffWorkshopsAddRouteImport.update({
+    id: '/workshops/add',
+    path: '/workshops/add',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffServicesAddRoute =
+  PrivateDashboardDataViewStaffServicesAddRouteImport.update({
+    id: '/services/add',
+    path: '/services/add',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffWorkshopsSlugEditRoute =
+  PrivateDashboardDataViewStaffWorkshopsSlugEditRouteImport.update({
+    id: '/workshops/$slug/edit',
+    path: '/workshops/$slug/edit',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
+  } as any)
+const PrivateDashboardDataViewStaffServicesSlugEditRoute =
+  PrivateDashboardDataViewStaffServicesSlugEditRouteImport.update({
+    id: '/services/$slug/edit',
+    path: '/services/$slug/edit',
+    getParentRoute: () => PrivateDashboardDataViewStaffRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
+  '/dashboard': typeof PrivateDashboardRouteRouteWithChildren
+  '/login': typeof PublicLoginRoute
+  '/signup': typeof PublicSignupRoute
+  '/dashboard/chat': typeof PrivateDashboardChatRouteRoute
+  '/services/$slug': typeof PublicServicesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/login/': typeof PublicLoginIndexRoute
   '/services/': typeof PublicServicesIndexRoute
-  '/dashboard/chat/': typeof privateDashboardChatIndexRoute
+  '/dashboard/calendar': typeof PrivateDashboardDataViewCalendarRoute
+  '/dashboard/projects': typeof PrivateDashboardDataViewProjectsRoute
+  '/dashboard/workshops': typeof PrivateDashboardDataViewWorkshopsRoute
+  '/dashboard/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
+  '/dashboard/reports': typeof PrivateDashboardDataViewStaffReportsRoute
+  '/dashboard/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
+  '/dashboard/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
+  '/dashboard/services/': typeof PrivateDashboardDataViewStaffServicesIndexRoute
+  '/dashboard/services/$slug/edit': typeof PrivateDashboardDataViewStaffServicesSlugEditRoute
+  '/dashboard/workshops/$slug/edit': typeof PrivateDashboardDataViewStaffWorkshopsSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
+  '/dashboard': typeof PrivateDashboardRouteRouteWithChildren
+  '/login': typeof PublicLoginRoute
+  '/signup': typeof PublicSignupRoute
+  '/dashboard/chat': typeof PrivateDashboardChatRouteRoute
+  '/services/$slug': typeof PublicServicesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/login': typeof PublicLoginIndexRoute
   '/services': typeof PublicServicesIndexRoute
-  '/dashboard/chat': typeof privateDashboardChatIndexRoute
+  '/dashboard/calendar': typeof PrivateDashboardDataViewCalendarRoute
+  '/dashboard/projects': typeof PrivateDashboardDataViewProjectsRoute
+  '/dashboard/workshops': typeof PrivateDashboardDataViewWorkshopsRoute
+  '/dashboard/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
+  '/dashboard/reports': typeof PrivateDashboardDataViewStaffReportsRoute
+  '/dashboard/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
+  '/dashboard/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
+  '/dashboard/services': typeof PrivateDashboardDataViewStaffServicesIndexRoute
+  '/dashboard/services/$slug/edit': typeof PrivateDashboardDataViewStaffServicesSlugEditRoute
+  '/dashboard/workshops/$slug/edit': typeof PrivateDashboardDataViewStaffWorkshopsSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_public': typeof PublicRouteWithChildren
+  '/_private': typeof PrivateRouteRouteWithChildren
+  '/_public': typeof PublicRouteRouteWithChildren
+  '/_private/dashboard': typeof PrivateDashboardRouteRouteWithChildren
+  '/_public/login': typeof PublicLoginRoute
+  '/_public/signup': typeof PublicSignupRoute
   '/_public/': typeof PublicIndexRoute
+  '/_private/dashboard/_data-view': typeof PrivateDashboardDataViewRouteRouteWithChildren
+  '/_private/dashboard/chat': typeof PrivateDashboardChatRouteRoute
+  '/_public/services/$slug': typeof PublicServicesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/_public/login/': typeof PublicLoginIndexRoute
   '/_public/services/': typeof PublicServicesIndexRoute
-  '/(private)/dashboard/chat/': typeof privateDashboardChatIndexRoute
+  '/_private/dashboard/_data-view/_staff': typeof PrivateDashboardDataViewStaffRouteRouteWithChildren
+  '/_private/dashboard/_data-view/calendar': typeof PrivateDashboardDataViewCalendarRoute
+  '/_private/dashboard/_data-view/projects': typeof PrivateDashboardDataViewProjectsRoute
+  '/_private/dashboard/_data-view/workshops': typeof PrivateDashboardDataViewWorkshopsRoute
+  '/_private/dashboard/_data-view/_staff/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
+  '/_private/dashboard/_data-view/_staff/reports': typeof PrivateDashboardDataViewStaffReportsRoute
+  '/_private/dashboard/_data-view/_staff/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
+  '/_private/dashboard/_data-view/_staff/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
+  '/_private/dashboard/_data-view/_staff/services/': typeof PrivateDashboardDataViewStaffServicesIndexRoute
+  '/_private/dashboard/_data-view/_staff/services/$slug/edit': typeof PrivateDashboardDataViewStaffServicesSlugEditRoute
+  '/_private/dashboard/_data-view/_staff/workshops/$slug/edit': typeof PrivateDashboardDataViewStaffWorkshopsSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/auth/$' | '/login/' | '/services/' | '/dashboard/chat/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/signup'
+    | '/dashboard/chat'
+    | '/services/$slug'
+    | '/api/auth/$'
+    | '/services/'
+    | '/dashboard/calendar'
+    | '/dashboard/projects'
+    | '/dashboard/workshops'
+    | '/dashboard/inventory'
+    | '/dashboard/reports'
+    | '/dashboard/services/add'
+    | '/dashboard/workshops/add'
+    | '/dashboard/services/'
+    | '/dashboard/services/$slug/edit'
+    | '/dashboard/workshops/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/auth/$' | '/login' | '/services' | '/dashboard/chat'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/signup'
+    | '/dashboard/chat'
+    | '/services/$slug'
+    | '/api/auth/$'
+    | '/services'
+    | '/dashboard/calendar'
+    | '/dashboard/projects'
+    | '/dashboard/workshops'
+    | '/dashboard/inventory'
+    | '/dashboard/reports'
+    | '/dashboard/services/add'
+    | '/dashboard/workshops/add'
+    | '/dashboard/services'
+    | '/dashboard/services/$slug/edit'
+    | '/dashboard/workshops/$slug/edit'
   id:
     | '__root__'
+    | '/_private'
     | '/_public'
+    | '/_private/dashboard'
+    | '/_public/login'
+    | '/_public/signup'
     | '/_public/'
+    | '/_private/dashboard/_data-view'
+    | '/_private/dashboard/chat'
+    | '/_public/services/$slug'
     | '/api/auth/$'
-    | '/_public/login/'
     | '/_public/services/'
-    | '/(private)/dashboard/chat/'
+    | '/_private/dashboard/_data-view/_staff'
+    | '/_private/dashboard/_data-view/calendar'
+    | '/_private/dashboard/_data-view/projects'
+    | '/_private/dashboard/_data-view/workshops'
+    | '/_private/dashboard/_data-view/_staff/inventory'
+    | '/_private/dashboard/_data-view/_staff/reports'
+    | '/_private/dashboard/_data-view/_staff/services/add'
+    | '/_private/dashboard/_data-view/_staff/workshops/add'
+    | '/_private/dashboard/_data-view/_staff/services/'
+    | '/_private/dashboard/_data-view/_staff/services/$slug/edit'
+    | '/_private/dashboard/_data-view/_staff/workshops/$slug/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  PublicRoute: typeof PublicRouteWithChildren
+  PrivateRouteRoute: typeof PrivateRouteRouteWithChildren
+  PublicRouteRoute: typeof PublicRouteRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  privateDashboardChatIndexRoute: typeof privateDashboardChatIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -97,7 +296,14 @@ declare module '@tanstack/react-router' {
       id: '/_public'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof PublicRouteImport
+      preLoaderRoute: typeof PublicRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_private': {
+      id: '/_private'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PrivateRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_public/': {
@@ -105,21 +311,35 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof PublicIndexRouteImport
-      parentRoute: typeof PublicRoute
+      parentRoute: typeof PublicRouteRoute
+    }
+    '/_public/signup': {
+      id: '/_public/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof PublicSignupRouteImport
+      parentRoute: typeof PublicRouteRoute
+    }
+    '/_public/login': {
+      id: '/_public/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof PublicLoginRouteImport
+      parentRoute: typeof PublicRouteRoute
+    }
+    '/_private/dashboard': {
+      id: '/_private/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof PrivateDashboardRouteRouteImport
+      parentRoute: typeof PrivateRouteRoute
     }
     '/_public/services/': {
       id: '/_public/services/'
       path: '/services'
       fullPath: '/services/'
       preLoaderRoute: typeof PublicServicesIndexRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    '/_public/login/': {
-      id: '/_public/login/'
-      path: '/login'
-      fullPath: '/login/'
-      preLoaderRoute: typeof PublicLoginIndexRouteImport
-      parentRoute: typeof PublicRoute
+      parentRoute: typeof PublicRouteRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -128,35 +348,216 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(private)/dashboard/chat/': {
-      id: '/(private)/dashboard/chat/'
-      path: '/dashboard/chat'
-      fullPath: '/dashboard/chat/'
-      preLoaderRoute: typeof privateDashboardChatIndexRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_public/services/$slug': {
+      id: '/_public/services/$slug'
+      path: '/services/$slug'
+      fullPath: '/services/$slug'
+      preLoaderRoute: typeof PublicServicesSlugRouteImport
+      parentRoute: typeof PublicRouteRoute
+    }
+    '/_private/dashboard/chat': {
+      id: '/_private/dashboard/chat'
+      path: '/chat'
+      fullPath: '/dashboard/chat'
+      preLoaderRoute: typeof PrivateDashboardChatRouteRouteImport
+      parentRoute: typeof PrivateDashboardRouteRoute
+    }
+    '/_private/dashboard/_data-view': {
+      id: '/_private/dashboard/_data-view'
+      path: ''
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof PrivateDashboardDataViewRouteRouteImport
+      parentRoute: typeof PrivateDashboardRouteRoute
+    }
+    '/_private/dashboard/_data-view/workshops': {
+      id: '/_private/dashboard/_data-view/workshops'
+      path: '/workshops'
+      fullPath: '/dashboard/workshops'
+      preLoaderRoute: typeof PrivateDashboardDataViewWorkshopsRouteImport
+      parentRoute: typeof PrivateDashboardDataViewRouteRoute
+    }
+    '/_private/dashboard/_data-view/projects': {
+      id: '/_private/dashboard/_data-view/projects'
+      path: '/projects'
+      fullPath: '/dashboard/projects'
+      preLoaderRoute: typeof PrivateDashboardDataViewProjectsRouteImport
+      parentRoute: typeof PrivateDashboardDataViewRouteRoute
+    }
+    '/_private/dashboard/_data-view/calendar': {
+      id: '/_private/dashboard/_data-view/calendar'
+      path: '/calendar'
+      fullPath: '/dashboard/calendar'
+      preLoaderRoute: typeof PrivateDashboardDataViewCalendarRouteImport
+      parentRoute: typeof PrivateDashboardDataViewRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff': {
+      id: '/_private/dashboard/_data-view/_staff'
+      path: ''
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffRouteRouteImport
+      parentRoute: typeof PrivateDashboardDataViewRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/reports': {
+      id: '/_private/dashboard/_data-view/_staff/reports'
+      path: '/reports'
+      fullPath: '/dashboard/reports'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffReportsRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/inventory': {
+      id: '/_private/dashboard/_data-view/_staff/inventory'
+      path: '/inventory'
+      fullPath: '/dashboard/inventory'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffInventoryRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/services/': {
+      id: '/_private/dashboard/_data-view/_staff/services/'
+      path: '/services'
+      fullPath: '/dashboard/services/'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffServicesIndexRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/workshops/add': {
+      id: '/_private/dashboard/_data-view/_staff/workshops/add'
+      path: '/workshops/add'
+      fullPath: '/dashboard/workshops/add'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffWorkshopsAddRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/services/add': {
+      id: '/_private/dashboard/_data-view/_staff/services/add'
+      path: '/services/add'
+      fullPath: '/dashboard/services/add'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffServicesAddRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/workshops/$slug/edit': {
+      id: '/_private/dashboard/_data-view/_staff/workshops/$slug/edit'
+      path: '/workshops/$slug/edit'
+      fullPath: '/dashboard/workshops/$slug/edit'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffWorkshopsSlugEditRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
+    }
+    '/_private/dashboard/_data-view/_staff/services/$slug/edit': {
+      id: '/_private/dashboard/_data-view/_staff/services/$slug/edit'
+      path: '/services/$slug/edit'
+      fullPath: '/dashboard/services/$slug/edit'
+      preLoaderRoute: typeof PrivateDashboardDataViewStaffServicesSlugEditRouteImport
+      parentRoute: typeof PrivateDashboardDataViewStaffRouteRoute
     }
   }
 }
 
-interface PublicRouteChildren {
+interface PrivateDashboardDataViewStaffRouteRouteChildren {
+  PrivateDashboardDataViewStaffInventoryRoute: typeof PrivateDashboardDataViewStaffInventoryRoute
+  PrivateDashboardDataViewStaffReportsRoute: typeof PrivateDashboardDataViewStaffReportsRoute
+  PrivateDashboardDataViewStaffServicesAddRoute: typeof PrivateDashboardDataViewStaffServicesAddRoute
+  PrivateDashboardDataViewStaffWorkshopsAddRoute: typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
+  PrivateDashboardDataViewStaffServicesIndexRoute: typeof PrivateDashboardDataViewStaffServicesIndexRoute
+  PrivateDashboardDataViewStaffServicesSlugEditRoute: typeof PrivateDashboardDataViewStaffServicesSlugEditRoute
+  PrivateDashboardDataViewStaffWorkshopsSlugEditRoute: typeof PrivateDashboardDataViewStaffWorkshopsSlugEditRoute
+}
+
+const PrivateDashboardDataViewStaffRouteRouteChildren: PrivateDashboardDataViewStaffRouteRouteChildren =
+  {
+    PrivateDashboardDataViewStaffInventoryRoute:
+      PrivateDashboardDataViewStaffInventoryRoute,
+    PrivateDashboardDataViewStaffReportsRoute:
+      PrivateDashboardDataViewStaffReportsRoute,
+    PrivateDashboardDataViewStaffServicesAddRoute:
+      PrivateDashboardDataViewStaffServicesAddRoute,
+    PrivateDashboardDataViewStaffWorkshopsAddRoute:
+      PrivateDashboardDataViewStaffWorkshopsAddRoute,
+    PrivateDashboardDataViewStaffServicesIndexRoute:
+      PrivateDashboardDataViewStaffServicesIndexRoute,
+    PrivateDashboardDataViewStaffServicesSlugEditRoute:
+      PrivateDashboardDataViewStaffServicesSlugEditRoute,
+    PrivateDashboardDataViewStaffWorkshopsSlugEditRoute:
+      PrivateDashboardDataViewStaffWorkshopsSlugEditRoute,
+  }
+
+const PrivateDashboardDataViewStaffRouteRouteWithChildren =
+  PrivateDashboardDataViewStaffRouteRoute._addFileChildren(
+    PrivateDashboardDataViewStaffRouteRouteChildren,
+  )
+
+interface PrivateDashboardDataViewRouteRouteChildren {
+  PrivateDashboardDataViewStaffRouteRoute: typeof PrivateDashboardDataViewStaffRouteRouteWithChildren
+  PrivateDashboardDataViewCalendarRoute: typeof PrivateDashboardDataViewCalendarRoute
+  PrivateDashboardDataViewProjectsRoute: typeof PrivateDashboardDataViewProjectsRoute
+  PrivateDashboardDataViewWorkshopsRoute: typeof PrivateDashboardDataViewWorkshopsRoute
+}
+
+const PrivateDashboardDataViewRouteRouteChildren: PrivateDashboardDataViewRouteRouteChildren =
+  {
+    PrivateDashboardDataViewStaffRouteRoute:
+      PrivateDashboardDataViewStaffRouteRouteWithChildren,
+    PrivateDashboardDataViewCalendarRoute:
+      PrivateDashboardDataViewCalendarRoute,
+    PrivateDashboardDataViewProjectsRoute:
+      PrivateDashboardDataViewProjectsRoute,
+    PrivateDashboardDataViewWorkshopsRoute:
+      PrivateDashboardDataViewWorkshopsRoute,
+  }
+
+const PrivateDashboardDataViewRouteRouteWithChildren =
+  PrivateDashboardDataViewRouteRoute._addFileChildren(
+    PrivateDashboardDataViewRouteRouteChildren,
+  )
+
+interface PrivateDashboardRouteRouteChildren {
+  PrivateDashboardDataViewRouteRoute: typeof PrivateDashboardDataViewRouteRouteWithChildren
+  PrivateDashboardChatRouteRoute: typeof PrivateDashboardChatRouteRoute
+}
+
+const PrivateDashboardRouteRouteChildren: PrivateDashboardRouteRouteChildren = {
+  PrivateDashboardDataViewRouteRoute:
+    PrivateDashboardDataViewRouteRouteWithChildren,
+  PrivateDashboardChatRouteRoute: PrivateDashboardChatRouteRoute,
+}
+
+const PrivateDashboardRouteRouteWithChildren =
+  PrivateDashboardRouteRoute._addFileChildren(
+    PrivateDashboardRouteRouteChildren,
+  )
+
+interface PrivateRouteRouteChildren {
+  PrivateDashboardRouteRoute: typeof PrivateDashboardRouteRouteWithChildren
+}
+
+const PrivateRouteRouteChildren: PrivateRouteRouteChildren = {
+  PrivateDashboardRouteRoute: PrivateDashboardRouteRouteWithChildren,
+}
+
+const PrivateRouteRouteWithChildren = PrivateRouteRoute._addFileChildren(
+  PrivateRouteRouteChildren,
+)
+
+interface PublicRouteRouteChildren {
+  PublicLoginRoute: typeof PublicLoginRoute
+  PublicSignupRoute: typeof PublicSignupRoute
   PublicIndexRoute: typeof PublicIndexRoute
-  PublicLoginIndexRoute: typeof PublicLoginIndexRoute
+  PublicServicesSlugRoute: typeof PublicServicesSlugRoute
   PublicServicesIndexRoute: typeof PublicServicesIndexRoute
 }
 
-const PublicRouteChildren: PublicRouteChildren = {
+const PublicRouteRouteChildren: PublicRouteRouteChildren = {
+  PublicLoginRoute: PublicLoginRoute,
+  PublicSignupRoute: PublicSignupRoute,
   PublicIndexRoute: PublicIndexRoute,
-  PublicLoginIndexRoute: PublicLoginIndexRoute,
+  PublicServicesSlugRoute: PublicServicesSlugRoute,
   PublicServicesIndexRoute: PublicServicesIndexRoute,
 }
 
-const PublicRouteWithChildren =
-  PublicRoute._addFileChildren(PublicRouteChildren)
+const PublicRouteRouteWithChildren = PublicRouteRoute._addFileChildren(
+  PublicRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  PublicRoute: PublicRouteWithChildren,
+  PrivateRouteRoute: PrivateRouteRouteWithChildren,
+  PublicRouteRoute: PublicRouteRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  privateDashboardChatIndexRoute: privateDashboardChatIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
