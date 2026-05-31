@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_public/login")({
   validateSearch: z.object({
     redirect: z.string().optional().catch("/dashboard/chat"),
   }),
-  beforeLoad: ({ search }) => {
+  beforeLoad: (opts) => {
     const env = process.env.VITE_ENV;
     const isPreview = env === "preview" || env === "development";
 
@@ -16,7 +16,13 @@ export const Route = createFileRoute("/_public/login")({
       throw redirect({
         to: "/signup",
         // Pass current search
-        search: { redirect: search.redirect },
+        search: { redirect: opts.search.redirect },
+      });
+    }
+
+    if (opts.context.isAuthenticated) {
+      throw redirect({
+        to: "/dashboard/chat",
       });
     }
   },

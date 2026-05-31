@@ -9,7 +9,7 @@ import {
 import { CtaButton } from "@/components/cta-button";
 import { useRouteContext } from "@tanstack/react-router";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
-import type { QueryClient } from "@tanstack/react-query";
+import { environmentManager, type QueryClient } from "@tanstack/react-query";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
 import { authClient } from "@/lib/auth-client";
 import { getToken } from "@/lib/auth-server";
@@ -57,6 +57,7 @@ export const Route = createRootRouteWithContext<{
     ],
   }),
   beforeLoad: async (ctx) => {
+    if (!environmentManager.isServer()) return;
     const token = await getAuth();
 
     if (token) {

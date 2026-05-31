@@ -24,6 +24,7 @@ import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react";
 import { UserProfileDialog } from "@/components/profile/profile-card";
 import { authClient } from "@/lib/auth-client";
 import posthog from "posthog-js";
+import { useRouter } from "@tanstack/react-router";
 
 function getInitials(name: string): string {
   return name
@@ -44,6 +45,7 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
   const initials = getInitials(user.name);
 
   const handleSignOut = async () => {
@@ -135,7 +137,6 @@ export function NavUser({
               align="end"
               sideOffset={4}
             >
-              {/* User identity header */}
               <DropdownMenuLabel className="p-0 font-normal">
                 <UserProfileDialog>
                   <button className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm hover:bg-black/5 transition-colors">

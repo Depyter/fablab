@@ -1,6 +1,3 @@
-"use client";
-
-import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +8,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { authClient } from "@/lib/auth-client";
+import { useRouter } from "@tanstack/react-router";
 
 interface BannedUserDialogProps {
   message?: string;
@@ -53,11 +51,9 @@ export function BannedUserDialog({
   actionLabel = "Back to Login",
   redirectTo = "/login",
 }: BannedUserDialogProps) {
-  const router = useRouter();
-
   const handleContinue = async () => {
     await authClient.signOut();
-    router.replace(redirectTo);
+    window.location.replace("/login");
   };
 
   return (
