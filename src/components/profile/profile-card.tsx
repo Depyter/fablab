@@ -1,10 +1,8 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import { User, Camera, Loader2 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import type { Doc, Id } from "@convex/_generated/dataModel";
+import type { Id } from "@convex/_generated/dataModel";
 import { ConvexError } from "convex/values";
 import { toast } from "sonner";
 import { getRateLimitErrorMessage } from "@/lib/rate-limit";
@@ -26,39 +24,41 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  useProfile,
+  type CurrentUserProfile,
+} from "@/components/sidebar/profile-context";
 
-type UserProfile = Doc<"userProfile"> & {
-  profilePicUrl: string | null;
-};
+type UserProfile = CurrentUserProfile;
 
 type UserProfilePanelVariant = "dialog" | "sheet";
 
 export function UserProfileDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
-  const profile = useQuery(api.users.getUserProfile);
+  const { profile, isPending } = useProfile();
   const variant: UserProfilePanelVariant = isMobile ? "sheet" : "dialog";
 
   const content = open ? (
-    profile === undefined ? (
+    isPending ? (
       <UserProfilePanel variant={variant}>
         <div className="pt-4 text-sm text-muted-foreground">
           Loading profile...
         </div>
       </UserProfilePanel>
-    ) : profile === null ? (
-      <UserProfilePanel variant={variant}>
-        <div className="pt-4 text-sm text-muted-foreground">
-          Profile unavailable.
-        </div>
-      </UserProfilePanel>
-    ) : (
+    ) : profile ? (
       <UserProfileForm
         key={profile._id}
         profile={profile}
         onOpenChange={setOpen}
         variant={variant}
       />
+    ) : (
+      <UserProfilePanel variant={variant}>
+        <div className="pt-4 text-sm text-muted-foreground">
+          Profile unavailable.
+        </div>
+      </UserProfilePanel>
     )
   ) : null;
 

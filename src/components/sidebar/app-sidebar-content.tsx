@@ -23,6 +23,8 @@ import { NavUser } from "@/components/sidebar/nav-user";
 import { useProfile } from "@/components/sidebar/profile-context";
 import { Separator } from "@/components/ui/separator";
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChevronsUpDownIcon } from "lucide-react";
 
 type Role = "admin" | "maker" | "client";
 
@@ -129,7 +131,7 @@ function groupNavItems(items: NavItem[]): { key: string; items: NavItem[] }[] {
 }
 
 export function SidebarNavigation() {
-  const profile = useProfile();
+  const { profile } = useProfile();
   const role: Role = profile?.role ?? "client";
   const groups = groupNavItems(filterNavItems(allNavItems, role));
   const { isMobile, setOpenMobile } = useSidebar();
@@ -188,16 +190,41 @@ export function SidebarNavigation() {
 }
 
 export function SidebarUserFooter() {
-  const profile = useProfile();
+  const { profile, isPending } = useProfile();
 
   usePostHogIdentify(profile ?? null);
+
+  if (isPending) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" disabled className="pointer-events-none">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="rounded-none border-2 border-black bg-fab-teal text-xs font-black text-white">
+                ...
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-black uppercase tracking-tighter text-black/50">
+                Loading profile
+              </span>
+              <span className="truncate text-xs text-black/40">
+                Please wait
+              </span>
+            </div>
+            <ChevronsUpDownIcon className="ml-auto size-4 text-black/20" />
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <NavUser
       user={{
         name: profile?.name ?? "",
         email: profile?.email ?? "",
-        avatar: profile?.profilePic ?? "",
+        avatar: profile?.profilePicUrl ?? "",
       }}
     />
   );

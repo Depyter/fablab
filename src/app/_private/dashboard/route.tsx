@@ -18,12 +18,12 @@ export const Route = createFileRoute("/_private/dashboard")({
 });
 
 function RouteComponent() {
-  const { data } = useQuery(convexQuery(api.users.getUserProfile, {}));
+  const { data, isPending } = useQuery(convexQuery(api.users.getUserProfile, {}));
 
   return (
     <TooltipProvider>
       <SidebarProvider className="flex h-dvh min-h-0">
-        <ProfileProvider profile={data}>
+        <ProfileProvider profile={data} isPending={isPending}>
           <AppSidebar />
           <SidebarInset className="flex flex-col h-full overflow-hidden">
             <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">

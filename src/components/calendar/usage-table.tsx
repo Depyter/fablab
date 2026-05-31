@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { PROJECT_STATUS_LABELS } from "@convex/constants";

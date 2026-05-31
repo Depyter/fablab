@@ -1,5 +1,3 @@
-"use client";
-
 import { LayoutGrid, Users } from "lucide-react";
 import { SelectItem } from "@/components/ui/select";
 import { DataViewPageHeader } from "@/components/manage/data-view-page-header";

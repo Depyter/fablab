@@ -1,29 +1,38 @@
 import * as React from "react";
 import { Doc } from "@convex/_generated/dataModel";
 
-type SidebarProfile = Doc<"userProfile"> | null | undefined;
+export type CurrentUserProfile = Doc<"userProfile"> & {
+  profilePicUrl?: string | null;
+};
 
-const ProfileContext = React.createContext<SidebarProfile>(undefined);
+interface ProfileContextType {
+  profile: CurrentUserProfile | null | undefined;
+  isPending: boolean;
+}
+
+const ProfileContext = React.createContext<ProfileContextType | null>(null);
 
 export function ProfileProvider({
   profile,
+  isPending,
   children,
 }: React.PropsWithChildren<{
-  profile: SidebarProfile;
+  profile: CurrentUserProfile | null | undefined;
+  isPending: boolean;
 }>) {
   return (
-    <ProfileContext.Provider value={profile}>
+    <ProfileContext.Provider value={{ profile, isPending }}>
       {children}
     </ProfileContext.Provider>
   );
 }
 
 export function useProfile() {
-  const profile = React.useContext(ProfileContext);
+  const context = React.useContext(ProfileContext);
 
-  if (profile === undefined) {
+  if (!context) {
     throw new Error("useProfile must be used within a ProfileProvider.");
   }
 
-  return profile;
+  return context;
 }
