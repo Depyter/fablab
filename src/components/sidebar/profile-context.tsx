@@ -1,30 +1,16 @@
-"use client";
-
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import type { Preloaded } from "convex/react";
-import { api } from "@convex/_generated/api";
+import { Doc } from "@convex/_generated/dataModel";
 
-function useSidebarProfile(
-  preloadedProfile: Preloaded<typeof api.users.getUserProfile>,
-) {
-  return usePreloadedAuthQuery(preloadedProfile);
-}
+type SidebarProfile = Doc<"userProfile"> | null | undefined;
 
-type SidebarProfile = ReturnType<typeof useSidebarProfile>;
-
-const ProfileContext = React.createContext<SidebarProfile | undefined>(
-  undefined,
-);
+const ProfileContext = React.createContext<SidebarProfile>(undefined);
 
 export function ProfileProvider({
-  preloadedProfile,
+  profile,
   children,
 }: React.PropsWithChildren<{
-  preloadedProfile: Preloaded<typeof api.users.getUserProfile>;
+  profile: SidebarProfile;
 }>) {
-  const profile = useSidebarProfile(preloadedProfile);
-
   return (
     <ProfileContext.Provider value={profile}>
       {children}

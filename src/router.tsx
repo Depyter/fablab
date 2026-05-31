@@ -27,9 +27,11 @@ export function getRouter() {
     },
   });
   convexQueryClient.connect(queryClient);
+
   const router = createRouter({
     routeTree,
     defaultPreload: "intent",
+    defaultPreloadDelay: 25,
     context: { queryClient, convexQueryClient },
     scrollRestoration: true,
     defaultErrorComponent: (err) => <p>{err.error.stack}</p>,

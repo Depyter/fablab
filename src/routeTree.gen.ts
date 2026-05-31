@@ -20,10 +20,12 @@ import { Route as ApiAuthSplatRouteImport } from './app/api/auth/$'
 import { Route as PublicServicesSlugRouteImport } from './app/_public/services/$slug'
 import { Route as PrivateDashboardChatRouteRouteImport } from './app/_private/dashboard/chat/route'
 import { Route as PrivateDashboardDataViewRouteRouteImport } from './app/_private/dashboard/_data-view/route'
+import { Route as PrivateDashboardChatIndexRouteImport } from './app/_private/dashboard/chat/index'
 import { Route as PrivateDashboardDataViewWorkshopsRouteImport } from './app/_private/dashboard/_data-view/workshops'
 import { Route as PrivateDashboardDataViewProjectsRouteImport } from './app/_private/dashboard/_data-view/projects'
 import { Route as PrivateDashboardDataViewCalendarRouteImport } from './app/_private/dashboard/_data-view/calendar'
 import { Route as PrivateDashboardDataViewStaffRouteRouteImport } from './app/_private/dashboard/_data-view/_staff/route'
+import { Route as PrivateDashboardChatSlugThreadIdRouteImport } from './app/_private/dashboard/chat/$slug.threadId'
 import { Route as PrivateDashboardDataViewStaffReportsRouteImport } from './app/_private/dashboard/_data-view/_staff/reports'
 import { Route as PrivateDashboardDataViewStaffInventoryRouteImport } from './app/_private/dashboard/_data-view/_staff/inventory'
 import { Route as PrivateDashboardDataViewStaffServicesIndexRouteImport } from './app/_private/dashboard/_data-view/_staff/services/index'
@@ -86,6 +88,12 @@ const PrivateDashboardDataViewRouteRoute =
     id: '/_data-view',
     getParentRoute: () => PrivateDashboardRouteRoute,
   } as any)
+const PrivateDashboardChatIndexRoute =
+  PrivateDashboardChatIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PrivateDashboardChatRouteRoute,
+  } as any)
 const PrivateDashboardDataViewWorkshopsRoute =
   PrivateDashboardDataViewWorkshopsRouteImport.update({
     id: '/workshops',
@@ -108,6 +116,12 @@ const PrivateDashboardDataViewStaffRouteRoute =
   PrivateDashboardDataViewStaffRouteRouteImport.update({
     id: '/_staff',
     getParentRoute: () => PrivateDashboardDataViewRouteRoute,
+  } as any)
+const PrivateDashboardChatSlugThreadIdRoute =
+  PrivateDashboardChatSlugThreadIdRouteImport.update({
+    id: '/$slug/threadId',
+    path: '/$slug/threadId',
+    getParentRoute: () => PrivateDashboardChatRouteRoute,
   } as any)
 const PrivateDashboardDataViewStaffReportsRoute =
   PrivateDashboardDataViewStaffReportsRouteImport.update({
@@ -157,15 +171,17 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof PrivateDashboardRouteRouteWithChildren
   '/login': typeof PublicLoginRoute
   '/signup': typeof PublicSignupRoute
-  '/dashboard/chat': typeof PrivateDashboardChatRouteRoute
+  '/dashboard/chat': typeof PrivateDashboardChatRouteRouteWithChildren
   '/services/$slug': typeof PublicServicesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/services/': typeof PublicServicesIndexRoute
   '/dashboard/calendar': typeof PrivateDashboardDataViewCalendarRoute
   '/dashboard/projects': typeof PrivateDashboardDataViewProjectsRoute
   '/dashboard/workshops': typeof PrivateDashboardDataViewWorkshopsRoute
+  '/dashboard/chat/': typeof PrivateDashboardChatIndexRoute
   '/dashboard/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
   '/dashboard/reports': typeof PrivateDashboardDataViewStaffReportsRoute
+  '/dashboard/chat/$slug/threadId': typeof PrivateDashboardChatSlugThreadIdRoute
   '/dashboard/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
   '/dashboard/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
   '/dashboard/services/': typeof PrivateDashboardDataViewStaffServicesIndexRoute
@@ -177,15 +193,16 @@ export interface FileRoutesByTo {
   '/dashboard': typeof PrivateDashboardRouteRouteWithChildren
   '/login': typeof PublicLoginRoute
   '/signup': typeof PublicSignupRoute
-  '/dashboard/chat': typeof PrivateDashboardChatRouteRoute
   '/services/$slug': typeof PublicServicesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/services': typeof PublicServicesIndexRoute
   '/dashboard/calendar': typeof PrivateDashboardDataViewCalendarRoute
   '/dashboard/projects': typeof PrivateDashboardDataViewProjectsRoute
   '/dashboard/workshops': typeof PrivateDashboardDataViewWorkshopsRoute
+  '/dashboard/chat': typeof PrivateDashboardChatIndexRoute
   '/dashboard/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
   '/dashboard/reports': typeof PrivateDashboardDataViewStaffReportsRoute
+  '/dashboard/chat/$slug/threadId': typeof PrivateDashboardChatSlugThreadIdRoute
   '/dashboard/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
   '/dashboard/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
   '/dashboard/services': typeof PrivateDashboardDataViewStaffServicesIndexRoute
@@ -201,7 +218,7 @@ export interface FileRoutesById {
   '/_public/signup': typeof PublicSignupRoute
   '/_public/': typeof PublicIndexRoute
   '/_private/dashboard/_data-view': typeof PrivateDashboardDataViewRouteRouteWithChildren
-  '/_private/dashboard/chat': typeof PrivateDashboardChatRouteRoute
+  '/_private/dashboard/chat': typeof PrivateDashboardChatRouteRouteWithChildren
   '/_public/services/$slug': typeof PublicServicesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_public/services/': typeof PublicServicesIndexRoute
@@ -209,8 +226,10 @@ export interface FileRoutesById {
   '/_private/dashboard/_data-view/calendar': typeof PrivateDashboardDataViewCalendarRoute
   '/_private/dashboard/_data-view/projects': typeof PrivateDashboardDataViewProjectsRoute
   '/_private/dashboard/_data-view/workshops': typeof PrivateDashboardDataViewWorkshopsRoute
+  '/_private/dashboard/chat/': typeof PrivateDashboardChatIndexRoute
   '/_private/dashboard/_data-view/_staff/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
   '/_private/dashboard/_data-view/_staff/reports': typeof PrivateDashboardDataViewStaffReportsRoute
+  '/_private/dashboard/chat/$slug/threadId': typeof PrivateDashboardChatSlugThreadIdRoute
   '/_private/dashboard/_data-view/_staff/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
   '/_private/dashboard/_data-view/_staff/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
   '/_private/dashboard/_data-view/_staff/services/': typeof PrivateDashboardDataViewStaffServicesIndexRoute
@@ -231,8 +250,10 @@ export interface FileRouteTypes {
     | '/dashboard/calendar'
     | '/dashboard/projects'
     | '/dashboard/workshops'
+    | '/dashboard/chat/'
     | '/dashboard/inventory'
     | '/dashboard/reports'
+    | '/dashboard/chat/$slug/threadId'
     | '/dashboard/services/add'
     | '/dashboard/workshops/add'
     | '/dashboard/services/'
@@ -244,15 +265,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
-    | '/dashboard/chat'
     | '/services/$slug'
     | '/api/auth/$'
     | '/services'
     | '/dashboard/calendar'
     | '/dashboard/projects'
     | '/dashboard/workshops'
+    | '/dashboard/chat'
     | '/dashboard/inventory'
     | '/dashboard/reports'
+    | '/dashboard/chat/$slug/threadId'
     | '/dashboard/services/add'
     | '/dashboard/workshops/add'
     | '/dashboard/services'
@@ -275,8 +297,10 @@ export interface FileRouteTypes {
     | '/_private/dashboard/_data-view/calendar'
     | '/_private/dashboard/_data-view/projects'
     | '/_private/dashboard/_data-view/workshops'
+    | '/_private/dashboard/chat/'
     | '/_private/dashboard/_data-view/_staff/inventory'
     | '/_private/dashboard/_data-view/_staff/reports'
+    | '/_private/dashboard/chat/$slug/threadId'
     | '/_private/dashboard/_data-view/_staff/services/add'
     | '/_private/dashboard/_data-view/_staff/workshops/add'
     | '/_private/dashboard/_data-view/_staff/services/'
@@ -369,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivateDashboardDataViewRouteRouteImport
       parentRoute: typeof PrivateDashboardRouteRoute
     }
+    '/_private/dashboard/chat/': {
+      id: '/_private/dashboard/chat/'
+      path: '/'
+      fullPath: '/dashboard/chat/'
+      preLoaderRoute: typeof PrivateDashboardChatIndexRouteImport
+      parentRoute: typeof PrivateDashboardChatRouteRoute
+    }
     '/_private/dashboard/_data-view/workshops': {
       id: '/_private/dashboard/_data-view/workshops'
       path: '/workshops'
@@ -396,6 +427,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof PrivateDashboardDataViewStaffRouteRouteImport
       parentRoute: typeof PrivateDashboardDataViewRouteRoute
+    }
+    '/_private/dashboard/chat/$slug/threadId': {
+      id: '/_private/dashboard/chat/$slug/threadId'
+      path: '/$slug/threadId'
+      fullPath: '/dashboard/chat/$slug/threadId'
+      preLoaderRoute: typeof PrivateDashboardChatSlugThreadIdRouteImport
+      parentRoute: typeof PrivateDashboardChatRouteRoute
     }
     '/_private/dashboard/_data-view/_staff/reports': {
       id: '/_private/dashboard/_data-view/_staff/reports'
@@ -506,15 +544,32 @@ const PrivateDashboardDataViewRouteRouteWithChildren =
     PrivateDashboardDataViewRouteRouteChildren,
   )
 
+interface PrivateDashboardChatRouteRouteChildren {
+  PrivateDashboardChatIndexRoute: typeof PrivateDashboardChatIndexRoute
+  PrivateDashboardChatSlugThreadIdRoute: typeof PrivateDashboardChatSlugThreadIdRoute
+}
+
+const PrivateDashboardChatRouteRouteChildren: PrivateDashboardChatRouteRouteChildren =
+  {
+    PrivateDashboardChatIndexRoute: PrivateDashboardChatIndexRoute,
+    PrivateDashboardChatSlugThreadIdRoute:
+      PrivateDashboardChatSlugThreadIdRoute,
+  }
+
+const PrivateDashboardChatRouteRouteWithChildren =
+  PrivateDashboardChatRouteRoute._addFileChildren(
+    PrivateDashboardChatRouteRouteChildren,
+  )
+
 interface PrivateDashboardRouteRouteChildren {
   PrivateDashboardDataViewRouteRoute: typeof PrivateDashboardDataViewRouteRouteWithChildren
-  PrivateDashboardChatRouteRoute: typeof PrivateDashboardChatRouteRoute
+  PrivateDashboardChatRouteRoute: typeof PrivateDashboardChatRouteRouteWithChildren
 }
 
 const PrivateDashboardRouteRouteChildren: PrivateDashboardRouteRouteChildren = {
   PrivateDashboardDataViewRouteRoute:
     PrivateDashboardDataViewRouteRouteWithChildren,
-  PrivateDashboardChatRouteRoute: PrivateDashboardChatRouteRoute,
+  PrivateDashboardChatRouteRoute: PrivateDashboardChatRouteRouteWithChildren,
 }
 
 const PrivateDashboardRouteRouteWithChildren =

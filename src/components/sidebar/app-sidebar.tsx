@@ -1,7 +1,5 @@
-"use client";
-
 import type { ComponentProps } from "react";
-import Image from "next/image";
+import { Image } from "@unpic/react";
 import { Link } from "@tanstack/react-router";
 import {
   Sidebar,
@@ -28,7 +26,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
               className="md:h-10 md:p-0 border-2 border-black rounded-none bg-background"
             >
               <Link
-                href="/"
+                to="/"
                 aria-label="IskoLab home"
                 className="inline-flex items-center gap-3 mr-10"
               >

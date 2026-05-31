@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { authClient } from "../lib/auth-client";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Route } from "@/app/_public/signup";
 
 export function SignUpForm({
   className,
@@ -17,6 +18,8 @@ export function SignUpForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { redirect } = Route.useSearch();
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,14 +35,12 @@ export function SignUpForm({
       return;
     }
 
-    setIsLoading(true);
-
     try {
       const result = await authClient.signUp.email({
         name,
         email,
         password,
-        callbackURL: "/",
+        callbackURL: redirect,
       });
 
       if (result?.error) {

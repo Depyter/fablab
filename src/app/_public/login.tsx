@@ -2,17 +2,22 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Image } from "@unpic/react";
 import { LoginForm } from "@/components/login-form";
 import { z } from "zod";
+
 export const Route = createFileRoute("/_public/login")({
   component: RouteComponent,
   validateSearch: z.object({
     redirect: z.string().optional().catch("/dashboard/chat"),
   }),
-  beforeLoad: ({}) => {
+  beforeLoad: ({ search }) => {
     const env = process.env.VITE_ENV;
     const isPreview = env === "preview" || env === "development";
 
     if (isPreview) {
-      throw redirect({ to: "/signup" });
+      throw redirect({
+        to: "/signup",
+        // Pass current search
+        search: { redirect: search.redirect },
+      });
     }
   },
 });

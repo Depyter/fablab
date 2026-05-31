@@ -1,9 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Image } from "@unpic/react";
 import { SignUpForm } from "@/components/signup-form";
+import { z } from "zod";
 
 export const Route = createFileRoute("/_public/signup")({
   component: RouteComponent,
+  validateSearch: z.object({
+    redirect: z.string().optional().catch("/dashboard/chat"),
+  }),
 });
 
 function RouteComponent() {
