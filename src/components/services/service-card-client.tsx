@@ -21,7 +21,8 @@ export function ServiceCardClient({
 
   return (
     <Link
-      href={`/services/${slug}`}
+      to="/services/$slug"
+      params={{ slug }}
       className={cn(
         "group relative block h-full overflow-hidden rounded-[2rem] border-4 border-black transition-all duration-200",
         "hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#000000] md:hover:shadow-[10px_10px_0_0_#000000] focus-visible:-translate-y-1 focus-visible:shadow-[5px_5px_0_0_#000000] md:focus-visible:shadow-[10px_10px_0_0_#000000] focus-visible:outline-none",

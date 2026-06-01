@@ -1,12 +1,12 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Upload, X, Loader2, AlertCircle, Box } from "lucide-react";
 import { useFileUpload } from "./use-file-upload";
 import { formatFileSize } from "./utils";
 import type { ModelUploadProps } from "./types";
-import { ModelViewer } from "@/components/3d/modelViewer";
+import { lazy } from "react";
+
+const ModelViewer = lazy(() => import("@/components/3d/modelViewer"));
 
 const ACCEPTED = ".stl";
 

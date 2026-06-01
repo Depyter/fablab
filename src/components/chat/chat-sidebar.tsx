@@ -13,7 +13,7 @@ import { ChatSidebarShell } from "./chat-sidebar-shell";
 import { cn } from "@/lib/utils";
 
 export function ChatSidebar({ className }: { className?: string }) {
-  const profile = useProfile();
+  const { profile } = useProfile();
   const assignedProjectIds = useQuery(api.projects.query.getAssignedProjectIds);
   const [assignedOnly, setAssignedOnly] = React.useState(false);
 

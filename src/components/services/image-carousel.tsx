@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
@@ -35,13 +34,11 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
             )}
           >
             <div className="relative h-full w-full">
-              <Image
+              <img
                 src={src}
                 alt={`Product Image ${index + 1}`}
-                fill
-                className="object-contain"
-                sizes="(max-width: 1024px) 100vw, 800px"
-                priority={index === 0}
+                className="absolute inset-0 h-full w-full object-contain"
+                loading={index === 0 ? "eager" : "lazy"}
               />
             </div>
           </div>

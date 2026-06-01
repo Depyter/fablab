@@ -1,6 +1,5 @@
-"use client";
-
-import dynamic from "next/dynamic";
+import { lazy, Suspense, type ComponentProps } from "react";
+import { ClientOnly } from "@/lib/client-only";
 import type { ModelFormat } from "./modelScene";
 
 // ---------------------------------------------------------------------------
@@ -28,13 +27,16 @@ export function is3DModel(
   return getModelFormat(fileType, originalName) !== null;
 }
 
-// ---------------------------------------------------------------------------
-// Dynamic Import of Client Component
-// ---------------------------------------------------------------------------
-// By using next/dynamic with ssr: false, we ensure that three.js and
-// @react-three/* libraries are NEVER included in the server bundle (Cloudflare Worker).
-// They will only be loaded on the client side.
+const ModelViewerClient = lazy(() => import("./modelViewerClient"));
 
-export const ModelViewer = dynamic(() => import("./modelViewerClient"), {
-  ssr: false,
-});
+export default function ModelViewer(
+  props: ComponentProps<typeof ModelViewerClient>,
+) {
+  return (
+    <ClientOnly>
+      <Suspense fallback={null}>
+        <ModelViewerClient {...props} />
+      </Suspense>
+    </ClientOnly>
+  );
+}

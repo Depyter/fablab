@@ -1,17 +1,15 @@
-"use client";
-
-import dynamic from "next/dynamic";
 import { Canvas, useFrame } from "@react-three/fiber";
 
-import { Suspense, useState, useEffect, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useMemo, useRef, lazy } from "react";
 import { cn } from "@/lib/utils";
 import { Focus, Scissors } from "lucide-react";
 import * as THREE from "three";
 import type { ModelData } from "./utils";
 import { Button } from "@/components/ui/button";
 import { getModelFormat } from "./modelViewer";
+import { ClientOnly } from "@/lib/client-only";
 
-const ModelScene = dynamic(() => import("./modelScene"), { ssr: false });
+const ModelScene = lazy(() => import("./modelScene"));
 
 const COMPLEXITY_LEVELS = {
   low: { label: "Low", color: "var(--fab-teal)" },
@@ -561,17 +559,21 @@ export default function ModelViewerClient({
   const format = fileUrl ? getModelFormat(fileType, originalName) : null;
 
   return (
-    <div
-      className={cn(
-        "mt-2 w-full overflow-hidden rounded-2xl border border-sidebar-border/50 bg-black relative shadow-inner",
-        className,
-      )}
-    >
-      {fileUrl && format ? (
-        <ModelContent key={fileUrl} fileUrl={fileUrl} format={format} />
-      ) : (
-        <LoadingOverlay phase="convex" />
-      )}
-    </div>
+    <ClientOnly>
+      <Suspense fallback={null}>
+        <div
+          className={cn(
+            "mt-2 w-full overflow-hidden rounded-2xl border border-sidebar-border/50 bg-black relative shadow-inner",
+            className,
+          )}
+        >
+          {fileUrl && format ? (
+            <ModelContent key={fileUrl} fileUrl={fileUrl} format={format} />
+          ) : (
+            <LoadingOverlay phase="convex" />
+          )}
+        </div>
+      </Suspense>
+    </ClientOnly>
   );
 }

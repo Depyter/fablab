@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useCallback, useState, Suspense } from "react";
 import { useLoader } from "@react-three/fiber";
 import {

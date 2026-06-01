@@ -1,10 +1,9 @@
 import { v } from "convex/values";
-import { authQuery } from "../helper";
+import { authQuery, publicQuery } from "../helper";
 
 // ─── List sessions for a specific workshop service ─────────────────────────
 // Ordered by startTime ascending. Only active sessions by default.
-export const listByService = authQuery({
-  role: ["admin", "maker", "client"],
+export const listByService = publicQuery({
   args: {
     serviceId: v.id("services"),
     includeCancelled: v.optional(v.boolean()),
