@@ -9,7 +9,6 @@ describe("Room membership authorization", () => {
     // Maker already created by setupUsers() — use the returned identity
 
     // Get profile IDs directly from DB to avoid BetterAuth component calls in getUserProfile
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const adminProfile = await t.run(async (ctx) =>
       ctx.db
         .query("userProfile")

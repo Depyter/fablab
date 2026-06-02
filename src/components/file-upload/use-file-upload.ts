@@ -1,36 +1,34 @@
-"use client";
-
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useMutation, useQuery, useConvex } from "convex/react";
-import { useUploadFiles } from "@/lib/use-upload-files";
 import { api } from "@convex/_generated/api";
-import type { UploadedFile, UploadingFile } from "./types";
 import type { Id } from "@convex/_generated/dataModel";
-import { resolveFileType } from "./utils";
-import { toast } from "sonner";
 import { CONTENT_POLICY_ERROR } from "@convex/constants";
+import { useConvex, useMutation, useQuery } from "convex/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { useUploadFiles } from "@/lib/use-upload-files";
+import type { UploadedFile, UploadingFile } from "./types";
+import { resolveFileType } from "./utils";
 
-const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+const EMPTY_UPLOADED_FILES: Array<UploadedFile> = [];
 
 export interface UseFileUploadOptions {
   maxFiles?: number;
   maxFileSizeMB?: number;
   disabled?: boolean;
   autoUpload?: boolean;
-  allowedTypes?: string[];
-  value?: UploadedFile[];
+  allowedTypes?: Array<string>;
+  value?: Array<UploadedFile>;
   onAddFile?: (file: UploadedFile) => void;
   onUploadComplete?: (file: UploadedFile) => void;
   onUploadError?: (error: Error, file?: File) => void;
-  onFilesChange?: (files: UploadedFile[]) => void;
+  onFilesChange?: (files: Array<UploadedFile>) => void;
   onRemoveFile?: (file: UploadedFile) => void;
   onUploadingChange?: (isUploading: boolean) => void;
-  onUploadingFilesChange?: (files: UploadingFile[]) => void;
+  onUploadingFilesChange?: (files: Array<UploadingFile>) => void;
 }
 
 export interface UseFileUploadReturn {
-  uploadingFiles: UploadingFile[];
-  uploadedFiles: UploadedFile[];
+  uploadingFiles: Array<UploadingFile>;
+  uploadedFiles: Array<UploadedFile>;
   isDragging: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFiles: (files: FileList | null) => void;
@@ -64,17 +62,19 @@ export function useFileUpload({
   const isControlled = value !== undefined;
 
   const [internalUploadedFiles, setInternalUploadedFiles] =
-    useState<UploadedFile[]>(EMPTY_UPLOADED_FILES);
+    useState<Array<UploadedFile>>(EMPTY_UPLOADED_FILES);
 
   const uploadedFiles = isControlled ? value : internalUploadedFiles;
 
-  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<Array<UploadingFile>>(
+    [],
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const previewUrlMapRef = useRef(new Map<File, string>());
-  const uploadQueueRef = useRef<File[]>([]);
+  const uploadQueueRef = useRef<Array<File>>([]);
   const processingRef = useRef(false);
   const toastedIdsRef = useRef(new Set<string>());
   const timeoutRefs = useRef(new Set<number>());
@@ -87,7 +87,11 @@ export function useFileUpload({
   const { startUpload } = useUploadFiles(generateUploadUrl);
 
   const setUploadedFiles = useCallback(
-    (updater: UploadedFile[] | ((prev: UploadedFile[]) => UploadedFile[])) => {
+    (
+      updater:
+        | Array<UploadedFile>
+        | ((prev: Array<UploadedFile>) => Array<UploadedFile>),
+    ) => {
       const next =
         typeof updater === "function" ? updater(uploadedFiles) : updater;
 
@@ -366,7 +370,7 @@ export function useFileUpload({
         createPreviewUrl(file);
       }
 
-      const pendingFiles: UploadingFile[] = fileArray.map((file) => ({
+      const pendingFiles: Array<UploadingFile> = fileArray.map((file) => ({
         file,
         progress: 0,
         status: "pending",
@@ -408,7 +412,7 @@ export function useFileUpload({
 
     let changed = false;
 
-    const nextFiles: UploadedFile[] = [];
+    const nextFiles: Array<UploadedFile> = [];
 
     for (const file of uploadedFiles) {
       const status = statusMap.get(file.storageId);

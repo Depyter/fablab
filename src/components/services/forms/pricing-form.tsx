@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState, useContext } from "react";
-import { withForm } from "@/lib/form-context";
-import {
-  addServiceFormOpts,
-  type AddServiceFormValues,
-} from "@/types/add-service";
+import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ServiceFormModeContext } from "@/components/services/forms/service-form";
-import { FormSection } from "@/components/ui/form-section";
+import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupText,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -15,14 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupText,
-} from "@/components/ui/input-group";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { withForm } from "@/lib/form-context";
+import type { AddServiceFormValues } from "@/types/add-service";
+import { addServiceFormOpts } from "@/types/add-service";
 
 type TimeUnit = "minute" | "hour" | "day";
 type ServiceCategory = AddServiceFormValues["serviceCategory"];
@@ -32,7 +29,7 @@ type FabricationPricing = Extract<Pricing, { type: "FABRICATION" }>;
 type FixedPricingVariant = FixedPricing["variants"][number];
 type FabricationPricingVariant = FabricationPricing["variants"][number];
 
-const TIME_UNITS: { value: TimeUnit; label: string }[] = [
+const TIME_UNITS: Array<{ value: TimeUnit; label: string }> = [
   { value: "minute", label: "Minute" },
   { value: "hour", label: "Hour" },
   { value: "day", label: "Day" },
@@ -53,6 +50,7 @@ export const PricingForm = withForm({
     const nextVariantKeyRef = useRef(0);
     const createVariantKey = () =>
       `pricing-variant-${nextVariantKeyRef.current++}`;
+
     const [variantKeys, setVariantKeys] = useState(() =>
       Array.from({ length: pricingValue.variants.length }, createVariantKey),
     );

@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
-  '/_private/dashboard/_data-view/_staff/services/',
+  "/_private/dashboard/_data-view/_staff/services/",
 )({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  return <div>Hello "/_private/dashboard/_data-view/_staff/services/"!</div>
+  return <div>Hello "/_private/dashboard/_data-view/_staff/services/"!</div>;
 }

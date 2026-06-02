@@ -1,6 +1,6 @@
 import { v } from "convex/values";
+import type { Id } from "../_generated/dataModel";
 import { authQuery } from "../helper";
-import { Id } from "../_generated/dataModel";
 
 export const getResources = authQuery({
   role: ["admin", "maker"],

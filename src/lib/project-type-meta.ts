@@ -1,4 +1,4 @@
-import { ProjectStatusType } from "@convex/constants";
+import type { ProjectStatusType } from "@convex/constants";
 import { formatLabDate } from "@/lib/lab-time";
 import {
   getWorkflow,
@@ -28,7 +28,7 @@ export interface TimelineStepDef {
 
 export interface ProjectTypeConfig {
   /** Timeline steps in display order. Order is derived from this array. */
-  timeline: TimelineStepDef[];
+  timeline: Array<TimelineStepDef>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -107,7 +107,7 @@ export const PROJECT_TYPE_CONFIG: Record<string, ProjectTypeConfig> = {
 // ═══════════════════════════════════════════════════════════════════════
 
 /** Safe config access. Returns FABRICATION timeline for unknown types. */
-export function getConfig(type: string): { timeline: TimelineStepDef[] } {
+export function getConfig(type: string): { timeline: Array<TimelineStepDef> } {
   if (isKnownType(type))
     return { timeline: PROJECT_TYPE_CONFIG[type].timeline };
   return { timeline: PROJECT_TYPE_CONFIG.FABRICATION.timeline };
@@ -125,10 +125,10 @@ export function getStatusLabel(
   return getWorkflowStatusLabel(getWorkflow(type ?? "FABRICATION"), status);
 }
 
+export type { ProjectType, ProjectWorkflow } from "./project-workflow";
 // Re-export workflow helpers so consumers can import from @/lib/project-type-meta
 export {
   getWorkflow,
   isKnownType,
   isValidTransition,
 } from "./project-workflow";
-export type { ProjectType, ProjectWorkflow } from "./project-workflow";

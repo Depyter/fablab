@@ -1,8 +1,8 @@
+import type { FulfillmentModeType } from "@convex/constants";
+import posthog from "posthog-js";
 import { Card } from "@/components/ui/card";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { AppFormApi } from "@/lib/form-context";
-import type { FulfillmentModeType } from "@convex/constants";
-import posthog from "posthog-js";
 import type { BookingDetailsFormValues } from "./step-2-project-details";
 
 export function Step1ServiceType({

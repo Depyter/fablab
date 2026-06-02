@@ -1,12 +1,17 @@
-import { UserIdentity } from "convex/server";
-import { QueryCtx, MutationCtx, query, mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-import {
-  customQuery,
-  customMutation,
-} from "convex-helpers/server/customFunctions";
+import type { UserIdentity } from "convex/server";
 import { ConvexError } from "convex/values";
-import { rateLimiter, type RateLimitName } from "./ratelimit";
+import {
+  customMutation,
+  customQuery,
+} from "convex-helpers/server/customFunctions";
+import type { Id } from "./_generated/dataModel";
+import {
+  type MutationCtx,
+  mutation,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
+import { type RateLimitName, rateLimiter } from "./ratelimit";
 
 type Role = "admin" | "maker" | "client";
 type RoleCombo = Role | Role[];
@@ -92,7 +97,7 @@ export async function ensureAuthentication(ctx: QueryCtx | MutationCtx) {
 
 export const authQuery = customQuery(query, {
   args: {},
-  input: async (ctx, args, opts: { role?: RoleCombo } = {}) => {
+  input: async (ctx, _args, opts: { role?: RoleCombo } = {}) => {
     const user = await ensureAuthentication(ctx);
 
     const profile = await ctx.db
@@ -119,7 +124,7 @@ export const authMutation = customMutation(mutation, {
   args: {},
   input: async (
     ctx,
-    args,
+    _args,
     opts: { role?: RoleCombo; rateLimit?: RateLimitName } = {},
   ) => {
     const user = await ensureAuthentication(ctx);

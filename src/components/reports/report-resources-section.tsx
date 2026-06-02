@@ -1,9 +1,6 @@
-"use client";
-
-import * as React from "react";
-import { ReportResourceUtilizationCard } from "@/components/reports/charts/report-resource-utilization-card";
-import { ReportResourceDowntimeCard } from "@/components/reports/charts/report-resource-downtime-card";
 import type { Id } from "@convex/_generated/dataModel";
+import { ReportResourceDowntimeCard } from "@/components/reports/charts/report-resource-downtime-card";
+import { ReportResourceUtilizationCard } from "@/components/reports/charts/report-resource-utilization-card";
 
 interface ReportResourcesSectionProps {
   resourceUtilization: Array<{

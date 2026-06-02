@@ -1,9 +1,7 @@
-"use client";
-
-import * as React from "react";
-import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import * as React from "react";
 
 export interface ChatThreadSummary {
   _id: string;
@@ -23,11 +21,11 @@ export interface ChatRoomSummary {
   lastMessageText?: string;
   lastMessageAt?: number;
   unreadCount?: number;
-  threads?: ChatThreadSummary[];
+  threads?: Array<ChatThreadSummary>;
 }
 
 interface ChatRoomsContextValue {
-  roomList: ChatRoomSummary[];
+  roomList: Array<ChatRoomSummary>;
   isLoading: boolean;
 }
 
@@ -39,7 +37,7 @@ export function ChatRoomsProvider({ children }: { children: React.ReactNode }) {
   const rooms = useQuery(api.chat.query.getRooms);
 
   const roomList = React.useMemo(
-    () => (rooms?.filter(Boolean) as ChatRoomSummary[]) ?? [],
+    () => (rooms?.filter(Boolean) as Array<ChatRoomSummary>) ?? [],
     [rooms],
   );
 

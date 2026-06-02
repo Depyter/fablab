@@ -1,10 +1,10 @@
+import { AlertCircle, Box, Loader2, Upload, X } from "lucide-react";
+import { lazy, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Upload, X, Loader2, AlertCircle, Box } from "lucide-react";
+import type { ModelUploadProps } from "./types";
 import { useFileUpload } from "./use-file-upload";
 import { formatFileSize } from "./utils";
-import type { ModelUploadProps } from "./types";
-import { lazy } from "react";
 
 const ModelViewer = lazy(() => import("@/components/3d/modelViewer"));
 
@@ -20,6 +20,7 @@ export function ModelUpload({
   className,
   value = null,
 }: ModelUploadProps) {
+  const fileInputId = useId();
   const {
     uploadingFiles,
     uploadedFiles,
@@ -75,11 +76,11 @@ export function ModelUpload({
     <div className={cn("space-y-3", className)}>
       {/* Drop zone — hidden once a file is present */}
       {!hasFile && (
-        <div
+        <label
+          htmlFor={fileInputId}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={triggerFileSelect}
           className={cn(
             "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors select-none",
             isDragging && !disabled
@@ -101,11 +102,12 @@ export function ModelUpload({
               </p>
             </div>
           </div>
-        </div>
+        </label>
       )}
 
       {/* Hidden file input */}
       <input
+        id={fileInputId}
         ref={fileInputRef}
         type="file"
         onChange={handleFileInputChange}

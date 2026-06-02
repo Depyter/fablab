@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Image } from "@unpic/react";
-import { LoginForm } from "@/components/login-form";
 import { z } from "zod";
+import { LoginForm } from "@/components/login-form";
 
 export const Route = createFileRoute("/_public/login")({
   component: RouteComponent,

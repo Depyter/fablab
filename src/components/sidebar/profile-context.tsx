@@ -1,5 +1,5 @@
+import type { Doc } from "@convex/_generated/dataModel";
 import * as React from "react";
-import { Doc } from "@convex/_generated/dataModel";
 
 export type CurrentUserProfile = Doc<"userProfile"> & {
   profilePicUrl?: string | null;

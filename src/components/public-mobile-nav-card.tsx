@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
 import { Link } from "@tanstack/react-router";
 import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
 import { Menu, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ type PublicNavItem = {
 };
 
 type PublicMobileNavCardProps = {
-  items: readonly PublicNavItem[];
+  items: ReadonlyArray<PublicNavItem>;
 };
 
 const mobileNavLinkClass =
@@ -37,13 +37,13 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
     },
   ] as const;
 
-  const openMenu = () => {
+  const openMenu = useCallback(() => {
     setOpen(true);
-  };
+  }, []);
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     setOpen(false);
-  };
+  }, []);
 
   useGSAP(
     () => {
@@ -106,7 +106,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   useEffect(() => {
     const timeline = timelineRef.current;

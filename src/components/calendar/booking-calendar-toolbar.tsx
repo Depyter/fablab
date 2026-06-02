@@ -1,16 +1,14 @@
-import * as React from "react";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { LAB_TIME_ZONE } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
 import type { CalendarVisibleRange } from "./calendar-state";

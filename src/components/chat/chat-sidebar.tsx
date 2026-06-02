@@ -1,16 +1,14 @@
-"use client";
-
-import * as React from "react";
-import { UserCheck } from "lucide-react";
-import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { UserRole } from "@convex/constants";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "convex/react";
+import { UserCheck } from "lucide-react";
+import * as React from "react";
 import { useProfile } from "@/components/sidebar/profile-context";
-import { ChatSidebarContent } from "./chat-sidebar-content";
-import { ChatSidebarRoomsLoading } from "./chat-loading";
-import { ChatSidebarShell } from "./chat-sidebar-shell";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ChatSidebarRoomsLoading } from "./chat-loading";
+import { ChatSidebarContent } from "./chat-sidebar-content";
+import { ChatSidebarShell } from "./chat-sidebar-shell";
 
 export function ChatSidebar({ className }: { className?: string }) {
   const { profile } = useProfile();

@@ -1,8 +1,9 @@
-import { Image } from "@unpic/react";
 import { Link } from "@tanstack/react-router";
+import { Image } from "@unpic/react";
 import { PublicMobileNavCard } from "@/components/public-mobile-nav-card";
 import { PublicNavAuth } from "@/components/public-nav-auth";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
+
 const publicNavItems = [
   {
     href: "/",

@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useCallback, useState, Suspense } from "react";
-import { useLoader } from "@react-three/fiber";
 import {
-  PerspectiveCamera,
-  OrbitControls,
-  Environment,
   Center,
-  useGLTF,
+  Environment,
   GizmoHelper,
   GizmoViewport,
+  OrbitControls,
+  PerspectiveCamera,
+  useGLTF,
 } from "@react-three/drei";
-import { STLLoader, OBJLoader } from "three-stdlib";
+import { useLoader } from "@react-three/fiber";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
-import { type Vector3, type ModelData, computeModelData } from "./utils";
+import { OBJLoader, STLLoader } from "three-stdlib";
+import type { ModelData, Vector3 } from "./utils";
+import { computeModelData } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,7 +29,7 @@ interface ModelSceneProps {
   fileUrl: string;
   format?: ModelFormat | null;
   onData?: (data: ModelData) => void;
-  clippingPlanes?: THREE.Plane[];
+  clippingPlanes?: Array<THREE.Plane>;
   showHelpers?: boolean;
 }
 
@@ -36,7 +37,7 @@ interface ModelProps {
   fileUrl: string;
   onZoomConfig: (cfg: ZoomConfig) => void;
   onData?: (data: ModelData) => void;
-  clippingPlanes?: THREE.Plane[];
+  clippingPlanes?: Array<THREE.Plane>;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,16 +53,16 @@ function computeZoomConfig(footprint: number): ZoomConfig {
 
 /** Extracts vertices and faces from a single BufferGeometry. */
 function extractFromGeometry(geometry: THREE.BufferGeometry): {
-  vertices: Vector3[];
-  faces: [number, number, number][];
+  vertices: Array<Vector3>;
+  faces: Array<[number, number, number]>;
 } {
-  const vertices: Vector3[] = [];
+  const vertices: Array<Vector3> = [];
   const posArray = geometry.attributes.position.array as Float32Array;
   for (let i = 0; i < posArray.length; i += 3) {
     vertices.push({ x: posArray[i], y: posArray[i + 1], z: posArray[i + 2] });
   }
 
-  const faces: [number, number, number][] = [];
+  const faces: Array<[number, number, number]> = [];
   const idx = geometry.index;
   if (idx) {
     const ia = idx.array as Uint32Array | Uint16Array;
@@ -79,11 +80,11 @@ function extractFromGeometry(geometry: THREE.BufferGeometry): {
 
 /** Extracts vertices and faces by traversing all meshes in an Object3D. */
 function extractFromObject3D(object: THREE.Object3D): {
-  vertices: Vector3[];
-  faces: [number, number, number][];
+  vertices: Array<Vector3>;
+  faces: Array<[number, number, number]>;
 } {
-  const allVertices: Vector3[] = [];
-  const allFaces: [number, number, number][] = [];
+  const allVertices: Array<Vector3> = [];
+  const allFaces: Array<[number, number, number]> = [];
   let offset = 0;
 
   object.traverse((child) => {
@@ -117,7 +118,11 @@ function STLModel({
 
   const { position, zoomConfig, data } = useMemo(() => {
     geometry.computeBoundingBox();
-    const bb = geometry.boundingBox!;
+    const bb = geometry.boundingBox;
+
+    if (!bb) {
+      throw new Error("Unable to compute the STL bounding box.");
+    }
 
     const px = -(bb.min.x + bb.max.x) / 2;
     const py = -bb.min.z;
@@ -400,10 +405,9 @@ export default function ModelScene({
           />
         )}
         {showHelpers &&
-          clippingPlanes &&
-          clippingPlanes.map((plane, idx) => (
+          clippingPlanes?.map((plane) => (
             <ClippingPlaneHelper
-              key={`helper-${idx}`}
+              key={`helper-${plane.normal.x}-${plane.normal.y}-${plane.normal.z}-${plane.constant}`}
               plane={plane}
               size={helperSize}
             />

@@ -1,11 +1,8 @@
-"use client";
-
-import * as React from "react";
-import { Dialog as DialogPrimitive } from "radix-ui";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import type * as React from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function Dialog({
   ...props
@@ -74,6 +71,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close asChild>
             <button
+              type="button"
               data-slot="dialog-close"
               onClick={onCloseButtonClick}
               className="absolute top-4 right-4 inline-flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 disabled:pointer-events-none disabled:opacity-50"

@@ -1,5 +1,7 @@
-import * as React from "react";
 import type { Id } from "@convex/_generated/dataModel";
+import * as React from "react";
+import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { CalendarRangeEvent, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_WEEK_DAY_MIN_WIDTH,
@@ -11,8 +13,6 @@ import {
   DAY_START,
   packCalendarTracks,
 } from "@/lib/calendar";
-
-import { cn } from "@/lib/utils";
 import {
   formatLabDate,
   formatLabDecimalHour,
@@ -25,20 +25,19 @@ import {
   isSameLabMonth,
 } from "@/lib/lab-time";
 import { clipTimeRange, overlapsTimeRange } from "@/lib/time-range";
-import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import type { MonthLayoutDensity } from "./month-layout";
 import {
   canShowMonthOverflowLabel,
   getMonthVisibleEventLimit,
   MONTH_CELL_MIN_HEIGHT,
   MONTH_DAY_MIN_WIDTH,
-  type MonthLayoutDensity,
 } from "./month-layout";
 
 interface CalendarRangeViewProps {
   anchorDate: Date;
-  days: Date[];
-  events: CalendarRangeEvent[];
+  days: Array<Date>;
+  events: Array<CalendarRangeEvent>;
   viewMode: Exclude<CalendarViewMode, "day">;
   isLoading?: boolean;
   onSelectDay?: (date: Date) => void;
@@ -91,7 +90,7 @@ function getDecimalHour(time: number) {
 }
 
 function buildWeekEventLayouts(
-  events: CalendarRangeEvent[],
+  events: Array<CalendarRangeEvent>,
   day: Date,
   minGridHeight: number,
   minEventHeight: number,
@@ -139,8 +138,11 @@ function buildWeekEventLayouts(
   }));
 }
 
-function buildEventsByDay(days: Date[], events: CalendarRangeEvent[]) {
-  const grouped = new Map<string, CalendarRangeEvent[]>();
+function buildEventsByDay(
+  days: Array<Date>,
+  events: Array<CalendarRangeEvent>,
+) {
+  const grouped = new Map<string, Array<CalendarRangeEvent>>();
 
   for (const day of days) {
     const { start, endExclusive } = getLabDayBounds(day);
@@ -158,12 +160,12 @@ function buildEventsByDay(days: Date[], events: CalendarRangeEvent[]) {
 }
 
 function buildWeekLayoutsByDay(
-  days: Date[],
-  eventsByDay: Map<string, CalendarRangeEvent[]>,
+  days: Array<Date>,
+  eventsByDay: Map<string, Array<CalendarRangeEvent>>,
   minGridHeight: number,
   minEventHeight: number,
 ) {
-  const layouts = new Map<string, WeekEventLayout[]>();
+  const layouts = new Map<string, Array<WeekEventLayout>>();
 
   for (const day of days) {
     const dayKey = toDayKey(day);
@@ -211,7 +213,7 @@ function EventCard({
         if (event.projectId && onOpenProjectDetails) {
           onOpenProjectDetails(event.projectId);
         } else if (isWorkshopSlot) {
-          onOpenWorkshopEvent!(event.serviceId, event.startTime);
+          onOpenWorkshopEvent(event.serviceId, event.startTime);
         }
       }}
       title={showDetails ? undefined : event.projectAlias}
@@ -281,7 +283,7 @@ function WeekEventBlock({
         if (event.projectId && onOpenProjectDetails) {
           onOpenProjectDetails(event.projectId);
         } else if (isWorkshopSlot) {
-          onOpenWorkshopEvent!(event.serviceId, event.startTime);
+          onOpenWorkshopEvent(event.serviceId, event.startTime);
         }
       }}
       className={cn(
@@ -377,7 +379,7 @@ export function CalendarRangeView({
     observer.observe(grid);
 
     return () => observer.disconnect();
-  }, [monthCellMinHeight, monthRowCount]);
+  }, [monthRowCount]);
 
   if (viewMode === "week") {
     return (

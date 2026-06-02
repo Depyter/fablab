@@ -1,9 +1,8 @@
-import { ProfileProvider } from "@/components/sidebar/profile-context";
-import { environmentManager } from "@tanstack/react-query";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@convex/_generated/api";
-import { useQuery } from "@tanstack/react-query";
+import { convexQuery } from "@convex-dev/react-query";
+import { environmentManager, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { ProfileProvider } from "@/components/sidebar/profile-context";
 
 export const Route = createFileRoute("/_private")({
   component: RouteComponent,

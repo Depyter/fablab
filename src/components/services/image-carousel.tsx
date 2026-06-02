@@ -1,11 +1,9 @@
-"use client";
-
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface ServiceGalleryProps {
-  images: string[];
+  images: Array<string>;
 }
 
 /**
@@ -36,7 +34,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
             <div className="relative h-full w-full">
               <img
                 src={src}
-                alt={`Product Image ${index + 1}`}
+                alt={`Product ${index + 1}`}
                 className="absolute inset-0 h-full w-full object-contain"
                 loading={index === 0 ? "eager" : "lazy"}
               />
@@ -48,6 +46,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
       {images.length > 1 && (
         <>
           <button
+            type="button"
             onClick={prev}
             className="absolute bottom-3 left-[44%] z-20 flex h-7 w-7 items-center justify-center border border-black bg-background text-foreground transition-colors hover:bg-sidebar-accent"
             aria-label="Previous image"
@@ -56,6 +55,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
           </button>
 
           <button
+            type="button"
             onClick={next}
             className="absolute bottom-3 left-[56%] z-20 flex h-7 w-7 items-center justify-center border border-black bg-background text-foreground transition-colors hover:bg-sidebar-accent"
             aria-label="Next image"
@@ -79,6 +79,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
           <div className="hidden">
             {images.map((src, idx) => (
               <button
+                type="button"
                 key={src}
                 onClick={() => setCurrent(idx)}
                 className={cn(

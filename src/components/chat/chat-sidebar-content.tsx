@@ -1,15 +1,14 @@
-"use client";
-
-import * as React from "react";
-import { Link } from "@tanstack/react-router";
-import { usePathname } from "next/navigation";
-import { Hash, ChevronDown, ChevronRight } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
-import { RoomSettingsDialog } from "./room-settings-dialog";
-import { ChatThreadSummary, useChatRooms } from "./chat-rooms-context";
-import { ChatSidebarRoomsLoading } from "./chat-loading";
-import { cn } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
+import { ChevronDown, ChevronRight, Hash } from "lucide-react";
+
 import posthog from "posthog-js";
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { ChatSidebarRoomsLoading } from "./chat-loading";
+import type { ChatThreadSummary } from "./chat-rooms-context";
+import { useChatRooms } from "./chat-rooms-context";
+import { RoomSettingsDialog } from "./room-settings-dialog";
 
 function ChatThreadLink({
   roomId,
@@ -98,7 +97,7 @@ export function ChatSidebarContent({
   assignedProjectIds,
 }: {
   assignedOnly?: boolean;
-  assignedProjectIds?: readonly Id<"projects">[];
+  assignedProjectIds?: ReadonlyArray<Id<"projects">>;
 }) {
   const { roomList, isLoading } = useChatRooms();
 
@@ -120,13 +119,13 @@ export function ChatSidebarContent({
     Record<string, boolean>
   >({});
 
-  const toggleRoom = (event: React.MouseEvent, roomId: string) => {
+  const toggleRoom = (event: React.SyntheticEvent, roomId: string) => {
     event.preventDefault();
     event.stopPropagation();
     setCollapsedRooms((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
   };
 
-  const toggleArchived = (event: React.MouseEvent, roomId: string) => {
+  const toggleArchived = (event: React.SyntheticEvent, roomId: string) => {
     event.preventDefault();
     event.stopPropagation();
     setExpandedArchived((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
@@ -168,24 +167,29 @@ export function ChatSidebarContent({
             className="mx-2 my-2 flex flex-col border-2 border-black bg-white rounded-lg hover:bg-fab-amber-light transition-colors"
           >
             <div
-              onClick={(event) => toggleRoom(event, roomId)}
               className="group relative flex cursor-pointer flex-col gap-0.5 px-3 py-2"
               style={{ fontFamily: "var(--font-body)" }}
             >
               <div className="flex w-full min-w-0 items-center gap-2">
-                <div className=" p-0.5 -ml-1 shrink-0 text-[var(--fab-text-dim)] transition-colors">
-                  {collapsedRooms[roomId] ? (
-                    <ChevronRight className="h-5 w-5" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5" />
-                  )}
-                </div>
-                <span className="flex-1 truncate font-body text-[15px] font-medium leading-tight text-[var(--fab-text-primary)]">
-                  {room.name}
-                </span>
-                {room.unreadCount !== undefined && room.unreadCount > 0 ? (
-                  <div className="mr-1 h-1.5 w-1.5 shrink-0 rounded-none border border-black bg-[var(--fab-magenta)]" />
-                ) : null}
+                <button
+                  type="button"
+                  onClick={(event) => toggleRoom(event, roomId)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <div className=" p-0.5 -ml-1 shrink-0 text-[var(--fab-text-dim)] transition-colors">
+                    {collapsedRooms[roomId] ? (
+                      <ChevronRight className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </div>
+                  <span className="flex-1 truncate font-body text-[15px] font-medium leading-tight text-[var(--fab-text-primary)]">
+                    {room.name}
+                  </span>
+                  {room.unreadCount !== undefined && room.unreadCount > 0 ? (
+                    <div className="mr-1 h-1.5 w-1.5 shrink-0 rounded-none border border-black bg-[var(--fab-magenta)]" />
+                  ) : null}
+                </button>
                 {room.name ? (
                   <RoomSettingsDialog
                     roomId={roomId as Id<"rooms">}
@@ -213,6 +217,7 @@ export function ChatSidebarContent({
                 {archivedThreads.length > 0 ? (
                   <div className="flex flex-col border-t border-black/30">
                     <button
+                      type="button"
                       onClick={(event) => toggleArchived(event, roomId)}
                       className="flex items-center gap-2 bg-[var(--fab-bg-main)] px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-[var(--fab-text-dim)] transition-colors hover:bg-[var(--fab-amber-light)]"
                       style={{ fontFamily: "var(--font-body)" }}

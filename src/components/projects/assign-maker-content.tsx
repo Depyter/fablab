@@ -1,12 +1,13 @@
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft } from "lucide-react";
-import { OptionRadioGroup, OptionRadioGroupItem } from "../option-radio-group";
+import type { OptionRadioGroupItem } from "../option-radio-group";
+import { OptionRadioGroup } from "../option-radio-group";
 
 interface AssignMakerContentProps {
   projectName: string;
   selectedMaker: string;
-  makerOptions: OptionRadioGroupItem[];
+  makerOptions: Array<OptionRadioGroupItem>;
   onSelectMaker: (value: string) => void;
   onBack: () => void;
   onConfirm: () => void;

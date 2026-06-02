@@ -1,5 +1,6 @@
+import type { ServiceStatusType } from "@convex/constants";
+import { ServiceStatus } from "@convex/constants";
 import { formOptions } from "@tanstack/react-form";
-import { ServiceStatus, type ServiceStatusType } from "@convex/constants";
 
 export type PricingVariant =
   | { name: string; amount: number } // FIXED variant
@@ -23,13 +24,13 @@ export interface AddServiceFormValues {
         variants: Array<{ name: string; setupFee: number; timeRate: number }>;
       };
   status: ServiceStatusType;
-  images: string[];
-  samples: string[];
-  requirements: string[];
-  fileTypes: string[];
-  resources: string[];
-  materials: string[];
-  availableDays: number[];
+  images: Array<string>;
+  samples: Array<string>;
+  requirements: Array<string>;
+  fileTypes: Array<string>;
+  resources: Array<string>;
+  materials: Array<string>;
+  availableDays: Array<number>;
 }
 
 export const defaultAddServiceValues: AddServiceFormValues = {

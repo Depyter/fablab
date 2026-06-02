@@ -1,23 +1,19 @@
-"use client";
-
+import type {
+  FulfillmentModeType,
+  ProjectMaterialType,
+  ProjectStatusType,
+} from "@convex/constants";
 import { useState } from "react";
-import {
-  ProjectTimeline,
-  ProjectTimelineStep,
-} from "@/components/projects/project-timeline";
-import { UploadedFile } from "@/components/file-upload/types";
+import { toast } from "sonner";
+import type { api } from "@/../convex/_generated/api";
+import type { UploadedFile } from "@/components/file-upload/types";
+import type { ProjectTimelineStep } from "@/components/projects/project-timeline";
+import { ProjectTimeline } from "@/components/projects/project-timeline";
+import { getStatusLabel, getWorkflow } from "@/lib/project-type-meta";
+import { PricingEstimateCard } from "./cards/pricing-estimate-card";
 import { ProjectInfoCard } from "./cards/project-info-card";
 import { ReceiptCard } from "./cards/receipt-card";
-import { PricingEstimateCard } from "./cards/pricing-estimate-card";
 import { WorkshopPricingSummary } from "./cards/workshop-pricing-summary";
-import { api } from "@/../convex/_generated/api";
-import {
-  ProjectStatusType,
-  ProjectMaterialType,
-  FulfillmentModeType,
-} from "@convex/constants";
-import { getWorkflow, getStatusLabel } from "@/lib/project-type-meta";
-import { toast } from "sonner";
 
 export type ProjectData = NonNullable<
   (typeof api.projects.query.getProject)["_returnType"]
@@ -25,7 +21,7 @@ export type ProjectData = NonNullable<
 
 interface ProjectDetailsContentProps {
   project: ProjectData;
-  timelineSteps: ProjectTimelineStep[];
+  timelineSteps: Array<ProjectTimelineStep>;
   onOpenAssignView: () => void;
   onUpdateStatus: (newStatus: ProjectStatusType) => void;
   onMarkPaid: () => void;
@@ -35,7 +31,7 @@ interface ProjectDetailsContentProps {
     notes?: string;
     material?: ProjectMaterialType;
     fulfillmentMode?: FulfillmentModeType;
-    files?: string[];
+    files?: Array<string>;
   }) => void;
   headerRight?: React.ReactNode;
 }
@@ -43,7 +39,7 @@ interface ProjectDetailsContentProps {
 export function ProjectDetailsContent({
   project,
   timelineSteps,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   onOpenAssignView: _onOpenAssignView,
   onUpdateStatus,
   onMarkPaid,
@@ -60,7 +56,7 @@ export function ProjectDetailsContent({
   const [editServiceType, setEditServiceType] = useState(
     project.fulfillmentMode,
   );
-  const [editFiles, setEditFiles] = useState<UploadedFile[]>([]);
+  const [editFiles, setEditFiles] = useState<Array<UploadedFile>>([]);
   const [isSaving, setIsSaving] = useState(false);
   const canEdit = !isClient || project.status === "pending";
 
@@ -107,7 +103,7 @@ export function ProjectDetailsContent({
         notes?: string;
         material?: ProjectMaterialType;
         fulfillmentMode?: FulfillmentModeType;
-        files?: string[];
+        files?: Array<string>;
       } = {};
       if (editDescription !== (project.description ?? ""))
         didUpdate.description = editDescription;
@@ -190,9 +186,9 @@ export function ProjectDetailsContent({
                 : status === "claimed" && direction === "forward"
                   ? label
                   : direction === "forward"
-                    ? "Proceed to " + label
+                    ? `Proceed to ${label}`
                     : direction === "backward"
-                      ? "Back to " + label
+                      ? `Back to ${label}`
                       : label;
 
             if (status === "paid") {

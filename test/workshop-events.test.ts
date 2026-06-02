@@ -1,9 +1,9 @@
-import { describe, expect, test } from "vitest";
-import { convexTest } from "convex-test";
-import schema from "../convex/schema";
-import { api, internal } from "../convex/_generated/api";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+import { api, internal } from "../convex/_generated/api";
+import schema from "../convex/schema";
 import { flushScheduledFunctions } from "./helper";
 
 process.env.RESEND_TEST_MODE = "true";
@@ -13,6 +13,25 @@ process.env.DISABLE_SCHEDULED_EMAILS = "true";
 const HOUR_MS = 1000 * 60 * 60;
 
 describe("getWorkshopEvents — resource & material resolution", () => {
+  function expectPresent<T>(value: T | null | undefined, message: string): T {
+    expect(value).toBeDefined();
+    if (value == null) {
+      throw new Error(message);
+    }
+    return value;
+  }
+
+  async function getFirstServiceId(t: ReturnType<typeof convexTest>) {
+    const service = await t.run(async (ctx) =>
+      ctx.db.query("services").first(),
+    );
+    expect(service).not.toBeNull();
+    if (!service) {
+      throw new Error("Expected a service to exist for this test.");
+    }
+    return service._id;
+  }
+
   /**
    * Verifies that getWorkshopEvents resolves resource and material IDs from
    * the service schedule into named objects, rather than passing through
@@ -80,10 +99,7 @@ describe("getWorkshopEvents — resource & material resolution", () => {
       status: "Available",
     });
 
-    const serviceId = await t.run(async (ctx) => {
-      const service = await ctx.db.query("services").first();
-      return service!._id;
-    });
+    const serviceId = await getFirstServiceId(t);
 
     // Create a workshop session so getWorkshopEvents finds this slot
     await tAdmin.mutation(api.workshopSessions.mutate.create, {
@@ -123,20 +139,23 @@ describe("getWorkshopEvents — resource & material resolution", () => {
     const workshopEvent = allEvents.find(
       (e) => e.serviceId === serviceId && e.startTime === startTime,
     );
-    expect(workshopEvent).toBeDefined();
+    const resolvedWorkshopEvent = expectPresent(
+      workshopEvent,
+      "Expected workshop event to exist.",
+    );
 
     // Verify resources are resolved objects, not raw IDs
-    expect(workshopEvent!.resources).toBeDefined();
-    expect(workshopEvent!.resources!.length).toBe(1);
-    expect(workshopEvent!.resources![0]).toEqual({
+    expect(resolvedWorkshopEvent.resources).toBeDefined();
+    expect(resolvedWorkshopEvent.resources?.length).toBe(1);
+    expect(resolvedWorkshopEvent.resources?.[0]).toEqual({
       _id: resourceId,
       name: "3D Printer",
     });
 
     // Verify materials are resolved objects, not raw IDs
-    expect(workshopEvent!.availableMaterials).toBeDefined();
-    expect(workshopEvent!.availableMaterials!.length).toBe(1);
-    expect(workshopEvent!.availableMaterials![0]).toEqual({
+    expect(resolvedWorkshopEvent.availableMaterials).toBeDefined();
+    expect(resolvedWorkshopEvent.availableMaterials?.length).toBe(1);
+    expect(resolvedWorkshopEvent.availableMaterials?.[0]).toEqual({
       _id: materialId,
       name: "PLA Filament",
       unit: "grams",
@@ -184,10 +203,7 @@ describe("getWorkshopEvents — resource & material resolution", () => {
       status: "Available",
     });
 
-    const serviceId = await t.run(async (ctx) => {
-      const service = await ctx.db.query("services").first();
-      return service!._id;
-    });
+    const serviceId = await getFirstServiceId(t);
 
     // Create a workshop session so getWorkshopEvents finds this slot
     await tAdmin.mutation(api.workshopSessions.mutate.create, {
@@ -220,9 +236,12 @@ describe("getWorkshopEvents — resource & material resolution", () => {
     const event = allEvents.find(
       (e) => e.serviceId === serviceId && e.startTime === startTime,
     );
-    expect(event).toBeDefined();
-    expect(event!.resources).toBeUndefined();
-    expect(event!.availableMaterials).toBeUndefined();
+    const resolvedEvent = expectPresent(
+      event,
+      "Expected workshop event without resources/materials.",
+    );
+    expect(resolvedEvent.resources).toBeUndefined();
+    expect(resolvedEvent.availableMaterials).toBeUndefined();
   });
 
   /**
@@ -290,10 +309,7 @@ describe("getWorkshopEvents — resource & material resolution", () => {
       status: "Available",
     });
 
-    const serviceId = await t.run(async (ctx) => {
-      const service = await ctx.db.query("services").first();
-      return service!._id;
-    });
+    const serviceId = await getFirstServiceId(t);
 
     // Create a workshop session so getWorkshopEvents finds this slot
     await tAdmin.mutation(api.workshopSessions.mutate.create, {
@@ -332,12 +348,18 @@ describe("getWorkshopEvents — resource & material resolution", () => {
     const event = allEvents.find(
       (e) => e.serviceId === serviceId && e.startTime === startTime,
     );
-    expect(event).toBeDefined();
+    const resolvedEvent = expectPresent(
+      event,
+      "Expected workshop event for deleted-resource test.",
+    );
 
     // Only the kept resource should appear; the deleted one is omitted
-    expect(event!.resources).toBeDefined();
-    expect(event!.resources!.length).toBe(1);
-    const resolved = event!.resources![0]!;
+    expect(resolvedEvent.resources).toBeDefined();
+    expect(resolvedEvent.resources?.length).toBe(1);
+    const resolved = expectPresent(
+      resolvedEvent.resources?.[0],
+      "Expected resolved resource entry.",
+    );
     expect(typeof resolved === "object" ? resolved._id : resolved).toBe(
       keptResourceId,
     );

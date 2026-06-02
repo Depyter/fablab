@@ -1,14 +1,15 @@
-"use client";
-
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { ProjectMaterial } from "@convex/constants";
+import { useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FieldSeparator } from "@/components/ui/field";
+  DetailCard,
+  DetailChip,
+} from "@/components/projects/cards/detail-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,46 +20,42 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DetailCard,
-  DetailChip,
-} from "@/components/projects/cards/detail-card";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
-import { ConvexError } from "convex/values";
-import { toast } from "sonner";
-import { ProjectMaterial } from "@convex/constants";
-import {
-  derivePricingFromSchema,
-  type PricingServiceType,
-  type ServicePricing,
-} from "@/lib/project-pricing";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FieldSeparator } from "@/components/ui/field";
 import {
-  UsageDraftItem,
-  UsageReadOnlyItem,
-  type UsageDraft,
-  type ResourceUsage,
-  type RequestedMaterial,
-  type PricingService,
-  type EditableResource,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { PricingServiceType, ServicePricing } from "@/lib/project-pricing";
+import { derivePricingFromSchema } from "@/lib/project-pricing";
+import {
+  buildSyncMaterials,
+  extractRetainedUsageIds,
+  hasPastBooking,
+  shouldUpdatePricingSnapshot,
+  validateUsageBookingPayloads,
+} from "./pricing-persistence";
+import type {
+  EditableResource,
+  PricingService,
+  RequestedMaterial,
+  ResourceUsage,
+  UsageDraft,
+} from "./usage-item";
+import {
+  buildBookingRange,
+  buildUsageDraft,
+  computeUsagePreview,
   formatCurrency,
   formatDateInputValue,
   formatTimeInputValue,
-  buildBookingRange,
-  computeUsagePreview,
   sortUsages,
-  buildUsageDraft,
+  UsageDraftItem,
+  UsageReadOnlyItem,
 } from "./usage-item";
-import {
-  validateUsageBookingPayloads,
-  hasPastBooking,
-  extractRetainedUsageIds,
-  shouldUpdatePricingSnapshot,
-  buildSyncMaterials,
-} from "./pricing-persistence";
 
 interface TotalInvoice {
   subtotal: number;
@@ -90,7 +87,7 @@ interface PricingEstimateCardProps {
   service?: PricingService;
   serviceType?: PricingServiceType;
   projectPricing?: string;
-  resourceUsages?: ResourceUsage[];
+  resourceUsages?: Array<ResourceUsage>;
   assignedMaker?: AssignedMaker | null;
   headlineBookingStartTime?: number | null;
   headlineBookingEndTime?: number | null;
@@ -189,7 +186,7 @@ export function PricingEstimateCard({
   const [selectedMakerId, setSelectedMakerId] = useState<string>(
     assignedMaker?._id ?? "",
   );
-  const [usageDrafts, setUsageDrafts] = useState<UsageDraft[]>([]);
+  const [usageDrafts, setUsageDrafts] = useState<Array<UsageDraft>>([]);
   const [nextDraftId, setNextDraftId] = useState(0);
 
   const editableMaterialDocs = useMemo(
@@ -212,7 +209,7 @@ export function PricingEstimateCard({
       ),
     [editableMaterialDocs],
   );
-  const editableResources: EditableResource[] = (resources ?? [])
+  const editableResources: Array<EditableResource> = (resources ?? [])
     .filter((r) => {
       // If the service explicitly restricts resources, only allow those.
       // Otherwise fall back to all resources so that existing services
@@ -429,7 +426,13 @@ export function PricingEstimateCard({
       > = [];
 
       for (const draft of usageDrafts) {
-        const booking = bookingPayloads.get(draft.key)!;
+        const booking = bookingPayloads.get(draft.key);
+
+        if (!booking) {
+          throw new Error(
+            `Missing booking payload for usage draft "${draft.key}".`,
+          );
+        }
 
         if (!draft.usageId) {
           const { usageId } = await createUsage({
@@ -648,11 +651,21 @@ export function PricingEstimateCard({
                 draft={draft}
                 index={index}
                 pricingType={pricingType}
-                preview={previewByDraftKey.get(draft.key)!}
+                preview={(() => {
+                  const preview = previewByDraftKey.get(draft.key);
+
+                  if (!preview) {
+                    throw new Error(
+                      `Missing pricing preview for usage draft "${draft.key}".`,
+                    );
+                  }
+
+                  return preview;
+                })()}
                 service={service}
                 editableResources={editableResources}
                 editableMaterialDocs={
-                  editableMaterialDocs as RequestedMaterial[]
+                  editableMaterialDocs as Array<RequestedMaterial>
                 }
                 isBuyFromLab={isBuyFromLab}
                 allDrafts={usageDrafts}

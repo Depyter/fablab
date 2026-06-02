@@ -1,6 +1,10 @@
-import type { ComponentProps } from "react";
-import { Image } from "@unpic/react";
 import { Link } from "@tanstack/react-router";
+import { Image } from "@unpic/react";
+import type { ComponentProps } from "react";
+import {
+  SidebarNavigation,
+  SidebarUserFooter,
+} from "@/components/sidebar/app-sidebar-content";
 import {
   Sidebar,
   SidebarFooter,
@@ -9,10 +13,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import {
-  SidebarNavigation,
-  SidebarUserFooter,
-} from "@/components/sidebar/app-sidebar-content";
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   return (

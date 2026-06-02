@@ -1,7 +1,3 @@
-"use client";
-
-import * as React from "react";
-
 interface PrintData {
   metrics: {
     projectCount: number;
@@ -102,7 +98,7 @@ export function ReportPrintView({ data }: ReportPrintViewProps) {
   const workshopCount = m?.workshopCount ?? 0;
   const completedStages = (() => {
     const s = m?.projectCountByStatus ?? {};
-    return (s["completed"] ?? 0) + (s["paid"] ?? 0) + (s["claimed"] ?? 0);
+    return (s.completed ?? 0) + (s.paid ?? 0) + (s.claimed ?? 0);
   })();
 
   return (

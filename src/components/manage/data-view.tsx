@@ -1,17 +1,14 @@
-"use client";
-
-import * as React from "react";
 import { PackageOpen, Search } from "lucide-react";
+import type * as React from "react";
+import { DataViewLoadingState } from "@/components/manage/data-view-loading";
+import {
+  ManageEmptyState,
+  ManageFilterClear,
+  ManageFilterSearch,
+  ManageGrid,
+} from "@/components/manage/manage-primitives";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  ManageFilterSearch,
-  ManageFilterClear,
-  ManageGrid,
-  ManageEmptyState,
-} from "@/components/manage/manage-primitives";
-
-import { DataViewLoadingState } from "@/components/manage/data-view-loading";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,12 +27,12 @@ function useResolvedView(explicitView?: ViewMode): ViewMode {
 // ---------------------------------------------------------------------------
 
 interface DataViewContentProps<T> {
-  items: T[];
+  items: Array<T>;
   totalItems: number;
   isLoading?: boolean;
   view?: ViewMode;
   /** Hide content in these view modes; use `viewSlots` for those views instead */
-  hideInViews?: ViewMode[];
+  hideInViews?: Array<ViewMode>;
   /** Render slots for specific view modes, keyed by ViewMode */
   viewSlots?: Partial<Record<ViewMode, React.ReactNode>>;
   /** How to render each item in gallery mode */
@@ -145,7 +142,7 @@ interface DataViewLoadMoreProps {
   onLoadMore: () => void;
   label?: string;
   view?: ViewMode;
-  hideInViews?: ViewMode[];
+  hideInViews?: Array<ViewMode>;
 }
 
 export function DataViewLoadMore({
@@ -174,8 +171,8 @@ export function DataViewLoadMore({
 // ---------------------------------------------------------------------------
 
 export {
-  ManageFilterSearch as DataViewSearch,
-  ManageFilterClear as DataViewFilterClear,
   ManageEmptyState as DataViewEmptyState,
+  ManageFilterClear as DataViewFilterClear,
+  ManageFilterSearch as DataViewSearch,
   ManageGrid as DataViewGrid,
 };

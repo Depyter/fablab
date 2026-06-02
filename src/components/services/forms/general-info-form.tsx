@@ -1,11 +1,9 @@
-"use client";
-
-import { withForm } from "@/lib/form-context";
-import { addServiceFormOpts } from "@/types/add-service";
-import { FormSection } from "@/components/ui/form-section";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { FormSection } from "@/components/ui/form-section";
+import { withForm } from "@/lib/form-context";
 import { cn } from "@/lib/utils";
+import { addServiceFormOpts } from "@/types/add-service";
 
 const DAYS_OF_WEEK = [
   { label: "Su", value: 0 },

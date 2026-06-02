@@ -1,7 +1,7 @@
-"use client";
 
-import React, { ReactNode } from "react";
-import { SlidersHorizontal, Search, X } from "lucide-react";
+
+import { Search, SlidersHorizontal, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,7 @@ export function ManageFilterSearch({
       />
       {value && onClear && (
         <button
+          type="button"
           onClick={onClear}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground"
         >

@@ -1,19 +1,20 @@
-import appCss from "./globals.css?url";
-import { Toaster } from "@/components/ui/sonner";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import type { ConvexQueryClient } from "@convex-dev/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { environmentManager } from "@tanstack/react-query";
 import {
-  Outlet,
   createRootRouteWithContext,
   HeadContent,
+  Outlet,
   Scripts,
+  useRouteContext,
 } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { CtaButton } from "@/components/cta-button";
-import { useRouteContext } from "@tanstack/react-router";
-import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
-import { environmentManager, type QueryClient } from "@tanstack/react-query";
-import type { ConvexQueryClient } from "@convex-dev/react-query";
+import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/auth-client";
 import { getToken } from "@/lib/auth-server";
-import { createServerFn } from "@tanstack/react-start";
+import appCss from "./globals.css?url";
 
 const getAuth = createServerFn({ method: "GET" }).handler(async () => {
   return await getToken();
@@ -25,6 +26,18 @@ export const Route = createRootRouteWithContext<{
   isAuthenticated?: boolean;
   token?: string | null;
 }>()({
+  beforeLoad: async (ctx) => {
+    if (!environmentManager.isServer()) return;
+    const token = await getAuth();
+
+    if (token) {
+      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
+    }
+    return {
+      isAuthenticated: !!token,
+      token,
+    };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -56,18 +69,6 @@ export const Route = createRootRouteWithContext<{
       { rel: "apple-touch-icon", href: "/ios/114.png", sizes: "114x114" },
     ],
   }),
-  beforeLoad: async (ctx) => {
-    if (!environmentManager.isServer()) return;
-    const token = await getAuth();
-
-    if (token) {
-      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
-    }
-    return {
-      isAuthenticated: !!token,
-      token,
-    };
-  },
 
   notFoundComponent: () => {
     <div className="relative min-h-screen bg-background overflow-hidden flex flex-col items-center justify-center p-12">

@@ -1,8 +1,5 @@
-"use client";
-
-import * as React from "react";
-import { ReportMaterialUsageCard } from "@/components/reports/charts/report-material-usage-card";
 import type { Id } from "@convex/_generated/dataModel";
+import { ReportMaterialUsageCard } from "@/components/reports/charts/report-material-usage-card";
 
 interface ReportMaterialsSectionProps {
   materialUsage: Array<{

@@ -1,8 +1,8 @@
-import { cn } from "@/lib/utils";
-import { ProjectStatusType } from "@convex/constants";
+import type { ProjectStatusType } from "@convex/constants";
 import { ManageCard } from "@/components/manage/manage-card";
 import { STATUS_STYLES } from "@/lib/project-status-styles";
 import { getStatusLabel } from "@/lib/project-type-meta";
+import { cn } from "@/lib/utils";
 
 export { STATUS_STYLES } from "@/lib/project-status-styles";
 
@@ -74,31 +74,29 @@ export function ProjectCard({
       badgeText={getStatusLabel(status as ProjectStatusType, type)}
       badgeClassName={styles.badge}
       footer={
-        <>
-          <div className="flex flex-col items-center justify-between w-full">
-            <div className="flex flex-row items-center justify-between w-full mb-1">
-              <span className="text-xs font-bold text-black/60">
-                {bookingDateStr}
-                {bookingTimeStr && (
-                  <span className="ml-1">· {bookingTimeStr}</span>
-                )}
-              </span>
-              <span className="font-black text-black">
-                ₱{estimatedPrice.toFixed(2)}
-              </span>
-            </div>
-
-            <div className="w-full mt-1">
-              <button
-                type="button"
-                onClick={onOpenDetails}
-                className="inline-flex h-8 w-full items-center justify-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white cursor-pointer rounded-none shadow-[2px_2px_0_0_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-              >
-                View Details
-              </button>
-            </div>
+        <div className="flex flex-col items-center justify-between w-full">
+          <div className="flex flex-row items-center justify-between w-full mb-1">
+            <span className="text-xs font-bold text-black/60">
+              {bookingDateStr}
+              {bookingTimeStr && (
+                <span className="ml-1">· {bookingTimeStr}</span>
+              )}
+            </span>
+            <span className="font-black text-black">
+              ₱{estimatedPrice.toFixed(2)}
+            </span>
           </div>
-        </>
+
+          <div className="w-full mt-1">
+            <button
+              type="button"
+              onClick={onOpenDetails}
+              className="inline-flex h-8 w-full items-center justify-center border-2 border-black bg-fab-teal px-3 text-[10px] font-black uppercase tracking-wider text-white cursor-pointer rounded-none shadow-[2px_2px_0_0_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+            >
+              View Details
+            </button>
+          </div>
+        </div>
       }
     ></ManageCard>
   );

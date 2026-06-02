@@ -1,13 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { api } from "@convex/_generated/api";
-import { CtaSection } from "@/components/cta-section";
-import { ServiceCardClient } from "@/components/services/service-card-client";
-import { useEffect, useMemo } from "react";
-import posthog from "posthog-js";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import posthog from "posthog-js";
+import { useEffect, useMemo } from "react";
+import { CtaSection } from "@/components/cta-section";
+import { ServiceCardClient } from "@/components/services/service-card-client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_public/services/")({
   component: RouteComponent,
@@ -17,6 +17,18 @@ export const Route = createFileRoute("/_public/services/")({
     );
   },
 });
+
+const FABRICATION_SKELETON_KEYS = [
+  "fabrication-skeleton-1",
+  "fabrication-skeleton-2",
+  "fabrication-skeleton-3",
+  "fabrication-skeleton-4",
+] as const;
+
+const WORKSHOP_SKELETON_KEYS = [
+  "workshop-skeleton-1",
+  "workshop-skeleton-2",
+] as const;
 
 function ServiceCardSkeleton({ isWorkshop }: { isWorkshop: boolean }) {
   return (
@@ -105,8 +117,8 @@ function RouteComponent() {
               <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
               <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-2 gap-2 p-2 sm:p-6 lg:gap-5 lg:p-8">
                 {isPending
-                  ? Array.from({ length: 4 }).map((_, i) => (
-                      <ServiceCardSkeleton key={i} isWorkshop={false} />
+                  ? FABRICATION_SKELETON_KEYS.map((key) => (
+                      <ServiceCardSkeleton key={key} isWorkshop={false} />
                     ))
                   : fabricationServices.map((service) => (
                       <ServiceCardClient
@@ -132,8 +144,8 @@ function RouteComponent() {
               <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px] opacity-35" />
               <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-2 gap-2 p-2 sm:p-6 lg:gap-5 lg:p-8">
                 {isPending
-                  ? Array.from({ length: 2 }).map((_, i) => (
-                      <ServiceCardSkeleton key={i} isWorkshop={true} />
+                  ? WORKSHOP_SKELETON_KEYS.map((key) => (
+                      <ServiceCardSkeleton key={key} isWorkshop={true} />
                     ))
                   : workshopServices.map((service) => (
                       <ServiceCardClient

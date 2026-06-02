@@ -24,23 +24,23 @@ export interface FileUploadProps {
   onAddFile?: (file: UploadedFile) => void | Promise<void>;
   onUploadComplete?: (file: UploadedFile) => void | Promise<void>;
   onUploadError?: (error: Error, file: File) => void;
-  onFilesChange?: (files: UploadedFile[]) => void;
+  onFilesChange?: (files: Array<UploadedFile>) => void;
   onRemoveFile?: (file: UploadedFile) => void | Promise<void>;
   /** Called whenever the in-progress upload state changes. `true` means at least one upload is still pending/uploading. */
   onUploadingChange?: (isUploading: boolean) => void;
   /** Called whenever the list of in-progress uploading files changes, so consumers can render progress indicators. */
-  onUploadingFilesChange?: (files: UploadingFile[]) => void;
+  onUploadingFilesChange?: (files: Array<UploadingFile>) => void;
   maxFiles?: number;
   maxFileSizeMB?: number;
   accept?: string;
-  allowedTypes?: string[];
+  allowedTypes?: Array<string>;
   disabled?: boolean;
   className?: string;
   multiple?: boolean;
   variant?: "default" | "compact" | "minimal" | "inline";
   showPreview?: boolean;
   autoUpload?: boolean;
-  value?: UploadedFile[];
+  value?: Array<UploadedFile>;
   showDriveLinkNote?: boolean;
 }
 

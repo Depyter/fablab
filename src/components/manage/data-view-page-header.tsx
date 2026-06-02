@@ -1,7 +1,7 @@
-"use client";
 
-import type * as React from "react";
+
 import { PanelLeft } from "lucide-react";
+import type * as React from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 

@@ -1,12 +1,6 @@
-import {
-  File,
-  FileText,
-  Image as ImageIcon,
-  Video,
-  Box,
-  type LucideIcon,
-} from "lucide-react";
 import { EXT_MIME } from "@convex/constants";
+import type { LucideIcon } from "lucide-react";
+import { Box, File, FileText, Image as ImageIcon, Video } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Accept string for the chat file input.
@@ -85,5 +79,5 @@ export const formatFileSize = (bytes: number) => {
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
 };

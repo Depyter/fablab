@@ -1,7 +1,5 @@
-"use client";
-
-import { cn } from "@/lib/utils";
 import { XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type ProjectTimelineStep = {
   title: string;
@@ -13,7 +11,7 @@ export type ProjectTimelineStep = {
 };
 
 interface ProjectTimelineProps {
-  steps: ProjectTimelineStep[];
+  steps: Array<ProjectTimelineStep>;
   className?: string;
 }
 

@@ -1,18 +1,16 @@
-import {
-  createFormHook,
-  createFormHookContexts,
-  type AppFieldExtendedReactFormApi,
-  type FormAsyncValidateOrFn,
-  type FormValidateOrFn,
+import type {
+  AppFieldExtendedReactFormApi,
+  FormAsyncValidateOrFn,
+  FormValidateOrFn,
 } from "@tanstack/react-form";
-import {
-  WorkshopTimeSlotPicker,
-  type WorkshopTimeSlotValue,
-  type WorkshopSchedule,
+import { createFormHook, createFormHookContexts } from "@tanstack/react-form";
+import type {
+  WorkshopSchedule,
+  WorkshopTimeSlotValue,
 } from "@/components/booking/workshop-time-slot-picker";
+import { WorkshopTimeSlotPicker } from "@/components/booking/workshop-time-slot-picker";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -21,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
@@ -153,7 +152,7 @@ const fieldComponents = {
     );
   },
   WorkshopTimeSlotPicker: (props: {
-    schedules?: WorkshopSchedule[];
+    schedules?: Array<WorkshopSchedule>;
     serviceName?: string;
     serviceCategory?: string;
   }) => {
@@ -180,7 +179,7 @@ const fieldComponents = {
   SelectInput: (props: {
     label: string;
     placeholder?: string;
-    options: { label: string; value: string }[];
+    options: Array<{ label: string; value: string }>;
     required?: boolean;
   }) => {
     const field = useFieldContext<string>();

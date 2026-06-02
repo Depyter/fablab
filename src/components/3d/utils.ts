@@ -44,9 +44,9 @@ function vecNormalize(v: Vector3): Vector3 {
  * @returns Array of triangles with positions and computed normals.
  */
 export function getTriangleFaces(
-  vertices: Vector3[],
-  faces: [number, number, number][],
-): Triangle[] {
+  vertices: Array<Vector3>,
+  faces: Array<[number, number, number]>,
+): Array<Triangle> {
   return faces.map((face) => {
     const v1 = vertices[face[0]];
     const v2 = vertices[face[1]];
@@ -61,7 +61,7 @@ export function getTriangleFaces(
  * @param vertices Array of vertex positions.
  * @returns Object with min and max Vector3.
  */
-export function getBoundingBox(vertices: Vector3[]): {
+export function getBoundingBox(vertices: Array<Vector3>): {
   min: Vector3;
   max: Vector3;
 } {
@@ -90,7 +90,7 @@ export function getBoundingBox(vertices: Vector3[]): {
  * @param triangles Array of triangles.
  * @returns Volume in mm³.
  */
-export function getVolume(triangles: Triangle[]): number {
+export function getVolume(triangles: Array<Triangle>): number {
   let volume = 0;
   for (const tri of triangles) {
     const { v1, v2, v3 } = tri;
@@ -104,7 +104,7 @@ export function getVolume(triangles: Triangle[]): number {
  * @param triangles Array of triangles.
  * @returns Surface area in mm².
  */
-export function getSurfaceArea(triangles: Triangle[]): number {
+export function getSurfaceArea(triangles: Array<Triangle>): number {
   let area = 0;
   for (const tri of triangles) {
     const { v1, v2, v3 } = tri;
@@ -122,7 +122,7 @@ export function getSurfaceArea(triangles: Triangle[]): number {
  * @param triangles Array of triangles.
  * @returns Triangle count.
  */
-export function getTriangleCount(triangles: Triangle[]): number {
+export function getTriangleCount(triangles: Array<Triangle>): number {
   return triangles.length;
 }
 
@@ -193,7 +193,7 @@ export function getPrintTime(
  * @returns True if support is required.
  */
 export function isSupportRequired(
-  triangles: Triangle[],
+  triangles: Array<Triangle>,
   overhangThresholdDegrees: number = 45,
 ): boolean {
   const buildDir = { x: 0, y: 0, z: 1 };
@@ -214,7 +214,7 @@ export function isSupportRequired(
  * @returns Overhang ratio (0-1).
  */
 export function getOverhangRatio(
-  triangles: Triangle[],
+  triangles: Array<Triangle>,
   overhangThresholdDegrees: number = 45,
 ): number {
   const buildDir = { x: 0, y: 0, z: 1 };
@@ -312,7 +312,7 @@ export function getPriceBreakdown(
  * @returns Estimated support volume in mm³.
  */
 export function getSupportVolume(
-  triangles: Triangle[],
+  triangles: Array<Triangle>,
   volumeMm3: number,
   overhangRatio: number,
   supportFactor: number = 0.2,
@@ -356,8 +356,8 @@ export const PRINT_DEFAULTS = {
  * @returns ModelData with all computed metrics.
  */
 export function computeModelData(
-  vertices: Vector3[],
-  faces: [number, number, number][],
+  vertices: Array<Vector3>,
+  faces: Array<[number, number, number]>,
 ): ModelData {
   const triangles = getTriangleFaces(vertices, faces);
   const boundingBox = getBoundingBox(vertices);

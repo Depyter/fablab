@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // Zero-dependency replacement for @xixixao/uploadstuff/react's useUploadFiles.
@@ -46,11 +44,11 @@ export function useUploadFiles(generateUploadUrl: () => Promise<string>) {
 
   const startUpload = useCallback(
     async (
-      files: File[],
+      files: Array<File>,
       options?: StartUploadOptions,
-    ): Promise<UploadFileResponse[]> => {
+    ): Promise<Array<UploadFileResponse>> => {
       setIsUploading(true);
-      const results: UploadFileResponse[] = [];
+      const results: Array<UploadFileResponse> = [];
 
       try {
         for (const file of files) {

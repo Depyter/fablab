@@ -1,9 +1,9 @@
-import { useRef } from "react";
-import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { CtaSection } from "@/components/cta-section";
-import { CtaButton } from "@/components/cta-button";
 import { createFileRoute } from "@tanstack/react-router";
+import gsap from "gsap";
+import { useRef } from "react";
+import { CtaButton } from "@/components/cta-button";
+import { CtaSection } from "@/components/cta-section";
 
 export const Route = createFileRoute("/_public/")({
   component: Home,

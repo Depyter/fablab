@@ -1,8 +1,7 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, action } from "./_generated/server";
 import OpenAI from "openai";
-import { MODERATION_CATEGORY_LABELS, FileStatus } from "./constants";
-import { customAction } from "convex-helpers/server/customFunctions";
+import { action, internalAction, internalMutation } from "./_generated/server";
+import { FileStatus, MODERATION_CATEGORY_LABELS } from "./constants";
 
 // ---------------------------------------------------------------------------
 // OpenAI client — instantiated lazily so the module doesn't fail at import
@@ -186,7 +185,7 @@ export const validateTextContent = action({
       });
 
       const result = response.results[0];
-      if (!result || !result.flagged) {
+      if (!result?.flagged) {
         return { flagged: false, categories: "" };
       }
 

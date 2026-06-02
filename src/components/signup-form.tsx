@@ -1,12 +1,12 @@
-import { cn } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { Route } from "@/app/_public/signup";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { authClient } from "../lib/auth-client";
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Route } from "@/app/_public/signup";
 
 export function SignUpForm({
   className,

@@ -1,4 +1,5 @@
-import { lazy, Suspense, type ComponentProps } from "react";
+import type { ComponentProps } from "react";
+import { lazy, Suspense } from "react";
 import { ClientOnly } from "@/lib/client-only";
 import type { ModelFormat } from "./modelScene";
 
@@ -7,7 +8,7 @@ import type { ModelFormat } from "./modelScene";
 // ---------------------------------------------------------------------------
 
 export function getModelFormat(
-  fileType?: string | null,
+  _fileType?: string | null,
   originalName?: string | null,
 ): ModelFormat | null {
   if (!originalName) return null;
@@ -15,7 +16,7 @@ export function getModelFormat(
   if (parts.length <= 1) return null;
   const ext = parts.pop()?.toLowerCase();
   if (ext === "stl") return "stl";
-  if (ext === "glb" || ext === "gltf") return ext as ModelFormat;
+  if (ext === "glb" || ext === "gltf") return ext;
   if (ext === "obj") return "obj";
   return null;
 }

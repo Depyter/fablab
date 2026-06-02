@@ -1,28 +1,29 @@
-import * as React from "react";
-import { Link } from "@tanstack/react-router";
-import { PROJECT_STATUS_LABELS } from "@convex/constants";
 import type { Id } from "@convex/_generated/dataModel";
-
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
+import { Link } from "@tanstack/react-router";
+import * as React from "react";
 import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
+import { useIsMobile } from "@/hooks/use-mobile";
+import type {
+  CalendarDayTrackEntry,
+  CalendarMachine as Machine,
+  CalendarMachineUsage as MachineUsage,
+} from "@/lib/calendar";
 import {
   buildCalendarDayScheduleRows,
   CALENDAR_DAY_HEADER_HEIGHT,
+  CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_ROW_HEIGHT,
   CALENDAR_DAY_SECTION_HEIGHT,
-  CALENDAR_DAY_LEADING_COL_WIDTH,
   CALENDAR_DAY_SLOT_WIDTH,
-  getCalendarDayNowIndicatorLeft,
-  getCalendarDayUsagePosition,
-  isWorkshopTrackEntry,
-  type CalendarDayTrackEntry,
-  type CalendarMachine as Machine,
   DAY_END,
   DAY_START,
+  getCalendarDayNowIndicatorLeft,
+  getCalendarDayUsagePosition,
   HEADER_SLOTS,
-  type CalendarMachineUsage as MachineUsage,
+  isWorkshopTrackEntry,
 } from "@/lib/calendar";
 import {
   formatLabDecimalHour,
@@ -37,8 +38,8 @@ const CALENDAR_HEADER_BG = "#f3f4f6";
 const CALENDAR_BORDER = "#9ca3af";
 
 interface UsageTableProps {
-  machines: Machine[];
-  usages: MachineUsage[];
+  machines: Array<Machine>;
+  usages: Array<MachineUsage>;
   onOpenProjectDetails?: (projectId: Id<"projects">) => void;
   onOpenWorkshopEvent?: (serviceId: string, startTime: number) => void;
   leadingColumnLabel?: string;
@@ -235,7 +236,7 @@ function StandardUsageCard({
         if (usage.projectId && onOpenProjectDetails) {
           onOpenProjectDetails(usage.projectId);
         } else if (isWorkshopSlot) {
-          onOpenWorkshopEvent!(
+          onOpenWorkshopEvent(
             usage.serviceId ?? usage.machineId,
             usage.startTime,
           );

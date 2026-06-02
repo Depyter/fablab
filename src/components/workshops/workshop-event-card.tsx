@@ -1,26 +1,23 @@
-"use client";
 
-import * as React from "react";
 import {
+  Calendar,
   ChevronDown,
   ChevronUp,
-  Users,
-  Calendar,
   Clock,
+  Users,
   XCircle,
 } from "lucide-react";
-import { formatLabDate, formatLabTime } from "@/lib/lab-time";
-import {
-  WorkshopAttendeeRow,
-  type AttendeeInfo,
-} from "@/components/workshops/workshop-attendee-row";
+import * as React from "react";
+import type { StatusColorSet } from "@/components/brand/primitives";
 import {
   BrandCard,
+  CapacityBar,
   SectionLabel,
   StatusBadge,
-  type StatusColorSet,
-  CapacityBar,
 } from "@/components/brand/primitives";
+import type { AttendeeInfo } from "@/components/workshops/workshop-attendee-row";
+import { WorkshopAttendeeRow } from "@/components/workshops/workshop-attendee-row";
+import { formatLabDate, formatLabTime } from "@/lib/lab-time";
 
 export type WorkshopEvent = {
   serviceId: string;
@@ -34,8 +31,8 @@ export type WorkshopEvent = {
   registrationCount: number;
   cancelledCount: number;
   statusBreakdown: Record<string, number>;
-  resources?: { _id: string; name: string }[];
-  availableMaterials?: { _id: string; name: string; unit: string }[];
+  resources?: Array<{ _id: string; name: string }>;
+  availableMaterials?: Array<{ _id: string; name: string; unit: string }>;
   attendees: Array<{
     projectId: string;
     userId: string;

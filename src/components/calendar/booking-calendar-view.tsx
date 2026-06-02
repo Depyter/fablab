@@ -1,16 +1,15 @@
-import * as React from "react";
 import type { Id } from "@convex/_generated/dataModel";
-
-import { UsageTable } from "./usage-table";
-import type { CalendarVisibleRange } from "./calendar-state";
-import { CalendarRangeView } from "./calendar-range-view";
-import {
-  type CalendarMachine,
-  type CalendarMachineUsage,
-  type CalendarRangeEvent,
-  type CalendarTab,
-  type CalendarViewMode,
+import type {
+  CalendarMachine,
+  CalendarMachineUsage,
+  CalendarRangeEvent,
+  CalendarTab,
+  CalendarViewMode,
 } from "@/lib/calendar";
+import { CalendarRangeView } from "./calendar-range-view";
+
+import type { CalendarVisibleRange } from "./calendar-state";
+import { UsageTable } from "./usage-table";
 
 export function BookingCalendarView({
   date,
@@ -37,11 +36,11 @@ export function BookingCalendarView({
   activeTab: CalendarTab;
   isAdminOrMaker: boolean;
   bookingsLoading: boolean;
-  serviceMachines: CalendarMachine[];
-  resourceMachines: CalendarMachine[];
-  serviceUsages: CalendarMachineUsage[];
-  resourceUsages: CalendarMachineUsage[];
-  rangeEvents: CalendarRangeEvent[];
+  serviceMachines: Array<CalendarMachine>;
+  resourceMachines: Array<CalendarMachine>;
+  serviceUsages: Array<CalendarMachineUsage>;
+  resourceUsages: Array<CalendarMachineUsage>;
+  rangeEvents: Array<CalendarRangeEvent>;
 }) {
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">

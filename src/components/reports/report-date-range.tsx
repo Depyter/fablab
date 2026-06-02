@@ -1,8 +1,9 @@
-"use client";
 
+
+import { ArrowLeft, CalendarDays } from "lucide-react";
 import * as React from "react";
-import { CalendarDays, ArrowLeft } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import type { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -15,8 +16,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Calendar } from "@/components/ui/calendar";
-import type { DateRange } from "react-day-picker";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReportDateRangeProps {
   dateFrom: number;

@@ -1,18 +1,16 @@
-"use client";
-
-import { useState } from "react";
 import { XIcon } from "lucide-react";
+import { useState } from "react";
+import { FormSection } from "@/components/ui/form-section";
 import {
   Select,
+  SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectItem,
-  SelectContent,
 } from "@/components/ui/select";
-import { FormSection } from "@/components/ui/form-section";
 
 interface MultipleSelectFormProps {
-  options: { label: string; value: string }[];
+  options: Array<{ label: string; value: string }>;
   title?: string;
   fieldName?: string;
   placeholder?: string;
@@ -25,7 +23,7 @@ export function MultipleSelectForm({
   placeholder = "Select item...",
 }: MultipleSelectFormProps) {
   // Local state just to manage the visual list of selected items
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const [selectedValues, setSelectedValues] = useState<Array<string>>([]);
 
   const addMachine = (value: string) => {
     if (!selectedValues.includes(value)) {

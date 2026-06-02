@@ -1,12 +1,12 @@
 import { LayoutGrid, Users } from "lucide-react";
-import { SelectItem } from "@/components/ui/select";
-import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
 import {
-  BrandSelect,
   BrandSegmentedControl,
+  BrandSelect,
 } from "@/components/brand/primitives";
-import { CalendarNavigation } from "./booking-calendar-toolbar";
+import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
+import { SelectItem } from "@/components/ui/select";
 import { BookingCalendarShell } from "./booking-calendar-shell";
+import { CalendarNavigation } from "./booking-calendar-toolbar";
 import {
   BookingCalendarProvider,
   useBookingCalendarController,

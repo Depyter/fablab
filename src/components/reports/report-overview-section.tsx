@@ -1,20 +1,18 @@
-"use client";
-
+import type { Id } from "@convex/_generated/dataModel";
 import * as React from "react";
+import { ReportMaterialUsageCard } from "@/components/reports/charts/report-material-usage-card";
+import { ReportProjectStatusCard } from "@/components/reports/charts/report-project-status-card";
+import { ReportResourceDowntimeCard } from "@/components/reports/charts/report-resource-downtime-card";
+import { ReportResourceUtilizationCard } from "@/components/reports/charts/report-resource-utilization-card";
+import { ReportRevenueByServiceCard } from "@/components/reports/charts/report-revenue-by-service-card";
+import { Skeleton } from "@/components/ui/skeleton";
+
 const currencyFormatter = new Intl.NumberFormat("en-PH", {
   style: "currency",
   currency: "PHP",
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
-
-import { Skeleton } from "@/components/ui/skeleton";
-import { ReportRevenueByServiceCard } from "@/components/reports/charts/report-revenue-by-service-card";
-import { ReportResourceDowntimeCard } from "@/components/reports/charts/report-resource-downtime-card";
-import { ReportProjectStatusCard } from "@/components/reports/charts/report-project-status-card";
-import { ReportMaterialUsageCard } from "@/components/reports/charts/report-material-usage-card";
-import { ReportResourceUtilizationCard } from "@/components/reports/charts/report-resource-utilization-card";
-import type { Id } from "@convex/_generated/dataModel";
 
 interface OverviewMetrics {
   projectCount: number;

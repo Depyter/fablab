@@ -1,5 +1,7 @@
-import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { CalendarTab, CalendarViewMode } from "@/lib/calendar";
 import {
   CALENDAR_DAY_LAYOUT_TEMPLATE,
@@ -14,15 +16,13 @@ import {
   CALENDAR_WEEK_HEADER_HEIGHT,
   CALENDAR_WEEK_HOUR_ROW_MIN_HEIGHT,
   CALENDAR_WEEK_TIME_COL_WIDTH,
-  DAY_HOURS,
   DAY_END,
+  DAY_HOURS,
   DAY_START,
   HEADER_SLOTS,
 } from "@/lib/calendar";
 import { formatLabDecimalHour } from "@/lib/lab-time";
 import { cn } from "@/lib/utils";
-import { ViewHeader, ViewHeaderLeading } from "@/components/ui/view-header";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const DAY_SECTION_BG = "#ffffff";
 const DAY_SECTION_BG_STICKY = "#ffffff";
@@ -67,7 +67,7 @@ type DayLoadingRow =
       >;
     };
 
-const SERVICE_DAY_LOADING_ROWS: DayLoadingRow[] = [
+const SERVICE_DAY_LOADING_ROWS: Array<DayLoadingRow> = [
   {
     id: "fabrication-section",
     kind: "section",
@@ -108,7 +108,7 @@ const SERVICE_DAY_LOADING_ROWS: DayLoadingRow[] = [
   },
 ];
 
-const RESOURCE_DAY_LOADING_ROWS: DayLoadingRow[] = [
+const RESOURCE_DAY_LOADING_ROWS: Array<DayLoadingRow> = [
   {
     id: "machine-section",
     kind: "section",
@@ -236,6 +236,7 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
 
   return (
     <>
+      {/* Desktop Layout */}
       <div className="hidden min-h-0 flex-1 md:flex">
         <ScrollArea className="min-h-0 min-w-0 flex-1">
           <div
@@ -396,26 +397,22 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
                         minHeight: row.rowHeight,
                       }}
                     >
-                      {HEADER_SLOTS.map((slot, slotIndex) => {
-                        const isBoundary = slot >= DAY_END;
-
-                        return (
-                          <div
-                            key={`${row.id}-${slot}`}
-                            aria-hidden
-                            style={{
-                              height: "100%",
-                              borderBottom: `1px solid ${CALENDAR_BORDER}`,
-                              borderLeft:
-                                slotIndex > 0
-                                  ? `1px solid ${CALENDAR_BORDER}`
-                                  : "",
-                              background: isBoundary ? "#fff" : "#fff",
-                              pointerEvents: "none",
-                            }}
-                          />
-                        );
-                      })}
+                      {HEADER_SLOTS.map((slot, slotIndex) => (
+                        <div
+                          key={`${row.id}-${slot}`}
+                          aria-hidden
+                          style={{
+                            height: "100%",
+                            borderBottom: `1px solid ${CALENDAR_BORDER}`,
+                            borderLeft:
+                              slotIndex > 0
+                                ? `1px solid ${CALENDAR_BORDER}`
+                                : "",
+                            background: "#fff",
+                            pointerEvents: "none",
+                          }}
+                        />
+                      ))}
 
                       {row.slots.map((slot) =>
                         slot.kind === "workshop" ? (
@@ -443,14 +440,15 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
         </ScrollArea>
       </div>
 
+      {/* Mobile Layout */}
       <div className="flex flex-1 flex-col overflow-y-auto md:hidden">
         {rows
           .filter(
             (row): row is Extract<DayLoadingRow, { kind: "track" }> =>
               row.kind === "track",
           )
-          .map((row, rowIndex) => (
-            <div key={`calendar-mobile-loading-${row.id}-${rowIndex}`}>
+          .map((row) => (
+            <div key={`calendar-mobile-loading-${row.id}`}>
               <div
                 className="sticky top-0 z-10 flex items-center justify-between border-b bg-[#f3f4f6] px-3 py-1.5"
                 style={{ borderBottomColor: CALENDAR_BORDER }}
@@ -470,9 +468,9 @@ function DayLoadingState({ activeTab }: { activeTab: CalendarTab }) {
               </div>
 
               <div className="divide-y divide-[#9ca3af]">
-                {row.slots.map((slot, slotIndex) => (
+                {row.slots.map((slot) => (
                   <div
-                    key={`calendar-mobile-entry-${row.id}-${slot.start}-${slotIndex}`}
+                    key={`calendar-mobile-entry-${row.id}-${slot.start}-${slot.kind}`}
                     className="flex items-center gap-2.5 px-3 py-2"
                   >
                     <Skeleton className="h-7 w-1 shrink-0 rounded-full" />

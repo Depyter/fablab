@@ -1,8 +1,6 @@
-"use client";
-
 import { Link } from "@tanstack/react-router";
-import posthog from "posthog-js";
 import { ChevronRight } from "lucide-react";
+import posthog from "posthog-js";
 import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {

@@ -1,8 +1,8 @@
-import { v, ConvexError } from "convex/values";
-import { authMutation, claimFiles } from "../helper";
-import { internalAction, internalQuery } from "../_generated/server";
+import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
+import { internalAction, internalQuery } from "../_generated/server";
 import { FileStatus } from "../constants";
+import { authMutation, claimFiles } from "../helper";
 
 export const sendMessage = authMutation({
   args: {

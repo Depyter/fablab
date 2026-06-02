@@ -1,8 +1,10 @@
-"use client";
-
-import { FulfillmentModeType, ProjectMaterialType } from "@convex/constants";
-import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
+import type {
+  FulfillmentModeType,
+  ProjectMaterialType,
+} from "@convex/constants";
+import { FileUpload } from "@/components/file-upload/file-upload";
+import type { UploadedFile } from "@/components/file-upload/types";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
 import {
   Select,
   SelectContent,
@@ -10,10 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { DetailCard } from "./detail-card";
-import { ProjectAttachments } from "@/components/projects/project-attachments";
-import { FileUpload } from "@/components/file-upload/file-upload";
-import { UploadedFile } from "@/components/file-upload/types";
 
 interface ResolvedFile {
   url?: string | null;
@@ -28,7 +29,7 @@ interface ProjectInfoCardProps {
   notes?: string | null;
   bookingDateStr: string;
   bookingTimeRange: string;
-  resolvedFiles?: ResolvedFile[] | null;
+  resolvedFiles?: Array<ResolvedFile> | null;
   submittedBy?: string | null;
   submittedAt?: number | null;
 
@@ -45,8 +46,8 @@ interface ProjectInfoCardProps {
   setEditDescription: (v: string) => void;
   editNotes: string;
   setEditNotes: (v: string) => void;
-  editFiles: UploadedFile[];
-  setEditFiles: (files: UploadedFile[]) => void;
+  editFiles: Array<UploadedFile>;
+  setEditFiles: (files: Array<UploadedFile>) => void;
   editMaterial: ProjectMaterialType;
   setEditMaterial: (v: ProjectMaterialType) => void;
   editServiceType: FulfillmentModeType;
@@ -244,13 +245,17 @@ export function ProjectInfoCard({
           />
         ) : (
           <ProjectAttachments
-            files={(resolvedFiles ?? [])
-              .filter((f) => !!f.url)
-              .map((f) => ({
-                url: f.url!,
-                type: f.type,
-                originalName: f.originalName,
-              }))}
+            files={(resolvedFiles ?? []).flatMap((file) =>
+              file.url
+                ? [
+                    {
+                      url: file.url,
+                      type: file.type,
+                      originalName: file.originalName,
+                    },
+                  ]
+                : [],
+            )}
           />
         )}
       </div>

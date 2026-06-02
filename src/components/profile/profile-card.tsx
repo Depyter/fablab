@@ -1,15 +1,13 @@
-import { useState, useRef, useEffect } from "react";
-import { User, Camera, Loader2 } from "lucide-react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
+import { Camera, Loader2, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getRateLimitErrorMessage } from "@/lib/rate-limit";
+import type { CurrentUserProfile } from "@/components/sidebar/profile-context";
+import { useProfile } from "@/components/sidebar/profile-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +15,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
@@ -24,10 +24,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  useProfile,
-  type CurrentUserProfile,
-} from "@/components/sidebar/profile-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
 
 type UserProfile = CurrentUserProfile;
 
@@ -233,7 +231,6 @@ function UserProfileForm({
               className="h-16 w-16 rounded-full bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {previewSrc ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={previewSrc}
                   alt={name || profile.name}

@@ -1,7 +1,5 @@
-import {
-  PROJECT_STATUS_LABELS,
-  type ProjectStatusType,
-} from "../../../convex/constants";
+import type { ProjectStatusType } from "@convex/constants";
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
 
 import type {
   CalendarServiceCategoryType,
@@ -11,10 +9,7 @@ import type {
 export function getCalendarProjectStatus(
   status: string | null | undefined,
 ): ProjectStatusType {
-  if (
-    status &&
-    Object.prototype.hasOwnProperty.call(PROJECT_STATUS_LABELS, status)
-  ) {
+  if (status && Object.hasOwn(PROJECT_STATUS_LABELS, status)) {
     return status as ProjectStatusType;
   }
 

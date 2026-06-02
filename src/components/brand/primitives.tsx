@@ -1,14 +1,6 @@
-import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { cn } from "@/lib/utils";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Select,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import * as React from "react";
 import {
   Popover,
   PopoverContent,
@@ -16,6 +8,12 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +23,23 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// BrandSearchField — brand-styled search with embedded icon
+// ---------------------------------------------------------------------------
+
+import { DataViewSearchField } from "@/components/manage/data-view-toolbar";
+
+// ---------------------------------------------------------------------------
+// BrandTabs — branded tab list and trigger
+// ---------------------------------------------------------------------------
+
+import {
+  TabsList as ShadcnTabsList,
+  TabsTrigger as ShadcnTabsTrigger,
+} from "@/components/ui/tabs";
 
 // ---------------------------------------------------------------------------
 // GridBackground — repeating crosshatch grid overlay
@@ -414,7 +429,7 @@ type BrandSegmentedControlOption<T extends string> = {
 };
 
 type BrandSegmentedControlProps<T extends string> = {
-  options: readonly BrandSegmentedControlOption<T>[];
+  options: ReadonlyArray<BrandSegmentedControlOption<T>>;
   value: T;
   onChange: (value: T) => void;
   className?: string;
@@ -578,12 +593,6 @@ export function BrandFilterPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// BrandSearchField — brand-styled search with embedded icon
-// ---------------------------------------------------------------------------
-
-import { DataViewSearchField } from "@/components/manage/data-view-toolbar";
-
 type BrandSearchFieldProps = {
   value: string;
   onChange: (value: string) => void;
@@ -652,15 +661,6 @@ export function BrandSearchField({
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// BrandTabs — branded tab list and trigger
-// ---------------------------------------------------------------------------
-
-import {
-  TabsList as ShadcnTabsList,
-  TabsTrigger as ShadcnTabsTrigger,
-} from "@/components/ui/tabs";
 
 type BrandTabsListProps = React.ComponentProps<typeof ShadcnTabsList>;
 

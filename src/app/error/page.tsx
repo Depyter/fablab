@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { BannedUserDialog } from "@/components/ban-error-dialog";
 
 interface ErrorPageProps {

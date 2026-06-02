@@ -1,15 +1,13 @@
-"use client";
-
+import { CalendarIcon, Clock2Icon } from "lucide-react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-import { CalendarIcon, Clock2Icon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Field, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -17,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCallback } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -38,7 +35,7 @@ import {
   LAB_TIME_ZONE,
 } from "@/lib/lab-time";
 
-const TIME_SLOTS: string[] = [];
+const TIME_SLOTS: Array<string> = [];
 for (let h = 9; h <= 18; h++) {
   const hourStr = h.toString().padStart(2, "0");
   TIME_SLOTS.push(`${hourStr}:00`);
@@ -67,15 +64,15 @@ export interface DateTimePickerValue {
 export interface DateTimePickerProps {
   value: DateTimePickerValue;
   onChange: (value: DateTimePickerValue) => void;
-  availableDays?: number[];
-  bookedTimeBlocks?: { start: string; end: string }[];
+  availableDays?: Array<number>;
+  bookedTimeBlocks?: Array<{ start: string; end: string }>;
   allowPastSelection?: boolean;
 }
 
 type BookedTimeBlock = { start: string; end: string };
 
-const EMPTY_AVAILABLE_DAYS: number[] = [];
-const EMPTY_BOOKED_TIME_BLOCKS: BookedTimeBlock[] = [];
+const EMPTY_AVAILABLE_DAYS: Array<number> = [];
+const EMPTY_BOOKED_TIME_BLOCKS: Array<BookedTimeBlock> = [];
 
 export function DateTimePicker({
   value,

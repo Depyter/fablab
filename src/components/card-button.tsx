@@ -1,8 +1,6 @@
-"use client";
+import { CirclePlus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { CirclePlus } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface CardButtonProps {
   path: string;

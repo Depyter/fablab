@@ -1,9 +1,9 @@
-import { describe, expect, test } from "vitest";
-import { api, internal } from "../convex/_generated/api";
-import { convexTest } from "convex-test";
-import schema from "../convex/schema";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+import { api, internal } from "../convex/_generated/api";
+import schema from "../convex/schema";
 
 process.env.RESEND_TEST_MODE = "true";
 process.env.RESEND_API_KEY ??= "test-api-key";
@@ -11,6 +11,16 @@ process.env.DISABLE_SCHEDULED_EMAILS = "true";
 
 const HOUR_MS = 1000 * 60 * 60;
 const DAY_MS = 24 * HOUR_MS;
+
+function expectPresent<T>(value: T | null | undefined, message: string): T {
+  expect(value).toBeDefined();
+
+  if (value == null) {
+    throw new Error(message);
+  }
+
+  return value;
+}
 
 async function setupReportFixture() {
   const t = convexTest(schema, import.meta.glob("../convex/**/*.{ts,tsx}"));
@@ -98,22 +108,35 @@ async function setupReportFixture() {
   // Resolve IDs
   const ids = await t.run(async (ctx) => {
     const services = await ctx.db.query("services").collect();
-    const fabricationSvc = services.find((s) => s.name === "3D Printing")!;
-    const workshopSvc = services.find(
-      (s) => s.name === "Laser Cutting Workshop",
-    )!;
-    const resource = await ctx.db.query("resources").first()!;
-    const material = await ctx.db.query("materials").first()!;
-    const maker = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", "3"))
-      .first();
+    const fabricationSvc = expectPresent(
+      services.find((s) => s.name === "3D Printing"),
+      "3D Printing service should exist in the report fixture.",
+    );
+    const workshopSvc = expectPresent(
+      services.find((s) => s.name === "Laser Cutting Workshop"),
+      "Laser Cutting Workshop service should exist in the report fixture.",
+    );
+    const resource = expectPresent(
+      await ctx.db.query("resources").first(),
+      "A fixture resource should exist in the report fixture.",
+    );
+    const material = expectPresent(
+      await ctx.db.query("materials").first(),
+      "A fixture material should exist in the report fixture.",
+    );
+    const maker = expectPresent(
+      await ctx.db
+        .query("userProfile")
+        .withIndex("by_userId", (q) => q.eq("userId", "3"))
+        .first(),
+      "The maker user profile should exist in the report fixture.",
+    );
     return {
       fabricationServiceId: fabricationSvc._id,
       workshopServiceId: workshopSvc._id,
-      resourceId: resource!._id,
-      materialId: material!._id,
-      makerId: maker!._id,
+      resourceId: resource._id,
+      materialId: material._id,
+      makerId: maker._id,
     };
   });
 
@@ -250,11 +273,14 @@ describe("Reports — getReportMetrics", () => {
     });
 
     const usageId = await tAera.run(async (ctx) => {
-      const usage = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_project", (q) => q.eq("projectId", projectId))
-        .first();
-      return usage!._id;
+      const usage = expectPresent(
+        await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first(),
+        "A resource usage should be created for the revenue test project.",
+      );
+      return usage._id;
     });
 
     // Set pricing so invoice gets populated
@@ -304,7 +330,10 @@ describe("Reports — getReportMetrics", () => {
 
     const secondResourceId = await tAera.run(async (ctx) => {
       const resources = await ctx.db.query("resources").collect();
-      const laser = resources.find((r) => r.name === "Laser Cutter")!;
+      const laser = expectPresent(
+        resources.find((r) => r.name === "Laser Cutter"),
+        "Laser Cutter should exist in the report fixture.",
+      );
       return laser._id;
     });
 
@@ -333,11 +362,14 @@ describe("Reports — getReportMetrics", () => {
 
     // Get the auto-created usage and assign resource
     const usageId = await tAera.run(async (ctx) => {
-      const usage = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_project", (q) => q.eq("projectId", projectId))
-        .first();
-      return usage!._id;
+      const usage = expectPresent(
+        await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first(),
+        "A resource usage should be created for the utilization test project.",
+      );
+      return usage._id;
     });
 
     await tAera.mutation(api.projects.mutate.updateUsage, {
@@ -374,14 +406,18 @@ describe("Reports — getReportMetrics", () => {
     const prusa = metrics.resourceUtilization.find(
       (r) => r.name === "Prusa MK4",
     );
-    expect(prusa).toBeDefined();
-    expect(prusa!.totalBookedMinutes).toBe(240);
+    expect(
+      expectPresent(prusa, "Prusa MK4 should be in resource metrics.")
+        .totalBookedMinutes,
+    ).toBe(240);
 
     const laser = metrics.resourceUtilization.find(
       (r) => r.name === "Laser Cutter",
     );
-    expect(laser).toBeDefined();
-    expect(laser!.totalBookedMinutes).toBe(120);
+    expect(
+      expectPresent(laser, "Laser Cutter should be in resource metrics.")
+        .totalBookedMinutes,
+    ).toBe(120);
   });
 
   test("aggregates material usage with costs", async () => {
@@ -402,7 +438,10 @@ describe("Reports — getReportMetrics", () => {
 
     const petgId = await tAera.run(async (ctx) => {
       const materials = await ctx.db.query("materials").collect();
-      const petg = materials.find((m) => m.name === "PETG Filament")!;
+      const petg = expectPresent(
+        materials.find((m) => m.name === "PETG Filament"),
+        "PETG Filament should exist in the report fixture.",
+      );
       return petg._id;
     });
 
@@ -431,11 +470,14 @@ describe("Reports — getReportMetrics", () => {
     await tAera.finishAllScheduledFunctions(() => {});
 
     const usageId = await tAera.run(async (ctx) => {
-      const usage = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_project", (q) => q.eq("projectId", projectId))
-        .first();
-      return usage!._id;
+      const usage = expectPresent(
+        await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first(),
+        "A resource usage should be created for the material test project.",
+      );
+      return usage._id;
     });
 
     // materialCost must equal sum of (amountUsed * pricePerUnit)
@@ -465,16 +507,32 @@ describe("Reports — getReportMetrics", () => {
     expect(metrics.materialUsage).toHaveLength(2);
 
     const pla = metrics.materialUsage.find((m) => m.name === "PLA Filament");
-    expect(pla).toBeDefined();
-    expect(pla!.totalUsed).toBe(50);
-    expect(pla!.totalCost).toBe(25);
-    expect(pla!.currentStock).toBe(4950); // 5000 - 50
+    expect(
+      expectPresent(pla, "PLA Filament should be in material metrics.")
+        .totalUsed,
+    ).toBe(50);
+    expect(
+      expectPresent(pla, "PLA Filament should be in material metrics.")
+        .totalCost,
+    ).toBe(25);
+    expect(
+      expectPresent(pla, "PLA Filament should be in material metrics.")
+        .currentStock,
+    ).toBe(4950); // 5000 - 50
 
     const petg = metrics.materialUsage.find((m) => m.name === "PETG Filament");
-    expect(petg).toBeDefined();
-    expect(petg!.totalUsed).toBe(30);
-    expect(petg!.totalCost).toBe(24);
-    expect(petg!.currentStock).toBe(2970); // 3000 - 30
+    expect(
+      expectPresent(petg, "PETG Filament should be in material metrics.")
+        .totalUsed,
+    ).toBe(30);
+    expect(
+      expectPresent(petg, "PETG Filament should be in material metrics.")
+        .totalCost,
+    ).toBe(24);
+    expect(
+      expectPresent(petg, "PETG Filament should be in material metrics.")
+        .currentStock,
+    ).toBe(2970); // 3000 - 30
 
     expect(metrics.totalMaterialCost).toBe(49); // 25 + 24
   });
@@ -596,11 +654,14 @@ describe("Reports — getRevenueBreakdown", () => {
     await tAera.finishAllScheduledFunctions(() => {});
 
     const usageId = await tAera.run(async (ctx) => {
-      const usage = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_project", (q) => q.eq("projectId", projectId))
-        .first();
-      return usage!._id;
+      const usage = expectPresent(
+        await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first(),
+        "A resource usage should be created for the revenue breakdown test project.",
+      );
+      return usage._id;
     });
 
     await tAera.mutation(api.projects.mutate.updateUsagePricing, {
@@ -674,19 +735,41 @@ describe("Reports — getResourceDowntime", () => {
     expect(downtime).toHaveLength(2);
 
     const prusa = downtime.find((r) => r.name === "Prusa MK4");
-    expect(prusa).toBeDefined();
-    expect(prusa!.isUnderMaintenance).toBe(false);
-    expect(prusa!.currentStatus).toBe("Available");
-    expect(prusa!.totalDowntimeMinutes).toBe(0);
-    expect(prusa!.bookingCount).toBe(0);
+    expect(
+      expectPresent(prusa, "Prusa MK4 should be in downtime metrics.")
+        .isUnderMaintenance,
+    ).toBe(false);
+    expect(
+      expectPresent(prusa, "Prusa MK4 should be in downtime metrics.")
+        .currentStatus,
+    ).toBe("Available");
+    expect(
+      expectPresent(prusa, "Prusa MK4 should be in downtime metrics.")
+        .totalDowntimeMinutes,
+    ).toBe(0);
+    expect(
+      expectPresent(prusa, "Prusa MK4 should be in downtime metrics.")
+        .bookingCount,
+    ).toBe(0);
 
     const broken = downtime.find((r) => r.name === "Broken Machine");
-    expect(broken).toBeDefined();
-    expect(broken!.isUnderMaintenance).toBe(true);
-    expect(broken!.currentStatus).toBe("Under Maintenance");
+    expect(
+      expectPresent(broken, "Broken Machine should be in downtime metrics.")
+        .isUnderMaintenance,
+    ).toBe(true);
+    expect(
+      expectPresent(broken, "Broken Machine should be in downtime metrics.")
+        .currentStatus,
+    ).toBe("Under Maintenance");
     // 2 days in minutes
-    expect(broken!.totalDowntimeMinutes).toBe(2 * 24 * 60);
-    expect(broken!.bookingCount).toBe(0);
+    expect(
+      expectPresent(broken, "Broken Machine should be in downtime metrics.")
+        .totalDowntimeMinutes,
+    ).toBe(2 * 24 * 60);
+    expect(
+      expectPresent(broken, "Broken Machine should be in downtime metrics.")
+        .bookingCount,
+    ).toBe(0);
   });
 
   test("reports booking count per resource", async () => {
@@ -716,11 +799,14 @@ describe("Reports — getResourceDowntime", () => {
     await tAera.finishAllScheduledFunctions(() => {});
 
     const usageId = await tAera.run(async (ctx) => {
-      const usage = await ctx.db
-        .query("resourceUsage")
-        .withIndex("by_project", (q) => q.eq("projectId", projectId))
-        .first();
-      return usage!._id;
+      const usage = expectPresent(
+        await ctx.db
+          .query("resourceUsage")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .first(),
+        "A resource usage should be created for the downtime test project.",
+      );
+      return usage._id;
     });
 
     await tAera.mutation(api.projects.mutate.updateUsage, {
@@ -735,7 +821,9 @@ describe("Reports — getResourceDowntime", () => {
     });
 
     const prusa = downtime.find((r) => r.name === "Prusa MK4");
-    expect(prusa).toBeDefined();
-    expect(prusa!.bookingCount).toBe(1);
+    expect(
+      expectPresent(prusa, "Prusa MK4 should be in downtime metrics.")
+        .bookingCount,
+    ).toBe(1);
   });
 });

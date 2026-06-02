@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import posthog from "posthog-js";
+import { useEffect } from "react";
 
 interface Profile {
   _id: string;

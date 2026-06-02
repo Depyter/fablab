@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
-import { Card, CardContent } from "../ui/card";
 import { PhilippinePeso } from "lucide-react";
+import type { ReactNode } from "react";
+import { Card, CardContent } from "../ui/card";
 
 interface PriceTileProps {
   label: string;

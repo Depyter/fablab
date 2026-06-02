@@ -1,4 +1,3 @@
-import { ProjectStatus, UserRole } from "../constants";
 import type {
   CalendarBookingItem,
   CalendarFrameData,
@@ -6,6 +5,7 @@ import type {
 import { overlapsTimeRange } from "../../src/lib/time-range";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
+import { ProjectStatus, UserRole } from "../constants";
 
 type CalendarRole = Doc<"userProfile">["role"];
 type CalendarQueryContext = {

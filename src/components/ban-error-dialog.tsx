@@ -8,7 +8,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "@tanstack/react-router";
 
 interface BannedUserDialogProps {
   message?: string;
@@ -53,7 +52,7 @@ export function BannedUserDialog({
 }: BannedUserDialogProps) {
   const handleContinue = async () => {
     await authClient.signOut();
-    window.location.replace("/login");
+    window.location.replace(redirectTo);
   };
 
   return (

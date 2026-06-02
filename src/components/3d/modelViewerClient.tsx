@@ -1,13 +1,12 @@
 import { Canvas, useFrame } from "@react-three/fiber";
-
-import { Suspense, useState, useEffect, useMemo, useRef, lazy } from "react";
-import { cn } from "@/lib/utils";
 import { Focus, Scissors } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import type { ModelData } from "./utils";
 import { Button } from "@/components/ui/button";
-import { getModelFormat } from "./modelViewer";
 import { ClientOnly } from "@/lib/client-only";
+import { cn } from "@/lib/utils";
+import { getModelFormat } from "./modelViewer";
+import type { ModelData } from "./utils";
 
 const ModelScene = lazy(() => import("./modelScene"));
 
@@ -239,7 +238,7 @@ function ModelContent({
   const activePlanes = useMemo(() => {
     if (!modelData || !worldBounds) return [];
 
-    const planes: THREE.Plane[] = [];
+    const planes: Array<THREE.Plane> = [];
 
     if (clippingConfig.x.enabled) {
       const normal = new THREE.Vector3(clippingConfig.x.dir, 0, 0);
@@ -360,6 +359,7 @@ function ModelContent({
 
       {loadingPhase === "done" && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             triggerCameraAction("recenter");
@@ -507,6 +507,7 @@ function AxisControl({
         </div>
         {config.enabled && (
           <button
+            type="button"
             onClick={onInvert}
             className={cn(
               "text-[9px] font-bold uppercase tracking-wider hover:opacity-80 transition-opacity cursor-pointer",

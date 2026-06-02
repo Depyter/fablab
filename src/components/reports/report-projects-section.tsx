@@ -1,9 +1,6 @@
-"use client";
-
-import * as React from "react";
+import type { Id } from "@convex/_generated/dataModel";
 import { ReportProjectStatusCard } from "@/components/reports/charts/report-project-status-card";
 import { ReportTopServicesCard } from "@/components/reports/charts/report-top-services-card";
-import type { Id } from "@convex/_generated/dataModel";
 
 interface ReportProjectsSectionProps {
   projectCountByStatus: Record<string, number> | null;

@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { flushScheduledFunctions, setupProject, setupUsers } from "./helper";
-import { api, internal } from "../convex/_generated/api";
-import { Id } from "../convex/_generated/dataModel";
-import { syncProjectTotalInvoice } from "../convex/projects/helper";
+import { api, internal } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { syncProjectTotalInvoice } from "@/convex/projects/helper";
 import {
   addLabDays,
   addLabMonths,
@@ -13,6 +12,7 @@ import {
   startOfLabMonth,
   startOfLabWeek,
 } from "../src/lib/lab-time";
+import { flushScheduledFunctions, setupProject, setupUsers } from "./helper";
 
 const HOUR_MS = 1000 * 60 * 60;
 type TestConvex = Awaited<ReturnType<typeof setupUsers>>["t"];

@@ -1,3 +1,6 @@
+import { BadgeCheckIcon, ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
+import posthog from "posthog-js";
+import { UserProfileDialog } from "@/components/profile/profile-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -9,22 +12,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import {
   Sheet,
   SheetClose,
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react";
-import { UserProfileDialog } from "@/components/profile/profile-card";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
-import posthog from "posthog-js";
-import { useRouter } from "@tanstack/react-router";
 
 function getInitials(name: string): string {
   return name
@@ -45,7 +44,6 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
-  const router = useRouter();
   const initials = getInitials(user.name);
 
   const handleSignOut = async () => {
@@ -87,7 +85,10 @@ export function NavUser({
               <div className="flex flex-col">
                 <UserProfileDialog>
                   <SheetClose asChild>
-                    <button className="flex w-full items-center gap-3 px-4 py-4 text-left text-sm border-b-2 border-black hover:bg-black/5 transition-colors">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 border-b-2 border-black px-4 py-4 text-left text-sm transition-colors hover:bg-black/5"
+                    >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.avatar} alt={user.name} />
                         <AvatarFallback className="rounded-none border-2 border-black bg-fab-teal text-xs font-black text-white">
@@ -108,7 +109,10 @@ export function NavUser({
 
                 <UserProfileDialog>
                   <SheetClose asChild>
-                    <button className="flex w-full items-center gap-2.5 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-black/60 hover:bg-black/5 hover:text-black transition-colors">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2.5 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                    >
                       <BadgeCheckIcon className="size-4 text-fab-teal" />
                       Account
                     </button>
@@ -117,6 +121,7 @@ export function NavUser({
 
                 <SheetClose asChild>
                   <button
+                    type="button"
                     className="flex w-full items-center gap-2.5 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-destructive hover:bg-black/5 transition-colors"
                     onClick={handleSignOut}
                   >
@@ -139,7 +144,10 @@ export function NavUser({
             >
               <DropdownMenuLabel className="p-0 font-normal">
                 <UserProfileDialog>
-                  <button className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm hover:bg-black/5 transition-colors">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm transition-colors hover:bg-black/5"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar} alt={user.name} />
                       <AvatarFallback className="rounded-none border-2 border-black bg-fab-teal text-xs font-black text-white">

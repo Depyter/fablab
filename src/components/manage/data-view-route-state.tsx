@@ -1,12 +1,4 @@
-"use client";
-
 import * as React from "react";
-import {
-  usePathname,
-  useRouter,
-  useSearchParams,
-  type ReadonlyURLSearchParams,
-} from "next/navigation";
 import type { ViewMode } from "@/components/manage/data-view";
 
 export type DataViewSection =

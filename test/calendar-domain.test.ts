@@ -2,10 +2,10 @@ import { describe, expect, test } from "vitest";
 import type { Id } from "../convex/_generated/dataModel";
 
 import {
-  DAY_END,
-  DAY_START,
   buildBookingCalendarViewModels,
   buildCalendarDayScheduleRows,
+  DAY_END,
+  DAY_START,
   getCalendarProjectStatus,
   getCalendarSlotIndex,
   getCalendarSlotPresentation,

@@ -1,15 +1,13 @@
-"use client";
-
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UserRole } from "@convex/constants";
+import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
+import { Search, Settings, UserMinus, UserPlus } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { getRateLimitErrorMessage } from "@/lib/rate-limit";
-import { UserPlus, UserMinus, Search, Settings } from "lucide-react";
-
+import { useProfile } from "@/components/sidebar/profile-context";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -18,11 +16,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { useProfile } from "@/components/sidebar/profile-context";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getRateLimitErrorMessage } from "@/lib/rate-limit";
+import { cn } from "@/lib/utils";
 
 interface RoomSettingsDialogProps {
   roomId: Id<"rooms">;
@@ -38,7 +35,7 @@ export function RoomSettingsDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [newRoomName, setNewRoomName] = useState(roomName);
-  const profile = useProfile();
+  const { profile } = useProfile();
   const canManageMembers =
     profile?.role === UserRole.ADMIN || profile?.role === UserRole.MAKER;
 
@@ -119,7 +116,7 @@ export function RoomSettingsDialog({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger ? (
-          <>{trigger}</>
+          trigger
         ) : (
           <Button
             variant="ghost"

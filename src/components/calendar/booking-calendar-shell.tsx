@@ -1,6 +1,4 @@
 import * as React from "react";
-import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { ProjectDetails } from "@/components/projects/project-details";
 import { CalendarContentLoadingState } from "./calendar-loading";
 import { useBookingCalendarController } from "./use-booking-calendar-controller";

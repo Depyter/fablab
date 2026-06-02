@@ -1,8 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
+import { v } from "convex/values";
+import type { Doc } from "../_generated/dataModel";
+import { PROJECT_ARCHIVE_STATUSES } from "../constants";
 import { authQuery } from "../helper";
 import { checkRoomMembership } from "./helper";
-import { v } from "convex/values";
-import { PROJECT_ARCHIVE_STATUSES } from "../constants";
 
 const ARCHIVE_STATUSES = new Set(PROJECT_ARCHIVE_STATUSES);
 
@@ -104,7 +105,7 @@ export const getRooms = authQuery({
     // TODO: PAGINATED QUERY INSTEAD
     // TODO: Split this into lightweight room summaries plus per-room thread
     // queries as chat grows so the shell does not preload every thread up front.
-    let rooms;
+    let rooms: Doc<"rooms">[];
 
     if (ctx.profile.role === "admin" || ctx.profile.role === "maker") {
       // Admins and makers have implicit access to all rooms

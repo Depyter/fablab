@@ -91,6 +91,6 @@ export interface CalendarFrameResource {
 }
 
 export interface CalendarFrameData {
-  services?: CalendarFrameService[];
-  resources?: CalendarFrameResource[];
+  services?: Array<CalendarFrameService>;
+  resources?: Array<CalendarFrameResource>;
 }

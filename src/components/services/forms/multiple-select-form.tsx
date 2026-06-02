@@ -1,24 +1,21 @@
-"use client";
-
+import { Plus, XIcon } from "lucide-react";
 import { useState } from "react";
-
-import { XIcon, Plus } from "lucide-react";
+import { FormSection } from "@/components/ui/form-section";
 import {
   Select,
+  SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectItem,
-  SelectContent,
 } from "@/components/ui/select";
-import { FormSection } from "@/components/ui/form-section";
 
 interface MultipleSelectFormProps {
-  options: { label: string; value: string }[];
+  options: Array<{ label: string; value: string }>;
   title?: string;
   fieldName?: string;
   placeholder?: string;
-  value?: string[];
-  onChange?: (value: string[]) => void;
+  value?: Array<string>;
+  onChange?: (value: Array<string>) => void;
   /** When provided, shows an "Add new…" option in the select that calls this callback. */
   onAddNew?: () => void;
   /** Label for the add-new option. Defaults to "Add new…" */
@@ -39,7 +36,7 @@ export function MultipleSelectForm({
   compact = false,
 }: MultipleSelectFormProps) {
   // Local state as fallback for uncontrolled usage
-  const [localValues, setLocalValues] = useState<string[]>([]);
+  const [localValues, setLocalValues] = useState<Array<string>>([]);
 
   const selectedValues = value ?? localValues;
 
@@ -75,9 +72,9 @@ export function MultipleSelectForm({
     <div className={`w-full ${compact ? "" : "sm:max-w-3xl"}`}>
       {compact ? (
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+          <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
             {title}
-          </label>
+          </div>
           {renderItems()}
         </div>
       ) : (

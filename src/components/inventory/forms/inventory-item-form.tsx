@@ -1,23 +1,21 @@
-"use client";
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { FieldSet } from "@/components/ui/field";
-import { FileUpload } from "@/components/file-upload/file-upload";
-import type { UploadedFile } from "@/components/file-upload/types";
-import { ActionDialog } from "@/components/action-dialog";
-import { FormSection } from "@/components/ui/form-section";
-import { toast } from "sonner";
-import { useAppForm } from "@/lib/form-context";
-import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
-import {
+import type { Id } from "@convex/_generated/dataModel";
+import type {
   ResourceCategoryType,
   ResourceStatusType,
-  ResourceStatus,
 } from "@convex/constants";
+import { ResourceStatus } from "@convex/constants";
+import { useAction, useMutation } from "convex/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { ActionDialog } from "@/components/action-dialog";
+import { FileUpload } from "@/components/file-upload/file-upload";
+import type { UploadedFile } from "@/components/file-upload/types";
+import { Button } from "@/components/ui/button";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { FieldSet } from "@/components/ui/field";
+import { FormSection } from "@/components/ui/form-section";
+import { useAppForm } from "@/lib/form-context";
 
 export type InventoryItemType = ResourceCategoryType;
 
@@ -26,7 +24,7 @@ export type InventoryItemFormValues = {
   description: string;
   type: string;
   status: ResourceStatusType;
-  thumbnail: string[]; // storage IDs
+  thumbnail: Array<string>; // storage IDs
 };
 
 const ITEM_CONFIG: Record<
@@ -58,11 +56,11 @@ interface InventoryItemFormProps {
   itemType: InventoryItemType;
   mode?: "add" | "edit";
   initialValues?: Partial<InventoryItemFormValues> & { _id?: string };
-  initialImages?: UploadedFile[];
+  initialImages?: Array<UploadedFile>;
   onSuccess?: () => void;
 }
 
-const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+const EMPTY_UPLOADED_FILES: Array<UploadedFile> = [];
 
 export function InventoryItemForm({
   itemType,
@@ -128,7 +126,7 @@ export function InventoryItemForm({
             description: value.description,
             category: itemType,
             type: value.type,
-            images: value.thumbnail as Id<"_storage">[],
+            images: value.thumbnail as Array<Id<"_storage">>,
             status: value.status,
           });
 

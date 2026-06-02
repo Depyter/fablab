@@ -25,7 +25,7 @@ import { Route as PrivateDashboardDataViewWorkshopsRouteImport } from './app/_pr
 import { Route as PrivateDashboardDataViewProjectsRouteImport } from './app/_private/dashboard/_data-view/projects'
 import { Route as PrivateDashboardDataViewCalendarRouteImport } from './app/_private/dashboard/_data-view/calendar'
 import { Route as PrivateDashboardDataViewStaffRouteRouteImport } from './app/_private/dashboard/_data-view/_staff/route'
-import { Route as PrivateDashboardChatSlugThreadIdRouteImport } from './app/_private/dashboard/chat/$slug.threadId'
+import { Route as PrivateDashboardChatSlugThreadIdRouteImport } from './app/_private/dashboard/chat/$slug.$threadId'
 import { Route as PrivateDashboardDataViewStaffReportsRouteImport } from './app/_private/dashboard/_data-view/_staff/reports'
 import { Route as PrivateDashboardDataViewStaffInventoryRouteImport } from './app/_private/dashboard/_data-view/_staff/inventory'
 import { Route as PrivateDashboardDataViewStaffServicesIndexRouteImport } from './app/_private/dashboard/_data-view/_staff/services/index'
