@@ -1,9 +1,9 @@
-import { describe, expect, test } from "vitest";
-import { convexTest } from "convex-test";
-import schema from "../convex/schema";
-import { api, internal } from "../convex/_generated/api";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+import { api, internal } from "../convex/_generated/api";
+import schema from "../convex/schema";
 import { flushScheduledFunctions } from "./helper";
 
 process.env.RESEND_TEST_MODE = "true";
@@ -174,66 +174,62 @@ describe("Type-aware project workflows", () => {
   // ══════════════════════════════════════════════════════════════════════════
 
   describe("markProjectPaid — type-aware payment status gates", () => {
-    test(
-      "workshop project can be marked paid from approved status (pre-pay)",
-      { timeout: 15_000 },
-      async () => {
-        const { t, tAdmin, projectId } = await setupWorkshopProject();
+    test("workshop project can be marked paid from approved status (pre-pay)", {
+      timeout: 15_000,
+    }, async () => {
+      const { t, tAdmin, projectId } = await setupWorkshopProject();
 
-        await tAdmin.mutation(api.projects.mutate.updateProject, {
-          projectId,
-          status: "approved",
-        });
+      await tAdmin.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "approved",
+      });
 
-        await tAdmin.mutation(api.projects.mutate.markProjectPaid, {
-          projectId,
-          receiptString: "WS-001",
-          paymentMode: "gcash",
-          proof: "GCash ref: ABC123",
-        });
+      await tAdmin.mutation(api.projects.mutate.markProjectPaid, {
+        projectId,
+        receiptString: "WS-001",
+        paymentMode: "gcash",
+        proof: "GCash ref: ABC123",
+      });
 
-        await t.run(async (ctx) => {
-          const project = await ctx.db.get(projectId);
-          expect(project!.status).toBe("paid");
-          expect(project!.receipt).toBeDefined();
-        });
-      },
-    );
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        expect(project!.status).toBe("paid");
+        expect(project!.receipt).toBeDefined();
+      });
+    });
 
-    test(
-      "workshop project can skip completed and go directly to paid from approved",
-      { timeout: 15_000 },
-      async () => {
-        const { t, tAdmin, projectId } = await setupWorkshopProject();
+    test("workshop project can skip completed and go directly to paid from approved", {
+      timeout: 15_000,
+    }, async () => {
+      const { t, tAdmin, projectId } = await setupWorkshopProject();
 
-        await tAdmin.mutation(api.projects.mutate.updateProject, {
-          projectId,
-          status: "approved",
-        });
+      await tAdmin.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "approved",
+      });
 
-        await tAdmin.mutation(api.projects.mutate.markProjectPaid, {
-          projectId,
-          receiptString: "WS-002",
-          paymentMode: "cash",
-          proof: "Cash payment",
-        });
+      await tAdmin.mutation(api.projects.mutate.markProjectPaid, {
+        projectId,
+        receiptString: "WS-002",
+        paymentMode: "cash",
+        proof: "Cash payment",
+      });
 
-        await t.run(async (ctx) => {
-          const project = await ctx.db.get(projectId);
-          expect(project!.status).toBe("paid");
-        });
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        expect(project!.status).toBe("paid");
+      });
 
-        await tAdmin.mutation(api.projects.mutate.updateProject, {
-          projectId,
-          status: "completed",
-        });
+      await tAdmin.mutation(api.projects.mutate.updateProject, {
+        projectId,
+        status: "completed",
+      });
 
-        await t.run(async (ctx) => {
-          const project = await ctx.db.get(projectId);
-          expect(project!.status).toBe("completed");
-        });
-      },
-    );
+      await t.run(async (ctx) => {
+        const project = await ctx.db.get(projectId);
+        expect(project!.status).toBe("completed");
+      });
+    });
 
     test("fabrication project cannot be marked paid from approved status", async () => {
       const { tAdmin, projectId, makerId } = await setupFabricationProject();

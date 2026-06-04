@@ -1,29 +1,33 @@
-"use client";
-import React, { ReactNode, useState } from "react";
+import type { Id } from "@convex/_generated/dataModel";
+import type {
+  FulfillmentModeType,
+  PaymentModeType,
+  ProjectMaterialType,
+  ProjectStatusType,
+} from "@convex/constants";
+import { FILE_CATEGORIES } from "@convex/constants";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
+import { XIcon } from "lucide-react";
+import posthog from "posthog-js";
+import type { ReactNode } from "react";
+import React, { useState } from "react";
+import { toast } from "sonner";
+import { api } from "@/../convex/_generated/api";
+import type { UploadedFile } from "@/components/file-upload";
+import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { XIcon } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { useQuery, useMutation, useAction } from "convex/react";
-import { toast } from "sonner";
-import { ConvexError } from "convex/values";
-import { api } from "@/../convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
-import { OptionRadioGroupItem } from "../option-radio-group";
-import { AssignMakerContent } from "./assign-maker-content";
-import { ProjectDetailsContent } from "./project-details-content";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -33,20 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-import { FileUpload } from "@/components/file-upload";
-import type { UploadedFile } from "@/components/file-upload";
-import posthog from "posthog-js";
-
-import {
-  ProjectStatusType,
-  PaymentModeType,
-  UserRoleType,
-  ProjectMaterialType,
-  FulfillmentModeType,
-  FILE_CATEGORIES,
-} from "@convex/constants";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { getConfig, getWorkflow, isKnownType } from "@/lib/project-type-meta";
+import { cn } from "@/lib/utils";
+import type { OptionRadioGroupItem } from "../option-radio-group";
+import { AssignMakerContent } from "./assign-maker-content";
+import { ProjectDetailsContent } from "./project-details-content";
 
 interface ProjectDetailsProps {
   projectId?: Id<"projects"> | null;
@@ -62,6 +59,7 @@ interface ProjectDetailsProps {
 const PROJECT_DETAILS_TIMELINE_LOADING_STEPS = Array.from(
   { length: 5 },
   (_, i) => ({
+    id: `project-details-loading-step-${i + 1}`,
     titleWidth: "w-20",
     isLast: i === 4,
   }),
@@ -79,22 +77,16 @@ function ProjectTimelineLoading() {
   return (
     <div className="w-full" aria-hidden="true">
       <div className="flex flex-col md:hidden">
-        {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step, index) => {
-          const isLast =
-            index === PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length - 1;
-
+        {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step) => {
           return (
-            <div
-              key={`project-timeline-mobile-loading-${index}`}
-              className="flex gap-3"
-            >
+            <div key={step.id} className="flex gap-3">
               <div className="flex flex-col items-center">
                 <ProjectTimelineLoadingDot />
-                {!isLast && (
+                {!step.isLast && (
                   <div className="w-px min-h-8 flex-1 rounded-full bg-[var(--fab-border-md)]" />
                 )}
               </div>
-              <div className={cn("min-w-0 flex-1", !isLast && "pb-6")}>
+              <div className={cn("min-w-0 flex-1", !step.isLast && "pb-6")}>
                 <div className="flex h-9 items-center">
                   <Skeleton
                     className={cn("h-4 rounded-full", step.titleWidth)}
@@ -114,14 +106,8 @@ function ProjectTimelineLoading() {
           }}
         >
           {PROJECT_DETAILS_TIMELINE_LOADING_STEPS.map((step, index) => {
-            const isLast =
-              index === PROJECT_DETAILS_TIMELINE_LOADING_STEPS.length - 1;
-
             return (
-              <div
-                key={`project-timeline-desktop-loading-${index}`}
-                className="flex min-w-0 flex-col items-center"
-              >
+              <div key={step.id} className="flex min-w-0 flex-col items-center">
                 <div className="relative flex h-10 w-full items-center justify-center">
                   {index > 0 && (
                     <div className="absolute left-0 right-1/2 flex items-center pr-[18px]">
@@ -129,7 +115,7 @@ function ProjectTimelineLoading() {
                     </div>
                   )}
                   <ProjectTimelineLoadingDot />
-                  {!isLast && (
+                  {!step.isLast && (
                     <div className="absolute left-1/2 right-0 flex items-center pl-[18px]">
                       <div className="h-0.5 flex-1 rounded-full bg-[var(--fab-border-md)]" />
                     </div>
@@ -239,7 +225,7 @@ export function ProjectDetails({
   const [receiptNumber, setReceiptNumber] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentModeType>("cash");
   const [proof, setProof] = useState("");
-  const [proofFiles, setProofFiles] = useState<UploadedFile[]>([]);
+  const [proofFiles, setProofFiles] = useState<Array<UploadedFile>>([]);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const isDialogOpen = open ?? uncontrolledOpen;
@@ -256,10 +242,7 @@ export function ProjectDetails({
     api.projects.mutate.updateOwnProjectDetails,
   );
   const validateTextContent = useAction(api.moderation.validateTextContent);
-  const role = useQuery(
-    api.users.getRole,
-    shouldLoadDialogData ? {} : "skip",
-  ) as UserRoleType | undefined;
+  const role = useQuery(api.users.getRole, shouldLoadDialogData ? {} : "skip");
   const isClient = role === "client";
   const isAdminOrMaker = role === "admin" || role === "maker";
   const makers = useQuery(
@@ -322,7 +305,7 @@ export function ProjectDetails({
     notes?: string;
     material?: ProjectMaterialType;
     fulfillmentMode?: FulfillmentModeType;
-    files?: string[];
+    files?: Array<string>;
   }) => {
     try {
       // ── Pre-flight moderation check for updated text fields ───────────
@@ -345,7 +328,7 @@ export function ProjectDetails({
       await updateOwnProjectDetails({
         projectId,
         ...args,
-        files: args.files as Id<"_storage">[],
+        files: args.files as Array<Id<"_storage">>,
       });
       posthog.capture("project_details_updated", {
         project_id: projectId,
@@ -448,7 +431,7 @@ export function ProjectDetails({
         })()
       : [];
 
-  const makerOptions: OptionRadioGroupItem[] = makers
+  const makerOptions: Array<OptionRadioGroupItem> = makers
     ? makers.map((m) => ({
         value: m._id,
         id: m._id,
@@ -480,9 +463,7 @@ export function ProjectDetails({
   const handleOpenPaymentDialog = () => {
     if (project?.receipt) {
       setReceiptNumber(project.receipt.receiptString ?? "");
-      setPaymentMode(
-        (project.receipt.paymentMode as typeof paymentMode) ?? "cash",
-      );
+      setPaymentMode(project.receipt.paymentMode ?? "cash");
       setProof(project.receipt.proof ?? "");
       setProofFiles([]);
     } else {

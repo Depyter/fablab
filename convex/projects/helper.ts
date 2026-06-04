@@ -1,8 +1,4 @@
 import { ConvexError } from "convex/values";
-import { Id, Doc } from "../_generated/dataModel";
-import { MutationCtx, QueryCtx } from "../_generated/server";
-import { internal } from "../_generated/api";
-import { derivePricingFromSchema } from "../../src/lib/project-pricing";
 import {
   formatLabDate,
   formatLabTime,
@@ -10,15 +6,19 @@ import {
   getLabDayStartTimestamp,
   getLabWeekday,
 } from "../../src/lib/lab-time";
+import { derivePricingFromSchema } from "../../src/lib/project-pricing";
+import { getStatusLabel, getWorkflow } from "../../src/lib/project-workflow";
+import { internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import {
   FILE_CATEGORIES,
   MaterialStatus,
-  PROJECT_ARCHIVE_STATUSES,
-  UserRole,
   type MaterialStatusType,
+  PROJECT_ARCHIVE_STATUSES,
   type ProjectStatusType,
+  UserRole,
 } from "../constants";
-import { getWorkflow, getStatusLabel } from "../../src/lib/project-workflow";
 
 /**
  * Builds the denormalized search text for a project.
@@ -166,12 +166,11 @@ export async function validateFabricationAvailability(
 
   // Conflict check — prefer resource timelines when the service has discrete
   // resources, otherwise fall back to the pooled service timeline.
-  const existingUsages = options?.resourceId
+  const resourceId = options?.resourceId;
+  const existingUsages = resourceId
     ? await ctx.db
         .query("resourceUsage")
-        .withIndex("by_resource_startTime", (q) =>
-          q.eq("resource", options.resourceId!),
-        )
+        .withIndex("by_resource_startTime", (q) => q.eq("resource", resourceId))
         .collect()
     : await ctx.db
         .query("resourceUsage")
@@ -834,19 +833,19 @@ export async function applyStatusChange(
   ) {
     const service = await ctx.db.get(project.service);
     if (service && service.serviceCategory.type === "WORKSHOP") {
+      const bookingStartTime = project.bookingStartTime;
+      if (bookingStartTime == null) {
+        throw new ConvexError("Project booking start time is required.");
+      }
+      const bookingEndTime = project.bookingEndTime ?? bookingStartTime;
+      const bookingDate = getLabDayStartTimestamp(bookingStartTime);
+
       const session = await ctx.db
         .query("workshopSessions")
         .withIndex("by_serviceId_startTime", (q) =>
-          q
-            .eq("serviceId", project.service)
-            .eq("startTime", project.bookingStartTime!),
+          q.eq("serviceId", project.service).eq("startTime", bookingStartTime),
         )
-        .filter((q) =>
-          q.eq(
-            q.field("date"),
-            getLabDayStartTimestamp(project.bookingStartTime!),
-          ),
-        )
+        .filter((q) => q.eq(q.field("date"), bookingDate))
         .first();
 
       if (
@@ -866,9 +865,9 @@ export async function applyStatusChange(
       // incrementing the slot so createWorkshopUsage's internal capacity
       // check (which reads usedUpSlots) sees the current, un-incremented value.
       const booking: BookingWindow = {
-        startTime: project.bookingStartTime!,
-        endTime: project.bookingEndTime ?? project.bookingStartTime!,
-        date: getLabDayStartTimestamp(project.bookingStartTime!),
+        startTime: bookingStartTime,
+        endTime: bookingEndTime,
+        date: bookingDate,
       };
 
       const bookingDurationMs = booking.endTime - booking.startTime;
@@ -934,20 +933,27 @@ export async function applyStatusChange(
       // Increment the slot AFTER re-creating usages so the capacity check
       // inside createWorkshopUsage sees the pre-increment value.
       await incrementWorkshopSlot(ctx, service, {
-        startTime: project.bookingStartTime!,
-        endTime: project.bookingEndTime ?? project.bookingStartTime!,
-        date: getLabDayStartTimestamp(project.bookingStartTime!),
+        startTime: bookingStartTime,
+        endTime: bookingEndTime,
+        date: bookingDate,
       });
 
       await syncProjectTotalInvoice(ctx, project._id, {
         fallbackTotal: provisional.total,
       });
     } else if (service && service.serviceCategory.type === "FABRICATION") {
+      const bookingStartTime = project.bookingStartTime;
+      if (bookingStartTime == null) {
+        throw new ConvexError("Project booking start time is required.");
+      }
+      const bookingEndTime = project.bookingEndTime ?? bookingStartTime;
+      const bookingDate = getLabDayStartTimestamp(bookingStartTime);
+
       // Re-create fabrication resource usage that was deleted on cancellation.
       const booking: BookingWindow = {
-        startTime: project.bookingStartTime!,
-        endTime: project.bookingEndTime ?? project.bookingStartTime!,
-        date: getLabDayStartTimestamp(project.bookingStartTime!),
+        startTime: bookingStartTime,
+        endTime: bookingEndTime,
+        date: bookingDate,
       };
 
       // Validate that the time slot and resource are still available.
@@ -1154,8 +1160,7 @@ export async function scheduleProjectUpdateEmail(
     project.bookingStartTime !== undefined &&
     project.bookingEndTime !== undefined
       ? `${(
-          (project.bookingEndTime - project.bookingStartTime) /
-          (1000 * 60 * 60)
+          (project.bookingEndTime - project.bookingStartTime) / (1000 * 60 * 60)
         ).toFixed(1)} hours`
       : undefined;
 

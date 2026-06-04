@@ -1,23 +1,20 @@
-"use client";
-
-import { useState } from "react";
-import Image from "next/image";
-import { X, Play, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Image } from "@unpic/react";
+import { ChevronLeft, ChevronRight, Download, Play, X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import {
-  Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { ModelViewer, is3DModel } from "@/components/3d/modelViewer";
+import { useState } from "react";
+import ModelViewer, { is3DModel } from "@/components/3d/modelViewer";
 import {
   FileAttachmentCard,
   FileAttachmentThumbnail,
 } from "@/components/chat/file-attachment";
-
+import {
+  Dialog,
+  DialogClose,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -41,7 +38,7 @@ function MediaLightbox({
   open,
   onOpenChange,
 }: {
-  mediaFiles: MediaFile[];
+  mediaFiles: Array<MediaFile>;
   current: number;
   setCurrent: React.Dispatch<React.SetStateAction<number>>;
   open: boolean;
@@ -125,80 +122,74 @@ function MediaLightbox({
           </div>
 
           {/* Media area */}
-          <div
-            className="relative flex-1 flex items-center justify-center min-h-0 px-2 sm:px-16 cursor-default"
-            onClick={() => onOpenChange(false)}
-          >
-            {is3D ? (
-              <div
-                className="h-full w-full sm:w-4/5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ModelViewer
-                  fileUrl={f.fileUrl}
-                  fileType={f.fileType}
-                  originalName={f.originalName}
-                  className="w-full h-full rounded-2xl"
+          <div className="relative flex-1 flex items-center justify-center min-h-0 px-2 sm:px-16">
+            <button
+              type="button"
+              aria-label="Close preview"
+              onClick={() => onOpenChange(false)}
+              className="absolute inset-0"
+            />
+
+            <div className="relative z-10 flex h-full w-full items-center justify-center">
+              {is3D ? (
+                <div className="h-full w-full sm:w-4/5">
+                  <ModelViewer
+                    fileUrl={f.fileUrl}
+                    fileType={f.fileType}
+                    originalName={f.originalName}
+                    className="w-full h-full rounded-2xl"
+                  />
+                </div>
+              ) : isDocument ? (
+                <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white/5 p-12 text-center">
+                  <div className="rounded-full bg-white/5 p-6 text-white/50">
+                    <Download className="h-16 w-16" />
+                  </div>
+                  <div>
+                    <h3 className="mb-1 text-xl font-medium text-white/90">
+                      {f.originalName || "Document"}
+                    </h3>
+                    <p className="text-sm text-white/50">
+                      Preview not available
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadCurrent}
+                    className="mt-4 rounded-lg bg-primary px-6 py-2.5 font-medium text-white transition-colors hover:bg-primary/90"
+                  >
+                    Download File
+                  </button>
+                </div>
+              ) : f.fileType?.startsWith("video/") ? (
+                <video
+                  key={f.fileUrl}
+                  src={f.fileUrl}
+                  controls
+                  autoPlay
+                  muted
+                  playsInline
+                  className="max-h-full max-w-full rounded-xl shadow-2xl"
                 />
-              </div>
-            ) : isDocument ? (
-              <div
-                className="flex flex-col items-center justify-center gap-4 bg-white/5 rounded-2xl p-12 text-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="text-white/50 bg-white/5 p-6 rounded-full">
-                  <Download className="w-16 h-16" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-medium text-white/90 mb-1">
-                    {f.originalName || "Document"}
-                  </h3>
-                  <p className="text-white/50 text-sm">Preview not available</p>
-                </div>
-                <button
-                  onClick={downloadCurrent}
-                  className="mt-4 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
-                >
-                  Download File
-                </button>
-              </div>
-            ) : f.fileType?.startsWith("video/") ? (
-              <video
-                key={f.fileUrl}
-                src={f.fileUrl}
-                controls
-                autoPlay
-                className="max-h-full max-w-full rounded-xl shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : f.fileType === "image/svg+xml" ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                key={f.fileUrl}
-                src={f.fileUrl}
-                alt={`Media ${current + 1} of ${count}`}
-                className="rounded-xl max-w-full max-h-full object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <Image
-                key={f.fileUrl}
-                src={f.fileUrl}
-                alt={`Media ${current + 1} of ${count}`}
-                width={0}
-                height={0}
-                sizes="100vw"
-                className="rounded-xl"
-                style={{
-                  width: "auto",
-                  height: "auto",
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "cover",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            )}
+              ) : f.fileType === "image/svg+xml" ? (
+                <img
+                  key={f.fileUrl}
+                  src={f.fileUrl}
+                  alt={`Media ${current + 1} of ${count}`}
+                  className="max-h-full max-w-full rounded-xl object-contain"
+                />
+              ) : (
+                <Image
+                  key={f.fileUrl}
+                  src={f.fileUrl}
+                  alt={`Media ${current + 1} of ${count}`}
+                  width={0}
+                  height={0}
+                  sizes="100vw"
+                  className="rounded-xl"
+                />
+              )}
+            </div>
 
             {count > 1 && (
               <button
@@ -208,7 +199,7 @@ function MediaLightbox({
                   prev();
                 }}
                 aria-label="Previous"
-                className="hidden sm:flex absolute left-4 rounded-xl p-2.5 bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                className="absolute left-4 z-20 hidden rounded-xl bg-white/5 p-2.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white/80 sm:flex"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
@@ -222,7 +213,7 @@ function MediaLightbox({
                   next();
                 }}
                 aria-label="Next"
-                className="hidden sm:flex absolute right-4 rounded-xl p-2.5 bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                className="absolute right-4 z-20 hidden rounded-xl bg-white/5 p-2.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white/80 sm:flex"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -314,7 +305,7 @@ function MediaLightbox({
 // MediaGallery — renders 1-N image/video thumbnails with lightbox on click
 // ---------------------------------------------------------------------------
 
-export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
+export function MediaGallery({ mediaFiles }: { mediaFiles: Array<MediaFile> }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxCurrent, setLightboxCurrent] = useState(0);
 
@@ -351,6 +342,8 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
             <div className="relative rounded-xl overflow-hidden bg-black/10 max-w-md">
               <video
                 src={f.fileUrl}
+                muted
+                playsInline
                 className="max-w-full max-h-56 object-cover w-full"
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -360,7 +353,6 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
               </div>
             </div>
           ) : f.fileType === "image/svg+xml" ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={f.fileUrl}
               alt="SVG attachment"
@@ -371,17 +363,10 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
               <Image
                 src={f.fileUrl}
                 alt="Image attachment"
-                width={0}
-                height={0}
-                sizes="(max-width: 1024px) 320px, 448px"
-                className="rounded-xl"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  maxWidth: "100%",
-                  maxHeight: "224px",
-                  objectFit: "cover",
-                }}
+                layout="constrained"
+                width={448}
+                height={224}
+                className="rounded-xl object-cover"
               />
             </div>
           )}
@@ -439,6 +424,8 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                 >
                   <video
                     src={f.fileUrl}
+                    muted
+                    playsInline
                     className="w-full h-full object-cover opacity-75"
                   />
                   {!isLastVisible && (
@@ -450,7 +437,6 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                   )}
                 </div>
               ) : f.fileType === "image/svg+xml" ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={f.fileUrl}
                   alt={`SVG ${i + 1}`}
@@ -460,10 +446,9 @@ export function MediaGallery({ mediaFiles }: { mediaFiles: MediaFile[] }) {
                   )}
                 />
               ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={f.fileUrl}
-                  alt={`Image ${i + 1}`}
+                  alt={`Attachment ${i + 1}`}
                   className={cn(
                     "w-full object-cover",
                     isFirstOfThree ? "h-32" : "h-24",

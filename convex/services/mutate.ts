@@ -1,6 +1,6 @@
-import { internalMutation } from "../_generated/server";
+import { ConvexError, v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
-import { v, ConvexError } from "convex/values";
+import { internalMutation } from "../_generated/server";
 import {
   authMutation,
   checkAuthority,
@@ -210,29 +210,29 @@ export const updateService = authMutation({
     if (args.status !== undefined) updates.status = args.status;
 
     if (args.images !== undefined) {
+      const nextImages = args.images;
       const oldImages = existingService.images || [];
-      const newImages = args.images.filter((id) => !oldImages.includes(id));
-      const removedImages = oldImages.filter(
-        (id) => !args.images!.includes(id),
-      );
+      const newImages = nextImages.filter((id) => !oldImages.includes(id));
+      const removedImages = oldImages.filter((id) => !nextImages.includes(id));
 
       if (newImages.length > 0) await claimFiles(ctx, newImages);
       if (removedImages.length > 0) await deleteFiles(ctx, removedImages);
 
-      updates.images = args.images;
+      updates.images = nextImages;
     }
 
     if (args.samples !== undefined) {
+      const nextSamples = args.samples;
       const oldSamples = existingService.samples || [];
-      const newSamples = args.samples.filter((id) => !oldSamples.includes(id));
+      const newSamples = nextSamples.filter((id) => !oldSamples.includes(id));
       const removedSamples = oldSamples.filter(
-        (id) => !args.samples!.includes(id),
+        (id) => !nextSamples.includes(id),
       );
 
       if (newSamples.length > 0) await claimFiles(ctx, newSamples);
       if (removedSamples.length > 0) await deleteFiles(ctx, removedSamples);
 
-      updates.samples = args.samples;
+      updates.samples = nextSamples;
     }
 
     if (args.serviceCategory !== undefined) {

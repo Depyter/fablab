@@ -1,21 +1,19 @@
-"use client";
-
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { CONTENT_POLICY_ERROR } from "@convex/constants";
+import { useMutation, usePaginatedQuery } from "convex/react";
+import posthog from "posthog-js";
 import {
-  useState,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
-  useCallback,
+  useState,
 } from "react";
-import { usePaginatedQuery, useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import type { UploadedFile, UploadingFile } from "@/components/file-upload";
-import { PendingAttachment } from "./types";
 import { toast } from "sonner";
+import type { UploadedFile, UploadingFile } from "@/components/file-upload";
 import { getRateLimitErrorMessage } from "@/lib/rate-limit";
-import { CONTENT_POLICY_ERROR } from "@convex/constants";
-import posthog from "posthog-js";
+import type { PendingAttachment } from "./types";
 
 interface UseChatOptions {
   roomId: Id<"rooms">;
@@ -27,16 +25,16 @@ const MESSAGE_PAGE_SIZE = 50;
 export function useChat({ roomId, threadId }: UseChatOptions) {
   const [input, setInput] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<
-    PendingAttachment[]
+    Array<PendingAttachment>
   >([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
-  // Increment to remount FileUpload (resets its internal state)
+  const [uploadingFiles, setUploadingFiles] = useState<Array<UploadingFile>>(
+    [],
+  );
+
   const [fileUploadKey, setFileUploadKey] = useState(0);
-  // Pre-populated files passed to the remounted FileUpload so existing
-  // attachments survive when a single file is removed from the strip.
   const [fileUploadInitialFiles, setFileUploadInitialFiles] = useState<
-    UploadedFile[]
+    Array<UploadedFile>
   >([]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -47,7 +45,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   const isNearBottomRef = useRef(true);
   const isTopVisibleRef = useRef(false);
   const initialScrollDoneRef = useRef(false);
-  // Track the oldest loaded message — changes only when loadMore resolves
   const oldestMessageIdRef = useRef<string | null>(null);
 
   const {
@@ -79,6 +76,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     loadMore(MESSAGE_PAGE_SIZE);
   }, [loadMore, status]);
 
+  // 1. Top Sentinel Observer — Added actual node dependencies to handle mount timing safely
   useEffect(() => {
     const container = scrollContainerRef.current;
     const topSentinel = topSentinelRef.current;
@@ -96,10 +94,10 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     );
 
     observer.observe(topSentinel);
-
     return () => observer.disconnect();
-  }, [loadOlderMessages, messages.length]);
+  }, [loadOlderMessages]);
 
+  // 2. Bottom Sentinel Observer — Added target refs to track intersection actively on node changes
   useEffect(() => {
     const container = scrollContainerRef.current;
     const bottomSentinel = bottomRef.current;
@@ -113,27 +111,19 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     );
 
     observer.observe(bottomSentinel);
-
     return () => observer.disconnect();
-  }, [messages.length]);
-
-  useEffect(() => {
-    if (isTopVisibleRef.current) {
-      loadOlderMessages();
-    }
-  }, [loadOlderMessages, messages.length, status]);
+  }, []);
 
   useEffect(() => {
     if (threadId) {
       markReadMutation({ threadId }).catch(console.error);
     }
-  }, [threadId, messages.length, markReadMutation]);
+  }, [threadId, markReadMutation]);
 
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    // messages[messages.length - 1] is the oldest (query returns newest-first)
     const oldestId = messages[messages.length - 1]?._id ?? null;
 
     if (!initialScrollDoneRef.current && messages.length > 0) {
@@ -143,7 +133,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
       return;
     }
 
-    // Older messages loaded: oldest message ID changed after loadMore resolved
     if (isLoadingMoreRef.current && oldestId !== oldestMessageIdRef.current) {
       const newScrollHeight = container.scrollHeight;
       container.scrollTop += newScrollHeight - prevScrollHeightRef.current;
@@ -157,7 +146,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
       oldestMessageIdRef.current = oldestId;
     }
 
-    // New message arrived while loadMore is in-flight — don't restore scroll
     if (isLoadingMoreRef.current) return;
 
     if (isNearBottomRef.current) {
@@ -183,7 +171,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         content: content.trim() || "",
         files:
           attachments.length > 0
-            ? (attachments.map((a) => a.storageId) as Id<"_storage">[])
+            ? (attachments.map((a) => a.storageId) as Array<Id<"_storage">>)
             : undefined,
         room: roomId,
         threadId,
@@ -198,7 +186,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     } catch (error) {
       console.error("Failed to send message:", error);
 
-      // Rate-limit errors get a dedicated, actionable toast.
       const rateLimitMsg = getRateLimitErrorMessage(error);
       if (rateLimitMsg) {
         toast.error(rateLimitMsg);
@@ -206,8 +193,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
         return;
       }
 
-      // Don't surface raw ConvexError messages to the user — map them to
-      // user-friendly text.
       const rawMessage =
         error instanceof Error ? error.message : "Failed to send message";
       const isContentPolicy =
@@ -218,7 +203,6 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
           ? "Your message couldn't be sent because it may contain inappropriate content."
           : "Failed to send message. Please try again.",
       );
-      // Restore text; files need to be re-attached (they were already uploaded)
       setInput(content);
     }
   };
@@ -230,7 +214,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     }
   };
 
-  const handleFilesChange = (files: UploadedFile[]) => {
+  const handleFilesChange = (files: Array<UploadedFile>) => {
     setPendingAttachments(
       files.map((f) => ({
         storageId: f.storageId,
@@ -242,11 +226,8 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   };
 
   const handleUploadError = (error: Error) => {
-    // Log the raw error for debugging (especially ConvexErrors from trackUpload).
     console.error("Chat upload error:", error);
 
-    // Sanitize moderation-related errors so raw ConvexError text doesn't
-    // leak into the toast.
     const isContentPolicy =
       error.message?.includes(CONTENT_POLICY_ERROR) ||
       error.message?.includes("flagged by content moderation");
@@ -259,14 +240,16 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
 
   const removeAttachment = (index: number) => {
     const remaining = pendingAttachments.filter((_, i) => i !== index);
-    const remainingAsUploadedFiles: UploadedFile[] = remaining.map((a) => ({
-      storageId: a.storageId,
-      fileName: a.fileName,
-      fileType: a.fileType,
-      fileSize: 0,
-      uploadedAt: new Date(),
-      url: a.previewUrl,
-    }));
+    const remainingAsUploadedFiles: Array<UploadedFile> = remaining.map(
+      (a) => ({
+        storageId: a.storageId,
+        fileName: a.fileName,
+        fileType: a.fileType,
+        fileSize: 0,
+        uploadedAt: new Date(),
+        url: a.previewUrl,
+      }),
+    );
 
     setPendingAttachments(remaining);
     setFileUploadInitialFiles(remainingAsUploadedFiles);
@@ -280,9 +263,12 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
     (!!input.trim() || pendingAttachments.length > 0);
   const sortedMessages = [...messages].reverse();
 
-  const handleUploadingFilesChange = useCallback((files: UploadingFile[]) => {
-    setUploadingFiles(files);
-  }, []);
+  const handleUploadingFilesChange = useCallback(
+    (files: Array<UploadingFile>) => {
+      setUploadingFiles(files);
+    },
+    [],
+  );
 
   return {
     input,

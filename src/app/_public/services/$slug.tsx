@@ -1,14 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { api } from "@convex/_generated/api";
-import gsap from "gsap";
-import { ArrowLeft, CirclePercent } from "lucide-react";
-import { BookingDialog } from "@/components/booking/dialog-form";
-import { ServiceGallery } from "@/components/services/image-carousel";
-import type { WorkshopSchedule } from "@/components/booking/workshop-time-slot-picker";
-import { useEffect, useMemo, useRef } from "react";
-import posthog from "posthog-js";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import gsap from "gsap";
+import { ArrowLeft, CirclePercent } from "lucide-react";
+import posthog from "posthog-js";
+import { useEffect, useMemo, useRef } from "react";
+import { BookingDialog } from "@/components/booking/dialog-form";
+import type { WorkshopSchedule } from "@/components/booking/workshop-time-slot-picker";
+import { ServiceGallery } from "@/components/services/image-carousel";
 
 export const Route = createFileRoute("/_public/services/$slug")({
   component: RouteComponent,
@@ -75,18 +75,24 @@ function RouteComponent() {
     );
 
     return () => {
-      animations.forEach((animation) => animation.kill());
+      animations.forEach((animation) => {
+        animation.kill();
+      });
     };
   }, []);
 
+  const workshopServiceId =
+    service?.serviceCategory.type === "WORKSHOP" ? service._id : undefined;
+
   const { data: workshopSessions } = useQuery({
     ...convexQuery(api.workshopSessions.query.listByService, {
-      serviceId: service!._id,
+      // biome-ignore  lint/style/noNonNullAssertion: Ensured to exist due to enabled param
+      serviceId: workshopServiceId!,
     }),
-    enabled: service && service.serviceCategory.type === "WORKSHOP",
+    enabled: workshopServiceId !== undefined,
   });
 
-  const groupedSchedules = useMemo((): WorkshopSchedule[] | undefined => {
+  const groupedSchedules = useMemo((): Array<WorkshopSchedule> | undefined => {
     if (!workshopSessions) return undefined;
     if (workshopSessions.length === 0) return [];
 
@@ -418,11 +424,7 @@ function RouteComponent() {
                 hasUpPricing={
                   (service.serviceCategory.variants?.length ?? 0) > 0
                 }
-                pricingVariants={
-                  (service.serviceCategory.variants ?? []) as Array<{
-                    name: string;
-                  }>
-                }
+                pricingVariants={service.serviceCategory.variants ?? []}
                 servicePricing={
                   service.serviceCategory.type === "WORKSHOP"
                     ? {

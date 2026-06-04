@@ -1,3 +1,11 @@
+import type {
+  FulfillmentModeType,
+  ProjectMaterialType,
+} from "@convex/constants";
+import { ChevronLeft } from "lucide-react";
+import posthog from "posthog-js";
+import { useState } from "react";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { Card } from "@/components/ui/card";
 import {
   DialogDescription,
@@ -10,19 +18,15 @@ import { useState } from "react";
 import posthog from "posthog-js";
 
 import { FieldSeparator } from "@/components/ui/field";
-import { ProjectAttachments } from "@/components/projects/project-attachments";
-import type { UploadedFile } from "../file-upload/types";
+import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
+import type { ServicePricing } from "@/lib/project-pricing";
 import {
   derivePricingFromSchema,
   getDurationMinutesFromTimeRange,
   getPricingVariantKey,
   type ServicePricing,
 } from "@/lib/project-pricing";
-import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
-import type {
-  FulfillmentModeType,
-  ProjectMaterialType,
-} from "@convex/constants";
+import type { UploadedFile } from "../file-upload/types";
 
 export type BookingFormValues = {
   serviceType: FulfillmentModeType;
@@ -30,8 +34,8 @@ export type BookingFormValues = {
   description: string;
   notes: string;
   material: ProjectMaterialType;
-  requestedMaterialIds?: string[];
-  requestedResourceIds?: string[];
+  requestedMaterialIds?: Array<string>;
+  requestedResourceIds?: Array<string>;
   pricing: string;
   dateTime: {
     date: Date | undefined;
@@ -41,7 +45,7 @@ export type BookingFormValues = {
     originalStartTime?: number;
     originalEndTime?: number;
   };
-  files: UploadedFile[];
+  files: Array<UploadedFile>;
 };
 
 interface EstimateProjectDetailsProps {
@@ -105,7 +109,7 @@ export function EstimateProjectDetails({
     data.dateTime.endTime,
   );
 
-  let materialNames: string[] = [];
+  let materialNames: Array<string> = [];
   if (
     data.material === "buy-from-lab" &&
     data.requestedMaterialIds &&

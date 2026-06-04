@@ -14,8 +14,8 @@ export const Route = createFileRoute("/_private")({
       });
     }
   },
-  loader: (opts) => {
-    opts.context.queryClient.prefetchQuery(
+  loader: async (opts) => {
+    await opts.context.queryClient.ensureQueryData(
       convexQuery(api.users.getUserProfile, {}),
     );
   },

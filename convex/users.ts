@@ -1,10 +1,10 @@
-import { internalMutation } from "./_generated/server";
-import { v, ConvexError } from "convex/values";
-import { authQuery, authMutation, claimFiles } from "./helper";
-import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
-import { UserRole } from "./constants";
+import { ConvexError, v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import { internalMutation } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
+import { UserRole } from "./constants";
+import { authMutation, authQuery, claimFiles } from "./helper";
 
 export const listUserProfiles = authQuery({
   role: ["admin"],
@@ -13,18 +13,16 @@ export const listUserProfiles = authQuery({
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let paginatedProfiles;
-    if (args.search) {
-      paginatedProfiles = await ctx.db
-        .query("userProfile")
-        .withSearchIndex("search_email", (q) => q.search("email", args.search!))
-        .paginate(args.paginationOpts);
-    } else {
-      paginatedProfiles = await ctx.db
-        .query("userProfile")
-        .order("desc")
-        .paginate(args.paginationOpts);
-    }
+    const search = args.search;
+    const paginatedProfiles = search
+      ? await ctx.db
+          .query("userProfile")
+          .withSearchIndex("search_email", (q) => q.search("email", search))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("userProfile")
+          .order("desc")
+          .paginate(args.paginationOpts);
 
     // Enhance profiles with ban status from better-auth
     const pageWithBanStatus = await Promise.all(
@@ -71,10 +69,7 @@ export const updateUserRole = authMutation({
 export const getUserProfile = authQuery({
   args: {},
   handler: async (ctx) => {
-    const profile = await ctx.db
-      .query("userProfile")
-      .withIndex("by_userId", (q) => q.eq("userId", ctx.user.subject))
-      .first();
+    const profile = ctx.profile;
 
     if (!profile) return null;
 
