@@ -25,7 +25,7 @@ import { Route as PrivateDashboardDataViewWorkshopsRouteImport } from './app/_pr
 import { Route as PrivateDashboardDataViewProjectsRouteImport } from './app/_private/dashboard/_data-view/projects'
 import { Route as PrivateDashboardDataViewCalendarRouteImport } from './app/_private/dashboard/_data-view/calendar'
 import { Route as PrivateDashboardDataViewStaffRouteRouteImport } from './app/_private/dashboard/_data-view/_staff/route'
-import { Route as PrivateDashboardChatSlugThreadIdRouteImport } from './app/_private/dashboard/chat/$slug.$threadId'
+import { Route as PrivateDashboardChatRoomIdThreadIdRouteImport } from './app/_private/dashboard/chat/$roomId.$threadId'
 import { Route as PrivateDashboardDataViewStaffReportsRouteImport } from './app/_private/dashboard/_data-view/_staff/reports'
 import { Route as PrivateDashboardDataViewStaffInventoryRouteImport } from './app/_private/dashboard/_data-view/_staff/inventory'
 import { Route as PrivateDashboardDataViewStaffServicesIndexRouteImport } from './app/_private/dashboard/_data-view/_staff/services/index'
@@ -117,10 +117,10 @@ const PrivateDashboardDataViewStaffRouteRoute =
     id: '/_staff',
     getParentRoute: () => PrivateDashboardDataViewRouteRoute,
   } as any)
-const PrivateDashboardChatSlugThreadIdRoute =
-  PrivateDashboardChatSlugThreadIdRouteImport.update({
-    id: '/$slug/$threadId',
-    path: '/$slug/$threadId',
+const PrivateDashboardChatRoomIdThreadIdRoute =
+  PrivateDashboardChatRoomIdThreadIdRouteImport.update({
+    id: '/$roomId/$threadId',
+    path: '/$roomId/$threadId',
     getParentRoute: () => PrivateDashboardChatRouteRoute,
   } as any)
 const PrivateDashboardDataViewStaffReportsRoute =
@@ -181,7 +181,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/chat/': typeof PrivateDashboardChatIndexRoute
   '/dashboard/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
   '/dashboard/reports': typeof PrivateDashboardDataViewStaffReportsRoute
-  '/dashboard/chat/$slug/$threadId': typeof PrivateDashboardChatSlugThreadIdRoute
+  '/dashboard/chat/$roomId/$threadId': typeof PrivateDashboardChatRoomIdThreadIdRoute
   '/dashboard/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
   '/dashboard/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
   '/dashboard/services/': typeof PrivateDashboardDataViewStaffServicesIndexRoute
@@ -202,7 +202,7 @@ export interface FileRoutesByTo {
   '/dashboard/chat': typeof PrivateDashboardChatIndexRoute
   '/dashboard/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
   '/dashboard/reports': typeof PrivateDashboardDataViewStaffReportsRoute
-  '/dashboard/chat/$slug/$threadId': typeof PrivateDashboardChatSlugThreadIdRoute
+  '/dashboard/chat/$roomId/$threadId': typeof PrivateDashboardChatRoomIdThreadIdRoute
   '/dashboard/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
   '/dashboard/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
   '/dashboard/services': typeof PrivateDashboardDataViewStaffServicesIndexRoute
@@ -229,7 +229,7 @@ export interface FileRoutesById {
   '/_private/dashboard/chat/': typeof PrivateDashboardChatIndexRoute
   '/_private/dashboard/_data-view/_staff/inventory': typeof PrivateDashboardDataViewStaffInventoryRoute
   '/_private/dashboard/_data-view/_staff/reports': typeof PrivateDashboardDataViewStaffReportsRoute
-  '/_private/dashboard/chat/$slug/$threadId': typeof PrivateDashboardChatSlugThreadIdRoute
+  '/_private/dashboard/chat/$roomId/$threadId': typeof PrivateDashboardChatRoomIdThreadIdRoute
   '/_private/dashboard/_data-view/_staff/services/add': typeof PrivateDashboardDataViewStaffServicesAddRoute
   '/_private/dashboard/_data-view/_staff/workshops/add': typeof PrivateDashboardDataViewStaffWorkshopsAddRoute
   '/_private/dashboard/_data-view/_staff/services/': typeof PrivateDashboardDataViewStaffServicesIndexRoute
@@ -253,7 +253,7 @@ export interface FileRouteTypes {
     | '/dashboard/chat/'
     | '/dashboard/inventory'
     | '/dashboard/reports'
-    | '/dashboard/chat/$slug/$threadId'
+    | '/dashboard/chat/$roomId/$threadId'
     | '/dashboard/services/add'
     | '/dashboard/workshops/add'
     | '/dashboard/services/'
@@ -274,7 +274,7 @@ export interface FileRouteTypes {
     | '/dashboard/chat'
     | '/dashboard/inventory'
     | '/dashboard/reports'
-    | '/dashboard/chat/$slug/$threadId'
+    | '/dashboard/chat/$roomId/$threadId'
     | '/dashboard/services/add'
     | '/dashboard/workshops/add'
     | '/dashboard/services'
@@ -300,7 +300,7 @@ export interface FileRouteTypes {
     | '/_private/dashboard/chat/'
     | '/_private/dashboard/_data-view/_staff/inventory'
     | '/_private/dashboard/_data-view/_staff/reports'
-    | '/_private/dashboard/chat/$slug/$threadId'
+    | '/_private/dashboard/chat/$roomId/$threadId'
     | '/_private/dashboard/_data-view/_staff/services/add'
     | '/_private/dashboard/_data-view/_staff/workshops/add'
     | '/_private/dashboard/_data-view/_staff/services/'
@@ -428,11 +428,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivateDashboardDataViewStaffRouteRouteImport
       parentRoute: typeof PrivateDashboardDataViewRouteRoute
     }
-    '/_private/dashboard/chat/$slug/$threadId': {
-      id: '/_private/dashboard/chat/$slug/$threadId'
-      path: '/$slug/$threadId'
-      fullPath: '/dashboard/chat/$slug/$threadId'
-      preLoaderRoute: typeof PrivateDashboardChatSlugThreadIdRouteImport
+    '/_private/dashboard/chat/$roomId/$threadId': {
+      id: '/_private/dashboard/chat/$roomId/$threadId'
+      path: '/$roomId/$threadId'
+      fullPath: '/dashboard/chat/$roomId/$threadId'
+      preLoaderRoute: typeof PrivateDashboardChatRoomIdThreadIdRouteImport
       parentRoute: typeof PrivateDashboardChatRouteRoute
     }
     '/_private/dashboard/_data-view/_staff/reports': {
@@ -546,14 +546,14 @@ const PrivateDashboardDataViewRouteRouteWithChildren =
 
 interface PrivateDashboardChatRouteRouteChildren {
   PrivateDashboardChatIndexRoute: typeof PrivateDashboardChatIndexRoute
-  PrivateDashboardChatSlugThreadIdRoute: typeof PrivateDashboardChatSlugThreadIdRoute
+  PrivateDashboardChatRoomIdThreadIdRoute: typeof PrivateDashboardChatRoomIdThreadIdRoute
 }
 
 const PrivateDashboardChatRouteRouteChildren: PrivateDashboardChatRouteRouteChildren =
   {
     PrivateDashboardChatIndexRoute: PrivateDashboardChatIndexRoute,
-    PrivateDashboardChatSlugThreadIdRoute:
-      PrivateDashboardChatSlugThreadIdRoute,
+    PrivateDashboardChatRoomIdThreadIdRoute:
+      PrivateDashboardChatRoomIdThreadIdRoute,
   }
 
 const PrivateDashboardChatRouteRouteWithChildren =

@@ -179,14 +179,11 @@ function MediaLightbox({
                   className="max-h-full max-w-full rounded-xl object-contain"
                 />
               ) : (
-                <Image
+                <img
                   key={f.fileUrl}
                   src={f.fileUrl}
                   alt={`Media ${current + 1} of ${count}`}
-                  width={0}
-                  height={0}
-                  sizes="100vw"
-                  className="rounded-xl"
+                  className="max-h-full max-w-full rounded-xl object-contain"
                 />
               )}
             </div>

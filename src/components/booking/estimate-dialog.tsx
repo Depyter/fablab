@@ -12,11 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
-import posthog from "posthog-js";
-
 import { FieldSeparator } from "@/components/ui/field";
 import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
 import type { ServicePricing } from "@/lib/project-pricing";
@@ -24,7 +19,6 @@ import {
   derivePricingFromSchema,
   getDurationMinutesFromTimeRange,
   getPricingVariantKey,
-  type ServicePricing,
 } from "@/lib/project-pricing";
 import type { UploadedFile } from "../file-upload/types";
 
@@ -362,14 +356,14 @@ export function EstimateProjectDetails({
                 I understand that this is a booking request and requires admin
                 approval. I agree to the{" "}
                 <a
-                  href="#"
+                  href="#terms-and-conditions"
                   className="text-fab-teal underline hover:text-black"
                 >
                   terms and conditions
                 </a>{" "}
                 and the{" "}
                 <a
-                  href="#"
+                  href="#cancellation-policy"
                   className="text-fab-teal underline hover:text-black"
                 >
                   cancellation policy

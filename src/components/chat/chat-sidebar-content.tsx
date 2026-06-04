@@ -1,7 +1,6 @@
 import type { Id } from "@convex/_generated/dataModel";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, Hash } from "lucide-react";
-
 import posthog from "posthog-js";
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -21,15 +20,16 @@ function ChatThreadLink({
   thread: ChatThreadSummary;
   isArchived: boolean;
 }) {
-  const pathname = usePathname();
+  const location = useLocation();
   const href = `/dashboard/chat/${roomId}/${thread._id}`;
-  const isThreadActive = pathname === href;
+  const isThreadActive = location.href === href;
   const hasUnreads = Boolean(thread.unreadCount && thread.unreadCount > 0);
   const paddingClass = isArchived ? "pl-8" : "pl-5";
 
   return (
     <Link
-      href={href}
+      to={"/dashboard/chat/$roomId/$threadId"}
+      params={{ roomId: roomId, threadId: thread._id }}
       className={cn(
         "group relative flex items-center gap-2 pr-3 py-2 transition-colors border-l-2 border-transparent",
         paddingClass,
@@ -99,7 +99,7 @@ export function ChatSidebarContent({
   assignedOnly?: boolean;
   assignedProjectIds?: ReadonlyArray<Id<"projects">>;
 }) {
-  const { roomList, isLoading } = useChatRooms();
+  const { roomList, isPending } = useChatRooms();
 
   const assignedIdSet = React.useMemo(
     () => new Set<string>(assignedProjectIds ?? []),
@@ -131,7 +131,7 @@ export function ChatSidebarContent({
     setExpandedArchived((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
   };
 
-  if (isLoading) {
+  if (isPending) {
     return <ChatSidebarRoomsLoading />;
   }
 

@@ -59,6 +59,7 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
 
   const sendMessageMutation = useMutation(api.chat.mutate.sendMessage);
   const markReadMutation = useMutation(api.chat.mutate.markThreadRead);
+  const newestMessageId = messages[0]?._id;
 
   const loadOlderMessages = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -115,10 +116,10 @@ export function useChat({ roomId, threadId }: UseChatOptions) {
   }, []);
 
   useEffect(() => {
-    if (threadId) {
-      markReadMutation({ threadId }).catch(console.error);
-    }
-  }, [threadId, markReadMutation]);
+    if (status === "LoadingFirstPage" || !newestMessageId) return;
+
+    markReadMutation({ threadId }).catch(console.error);
+  }, [threadId, newestMessageId, status, markReadMutation]);
 
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;

@@ -1,6 +1,4 @@
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { useQuery } from "convex/react";
+import type { Doc, Id } from "@convex/_generated/dataModel";
 import * as React from "react";
 
 export interface ChatThreadSummary {
@@ -26,30 +24,28 @@ export interface ChatRoomSummary {
 
 interface ChatRoomsContextValue {
   roomList: Array<ChatRoomSummary>;
-  isLoading: boolean;
+  isPending: boolean;
 }
 
 const ChatRoomsContext = React.createContext<ChatRoomsContextValue | null>(
   null,
 );
 
-export function ChatRoomsProvider({ children }: { children: React.ReactNode }) {
-  const rooms = useQuery(api.chat.query.getRooms);
-
+export function ChatRoomsProvider({
+  children,
+  isPending,
+  rooms,
+}: React.PropsWithChildren<{
+  rooms: Array<Doc<"rooms">> | undefined;
+  isPending: boolean;
+}>) {
   const roomList = React.useMemo(
     () => (rooms?.filter(Boolean) as Array<ChatRoomSummary>) ?? [],
     [rooms],
   );
 
-  const isLoading = rooms === undefined;
-
-  const value = React.useMemo(
-    () => ({ roomList, isLoading }),
-    [roomList, isLoading],
-  );
-
   return (
-    <ChatRoomsContext.Provider value={value}>
+    <ChatRoomsContext.Provider value={{ roomList, isPending }}>
       {children}
     </ChatRoomsContext.Provider>
   );

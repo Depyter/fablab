@@ -1,7 +1,7 @@
+import { api, internal } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { syncProjectTotalInvoice } from "@convex/projects/helper";
 import { describe, expect, test } from "vitest";
-import { api, internal } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { syncProjectTotalInvoice } from "@/convex/projects/helper";
 import {
   addLabDays,
   addLabMonths,
