@@ -156,7 +156,7 @@ export function SidebarNavigation() {
                 {group.items.map((item) => {
                   const currentRoute = !!matchRoute({
                     to: item.url,
-                    pending: true,
+                    fuzzy: true,
                   });
 
                   return (

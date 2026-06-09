@@ -1,7 +1,7 @@
 import { api } from "@convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Outlet, useMatch } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useMatchRoute } from "@tanstack/react-router";
 import {
   ChatContentPane,
   ChatSidebarPane,
@@ -17,13 +17,15 @@ export const Route = createFileRoute("/_private/dashboard/chat")({
 });
 
 function RouteComponent() {
+  "use no memo";
+
   const { data: rooms, isPending } = useQuery(
     convexQuery(api.chat.query.getRooms),
   );
 
-  const threadMatch = useMatch({
-    from: "/_private/dashboard/chat/$roomId/$threadId",
-    shouldThrow: false,
+  const matchRoute = useMatchRoute();
+  const threadMatch = matchRoute({
+    to: "/dashboard/chat/$roomId/$threadId",
   });
   const isInConversation = !!threadMatch;
 

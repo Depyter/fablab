@@ -24,6 +24,15 @@ pattern = "fablab.harleyvan.com"
 custom_domain = true
 
 [env.preview]
+name = "fablab-preview"
 workers_dev = true
 preview_urls = true
 routes = []
+
+[env.preview.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.preview.observability.logs]
+enabled = true
+invocation_logs = true
