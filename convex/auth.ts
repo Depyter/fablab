@@ -50,7 +50,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
  * - `preview`      — set by the CI preview workflow via `bunx convex env set`
  */
 function isPreviewEnvironment(): boolean {
-  const env = process.env.NEXTJS_ENV;
+  const env = process.env.VITE_ENV;
   return env === "preview" || env === "development";
 }
 

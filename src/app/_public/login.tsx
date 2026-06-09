@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_public/login")({
     redirect: z.string().optional().catch("/dashboard/chat"),
   }),
   beforeLoad: (opts) => {
-    const env = process.env.VITE_ENV;
+    const env = import.meta.env.VITE_ENV;
     const isPreview = env === "preview" || env === "development";
 
     if (isPreview) {

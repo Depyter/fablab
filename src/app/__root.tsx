@@ -1,5 +1,6 @@
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
+import { PostHogProvider } from "@posthog/react";
 import type { QueryClient } from "@tanstack/react-query";
 import { environmentManager } from "@tanstack/react-query";
 import {
@@ -92,15 +93,24 @@ export const Route = createRootRouteWithContext<{
 function RootComponent() {
   const context = useRouteContext({ from: Route.id });
   return (
-    <ConvexBetterAuthProvider
-      client={context.convexQueryClient.convexClient}
-      authClient={authClient}
-      initialToken={context.token}
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_POSTHOG_TOKEN}
+      options={{
+        api_host: import.meta.env.VITE_POSTHOG_HOST,
+        defaults: "2026-01-30",
+        capture_exceptions: true,
+      }}
     >
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
-    </ConvexBetterAuthProvider>
+      <ConvexBetterAuthProvider
+        client={context.convexQueryClient.convexClient}
+        authClient={authClient}
+        initialToken={context.token}
+      >
+        <RootDocument>
+          <Outlet />
+        </RootDocument>
+      </ConvexBetterAuthProvider>
+    </PostHogProvider>
   );
 }
 

@@ -29,6 +29,7 @@
     "@convex-dev/react-query": "^0.1.0",
     "@convex-dev/resend": "^0.2.3",
     "@gsap/react": "^2.1.2",
+    "@posthog/react": "^1.10.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.0.7",
     "@react-three/drei": "^10.7.7",
@@ -52,7 +53,7 @@
     "lucide-react": "^0.563.0",
     "nitro": "^3.0.260522-beta",
     "openai": "^6.38.0",
-    "posthog-js": "^1.370.1",
+    "posthog-node": "^5.36.6",
     "radix-ui": "^1.4.3",
     "react": "^19.2.5",
     "react-day-picker": "^9.14.0",
@@ -72,6 +73,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
+    "@cloudflare/vite-plugin": "^1.40.0",
     "@convex-dev/eslint-plugin": "^1.2.2",
     "@edge-runtime/vm": "^5.0.0",
     "@rolldown/plugin-babel": "^0.2.3",
@@ -88,6 +90,6 @@
     "eslint": "^10.4.1",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
-    "wrangler": "^4.84.1"
+    "wrangler": "^4.98.0"
   }
 }
