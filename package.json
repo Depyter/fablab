@@ -10,6 +10,7 @@
     "dev:convex": "convex dev --start 'vite dev'",
     "deploy": "wrangler deploy",
     "deploy:preview": "wrangler versions upload",
+    "preview": "vite preview",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "convex": "bunx convex dev --once",
