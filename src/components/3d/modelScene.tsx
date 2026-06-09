@@ -11,14 +11,8 @@ import { useLoader } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { OBJLoader, STLLoader } from "three-stdlib";
-import type { ModelData, Vector3 } from "./utils";
+import type { ModelData, ModelFormat, Vector3 } from "./utils";
 import { computeModelData } from "./utils";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type ModelFormat = "stl" | "glb" | "gltf" | "obj";
 
 interface ZoomConfig {
   minDistance: number;

@@ -1,4 +1,4 @@
-import { is3DModel } from "@/components/3d/modelViewer";
+import { is3DModel } from "@/components/3d/utils";
 import { FileAttachmentCard } from "@/components/chat/file-attachment";
 import type { MediaFile } from "@/components/chat/media-gallery";
 import { MediaGallery } from "@/components/chat/media-gallery";

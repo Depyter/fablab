@@ -5,8 +5,8 @@ import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { ClientOnly } from "@/lib/client-only";
 import { cn } from "@/lib/utils";
-import { getModelFormat } from "./modelViewer";
 import type { ModelData } from "./utils";
+import { getModelFormat } from "./utils";
 
 const ModelScene = lazy(() => import("./modelScene"));
 

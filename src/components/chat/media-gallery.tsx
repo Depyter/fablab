@@ -1,8 +1,8 @@
 import { Image } from "@unpic/react";
 import { ChevronLeft, ChevronRight, Download, Play, X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { useState } from "react";
-import ModelViewer, { is3DModel } from "@/components/3d/modelViewer";
+import { lazy, useState } from "react";
+import { is3DModel } from "@/components/3d/utils";
 import {
   FileAttachmentCard,
   FileAttachmentThumbnail,
@@ -15,9 +15,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+const ModelViewer = lazy(() => import("@/components/3d/modelViewer"));
 
 export interface MediaFile {
   fileUrl: string;

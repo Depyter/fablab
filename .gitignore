@@ -40,13 +40,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
-
-# OpenNext
-.open-next
 
 # wrangler preview
 .wrangler
+dist/
 
 # ai skills
 skills/*
