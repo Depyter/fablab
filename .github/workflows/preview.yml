@@ -69,7 +69,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          wrangler versions upload --preview-alias "$PREVIEW_ALIAS" | tee upload.log
+          bun run deploy:preview --preview-alias "$PREVIEW_ALIAS" | tee upload.log
           preview_url="https://${PREVIEW_ALIAS}-fablab-preview.acabalharleyvan.workers.dev"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
 
