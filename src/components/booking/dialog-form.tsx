@@ -5,6 +5,7 @@ import {
   FulfillmentMode,
   ProjectMaterial,
 } from "@convex/constants";
+import { usePostHog } from "@posthog/react";
 import { useStore } from "@tanstack/react-form";
 import {
   useLocation,
@@ -12,7 +13,6 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
-import posthog from "posthog-js";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { ActionDialog } from "@/components/action-dialog";
@@ -88,6 +88,7 @@ export function BookingDialog({
   serviceCategory,
   schedules,
 }: BookingDialog) {
+  const posthog = usePostHog();
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
   );
@@ -261,6 +262,7 @@ export function BookingDialog({
       validateTextContent,
       currentPath,
       navigate,
+      posthog,
     ],
   );
 

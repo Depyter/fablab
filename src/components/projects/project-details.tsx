@@ -6,10 +6,10 @@ import type {
   ProjectStatusType,
 } from "@convex/constants";
 import { FILE_CATEGORIES } from "@convex/constants";
+import { usePostHog } from "@posthog/react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { XIcon } from "lucide-react";
-import posthog from "posthog-js";
 import type { ReactNode } from "react";
 import React, { useState } from "react";
 import { toast } from "sonner";
@@ -228,6 +228,7 @@ export function ProjectDetails({
   const [proofFiles, setProofFiles] = useState<Array<UploadedFile>>([]);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const posthog = usePostHog();
   const isDialogOpen = open ?? uncontrolledOpen;
   const shouldLoadDialogData = Boolean(projectId) && isDialogOpen;
 

@@ -2,8 +2,8 @@ import type {
   FulfillmentModeType,
   ProjectMaterialType,
 } from "@convex/constants";
+import { usePostHog } from "@posthog/react";
 import { ChevronLeft } from "lucide-react";
-import posthog from "posthog-js";
 import { useState } from "react";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { Card } from "@/components/ui/card";
@@ -71,6 +71,7 @@ export function EstimateProjectDetails({
   canSubmit,
   onBack,
 }: EstimateProjectDetailsProps) {
+  const posthog = usePostHog();
   const [isChecked, setIsChecked] = useState(false);
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {

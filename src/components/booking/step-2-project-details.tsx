@@ -3,8 +3,8 @@ import type {
   ProjectMaterialType,
 } from "@convex/constants";
 import { ProjectMaterial } from "@convex/constants";
+import { usePostHog } from "@posthog/react";
 import { ChevronLeft } from "lucide-react";
-import posthog from "posthog-js";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/booking/date-time-picker";
 import { FileUpload } from "@/components/file-upload";
@@ -106,6 +106,8 @@ export function Step2ProjectDetails({
   schedules?: Array<WorkshopSchedule>;
   bookedTimeBlocks?: Array<{ start: string; end: string }>;
 }) {
+  const posthog = usePostHog();
+
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 

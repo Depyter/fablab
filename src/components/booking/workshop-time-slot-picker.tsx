@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import { usePostHog } from "@posthog/react";
 import { Label } from "@/components/ui/label";
 import {
   formatLabDate,
@@ -47,6 +47,8 @@ export function WorkshopTimeSlotPicker({
   serviceName,
   serviceCategory,
 }: WorkshopTimeSlotPickerProps) {
+  const posthog = usePostHog();
+
   return (
     <>
       <div className="mb-2 flex flex-col gap-1">

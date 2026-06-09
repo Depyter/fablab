@@ -1,8 +1,8 @@
 import { api } from "@convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
+import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import posthog from "posthog-js";
 import { useEffect, useMemo } from "react";
 import { CtaSection } from "@/components/cta-section";
 import { ServiceCardClient } from "@/components/services/service-card-client";
@@ -54,6 +54,7 @@ function ServiceCardSkeleton({ isWorkshop }: { isWorkshop: boolean }) {
 }
 
 function RouteComponent() {
+  const posthog = usePostHog();
   const { data: services, isPending } = useQuery(
     convexQuery(api.services.query.getServices),
   );
@@ -81,7 +82,7 @@ function RouteComponent() {
         workshop_count: workshopServices.length,
       });
     }
-  }, [services, fabricationServices.length, workshopServices.length]);
+  }, [posthog, services, fabricationServices.length, workshopServices.length]);
 
   if (!isPending && services?.length === 0) {
     return (

@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 
 interface Profile {
@@ -9,6 +9,8 @@ interface Profile {
 }
 
 export function usePostHogIdentify(profile: Profile | null | undefined) {
+  const posthog = usePostHog();
+
   useEffect(() => {
     if (!profile) return;
     posthog.identify(profile._id, {
@@ -16,5 +18,5 @@ export function usePostHogIdentify(profile: Profile | null | undefined) {
       email: profile.email,
       role: profile.role,
     });
-  }, [profile]);
+  }, [posthog, profile]);
 }

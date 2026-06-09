@@ -1,10 +1,10 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { usePostHog } from "@posthog/react";
 import { Link } from "@tanstack/react-router";
 import { Image } from "@unpic/react";
 import { useQuery } from "convex/react";
 import { ArrowLeft, Clock, Hash, Loader2, Send, User } from "lucide-react";
-import posthog from "posthog-js";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { FileUpload } from "@/components/file-upload";
@@ -104,6 +104,7 @@ export function ChatInterface({
   currentUserName,
   showBackButton,
 }: ChatInterfaceProps) {
+  const posthog = usePostHog();
   const [showTimeId, setShowTimeId] = useState<string | null>(null);
 
   const {

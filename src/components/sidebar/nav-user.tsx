@@ -1,5 +1,5 @@
+import { usePostHog } from "@posthog/react";
 import { BadgeCheckIcon, ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
-import posthog from "posthog-js";
 import { UserProfileDialog } from "@/components/profile/profile-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -43,6 +43,7 @@ export function NavUser({
     avatar: string;
   };
 }) {
+  const posthog = usePostHog();
   const { isMobile } = useSidebar();
   const initials = getInitials(user.name);
 

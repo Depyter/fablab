@@ -1,6 +1,6 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import posthog from "posthog-js";
 import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {
@@ -15,6 +15,7 @@ export function ServiceCardClient({
   title,
   serviceType,
 }: ServiceCardProps) {
+  const posthog = usePostHog();
   const isWorkshop = serviceType === "WORKSHOP";
 
   return (

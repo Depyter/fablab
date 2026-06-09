@@ -1,8 +1,8 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { CONTENT_POLICY_ERROR } from "@convex/constants";
+import { usePostHog } from "@posthog/react";
 import { useMutation, usePaginatedQuery } from "convex/react";
-import posthog from "posthog-js";
 import {
   useCallback,
   useEffect,
@@ -23,6 +23,7 @@ interface UseChatOptions {
 const MESSAGE_PAGE_SIZE = 50;
 
 export function useChat({ roomId, threadId }: UseChatOptions) {
+  const posthog = usePostHog();
   const [input, setInput] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<
     Array<PendingAttachment>

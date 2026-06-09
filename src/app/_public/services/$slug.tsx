@@ -1,10 +1,10 @@
 import { api } from "@convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
+import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import gsap from "gsap";
 import { ArrowLeft, CirclePercent } from "lucide-react";
-import posthog from "posthog-js";
 import { useEffect, useMemo, useRef } from "react";
 import { BookingDialog } from "@/components/booking/dialog-form";
 import type { WorkshopSchedule } from "@/components/booking/workshop-time-slot-picker";
@@ -40,6 +40,7 @@ const DAY_NAMES = [
 ] as const;
 
 function RouteComponent() {
+  const posthog = usePostHog();
   const { slug } = Route.useParams();
   const { data: service } = useQuery(
     convexQuery(api.services.query.getService, { slug }),
@@ -51,11 +52,11 @@ function RouteComponent() {
     if (!service) return;
 
     posthog.capture("service_detail_viewed", {
-      service_id: service._id,
+      service_id: service.slug,
       service_name: service.name,
       service_type: service.serviceCategory.type,
     });
-  }, [service]);
+  }, [posthog, service]);
 
   useEffect(() => {
     const stickers = [tealStickerRef.current, magentaStickerRef.current].filter(

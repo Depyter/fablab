@@ -1,7 +1,7 @@
 import type { Id } from "@convex/_generated/dataModel";
+import { usePostHog } from "@posthog/react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, Hash } from "lucide-react";
-import posthog from "posthog-js";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ChatSidebarRoomsLoading } from "./chat-loading";
@@ -20,6 +20,7 @@ function ChatThreadLink({
   thread: ChatThreadSummary;
   isArchived: boolean;
 }) {
+  const posthog = usePostHog();
   const location = useLocation();
   const href = `/dashboard/chat/${roomId}/${thread._id}`;
   const isThreadActive = location.href === href;
