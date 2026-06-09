@@ -10,8 +10,6 @@ import type {
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
-gsap.registerPlugin(useGSAP);
-
 type BaseProps = {
   label: string;
   className?: string;
