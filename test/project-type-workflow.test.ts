@@ -1,3 +1,4 @@
+// biome-ignore-all lint/style/noNonNullAssertion: Biome cannot infer properly that asserted values exist.
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";

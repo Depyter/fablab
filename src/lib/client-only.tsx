@@ -10,5 +10,6 @@ export function ClientOnly({
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // biome-ignore  lint/complexity/noUselessFragments: needed so it can wrap other components
   return mounted ? <>{children}</> : <>{fallback}</>;
 }

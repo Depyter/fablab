@@ -16,20 +16,20 @@
     "incremental": true,
     "plugins": [
       {
-        "name": "next",
-      },
+        "name": "next"
+      }
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@convex/*": ["./convex/*"],
-    },
+      "@convex/*": ["./convex/*"]
+    }
   },
   "include": [
     "convex/**/*.ts",
     "convex/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "test/**/*.ts",
+    "test/**/*.ts"
   ],
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules"]
 }

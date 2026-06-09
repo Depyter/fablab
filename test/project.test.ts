@@ -1,3 +1,4 @@
+// biome-ignore-all lint/style/noNonNullAssertion: Biome cannot infer properly that asserted values exist.
 import { api, internal } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { syncProjectTotalInvoice } from "@convex/projects/helper";

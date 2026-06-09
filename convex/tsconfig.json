@@ -10,7 +10,7 @@
     "moduleResolution": "Bundler",
     "paths": {
       "@/*": ["../src/*"],
-      "@convex/*": ["./*"],
+      "@convex/*": ["./*"]
     },
     "jsx": "react-jsx",
     "skipLibCheck": true,
@@ -23,8 +23,8 @@
     "module": "ESNext",
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["node"],
+    "types": ["node"]
   },
   "include": ["./**/*"],
-  "exclude": ["./_generated"],
+  "exclude": ["./_generated"]
 }

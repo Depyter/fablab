@@ -1,5 +1,3 @@
-
-
 import type { Id } from "@convex/_generated/dataModel";
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";

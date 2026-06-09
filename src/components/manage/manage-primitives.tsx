@@ -1,5 +1,3 @@
-
-
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";

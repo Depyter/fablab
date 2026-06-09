@@ -1,5 +1,3 @@
-
-
 import { ResourceCategory } from "@convex/constants";
 import { InventoryItemForm } from "./inventory-item-form";
 
