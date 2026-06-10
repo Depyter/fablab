@@ -21,7 +21,7 @@ export interface OptionRadioGroupItem {
 interface OptionRadioGroupProps {
   value: string;
   onValueChange: (value: string) => void;
-  options: OptionRadioGroupItem[];
+  options: Array<OptionRadioGroupItem>;
   className?: string;
 }
 

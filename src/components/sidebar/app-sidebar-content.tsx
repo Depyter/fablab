@@ -1,28 +1,30 @@
-"use client";
-
-import * as React from "react";
-import { usePostHogIdentify } from "@/hooks/use-posthog-identify";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
+  BarChart2Icon,
   CalendarCheckIcon,
   CalendarIcon,
-  MessageSquareIcon,
+  ChevronsUpDownIcon,
   FolderIcon,
-  WrenchIcon,
+  MessageSquareIcon,
   PackageIcon,
-  BarChart2Icon,
   UsersIcon,
+  WrenchIcon,
 } from "lucide-react";
+import * as React from "react";
+import { NavUser } from "@/components/sidebar/nav-user";
+import { useProfile } from "@/components/sidebar/profile-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { ActiveLink } from "@/components/sidebar/active-link";
-import { NavUser } from "@/components/sidebar/nav-user";
-import { useProfile } from "@/components/sidebar/profile-context";
-import { Separator } from "@/components/ui/separator";
+import { usePostHogIdentify } from "@/hooks/use-posthog-identify";
 
 type Role = "admin" | "maker" | "client";
 
@@ -32,11 +34,11 @@ type NavItem = {
   icon: React.ReactNode;
   iconBackground: string;
   iconColor: string;
-  roles: Role[];
+  roles: Array<Role>;
   group: "main" | "manage" | "reports";
 };
 
-const allNavItems: NavItem[] = [
+const allNavItems: Array<NavItem> = [
   {
     title: "Messages",
     url: "/dashboard/chat",
@@ -111,16 +113,20 @@ const allNavItems: NavItem[] = [
   },
 ];
 
-function filterNavItems(items: NavItem[], role: Role): NavItem[] {
+function filterNavItems(items: Array<NavItem>, role: Role): Array<NavItem> {
   return items.filter((item) => item.roles.includes(role));
 }
 
-function groupNavItems(items: NavItem[]): { key: string; items: NavItem[] }[] {
+function groupNavItems(
+  items: Array<NavItem>,
+): Array<{ key: string; items: Array<NavItem> }> {
   const order = ["main", "manage", "reports"] as const;
-  const grouped: Record<string, NavItem[]> = {};
+  const grouped: Record<string, Array<NavItem>> = {};
 
   for (const item of items) {
-    (grouped[item.group] ??= []).push(item);
+    const groupItems = grouped[item.group] ?? [];
+    groupItems.push(item);
+    grouped[item.group] = groupItems;
   }
 
   return order
@@ -129,9 +135,11 @@ function groupNavItems(items: NavItem[]): { key: string; items: NavItem[] }[] {
 }
 
 export function SidebarNavigation() {
-  const profile = useProfile();
+  const { profile } = useProfile();
   const role: Role = profile?.role ?? "client";
   const groups = groupNavItems(filterNavItems(allNavItems, role));
+  const { isMobile, setOpenMobile } = useSidebar();
+  const matchRoute = useMatchRoute();
 
   return (
     <SidebarContent>
@@ -146,21 +154,33 @@ export function SidebarNavigation() {
             <SidebarGroupContent className="px-1.5 md:px-0">
               <SidebarMenu>
                 {group.items.map((item) => {
+                  const currentRoute = !!matchRoute({
+                    to: item.url,
+                    fuzzy: true,
+                  });
+
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <ActiveLink
-                        href={item.url}
-                        tooltip={item.title}
-                        style={
-                          {
-                            "--sidebar-icon-bg": item.iconBackground,
-                            "--sidebar-icon-color": item.iconColor,
-                          } as React.CSSProperties
-                        }
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={{ children: item.title, hidden: false }}
+                        isActive={currentRoute}
+                        className="px-2.5 md:px-2"
                       >
-                        {item.icon}
-                        <span>{item.title}</span>
-                      </ActiveLink>
+                        <Link
+                          to={item.url}
+                          style={
+                            {
+                              "--sidebar-icon-bg": item.iconBackground,
+                              "--sidebar-icon-color": item.iconColor,
+                            } as React.CSSProperties
+                          }
+                          onClick={() => isMobile && setOpenMobile(false)}
+                        >
+                          {item.icon}
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
                 })}
@@ -174,9 +194,34 @@ export function SidebarNavigation() {
 }
 
 export function SidebarUserFooter() {
-  const profile = useProfile();
+  const { profile, isPending } = useProfile();
 
   usePostHogIdentify(profile ?? null);
+
+  if (isPending) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" disabled className="pointer-events-none">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="rounded-none border-2 border-black bg-fab-teal text-xs font-black text-white">
+                ...
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-black uppercase tracking-tighter text-black/50">
+                Loading profile
+              </span>
+              <span className="truncate text-xs text-black/40">
+                Please wait
+              </span>
+            </div>
+            <ChevronsUpDownIcon className="ml-auto size-4 text-black/20" />
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <NavUser

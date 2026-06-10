@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import type { InventoryItemType } from "@/components/inventory/forms/inventory-item-form";
+import { InventoryItemForm } from "@/components/inventory/forms/inventory-item-form";
 import { ManageCard } from "@/components/manage/manage-card";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import {
-  InventoryItemForm,
-  InventoryItemType,
-} from "@/components/inventory/forms/inventory-item-form";
 
 export interface InventoryItem {
   _id: string;
@@ -14,8 +12,8 @@ export interface InventoryItem {
   type: string;
   category: InventoryItemType;
   status: import("@convex/constants").ResourceStatusType;
-  images: string[];
-  imageUrls: string[];
+  images: Array<string>;
+  imageUrls: Array<string>;
 }
 
 interface InventoryCardProps {

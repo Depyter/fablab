@@ -1,43 +1,38 @@
-"use client";
-
+import type { Doc } from "@convex/_generated/dataModel";
 import * as React from "react";
-import { usePreloadedAuthQuery } from "@convex-dev/better-auth/nextjs/client";
-import type { Preloaded } from "convex/react";
-import { api } from "@convex/_generated/api";
 
-function useSidebarProfile(
-  preloadedProfile: Preloaded<typeof api.users.getUserProfile>,
-) {
-  return usePreloadedAuthQuery(preloadedProfile);
+export type CurrentUserProfile = Doc<"userProfile"> & {
+  profilePicUrl?: string | null;
+};
+
+interface ProfileContextType {
+  profile: CurrentUserProfile | null | undefined;
+  isPending: boolean;
 }
 
-type SidebarProfile = ReturnType<typeof useSidebarProfile>;
-
-const ProfileContext = React.createContext<SidebarProfile | undefined>(
-  undefined,
-);
+const ProfileContext = React.createContext<ProfileContextType | null>(null);
 
 export function ProfileProvider({
-  preloadedProfile,
+  profile,
+  isPending,
   children,
 }: React.PropsWithChildren<{
-  preloadedProfile: Preloaded<typeof api.users.getUserProfile>;
+  profile: CurrentUserProfile | undefined;
+  isPending: boolean;
 }>) {
-  const profile = useSidebarProfile(preloadedProfile);
-
   return (
-    <ProfileContext.Provider value={profile}>
+    <ProfileContext.Provider value={{ profile, isPending }}>
       {children}
     </ProfileContext.Provider>
   );
 }
 
 export function useProfile() {
-  const profile = React.useContext(ProfileContext);
+  const context = React.useContext(ProfileContext);
 
-  if (profile === undefined) {
+  if (!context) {
     throw new Error("useProfile must be used within a ProfileProvider.");
   }
 
-  return profile;
+  return context;
 }

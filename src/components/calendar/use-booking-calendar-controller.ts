@@ -1,26 +1,18 @@
-"use client";
-
-import * as React from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  usePathname,
-  useSearchParams,
-  type ReadonlyURLSearchParams,
-} from "next/navigation";
 import { useQuery } from "convex/react";
 
-import {
-  buildBookingCalendarViewModels,
-  type CalendarBookingItem,
-} from "@/lib/calendar";
+import * as React from "react";
+import { useProfile } from "@/components/sidebar/profile-context";
+
+import type { CalendarBookingItem } from "@/lib/calendar";
+import { buildBookingCalendarViewModels } from "@/lib/calendar";
 import {
   getCurrentTimestamp,
   getLabDayBounds,
   getLabDayKey,
   getLabDayStart,
 } from "@/lib/lab-time";
-import { useProfile } from "@/components/sidebar/profile-context";
 import {
   getCalendarSelectedDate,
   getVisibleRange,
@@ -140,7 +132,7 @@ function useCreateBookingCalendarController() {
     tab: activeTab,
   });
   const bookingsLoading = bookings === undefined;
-  const bookingItems: CalendarBookingItem[] = bookings ?? [];
+  const bookingItems: Array<CalendarBookingItem> = bookings ?? [];
 
   const totalBookings = bookingItems.length;
   const totalProjects = new Set(

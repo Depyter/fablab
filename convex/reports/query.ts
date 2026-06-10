@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { Doc, Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { authQuery } from "../helper";
 
 // ---------------------------------------------------------------------------
@@ -428,7 +428,8 @@ export const getDailyActivity = authQuery({
       if (project._creationTime < dateFrom) break;
       if (project._creationTime > dateTo) continue;
       const key = ensureDay(project._creationTime);
-      const entry = dayMap.get(key)!;
+      const entry = dayMap.get(key);
+      if (!entry) continue;
       entry.projectCount++;
       entry.totalCount++;
     }
@@ -441,7 +442,8 @@ export const getDailyActivity = authQuery({
       )
       .order("asc")) {
       const key = ensureDay(usage.startTime);
-      const entry = dayMap.get(key)!;
+      const entry = dayMap.get(key);
+      if (!entry) continue;
       entry.usageCount++;
       entry.totalCount++;
     }

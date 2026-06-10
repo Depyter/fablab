@@ -1,36 +1,37 @@
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ActionDialog } from "@/components/action-dialog";
-import { useState, useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { EstimateProjectDetails } from "./estimate-dialog";
-import { Step1ServiceType } from "./step-1-service-type";
-import {
-  Step2ProjectDetails,
-  type BookingDetailsFormValues,
-} from "./step-2-project-details";
-import { toast } from "sonner";
-import { useAppForm } from "@/lib/form-context";
-import { useStore } from "@tanstack/react-form";
-import { useMutation, useAction, useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
+import type { Id } from "@convex/_generated/dataModel";
 import {
   FILE_CATEGORIES,
   FulfillmentMode,
   ProjectMaterial,
 } from "@convex/constants";
-import { WorkshopSchedule } from "./workshop-time-slot-picker";
-import { type ServicePricing } from "@/lib/project-pricing";
+import { usePostHog } from "@posthog/react";
+import { useStore } from "@tanstack/react-form";
+import {
+  useLocation,
+  useNavigate,
+  useRouteContext,
+} from "@tanstack/react-router";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import { ActionDialog } from "@/components/action-dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useAppForm } from "@/lib/form-context";
 import {
   getCurrentTimestamp,
   getLabDayStartTimestamp,
   getLabTimeBlock,
   getLabTimeRangeTimestamps,
 } from "@/lib/lab-time";
-import { buildCurrentPath, buildLoginHref } from "@/lib/auth-redirect";
+import type { ServicePricing } from "@/lib/project-pricing";
 import { getRateLimitErrorMessage } from "@/lib/rate-limit";
-import posthog from "posthog-js";
+import { EstimateProjectDetails } from "./estimate-dialog";
+import { Step1ServiceType } from "./step-1-service-type";
+import type { BookingDetailsFormValues } from "./step-2-project-details";
+import { Step2ProjectDetails } from "./step-2-project-details";
+import type { WorkshopSchedule } from "./workshop-time-slot-picker";
 
 type BookingServiceMaterial = {
   _id: string;
@@ -42,26 +43,37 @@ type BookingServiceMaterial = {
 
 type BookingPricingVariant = { name: string };
 
+function isUnauthenticatedBookingError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  return /unauthenticated|not\s+authenticated/i.test(message);
+}
+
 interface BookingDialog {
   serviceId: Id<"services">;
   serviceName: string;
-  requirements: string[];
-  fileTypes?: string[];
-  availableDays?: number[];
-  serviceMaterials?: BookingServiceMaterial[];
+  requirements: Array<string>;
+  fileTypes?: Array<string>;
+  availableDays?: Array<number>;
+  serviceMaterials?: Array<BookingServiceMaterial>;
   hasUpPricing?: boolean;
-  pricingVariants?: BookingPricingVariant[];
+  pricingVariants?: Array<BookingPricingVariant>;
   servicePricing?: ServicePricing;
   serviceCategory?: string;
-  schedules?: WorkshopSchedule[];
+  schedules?: Array<WorkshopSchedule>;
 }
 
 type Step = 1 | 2 | 3;
 
-const EMPTY_FILE_TYPES: string[] = [];
-const EMPTY_AVAILABLE_DAYS: number[] = [];
-const EMPTY_SERVICE_MATERIALS: BookingServiceMaterial[] = [];
-const EMPTY_PRICING_VARIANTS: BookingPricingVariant[] = [];
+const EMPTY_FILE_TYPES: Array<string> = [];
+const EMPTY_AVAILABLE_DAYS: Array<number> = [];
+const EMPTY_SERVICE_MATERIALS: Array<BookingServiceMaterial> = [];
+const EMPTY_PRICING_VARIANTS: Array<BookingPricingVariant> = [];
 
 export function BookingDialog({
   serviceId,
@@ -76,13 +88,13 @@ export function BookingDialog({
   serviceCategory,
   schedules,
 }: BookingDialog) {
+  const posthog = usePostHog();
   const expandedFileTypes = fileTypes.flatMap(
     (cat) => FILE_CATEGORIES[cat] || [cat],
   );
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { isAuthenticated } = useConvexAuth();
+
+  const navigate = useNavigate();
+  const rootContext = useRouteContext({ from: "__root__" });
   const [step, setStep] = useState<Step>(
     serviceCategory === "WORKSHOP" ? 2 : 1,
   );
@@ -100,26 +112,16 @@ export function BookingDialog({
     setStep(newStep);
     trackStepViewed(newStep);
   };
+
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const createProject = useMutation(api.projects.mutate.createProject);
-  const validateBookingText = useAction(api.moderation.validateBookingText);
-  const loginHref = buildLoginHref(buildCurrentPath(pathname, searchParams));
-
-  const isUnauthenticatedBookingError = (error: unknown) => {
-    const message =
-      error instanceof Error
-        ? error.message
-        : typeof error === "string"
-          ? error
-          : "";
-
-    return /unauthenticated|not\s+authenticated/i.test(message);
-  };
-
+  const validateTextContent = useAction(api.moderation.validateTextContent);
+  const location = useLocation();
+  const currentPath = location.href;
   const handleUploadingChange = useCallback((uploading: boolean) => {
     setIsUploading(uploading);
   }, []);
@@ -178,15 +180,24 @@ export function BookingDialog({
         const description = value.description || `Booking for ${serviceName}`;
         const notes = value.notes || "";
 
-        const moderation = await validateBookingText({
-          name,
-          description,
-          notes,
+        const moderation = await validateTextContent({
+          texts: [name, description, notes].filter((t) => t.trim().length > 0),
         });
 
         if (moderation.flagged) {
           toast.error(
             "Your booking couldn't be submitted. Please review your project name, description, and notes, then try again.",
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
+        // ── Wait for file moderation ───────────────────────────────────
+        // Async moderation runs after upload — files may not be checked yet.
+        // Block submission until all attached files are cleared.
+        if (value.files.some((f) => f.moderationStatus == null)) {
+          toast.error(
+            "Your files are still being checked. Please wait a moment and try again.",
           );
           setIsSubmitting(false);
           return;
@@ -198,7 +209,7 @@ export function BookingDialog({
           notes,
           fulfillmentMode: value.serviceType,
           material: value.material,
-          materialIds: value.requestedMaterialIds as Id<"materials">[],
+          materialIds: value.requestedMaterialIds as Array<Id<"materials">>,
           service: serviceId,
           pricing: value.pricing,
           files: value.files.map((f) => f.storageId as Id<"_storage">),
@@ -224,13 +235,13 @@ export function BookingDialog({
 
         setIsSuccess(true);
         toast.success("Booking request created successfully!");
-        router.push(`/dashboard/chat/${roomId}/${threadId}`);
+        navigate({ to: `/dashboard/chat/${roomId}/${threadId}` });
       } catch (error) {
         setIsSubmitting(false);
         if (isUnauthenticatedBookingError(error)) {
           toast.error("You must be logged in to create a booking.");
           setIsOpen(false);
-          router.push(loginHref);
+          navigate({ to: currentPath });
           return;
         }
         const rateLimitMsg = getRateLimitErrorMessage(error);
@@ -248,9 +259,10 @@ export function BookingDialog({
       serviceId,
       serviceName,
       createProject,
-      validateBookingText,
-      loginHref,
-      router,
+      validateTextContent,
+      currentPath,
+      navigate,
+      posthog,
     ],
   );
 
@@ -396,9 +408,9 @@ export function BookingDialog({
   };
 
   const handleCreateBookingClick = async () => {
-    if (!isAuthenticated) {
+    if (!rootContext.isAuthenticated) {
       toast.error("You must be logged in to create a booking.");
-      router.push(loginHref);
+      navigate({ to: "/login", search: { redirect: currentPath } });
       return;
     }
 
@@ -423,7 +435,7 @@ export function BookingDialog({
         </Button>
 
         <DialogContent
-          className="top-0 left-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-2 border-black bg-background p-4 shadow-[2px_2px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]"
+          className="top-0 left-0 flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-2 border-black bg-background p-4 shadow-[2px_2px_0_0_#000] sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-full sm:min-w-[min(22rem,calc(100%-2rem))] sm:max-w-[min(80vw,80rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-none md:max-w-[80%] lg:max-w-[60vw]"
           onCloseButtonClick={handleManualClose}
         >
           {step === 1 && serviceCategory !== "WORKSHOP" && (

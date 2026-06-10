@@ -1,28 +1,26 @@
+import type {
+  FulfillmentModeType,
+  ProjectMaterialType,
+} from "@convex/constants";
+import { usePostHog } from "@posthog/react";
+import { ChevronLeft } from "lucide-react";
+import { useState } from "react";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { Card } from "@/components/ui/card";
 import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
-import posthog from "posthog-js";
-
 import { FieldSeparator } from "@/components/ui/field";
-import { ProjectAttachments } from "@/components/projects/project-attachments";
-import type { UploadedFile } from "../file-upload/types";
+import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
+import type { ServicePricing } from "@/lib/project-pricing";
 import {
   derivePricingFromSchema,
   getDurationMinutesFromTimeRange,
   getPricingVariantKey,
-  type ServicePricing,
 } from "@/lib/project-pricing";
-import { formatLabClockTime, formatLabDateNumeric } from "@/lib/lab-time";
-import type {
-  FulfillmentModeType,
-  ProjectMaterialType,
-} from "@convex/constants";
+import type { UploadedFile } from "../file-upload/types";
 
 export type BookingFormValues = {
   serviceType: FulfillmentModeType;
@@ -30,8 +28,8 @@ export type BookingFormValues = {
   description: string;
   notes: string;
   material: ProjectMaterialType;
-  requestedMaterialIds?: string[];
-  requestedResourceIds?: string[];
+  requestedMaterialIds?: Array<string>;
+  requestedResourceIds?: Array<string>;
   pricing: string;
   dateTime: {
     date: Date | undefined;
@@ -41,7 +39,7 @@ export type BookingFormValues = {
     originalStartTime?: number;
     originalEndTime?: number;
   };
-  files: UploadedFile[];
+  files: Array<UploadedFile>;
 };
 
 interface EstimateProjectDetailsProps {
@@ -73,7 +71,10 @@ export function EstimateProjectDetails({
   canSubmit,
   onBack,
 }: EstimateProjectDetailsProps) {
+  const posthog = usePostHog();
   const [isChecked, setIsChecked] = useState(false);
+  const hasCompleteTimeRange =
+    !!data.dateTime.startTime && !!data.dateTime.endTime;
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
@@ -105,7 +106,7 @@ export function EstimateProjectDetails({
     data.dateTime.endTime,
   );
 
-  let materialNames: string[] = [];
+  let materialNames: Array<string> = [];
   if (
     data.material === "buy-from-lab" &&
     data.requestedMaterialIds &&
@@ -183,8 +184,9 @@ export function EstimateProjectDetails({
                     Time
                   </p>
                   <p className="text-sm font-bold text-black">
-                    {formatLabClockTime(data.dateTime.startTime)} -{" "}
-                    {formatLabClockTime(data.dateTime.endTime)}
+                    {hasCompleteTimeRange
+                      ? `${formatLabClockTime(data.dateTime.startTime)} - ${formatLabClockTime(data.dateTime.endTime)}`
+                      : "Not specified"}
                   </p>
                 </div>
               </div>
@@ -358,14 +360,14 @@ export function EstimateProjectDetails({
                 I understand that this is a booking request and requires admin
                 approval. I agree to the{" "}
                 <a
-                  href="#"
+                  href="#terms-and-conditions"
                   className="text-fab-teal underline hover:text-black"
                 >
                   terms and conditions
                 </a>{" "}
                 and the{" "}
                 <a
-                  href="#"
+                  href="#cancellation-policy"
                   className="text-fab-teal underline hover:text-black"
                 >
                   cancellation policy

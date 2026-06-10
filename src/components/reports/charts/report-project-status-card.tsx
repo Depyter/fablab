@@ -1,8 +1,7 @@
-"use client";
-
 import * as React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -11,8 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CHART_COLORS, ChartTooltip, ChartContainer } from "./utils";
+import { CHART_COLORS, ChartContainer, ChartTooltip } from "./utils";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Review",

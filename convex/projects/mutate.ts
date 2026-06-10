@@ -1,41 +1,41 @@
-import { v, ConvexError } from "convex/values";
-import { authMutation, checkAuthority, claimFiles } from "../helper";
-import { Id } from "../_generated/dataModel";
-import { internalMutation, MutationCtx } from "../_generated/server";
+import { ConvexError, v } from "convex/values";
 import {
   formatLabDate,
   formatLabTime,
   getCurrentTimestamp,
   getLabDayStartTimestamp,
 } from "../../src/lib/lab-time";
-import { PROJECT_ARCHIVE_STATUSES, type ProjectStatusType } from "../constants";
 import { getWorkflow } from "../../src/lib/project-workflow";
+import type { Id } from "../_generated/dataModel";
+import { internalMutation, type MutationCtx } from "../_generated/server";
+import { PROJECT_ARCHIVE_STATUSES, type ProjectStatusType } from "../constants";
+import { authMutation, checkAuthority, claimFiles } from "../helper";
 import {
-  BookingWindow,
-  ProjectStatus,
+  applyMakerAssignment,
+  applyStatusChange,
+  type BookingWindow,
+  buildMaterialSnapshot,
+  buildPricingSnapshot,
   buildSearchText,
+  buildTotalInvoice,
+  buildUsagePricingSnapshot,
+  computeMaterialsUsedCost,
+  computeProvisionalCostBreakdown,
+  createFabricationUsage,
+  createProjectThread,
+  createWorkshopUsage,
+  decrementWorkshopSlot,
+  ensureProjectRoom,
+  incrementWorkshopSlot,
+  type ProjectStatus,
   resolveService,
-  validateFileTypes,
+  scheduleProjectUpdateEmail,
+  sendProjectSystemMessage,
+  syncMaterialUsageStock,
+  syncProjectTotalInvoice,
   validateBookingTiming,
   validateFabricationAvailability,
-  computeProvisionalCostBreakdown,
-  buildTotalInvoice,
-  buildPricingSnapshot,
-  buildUsagePricingSnapshot,
-  incrementWorkshopSlot,
-  decrementWorkshopSlot,
-  createWorkshopUsage,
-  createFabricationUsage,
-  ensureProjectRoom,
-  createProjectThread,
-  computeMaterialsUsedCost,
-  syncProjectTotalInvoice,
-  sendProjectSystemMessage,
-  applyStatusChange,
-  applyMakerAssignment,
-  syncMaterialUsageStock,
-  buildMaterialSnapshot,
-  scheduleProjectUpdateEmail,
+  validateFileTypes,
 } from "./helper";
 
 // ============================================================================
@@ -347,7 +347,8 @@ export const updateProject = authMutation({
     }
 
     // Re-fetch after potential status patch
-    const project = (await ctx.db.get(args.projectId))!;
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new ConvexError("Project not found.");
 
     // ── Maker assignment ─────────────────────────────────────────────────────
     if (args.makerId !== undefined) {

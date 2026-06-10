@@ -1,5 +1,4 @@
-"use client";
-
+import { usePostHog } from "@posthog/react";
 import { Label } from "@/components/ui/label";
 import {
   formatLabDate,
@@ -9,7 +8,6 @@ import {
   getLabDayStart,
   isSameLabDay,
 } from "@/lib/lab-time";
-import posthog from "posthog-js";
 
 export interface WorkshopTimeSlotValue {
   date: Date | undefined;
@@ -29,18 +27,18 @@ export interface WorkshopTimeSlot {
 
 export interface WorkshopSchedule {
   date: number;
-  timeSlots: WorkshopTimeSlot[];
+  timeSlots: Array<WorkshopTimeSlot>;
 }
 
 export interface WorkshopTimeSlotPickerProps {
   value: WorkshopTimeSlotValue;
   onChange: (value: WorkshopTimeSlotValue) => void;
-  schedules?: WorkshopSchedule[];
+  schedules?: Array<WorkshopSchedule>;
   serviceName?: string;
   serviceCategory?: string;
 }
 
-const EMPTY_WORKSHOP_SCHEDULES: WorkshopSchedule[] = [];
+const EMPTY_WORKSHOP_SCHEDULES: Array<WorkshopSchedule> = [];
 
 export function WorkshopTimeSlotPicker({
   value,
@@ -49,6 +47,8 @@ export function WorkshopTimeSlotPicker({
   serviceName,
   serviceCategory,
 }: WorkshopTimeSlotPickerProps) {
+  const posthog = usePostHog();
+
   return (
     <>
       <div className="mb-2 flex flex-col gap-1">
@@ -87,8 +87,11 @@ export function WorkshopTimeSlotPicker({
                   const isFull = usedUp >= slot.maxSlots;
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={`${schedule.date}-${slot.startTime}-${slot.endTime}`}
+                      disabled={isFull}
+                      aria-pressed={isSelected}
                       onClick={() => {
                         if (isFull) return;
                         const newValue = {
@@ -119,11 +122,11 @@ export function WorkshopTimeSlotPicker({
                             : "cursor-pointer border-black bg-background hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-fab-amber/20"
                       }`}
                     >
-                      <p className="font-medium text-sm text-gray-900">
+                      <span className="block text-left font-medium text-sm text-gray-900">
                         {formatLabTime(slot.startTime)} -{" "}
                         {formatLabTime(slot.endTime)} (PST)
-                      </p>
-                      <p className="text-xs mt-1 text-gray-500">
+                      </span>
+                      <span className="mt-1 block text-left text-xs text-gray-500">
                         {isFull ? (
                           <span className="text-destructive font-medium">
                             Fully Booked
@@ -131,8 +134,8 @@ export function WorkshopTimeSlotPicker({
                         ) : (
                           `${slot.maxSlots - usedUp} / ${slot.maxSlots} slots available`
                         )}
-                      </p>
-                    </div>
+                      </span>
+                    </button>
                   );
                 })}
               </div>

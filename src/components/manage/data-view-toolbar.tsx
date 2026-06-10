@@ -1,10 +1,5 @@
-"use client";
-
-import * as React from "react";
 import { SlidersHorizontal, X } from "lucide-react";
-import { useDebounce } from "@/hooks/use-debounce";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +18,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 export function DataViewFilterField({
   label,

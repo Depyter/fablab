@@ -1,7 +1,6 @@
-"use client";
-
-import { ReactNode, useState } from "react";
 import { ChevronDown, Pencil } from "lucide-react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface DetailCardProps {
@@ -69,7 +68,8 @@ export function DetailCard({
         )}
 
         {onEdit && !isEditing && (
-          <span
+          <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onEdit();
@@ -77,7 +77,7 @@ export function DetailCard({
             className="flex h-6 w-6 shrink-0 items-center justify-center text-black/40 hover:text-black"
           >
             <Pencil className="h-3.5 w-3.5" />
-          </span>
+          </button>
         )}
 
         <ChevronDown

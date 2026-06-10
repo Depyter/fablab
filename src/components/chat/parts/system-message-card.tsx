@@ -1,11 +1,8 @@
-"use client";
-
 import { Calendar } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-
-import { FieldSeparator } from "@/components/ui/field";
 import { MessageAttachments } from "@/components/chat/parts/message-attachments";
 import type { MessageFile } from "@/components/chat/types";
+import { FieldSeparator } from "@/components/ui/field";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,7 +21,7 @@ type SystemMessageType =
 interface ParsedSystemMessage {
   type: SystemMessageType;
   data: Record<string, string>;
-  rawLines: string[];
+  rawLines: Array<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +112,7 @@ function parseSystemMessage(content: string): ParsedSystemMessage {
 // Field grid helper — renders key-value pairs in a 2-column grid
 // ---------------------------------------------------------------------------
 
-function FieldGrid({ fields }: { fields: [string, string][] }) {
+function FieldGrid({ fields }: { fields: Array<[string, string]> }) {
   if (fields.length === 0) return null;
   return (
     <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -148,13 +145,13 @@ function MarkdownBlock({ content }: { content: string }) {
 // Bullet list block (for system messages with dash-prefixed lines)
 // ---------------------------------------------------------------------------
 
-function BulletListBlock({ lines }: { lines: string[] }) {
+function BulletListBlock({ lines }: { lines: Array<string> }) {
   const items = lines.filter((l) => l.startsWith("- "));
   if (items.length === 0) return null;
   return (
     <ul className="mt-1 space-y-0.5 text-sm opacity-85">
-      {items.map((item, i) => (
-        <li key={i} className="leading-relaxed">
+      {items.map((item) => (
+        <li key={item} className="leading-relaxed">
           <ReactMarkdown
             components={{
               p: ({ children }) => <span>{children}</span>,
@@ -172,7 +169,7 @@ function BulletListBlock({ lines }: { lines: string[] }) {
 // Shared attachments block
 // ---------------------------------------------------------------------------
 
-function AttachmentsBlock({ files }: { files: MessageFile[] }) {
+function AttachmentsBlock({ files }: { files: Array<MessageFile> }) {
   if (files.length === 0) return null;
   return (
     <div className="mt-2">
@@ -190,10 +187,10 @@ function ProjectCreatedCard({
   files,
 }: {
   data: Record<string, string>;
-  files: MessageFile[];
+  files: Array<MessageFile>;
 }) {
-  const booking = data["Booking"] ?? "";
-  const title = data.title ?? data["Service"] ?? "Project Created";
+  const booking = data.Booking ?? "";
+  const title = data.title ?? data.Service ?? "Project Created";
 
   return (
     <div className="flex gap-3 items-start">
@@ -203,11 +200,11 @@ function ProjectCreatedCard({
             <div className="text-sm font-bold text-[15px] opacity-85">
               {title}
             </div>
-            {data["Service"] && (
+            {data.Service && (
               <>
                 <span className="opacity-40">•</span>
                 <div className="text-[15px] opacity-70 truncate">
-                  {data["Service"]}
+                  {data.Service}
                 </div>
               </>
             )}
@@ -227,18 +224,16 @@ function ProjectCreatedCard({
         <FieldGrid
           fields={(
             [
-              ["Type", data["Type"]],
-              ["Fulfillment", data["Fulfillment"]],
-              ["Material", data["Material"]],
-              ["Pricing", data["Pricing"]],
-            ] as [string, string][]
+              ["Type", data.Type],
+              ["Fulfillment", data.Fulfillment],
+              ["Material", data.Material],
+              ["Pricing", data.Pricing],
+            ] as Array<[string, string]>
           ).filter(([, v]) => v)}
         />
 
-        {data["Description"] && (
-          <p className="mt-3 text-sm opacity-75 truncate">
-            {data["Description"]}
-          </p>
+        {data.Description && (
+          <p className="mt-3 text-sm opacity-75 truncate">{data.Description}</p>
         )}
 
         <AttachmentsBlock files={files} />
@@ -253,8 +248,8 @@ function StatusUpdatedCard({
   files,
 }: {
   data: Record<string, string>;
-  rawLines: string[];
-  files: MessageFile[];
+  rawLines: Array<string>;
+  files: Array<MessageFile>;
 }) {
   return (
     <div>
@@ -270,7 +265,7 @@ function PaymentRecordedCard({
   files,
 }: {
   data: Record<string, string>;
-  files: MessageFile[];
+  files: Array<MessageFile>;
 }) {
   return (
     <div>
@@ -280,8 +275,8 @@ function PaymentRecordedCard({
           [
             ["Receipt #", data["Receipt #"]],
             ["Payment Mode", data["Payment mode"]],
-            ["Proof", data["Proof"]],
-          ] as [string, string][]
+            ["Proof", data.Proof],
+          ] as Array<[string, string]>
         ).filter(([, v]) => v)}
       />
       <AttachmentsBlock files={files} />
@@ -295,8 +290,8 @@ function BulletListCard({
   files,
 }: {
   data: Record<string, string>;
-  rawLines: string[];
-  files: MessageFile[];
+  rawLines: Array<string>;
+  files: Array<MessageFile>;
 }) {
   return (
     <div>
@@ -312,7 +307,7 @@ function DetailsUpdatedCard({
   files,
 }: {
   data: Record<string, string>;
-  files: MessageFile[];
+  files: Array<MessageFile>;
 }) {
   return (
     <div>
@@ -327,7 +322,7 @@ function ThreadArchivedCard({
   files,
 }: {
   data: Record<string, string>;
-  files: MessageFile[];
+  files: Array<MessageFile>;
 }) {
   return (
     <div>
@@ -342,7 +337,7 @@ function GenericCard({
   files,
 }: {
   content: string;
-  files: MessageFile[];
+  files: Array<MessageFile>;
 }) {
   return (
     <div>
@@ -361,7 +356,7 @@ export function SystemMessageCard({
   files,
 }: {
   content: string;
-  files: MessageFile[];
+  files: Array<MessageFile>;
 }) {
   const parsed = parseSystemMessage(content);
 
@@ -391,7 +386,6 @@ export function SystemMessageCard({
       return <DetailsUpdatedCard data={parsed.data} files={files} />;
     case "thread-archived":
       return <ThreadArchivedCard data={parsed.data} files={files} />;
-    case "generic":
     default:
       return <GenericCard content={content} files={files} />;
   }

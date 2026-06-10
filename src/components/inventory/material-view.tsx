@@ -1,15 +1,13 @@
-import {
-  MaterialCard,
-  type MaterialItem,
-} from "@/components/inventory/material-card";
-import {
-  ManageGrid,
-  ManageEmptyState,
-} from "@/components/manage/manage-primitives";
 import { Search } from "lucide-react";
+import type { MaterialItem } from "@/components/inventory/material-card";
+import { MaterialCard } from "@/components/inventory/material-card";
+import {
+  ManageEmptyState,
+  ManageGrid,
+} from "@/components/manage/manage-primitives";
 
 interface MaterialListViewProps {
-  items: MaterialItem[];
+  items: Array<MaterialItem>;
 }
 
 export function MaterialListView({ items }: MaterialListViewProps) {

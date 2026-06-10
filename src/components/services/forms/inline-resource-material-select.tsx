@@ -1,9 +1,10 @@
-"use client";
-
-import { useState } from "react";
-import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useQuery } from "convex/react";
 import { Plus } from "lucide-react";
+import { useState } from "react";
+import type { InventoryItemType } from "@/components/inventory/forms/inventory-item-form";
+import { InventoryItemForm } from "@/components/inventory/forms/inventory-item-form";
+import { MaterialForm } from "@/components/inventory/forms/material-form";
 import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
 import {
   Dialog,
@@ -11,11 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  InventoryItemForm,
-  type InventoryItemType,
-} from "@/components/inventory/forms/inventory-item-form";
-import { MaterialForm } from "@/components/inventory/forms/material-form";
 
 // ── Resource type picker cards ──────────────────────────────────────────
 
@@ -35,8 +31,8 @@ const RESOURCE_TYPE_OPTIONS: Array<{
 ];
 
 type InlineSelectProps = {
-  value: string[];
-  onChange: (value: string[]) => void;
+  value: Array<string>;
+  onChange: (value: Array<string>) => void;
   title?: string;
   placeholder?: string;
 };

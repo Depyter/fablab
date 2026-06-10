@@ -7,6 +7,14 @@ const HOUR_MS = 1000 * 60 * 60;
 
 type TestHarness = Awaited<ReturnType<typeof setupUsers>>;
 
+function expectPresent<T>(value: T | null | undefined, message: string): T {
+  expect(value).toBeDefined();
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
+}
+
 async function createTrackedFile(
   t: TestHarness["t"],
   originalName: string,
@@ -27,6 +35,23 @@ async function createTrackedFile(
   return { blob, storageId };
 }
 
+async function getFirstServiceId(t: TestHarness["t"]) {
+  const service = await t.run(async (ctx) => ctx.db.query("services").first());
+  expect(service).not.toBeNull();
+  if (!service) {
+    throw new Error("Expected a service to exist for this test.");
+  }
+  return service._id;
+}
+
+async function getResourceIdByName(t: TestHarness["t"], name: string) {
+  const resources = await t.run(async (ctx) =>
+    ctx.db.query("resources").collect(),
+  );
+  const resource = resources.find((entry) => entry.name === name);
+  return expectPresent(resource, `Expected resource '${name}' to exist.`)._id;
+}
+
 describe("Service mutations and queries", () => {
   describe("Fabrication services", () => {
     test("default available days to every day and expose linked materials and machines", async () => {
@@ -40,11 +65,7 @@ describe("Service mutations and queries", () => {
         description: "Precision cutting machine",
         status: "Available",
       });
-      const resourceId = await t.run(async (ctx) => {
-        const resources = await ctx.db.query("resources").collect();
-        return resources.find((resource) => resource.name === "Laser Cutter")!
-          ._id;
-      });
+      const resourceId = await getResourceIdByName(t, "Laser Cutter");
 
       const materialId = await tAera.mutation(
         api.materials.mutate.addMaterial,
@@ -185,17 +206,8 @@ describe("Service mutations and queries", () => {
         description: "Secondary cutter",
         status: "Under Maintenance",
       });
-      const { firstMachineId, secondMachineId } = await t.run(async (ctx) => {
-        const resources = await ctx.db.query("resources").collect();
-        return {
-          firstMachineId: resources.find(
-            (resource) => resource.name === "Laser Cutter",
-          )!._id,
-          secondMachineId: resources.find(
-            (resource) => resource.name === "Fiber Laser",
-          )!._id,
-        };
-      });
+      const firstMachineId = await getResourceIdByName(t, "Laser Cutter");
+      const secondMachineId = await getResourceIdByName(t, "Fiber Laser");
 
       const firstMaterialId = await tAera.mutation(
         api.materials.mutate.addMaterial,
@@ -242,10 +254,7 @@ describe("Service mutations and queries", () => {
         status: "Available",
       });
 
-      const serviceId = await t.run(async (ctx) => {
-        const service = await ctx.db.query("services").first();
-        return service!._id;
-      });
+      const serviceId = await getFirstServiceId(t);
 
       await tAera.mutation(api.services.mutate.updateService, {
         service: serviceId,
@@ -410,9 +419,12 @@ describe("Service mutations and queries", () => {
           .filter((q) => q.eq(q.field("name"), "Image Test Service"))
           .unique(),
       );
-      expect(service).not.toBeNull();
-      expect(service?.images).toEqual([img1]);
-      expect(service?.samples).toEqual([sample1]);
+      const existingService = expectPresent(
+        service,
+        "Expected image test service to exist.",
+      );
+      expect(existingService.images).toEqual([img1]);
+      expect(existingService.samples).toEqual([sample1]);
 
       // Check if img1 and sample1 are claimed
       await t.run(async (ctx) => {
@@ -431,13 +443,13 @@ describe("Service mutations and queries", () => {
       // Update images: remove img1, add img2
       // Update samples: add sample2, keep sample1
       await tAera.mutation(api.services.mutate.updateService, {
-        service: service!._id,
+        service: existingService._id,
         images: [img2],
         samples: [sample1, sample2],
       });
 
       const updatedService = await t.run(async (ctx) =>
-        ctx.db.get(service!._id),
+        ctx.db.get(existingService._id),
       );
       expect(updatedService?.images).toEqual([img2]);
       expect(updatedService?.samples).toEqual([sample1, sample2]);
@@ -559,10 +571,7 @@ describe("Service mutations and queries", () => {
         status: "Available",
       });
 
-      const serviceId = await t.run(async (ctx) => {
-        const service = await ctx.db.query("services").first();
-        return service!._id;
-      });
+      const serviceId = await getFirstServiceId(t);
 
       await expect(
         tHarley.mutation(api.services.mutate.updateService, {
@@ -602,10 +611,7 @@ describe("Service mutations and queries", () => {
         status: "Available",
       });
 
-      const serviceId = await t.run(async (ctx) => {
-        const service = await ctx.db.query("services").first();
-        return service!._id;
-      });
+      const serviceId = await getFirstServiceId(t);
 
       await expect(
         tHarley.mutation(api.services.mutate.deleteService, {
@@ -646,10 +652,7 @@ describe("Service mutations and queries", () => {
         description: "Large-format printer",
         status: "Available",
       });
-      const machineId = await t.run(async (ctx) => {
-        const resources = await ctx.db.query("resources").collect();
-        return resources.find((resource) => resource.name === "Prusa XL")!._id;
-      });
+      const machineId = await getResourceIdByName(t, "Prusa XL");
 
       const materialId = await tAera.mutation(
         api.materials.mutate.addMaterial,
@@ -682,10 +685,7 @@ describe("Service mutations and queries", () => {
         status: "Available",
       });
 
-      const serviceId = await t.run(async (ctx) => {
-        const service = await ctx.db.query("services").first();
-        return service!._id;
-      });
+      const serviceId = await getFirstServiceId(t);
 
       const bookingDay = Date.UTC(2026, 5, 25);
       const bookingStart = bookingDay + 10 * HOUR_MS;
@@ -718,7 +718,7 @@ describe("Service mutations and queries", () => {
           .query("resourceUsage")
           .withIndex("by_project", (q) => q.eq("projectId", projectId))
           .first();
-        return usage!._id;
+        return expectPresent(usage, "Expected usage to exist.")._id;
       });
 
       await tAera.mutation(api.projects.mutate.updateUsage, {
@@ -810,7 +810,8 @@ describe("Service mutations and queries", () => {
           .query("services")
           .filter((q) => q.eq(q.field("slug"), "broken-laser"))
           .unique();
-        return service!._id;
+        return expectPresent(service, "Expected broken-laser service to exist.")
+          ._id;
       });
 
       const bookingDay = Date.UTC(2026, 6, 1);

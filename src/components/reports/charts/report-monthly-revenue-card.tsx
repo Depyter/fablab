@@ -1,15 +1,14 @@
-"use client";
-
 import * as React from "react";
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -18,8 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ChartTooltip, ChartContainer } from "./utils";
+import { ChartContainer, ChartTooltip } from "./utils";
 
 const MONTH_NAMES = [
   "Jan",

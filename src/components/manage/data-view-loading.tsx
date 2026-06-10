@@ -1,10 +1,7 @@
-"use client";
-
-import { usePathname, useSearchParams } from "next/navigation";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarLoadingState } from "@/components/calendar/calendar-loading";
-import { getDataViewSection, getProjectsView } from "./data-view-route-state";
 import type { ViewMode } from "@/components/manage/data-view";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getDataViewSection, getProjectsView } from "./data-view-route-state";
 
 const gridSkeletonKeys = Array.from(
   { length: 8 },

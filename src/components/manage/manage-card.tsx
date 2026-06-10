@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +37,6 @@ export function ManageCard({
       {/* Cover */}
       <div className="relative h-36 w-full shrink-0 overflow-hidden bg-muted">
         {coverUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={coverUrl}
             alt={typeof title === "string" ? title : "Cover"}

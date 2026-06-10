@@ -1,8 +1,6 @@
-"use client";
-
+import { FileUpload } from "@/components/file-upload";
 import { withForm } from "@/lib/form-context";
 import { addServiceFormOpts } from "@/types/add-service";
-import { FileUpload } from "@/components/file-upload";
 
 export const SampleProjectsForm = withForm({
   ...addServiceFormOpts,

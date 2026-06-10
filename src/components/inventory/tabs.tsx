@@ -1,17 +1,17 @@
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { BrandTabsList, BrandTabsTrigger } from "@/components/brand/primitives";
-import { InventoryListView } from "@/components/inventory/inventory-view";
-import type { InventoryItem } from "@/components/inventory/inventory-card";
-import { MaterialListView } from "@/components/inventory/material-view";
-import type { MaterialItem } from "@/components/inventory/material-card";
 import { ResourceCategory } from "@convex/constants";
+import { BrandTabsList, BrandTabsTrigger } from "@/components/brand/primitives";
+import type { InventoryItem } from "@/components/inventory/inventory-card";
+import { InventoryListView } from "@/components/inventory/inventory-view";
+import type { MaterialItem } from "@/components/inventory/material-card";
+import { MaterialListView } from "@/components/inventory/material-view";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 interface InventoryTabProps {
-  items: InventoryItem[];
-  materials?: MaterialItem[];
+  items: Array<InventoryItem>;
+  materials?: Array<MaterialItem>;
 }
 
-const EMPTY_MATERIAL_ITEMS: MaterialItem[] = [];
+const EMPTY_MATERIAL_ITEMS: Array<MaterialItem> = [];
 
 export function InventoryTab({
   items,

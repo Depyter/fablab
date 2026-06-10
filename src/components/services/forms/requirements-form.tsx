@@ -1,36 +1,34 @@
-"use client";
-
+import { CirclePlus, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { withForm } from "@/lib/form-context";
-import { addServiceFormOpts } from "@/types/add-service";
-import { FormSection } from "@/components/ui/form-section";
+import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldGroup,
   FieldContent,
+  FieldGroup,
   FieldSet,
 } from "@/components/ui/field";
+import { FormSection } from "@/components/ui/form-section";
 import {
   InputGroup,
-  InputGroupInput,
   InputGroupAddon,
   InputGroupButton,
+  InputGroupInput,
 } from "@/components/ui/input-group";
-import { Button } from "@/components/ui/button";
-import { XIcon, CirclePlus } from "lucide-react";
+import { withForm } from "@/lib/form-context";
+import { addServiceFormOpts } from "@/types/add-service";
 
 export const RequirementsForm = withForm({
   ...addServiceFormOpts,
   render: function RequirementsRender({ form }) {
     const requirements = form.state.values.requirements;
-    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
     const nextRequirementKeyRef = useRef(0);
     const createRequirementKey = () =>
       `requirement-${nextRequirementKeyRef.current++}`;
     const [requirementKeys, setRequirementKeys] = useState(() =>
       requirements.map(() => createRequirementKey()),
     );
-
+    // biome-ignore lint: createRequirementKey is stable (only reads from ref)
     useEffect(() => {
       setRequirementKeys((prev) => {
         if (prev.length === requirements.length) return prev;
@@ -41,6 +39,7 @@ export const RequirementsForm = withForm({
           ...prev,
           ...Array.from(
             { length: requirements.length - prev.length },
+
             createRequirementKey,
           ),
         ];

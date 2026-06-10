@@ -1,16 +1,14 @@
-"use client";
-
-import { X, Play } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { FileAttachmentThumbnail } from "@/components/chat/file-attachment";
 import { cn } from "@/lib/utils";
-import { PendingAttachment } from "../types";
+import type { PendingAttachment } from "../types";
 
 // ---------------------------------------------------------------------------
 // PendingAttachmentStrip — thumbnail strip shown above the input
 // ---------------------------------------------------------------------------
 
 interface PendingAttachmentStripProps {
-  attachments: PendingAttachment[];
+  attachments: Array<PendingAttachment>;
   onRemove: (index: number) => void;
 }
 
@@ -38,7 +36,6 @@ export function PendingAttachmentStrip({
           </button>
 
           {attachment.fileType.startsWith("image/") && attachment.previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={attachment.previewUrl}
               alt={attachment.fileName}
@@ -54,6 +51,8 @@ export function PendingAttachmentStrip({
             <div className="relative w-full h-full bg-black">
               <video
                 src={attachment.previewUrl}
+                muted
+                playsInline
                 className="w-full h-full object-cover opacity-80"
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

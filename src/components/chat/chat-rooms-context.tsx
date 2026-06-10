@@ -1,9 +1,5 @@
-"use client";
-
+import type { Doc, Id } from "@convex/_generated/dataModel";
 import * as React from "react";
-import { useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 
 export interface ChatThreadSummary {
   _id: string;
@@ -23,35 +19,33 @@ export interface ChatRoomSummary {
   lastMessageText?: string;
   lastMessageAt?: number;
   unreadCount?: number;
-  threads?: ChatThreadSummary[];
+  threads?: Array<ChatThreadSummary>;
 }
 
 interface ChatRoomsContextValue {
-  roomList: ChatRoomSummary[];
-  isLoading: boolean;
+  roomList: Array<ChatRoomSummary>;
+  isPending: boolean;
 }
 
 const ChatRoomsContext = React.createContext<ChatRoomsContextValue | null>(
   null,
 );
 
-export function ChatRoomsProvider({ children }: { children: React.ReactNode }) {
-  const rooms = useQuery(api.chat.query.getRooms);
-
+export function ChatRoomsProvider({
+  children,
+  isPending,
+  rooms,
+}: React.PropsWithChildren<{
+  rooms: Array<Doc<"rooms">> | undefined;
+  isPending: boolean;
+}>) {
   const roomList = React.useMemo(
-    () => (rooms?.filter(Boolean) as ChatRoomSummary[]) ?? [],
+    () => (rooms?.filter(Boolean) as Array<ChatRoomSummary>) ?? [],
     [rooms],
   );
 
-  const isLoading = rooms === undefined;
-
-  const value = React.useMemo(
-    () => ({ roomList, isLoading }),
-    [roomList, isLoading],
-  );
-
   return (
-    <ChatRoomsContext.Provider value={value}>
+    <ChatRoomsContext.Provider value={{ roomList, isPending }}>
       {children}
     </ChatRoomsContext.Provider>
   );

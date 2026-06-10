@@ -1,3 +1,4 @@
+// biome-ignore-all lint/style/noNonNullAssertion: Biome cannot infer properly that asserted values exist.
 import { describe, expect, test } from "vitest";
 import { api } from "../convex/_generated/api";
 import { flushScheduledFunctions, setupProject, setupUsers } from "./helper";

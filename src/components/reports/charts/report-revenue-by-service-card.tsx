@@ -1,8 +1,8 @@
-"use client";
-
+import type { Id } from "@convex/_generated/dataModel";
 import * as React from "react";
-import { PieChart, Pie, Cell, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -11,9 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { Id } from "@convex/_generated/dataModel";
-import { PIE_COLORS, PieTooltip, ChartContainer } from "./utils";
+import { ChartContainer, PIE_COLORS, PieTooltip } from "./utils";
 
 interface ReportRevenueByServiceCardProps {
   byService: Array<{
@@ -36,15 +34,13 @@ export function ReportRevenueByServiceCard({
   byService,
   isLoading,
 }: ReportRevenueByServiceCardProps) {
-  const formatCurrency = (amount: number) => currencyFormatter.format(amount);
-
   const chartData = React.useMemo(
     () =>
       byService
         ?.map((svc, i) => ({
           name: svc.serviceName,
           value: svc.revenue,
-          formattedValue: formatCurrency(svc.revenue),
+          formattedValue: currencyFormatter.format(svc.revenue),
           fill: PIE_COLORS[i % PIE_COLORS.length],
         }))
         .sort((a, b) => b.value - a.value) ?? [],

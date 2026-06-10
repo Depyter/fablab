@@ -1,6 +1,3 @@
-"use client";
-
-import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,11 +50,9 @@ export function BannedUserDialog({
   actionLabel = "Back to Login",
   redirectTo = "/login",
 }: BannedUserDialogProps) {
-  const router = useRouter();
-
   const handleContinue = async () => {
     await authClient.signOut();
-    router.replace(redirectTo);
+    window.location.replace(redirectTo);
   };
 
   return (

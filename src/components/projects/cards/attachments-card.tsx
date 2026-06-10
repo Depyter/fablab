@@ -1,10 +1,8 @@
-"use client";
-
-import { ProjectAttachments } from "@/components/projects/project-attachments";
-import { FileUpload } from "@/components/file-upload/file-upload";
-import { UploadedFile } from "@/components/file-upload/types";
-import { DetailCard } from "./detail-card";
 import { toast } from "sonner";
+import { FileUpload } from "@/components/file-upload/file-upload";
+import type { UploadedFile } from "@/components/file-upload/types";
+import { ProjectAttachments } from "@/components/projects/project-attachments";
+import { DetailCard } from "./detail-card";
 
 interface ResolvedFile {
   url?: string | null;
@@ -13,7 +11,7 @@ interface ResolvedFile {
 }
 
 interface AttachmentsCardProps {
-  resolvedFiles?: ResolvedFile[] | null;
+  resolvedFiles?: Array<ResolvedFile> | null;
 
   // Edit controls
   canEdit: boolean;
@@ -24,8 +22,8 @@ interface AttachmentsCardProps {
   onCancel: () => void;
 
   // Edit field values
-  editFiles: UploadedFile[];
-  setEditFiles: (files: UploadedFile[]) => void;
+  editFiles: Array<UploadedFile>;
+  setEditFiles: (files: Array<UploadedFile>) => void;
 }
 
 export function AttachmentsCard({
@@ -74,13 +72,17 @@ export function AttachmentsCard({
         />
       ) : (
         <ProjectAttachments
-          files={(resolvedFiles ?? [])
-            .filter((f) => !!f.url)
-            .map((f) => ({
-              url: f.url!,
-              type: f.type,
-              originalName: f.originalName,
-            }))}
+          files={(resolvedFiles ?? []).flatMap((file) =>
+            file.url
+              ? [
+                  {
+                    url: file.url,
+                    type: file.type,
+                    originalName: file.originalName,
+                  },
+                ]
+              : [],
+          )}
         />
       )}
     </DetailCard>

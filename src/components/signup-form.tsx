@@ -1,14 +1,12 @@
-"use client";
-import { cn } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { Route } from "@/app/_public/signup";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { authClient } from "../lib/auth-client";
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { getSafeReturnTo } from "@/lib/auth-redirect";
-import Link from "next/link";
 
 export function SignUpForm({
   className,
@@ -20,8 +18,8 @@ export function SignUpForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const redirectTo = getSafeReturnTo(searchParams.get("redirectTo"));
+
+  const { redirect } = Route.useSearch();
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -37,14 +35,12 @@ export function SignUpForm({
       return;
     }
 
-    setIsLoading(true);
-
     try {
       const result = await authClient.signUp.email({
         name,
         email,
         password,
-        callbackURL: redirectTo,
+        callbackURL: redirect,
       });
 
       if (result?.error) {
@@ -71,7 +67,7 @@ export function SignUpForm({
           <p className="text-muted-foreground text-sm">
             This is a preview environment. Sign up with email or{" "}
             <Link
-              href={`/login${searchParams.toString() ? `?${searchParams.toString()}` : ""}`}
+              to={"/login"}
               className="underline underline-offset-4 hover:text-primary"
             >
               sign in

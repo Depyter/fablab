@@ -21,17 +21,17 @@ import type {
 } from "./types";
 import { normalizeCalendarBookingToDayWindow } from "./windows";
 
-function buildResourcesById(resources: CalendarFrameResource[]) {
+function buildResourcesById(resources: Array<CalendarFrameResource>) {
   return new Map(resources.map((resource) => [resource._id, resource]));
 }
 
-function buildServicesById(services: CalendarFrameService[]) {
+function buildServicesById(services: Array<CalendarFrameService>) {
   return new Map(services.map((service) => [service._id, service]));
 }
 
 function buildResourceMachines(
-  resources: CalendarFrameResource[],
-): CalendarMachine[] {
+  resources: Array<CalendarFrameResource>,
+): Array<CalendarMachine> {
   return resources.map((resource) => ({
     id: resource._id,
     name: resource.name,
@@ -46,12 +46,12 @@ function buildResourceMachines(
 }
 
 function buildServiceMachines(
-  services: CalendarFrameService[],
-): CalendarMachine[] {
+  services: Array<CalendarFrameService>,
+): Array<CalendarMachine> {
   return services.map((service) => ({
     id: service._id,
     name: service.name,
-    href: `/services/${service.name}`,
+    href: `/dashboard/services/${service.slug}`,
     status:
       service.status === ServiceStatus.UNAVAILABLE
         ? ResourceStatus.UNAVAILABLE
@@ -123,7 +123,7 @@ function buildCalendarRangeEvent(args: {
 
 export function buildBookingCalendarViewModels(args: {
   frame?: CalendarFrameData | null;
-  bookings: CalendarBookingItem[];
+  bookings: Array<CalendarBookingItem>;
   dayRange: { startTime: number; endTime: number };
   activeTab: CalendarTab;
   viewMode: CalendarViewMode;

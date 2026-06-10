@@ -1,17 +1,13 @@
-"use client";
-
-import {
-  InventoryCard,
-  type InventoryItem,
-} from "@/components/inventory/inventory-card";
-import {
-  ManageGrid,
-  ManageEmptyState,
-} from "@/components/manage/manage-primitives";
 import { Search } from "lucide-react";
+import type { InventoryItem } from "@/components/inventory/inventory-card";
+import { InventoryCard } from "@/components/inventory/inventory-card";
+import {
+  ManageEmptyState,
+  ManageGrid,
+} from "@/components/manage/manage-primitives";
 
 interface InventoryListViewProps {
-  items: InventoryItem[];
+  items: Array<InventoryItem>;
 }
 
 export function InventoryListView({ items }: InventoryListViewProps) {

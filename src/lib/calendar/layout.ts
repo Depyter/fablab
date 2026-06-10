@@ -58,7 +58,7 @@ export interface CalendarWorkshopSlotCluster {
   pendingCount: number;
   /** Human-readable label like "2 slots available", or null if fully booked. */
   availableLabel: string | null;
-  members: CalendarMachineUsage[];
+  members: Array<CalendarMachineUsage>;
 }
 
 export type CalendarDayTrackEntry =
@@ -77,14 +77,14 @@ export type CalendarDayScheduleRow =
       kind: "track";
       machine: CalendarMachine;
       machineStatus: CalendarMachineStatus;
-      entries: CalendarDayTrackEntry[];
+      entries: Array<CalendarDayTrackEntry>;
       isFirstTrack: boolean;
       rowHeight: number;
     };
 
 function getCalendarMachineStatus(
   machine: CalendarMachine,
-  machineUsages: CalendarMachineUsage[],
+  machineUsages: Array<CalendarMachineUsage>,
   nowDecimal: number,
 ): CalendarMachineStatus {
   if (machine.status === ResourceStatus.UNAVAILABLE) {
@@ -121,7 +121,7 @@ function getWorkshopMemberSortValue(
   }
 }
 
-function buildWorkshopSlotClusters(usages: CalendarMachineUsage[]) {
+function buildWorkshopSlotClusters(usages: Array<CalendarMachineUsage>) {
   // Separate available-slot placeholders (projectId === null) from real
   // project usages. At most one placeholder exists per (machineId, startTime,
   // endTime) – it carries the availability label.
@@ -133,7 +133,7 @@ function buildWorkshopSlotClusters(usages: CalendarMachineUsage[]) {
     return false;
   });
 
-  const clusters = new Map<string, CalendarMachineUsage[]>();
+  const clusters = new Map<string, Array<CalendarMachineUsage>>();
 
   for (const usage of projectUsages) {
     const key = `${usage.machineId}:${usage.startTime}:${usage.endTime}`;
@@ -186,8 +186,8 @@ function buildWorkshopSlotClusters(usages: CalendarMachineUsage[]) {
 
 function buildDayTrackEntries(
   machine: CalendarMachine,
-  usages: CalendarMachineUsage[],
-): CalendarDayTrackEntry[] {
+  usages: Array<CalendarMachineUsage>,
+): Array<CalendarDayTrackEntry> {
   if (machine.serviceCategoryType === "WORKSHOP") {
     return buildWorkshopSlotClusters(usages);
   }
@@ -202,7 +202,7 @@ function buildDayTrackEntries(
     (u) => u.serviceCategoryType !== "WORKSHOP",
   );
 
-  const entries: CalendarDayTrackEntry[] = [];
+  const entries: Array<CalendarDayTrackEntry> = [];
 
   if (workshopUsages.length > 0) {
     const clusters = buildWorkshopSlotClusters(workshopUsages);
@@ -223,9 +223,9 @@ function buildDayTrackEntries(
 }
 
 export function packCalendarTracks<T>(
-  items: T[],
+  items: Array<T>,
   getRange: (item: T) => CalendarAbsoluteTimeRange,
-): CalendarPackedTrackItem<T>[] {
+): Array<CalendarPackedTrackItem<T>> {
   const sortedItems = [...items].sort((left, right) => {
     const leftRange = getRange(left);
     const rightRange = getRange(right);
@@ -235,7 +235,7 @@ export function packCalendarTracks<T>(
       leftRange.endTime - rightRange.endTime
     );
   });
-  const tracks: T[][] = [];
+  const tracks: Array<Array<T>> = [];
   const placements: Array<{ item: T; trackIndex: number }> = [];
 
   for (const item of sortedItems) {
@@ -269,8 +269,10 @@ export function packCalendarTracks<T>(
   }));
 }
 
-export function groupCalendarUsagesByMachine(usages: CalendarMachineUsage[]) {
-  const grouped = new Map<string, CalendarMachineUsage[]>();
+export function groupCalendarUsagesByMachine(
+  usages: Array<CalendarMachineUsage>,
+) {
+  const grouped = new Map<string, Array<CalendarMachineUsage>>();
 
   for (const usage of usages) {
     const machineUsages = grouped.get(usage.machineId);
@@ -289,8 +291,10 @@ export function groupCalendarUsagesByMachine(usages: CalendarMachineUsage[]) {
   return grouped;
 }
 
-export function groupCalendarMachinesBySection(machines: CalendarMachine[]) {
-  const grouped = new Map<string, CalendarMachine[]>();
+export function groupCalendarMachinesBySection(
+  machines: Array<CalendarMachine>,
+) {
+  const grouped = new Map<string, Array<CalendarMachine>>();
 
   for (const machine of machines) {
     const key = machine.group ?? "";
@@ -309,11 +313,11 @@ export function groupCalendarMachinesBySection(machines: CalendarMachine[]) {
 }
 
 export function buildCalendarDayScheduleRows(args: {
-  machines: CalendarMachine[];
-  usages: CalendarMachineUsage[];
+  machines: Array<CalendarMachine>;
+  usages: Array<CalendarMachineUsage>;
   nowDecimal: number;
 }) {
-  const rows: CalendarDayScheduleRow[] = [];
+  const rows: Array<CalendarDayScheduleRow> = [];
   const sections = groupCalendarMachinesBySection(args.machines);
   const usagesByMachine = groupCalendarUsagesByMachine(args.usages);
 
@@ -369,7 +373,7 @@ export function buildCalendarDayScheduleRows(args: {
         continue;
       }
 
-      const entriesByTrack = new Map<number, CalendarDayTrackEntry[]>();
+      const entriesByTrack = new Map<number, Array<CalendarDayTrackEntry>>();
 
       for (const placement of packedEntries) {
         const trackEntries = entriesByTrack.get(placement.trackIndex);

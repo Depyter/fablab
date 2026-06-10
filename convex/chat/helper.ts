@@ -1,7 +1,6 @@
-import { Doc } from "../_generated/dataModel";
-import { MutationCtx, QueryCtx } from "../_generated/server";
 import { ConvexError } from "convex/values";
-import { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 /**
  * Check whether a user has access to a room.

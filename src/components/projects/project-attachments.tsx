@@ -1,8 +1,7 @@
-"use client";
-
-import { MediaGallery, type MediaFile } from "@/components/chat/media-gallery";
+import { is3DModel } from "@/components/3d/utils";
 import { FileAttachmentCard } from "@/components/chat/file-attachment";
-import { is3DModel } from "@/components/3d/modelViewer";
+import type { MediaFile } from "@/components/chat/media-gallery";
+import { MediaGallery } from "@/components/chat/media-gallery";
 
 export interface AttachmentFile {
   url: string;
@@ -11,7 +10,7 @@ export interface AttachmentFile {
 }
 
 interface ProjectAttachmentsProps {
-  files: AttachmentFile[];
+  files: Array<AttachmentFile>;
 }
 
 /**
@@ -24,7 +23,7 @@ export function ProjectAttachments({ files }: ProjectAttachmentsProps) {
     return <p className="text-sm text-muted-foreground">No files uploaded.</p>;
   }
 
-  const mediaFiles: MediaFile[] = files
+  const mediaFiles: Array<MediaFile> = files
     .filter(
       (f) =>
         f.type?.startsWith("image/") ||

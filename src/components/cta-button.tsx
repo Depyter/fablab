@@ -1,5 +1,3 @@
-"use client";
-
 import { GsapArrowButton } from "@/components/ui/push-up-button";
 
 type CtaButtonProps = {

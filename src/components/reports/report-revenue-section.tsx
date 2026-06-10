@@ -1,9 +1,6 @@
-"use client";
-
-import * as React from "react";
+import type { Id } from "@convex/_generated/dataModel";
 import { ReportMonthlyRevenueCard } from "@/components/reports/charts/report-monthly-revenue-card";
 import { ReportRevenueByServiceCard } from "@/components/reports/charts/report-revenue-by-service-card";
-import type { Id } from "@convex/_generated/dataModel";
 
 interface ReportRevenueSectionProps {
   monthly: Array<{

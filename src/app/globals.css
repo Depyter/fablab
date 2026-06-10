@@ -60,6 +60,7 @@
 }
 
 :root {
+  --font-mono: "Roboto Mono", monospace;
   /* ── FabLab brand tokens ─────────────────────────────────────────────── */
   --fab-bg-deep: #f0eeff;
   --fab-bg-sidebar: #e8e4fb;

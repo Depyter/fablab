@@ -1,8 +1,8 @@
-"use client";
-
+import type { Id } from "@convex/_generated/dataModel";
 import * as React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -11,9 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { Id } from "@convex/_generated/dataModel";
-import { ChartTooltip, ChartContainer } from "./utils";
+import { ChartContainer, ChartTooltip } from "./utils";
 
 interface ReportTopServicesCardProps {
   topServices: Array<{

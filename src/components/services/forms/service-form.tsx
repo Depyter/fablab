@@ -1,40 +1,32 @@
-"use client";
-
-import * as React from "react";
-import { useState, createContext } from "react";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ActionDialog } from "@/components/action-dialog";
-import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
-import Link from "next/link";
+import type { ServiceStatusType } from "@convex/constants";
+import { FILE_CATEGORIES, ServiceStatus } from "@convex/constants";
+import type * as React from "react";
+import { createContext, useState } from "react";
 import { toast } from "sonner";
-import { useAppForm } from "@/lib/form-context";
 import type { Id } from "@/../convex/_generated/dataModel";
-
-import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
-import { PricingForm } from "@/components/services/forms/pricing-form";
-import { RequirementsForm } from "@/components/services/forms/requirements-form";
-import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
-import { FormSection } from "@/components/ui/form-section";
+import { ActionDialog } from "@/components/action-dialog";
 import { FileUpload } from "@/components/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
-import { AddServiceFormValues } from "@/types/add-service";
+import { DataViewPageHeader } from "@/components/manage/data-view-page-header";
+import { GeneralInfoForm } from "@/components/services/forms/general-info-form";
 import {
-  ServiceStatus,
-  type ServiceStatusType,
-  FILE_CATEGORIES,
-} from "@convex/constants";
+  InlineMaterialSelect,
+  InlineResourceSelect,
+} from "@/components/services/forms/inline-resource-material-select";
+import { MultipleSelectForm } from "@/components/services/forms/multiple-select-form";
+import { PricingForm } from "@/components/services/forms/pricing-form";
+import { RequirementsForm } from "@/components/services/forms/requirements-form";
+import { Button } from "@/components/ui/button";
+import { FormSection } from "@/components/ui/form-section";
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import {
-  InlineResourceSelect,
-  InlineMaterialSelect,
-} from "@/components/services/forms/inline-resource-material-select";
+import { useAppForm } from "@/lib/form-context";
+import type { AddServiceFormValues } from "@/types/add-service";
 
 const acceptedFileTypeOptions = Object.keys(FILE_CATEGORIES).map(
   (category) => ({
@@ -48,7 +40,7 @@ const statusOptions = [
   { label: ServiceStatus.UNAVAILABLE, value: ServiceStatus.UNAVAILABLE },
 ];
 
-const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+const EMPTY_UPLOADED_FILES: Array<UploadedFile> = [];
 
 /** @internal Context for passing a locked service-category mode to sub-forms. */
 export const ServiceFormModeContext = createContext<
@@ -58,8 +50,8 @@ export const ServiceFormModeContext = createContext<
 export interface ServiceFormProps {
   title: string;
   initialValues: AddServiceFormValues;
-  initialImages?: UploadedFile[];
-  initialSamples?: UploadedFile[];
+  initialImages?: Array<UploadedFile>;
+  initialSamples?: Array<UploadedFile>;
   onSubmit: (values: AddServiceFormValues) => Promise<boolean>;
   onDiscard: (formValues: AddServiceFormValues) => Promise<void> | void;
   submitError: string | null;
@@ -80,12 +72,14 @@ export function ServiceForm({
   onDiscard,
   submitError,
   mode,
-  backHref = "/dashboard/services",
+  backHref: _backHref = "/dashboard/services",
   footer,
 }: ServiceFormProps) {
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [imageFiles, setImageFiles] = useState(() => initialImages);
+  const [sampleFiles, setSampleFiles] = useState(() => initialSamples);
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
   const form = useAppForm({
@@ -96,10 +90,15 @@ export function ServiceForm({
     },
   });
 
+  const resetDisplayedFiles = () => {
+    setImageFiles(initialImages);
+    setSampleFiles(initialSamples);
+  };
+
   return (
     <ServiceFormModeContext.Provider value={mode}>
       <DataViewPageHeader>
-        {/*<Link href={backHref}>
+        {/* <Link href={backHref}>
           <Button
             variant="outline"
             size="icon"
@@ -121,6 +120,7 @@ export function ServiceForm({
             onConfirm={async () => {
               await onDiscard(form.state.values);
               form.reset();
+              resetDisplayedFiles();
             }}
             title="Discard changes?"
             description="Are you sure you want to discard your changes? This cannot be undone."
@@ -168,12 +168,13 @@ export function ServiceForm({
                 <FileUpload
                   title="Sample Projects"
                   accept="*/*"
-                  value={initialSamples}
-                  onFilesChange={(files) =>
+                  value={sampleFiles}
+                  onFilesChange={(files) => {
+                    setSampleFiles(files);
                     field.handleChange(
                       files.map((f) => f.storageId as Id<"_storage">),
-                    )
-                  }
+                    );
+                  }}
                   onUploadingChange={setSamplesUploading}
                   onUploadError={(error) => {
                     toast.error(error.message || "Failed to upload file");
@@ -198,12 +199,13 @@ export function ServiceForm({
                   <FileUpload
                     title="Thumbnail *"
                     accept="*/*"
-                    value={initialImages}
-                    onFilesChange={(files) =>
+                    value={imageFiles}
+                    onFilesChange={(files) => {
+                      setImageFiles(files);
                       field.handleChange(
                         files.map((f) => f.storageId as Id<"_storage">),
-                      )
-                    }
+                      );
+                    }}
                     onUploadingChange={setThumbnailUploading}
                     onUploadError={(error) => {
                       toast.error(error.message || "Failed to upload file");
@@ -267,9 +269,9 @@ export function ServiceForm({
                 name="status"
                 children={(field) => (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+                    <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                       Status
-                    </label>
+                    </div>
                     <Select
                       value={field.state.value}
                       onValueChange={(val) =>

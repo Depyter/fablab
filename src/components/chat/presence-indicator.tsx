@@ -1,10 +1,7 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import usePresence from "@convex-dev/presence/react";
+import { useQuery } from "convex/react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -99,7 +96,6 @@ export function PresenceIndicator({
               )}
             >
               {picUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={picUrl}
                   alt={presence.userId}

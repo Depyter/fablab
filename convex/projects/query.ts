@@ -1,10 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
-import { Id, Doc } from "../_generated/dataModel";
-import { QueryCtx } from "../_generated/server";
-import { UserRole } from "../constants";
-import { authQuery } from "../helper";
-
 import {
   addLabDays,
   endOfLabMonth,
@@ -15,6 +10,10 @@ import {
   startOfLabMonth,
   startOfLabWeek,
 } from "../../src/lib/lab-time";
+import type { Doc, Id } from "../_generated/dataModel";
+import type { QueryCtx } from "../_generated/server";
+import { UserRole } from "../constants";
+import { authQuery } from "../helper";
 
 const PROJECT_WEEK_STARTS_ON = 1 as const;
 type StatusUnion =
@@ -122,16 +121,18 @@ export const getProjects = authQuery({
     const isPrivileged = role === UserRole.ADMIN || role === UserRole.MAKER;
     const filterByAssignedMaker =
       args.assignedToMe === true && role === UserRole.MAKER;
+    const searchText = args.searchText?.trim();
+    const projectType = args.type;
 
     const hasStatusFilter =
       args.statusFilter !== undefined && args.statusFilter !== "all";
 
     // ── Search path: uses the search index, applies status as a filter field ─
-    if (args.searchText && args.searchText.trim() !== "") {
+    if (searchText) {
       let searchQuery = ctx.db
         .query("projects")
         .withSearchIndex("search_body", (q) => {
-          const base = q.search("searchText", args.searchText!);
+          const base = q.search("searchText", searchText);
           return hasStatusFilter
             ? base.eq("status", args.statusFilter as StatusUnion)
             : base;
@@ -149,9 +150,9 @@ export const getProjects = authQuery({
         );
       }
 
-      if (args.type) {
+      if (projectType) {
         searchQuery = searchQuery.filter((q) =>
-          q.eq(q.field("type"), args.type!),
+          q.eq(q.field("type"), projectType),
         );
       }
 
@@ -188,7 +189,7 @@ export const getProjects = authQuery({
             return false;
           }
 
-          if (args.type && project.type !== args.type) {
+          if (projectType && project.type !== projectType) {
             return false;
           }
 
@@ -204,64 +205,57 @@ export const getProjects = authQuery({
     // ── Sorted / filtered path ────────────────────────────────────────────────
     const baseQuery = ctx.db.query("projects");
 
-    let orderedQuery;
-
     // Track whether the by_assignedMaker index already narrowed results
     // to avoid a redundant .filter() later.
     const assignedMakerIndexUsed = filterByAssignedMaker && !hasStatusFilter;
 
-    if (assignedMakerIndexUsed) {
-      orderedQuery = ctx.db
-        .query("projects")
-        .withIndex("by_assignedMaker", (q) => q.eq("assignedMaker", callerId))
-        .order(args.sortBy === "oldest" ? "asc" : "desc");
-    } else {
-      switch (args.sortBy) {
-        case "price-high":
-        case "price-low":
-          // No price index; fall through to default creation-time order
-          orderedQuery = baseQuery.order(
-            args.sortBy === "price-high" ? "desc" : "asc",
-          );
-          break;
-        case "name-az":
-          orderedQuery = baseQuery.order("asc");
-          break;
-        case "oldest":
-          if (hasStatusFilter) {
-            orderedQuery = baseQuery
-              .withIndex("by_status", (q) =>
-                q.eq("status", args.statusFilter as StatusUnion),
-              )
-              .order("asc");
-          } else if (args.type) {
-            orderedQuery = ctx.db
-              .query("projects")
-              .withIndex("by_type", (q) => q.eq("type", args.type!))
-              .order("asc");
-          } else {
-            orderedQuery = baseQuery.order("asc");
+    const orderedQuery = assignedMakerIndexUsed
+      ? ctx.db
+          .query("projects")
+          .withIndex("by_assignedMaker", (q) => q.eq("assignedMaker", callerId))
+          .order(args.sortBy === "oldest" ? "asc" : "desc")
+      : (() => {
+          switch (args.sortBy) {
+            case "price-high":
+            case "price-low":
+              // No price index; fall through to default creation-time order
+              return baseQuery.order(
+                args.sortBy === "price-high" ? "desc" : "asc",
+              );
+            case "name-az":
+              return baseQuery.order("asc");
+            case "oldest":
+              if (hasStatusFilter) {
+                return baseQuery
+                  .withIndex("by_status", (q) =>
+                    q.eq("status", args.statusFilter as StatusUnion),
+                  )
+                  .order("asc");
+              }
+              if (projectType) {
+                return ctx.db
+                  .query("projects")
+                  .withIndex("by_type", (q) => q.eq("type", projectType))
+                  .order("asc");
+              }
+              return baseQuery.order("asc");
+            default:
+              if (hasStatusFilter) {
+                return baseQuery
+                  .withIndex("by_status", (q) =>
+                    q.eq("status", args.statusFilter as StatusUnion),
+                  )
+                  .order("desc");
+              }
+              if (projectType) {
+                return ctx.db
+                  .query("projects")
+                  .withIndex("by_type", (q) => q.eq("type", projectType))
+                  .order("desc");
+              }
+              return baseQuery.order("desc");
           }
-          break;
-        case "newest":
-        default:
-          if (hasStatusFilter) {
-            orderedQuery = baseQuery
-              .withIndex("by_status", (q) =>
-                q.eq("status", args.statusFilter as StatusUnion),
-              )
-              .order("desc");
-          } else if (args.type) {
-            orderedQuery = ctx.db
-              .query("projects")
-              .withIndex("by_type", (q) => q.eq("type", args.type!))
-              .order("desc");
-          } else {
-            orderedQuery = baseQuery.order("desc");
-          }
-          break;
-      }
-    }
+        })();
 
     let query = orderedQuery;
 
@@ -284,8 +278,8 @@ export const getProjects = authQuery({
       );
     }
 
-    if (args.type) {
-      query = query.filter((q) => q.eq(q.field("type"), args.type!));
+    if (projectType) {
+      query = query.filter((q) => q.eq(q.field("type"), projectType));
     }
 
     const result = await query.paginate(args.paginationOpts);
@@ -669,9 +663,9 @@ export const getWorkshopEvents = authQuery({
         uniqueServiceIds.map((id) => ctx.db.get(id)),
       );
       const serviceMap = new Map(
-        serviceDocs
-          .filter((d): d is NonNullable<typeof d> => d !== null)
-          .map((d) => [d._id, { name: d.name, slug: d.slug }]),
+        serviceDocs.flatMap((d) =>
+          d ? [[d._id, { name: d.name, slug: d.slug }]] : [],
+        ),
       );
 
       // 5. Collect resource & material IDs from all sessions
@@ -689,14 +683,14 @@ export const getWorkshopEvents = authQuery({
         Promise.all(Array.from(allMaterialIds).map((id) => ctx.db.get(id))),
       ]);
       const resourceMap = new Map(
-        resourceDocs
-          .filter((d): d is NonNullable<typeof d> => d !== null)
-          .map((d) => [d._id, { _id: d._id, name: d.name }]),
+        resourceDocs.flatMap((d) =>
+          d ? [[d._id, { _id: d._id, name: d.name }]] : [],
+        ),
       );
       const materialMap = new Map(
-        materialDocs
-          .filter((d): d is NonNullable<typeof d> => d !== null)
-          .map((d) => [d._id, { _id: d._id, name: d.name }]),
+        materialDocs.flatMap((d) =>
+          d ? [[d._id, { _id: d._id, name: d.name }]] : [],
+        ),
       );
 
       // 7. Pre-fetch the client's profile and threads for attendee data
@@ -877,9 +871,9 @@ export const getWorkshopEvents = authQuery({
       uniqueServiceIds.map((id) => ctx.db.get(id)),
     );
     const serviceMap = new Map(
-      serviceDocs
-        .filter((d): d is NonNullable<typeof d> => d !== null)
-        .map((d) => [d._id, { name: d.name, slug: d.slug }]),
+      serviceDocs.flatMap((d) =>
+        d ? [[d._id, { name: d.name, slug: d.slug }]] : [],
+      ),
     );
 
     // Load all workshop projects in time range for batch matching
@@ -995,9 +989,10 @@ export const getWorkshopEvents = authQuery({
       ),
     );
     const threadMap = new Map(
-      threadDocs
-        .filter((t): t is NonNullable<typeof t> => t !== null)
-        .map((t) => [t.projectId!, t]),
+      threadDocs.flatMap((t) => {
+        if (!t) return [];
+        return [[t.projectId, t]];
+      }),
     );
 
     const uniqueUserIds = Array.from(
@@ -1014,13 +1009,13 @@ export const getWorkshopEvents = authQuery({
 
     const uniqueProfilePics = Array.from(
       new Set(
-        userDocs
-          .filter(
-            (u): u is NonNullable<typeof u> => u !== null && !!u.profilePic,
-          )
-          .map((u) => u!.profilePic!),
+        userDocs.flatMap((u) => {
+          if (!u?.profilePic) return [];
+          return [u.profilePic];
+        }),
       ),
     );
+
     const urlPairs = await Promise.all(
       uniqueProfilePics.map(async (pic) => [
         pic,
@@ -1062,13 +1057,14 @@ export const getWorkshopEvents = authQuery({
         })
         .filter((a): a is NonNullable<typeof a> => a !== null);
 
-      const resolvedResources = Array.from(new Set(t.resourceIds))
-        .map((rid) => resourceMap.get(rid))
-        .filter((r): r is NonNullable<typeof r> => r !== undefined);
+      const resolveIds = <K, V>(ids: K[], map: Map<K, V>): V[] =>
+        [...new Set(ids)].flatMap((id) => {
+          const v = map.get(id);
+          return v !== undefined ? [v] : [];
+        });
 
-      const resolvedMaterials = Array.from(new Set(t.materialIds))
-        .map((mid) => materialMap.get(mid))
-        .filter((m): m is NonNullable<typeof m> => m !== undefined);
+      const resolvedResources = resolveIds(t.resourceIds, resourceMap);
+      const resolvedMaterials = resolveIds(t.materialIds, materialMap);
 
       return {
         sessionId: t.sessionId,

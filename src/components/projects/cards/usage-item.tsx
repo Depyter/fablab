@@ -1,8 +1,17 @@
-"use client";
-
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { DateTimePickerValue } from "@/components/booking/date-time-picker";
+import { DateTimePicker } from "@/components/booking/date-time-picker";
+import type {
+  WorkshopSchedule,
+  WorkshopTimeSlotValue,
+} from "@/components/booking/workshop-time-slot-picker";
+import { WorkshopTimeSlotPicker } from "@/components/booking/workshop-time-slot-picker";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -10,28 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
-import { Id } from "@convex/_generated/dataModel";
-import {
-  DateTimePicker,
-  type DateTimePickerValue,
-} from "@/components/booking/date-time-picker";
-import {
-  WorkshopTimeSlotPicker,
-  type WorkshopTimeSlotValue,
-  type WorkshopSchedule,
-} from "@/components/booking/workshop-time-slot-picker";
-import { useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import {
-  getDurationMinutesFromTimestampRange,
-  getDurationUnitsFromMinutes,
-} from "@/lib/project-pricing";
 import {
   getLabDayKey,
   getLabTimeBlock,
   getLabTimeRangeTimestamps,
 } from "@/lib/lab-time";
+import {
+  getDurationMinutesFromTimestampRange,
+  getDurationUnitsFromMinutes,
+} from "@/lib/project-pricing";
 
 // --- Types ---
 
@@ -102,8 +98,8 @@ export interface ServiceCategoryWorkshop {
 
 export interface ServiceCategoryFabrication {
   type: "FABRICATION";
-  availableDays?: number[];
-  materials?: Id<"materials">[];
+  availableDays?: Array<number>;
+  materials?: Array<Id<"materials">>;
   setupFee: number;
   unitName: string;
   timeRate: number;
@@ -116,7 +112,7 @@ export interface ServiceCategoryFabrication {
 
 export interface PricingService {
   _id: Id<"services">;
-  resources?: Id<"resources">[];
+  resources?: Array<Id<"resources">>;
   serviceCategory: ServiceCategoryWorkshop | ServiceCategoryFabrication;
   name?: string;
 }
@@ -144,7 +140,7 @@ export function nearlyEqual(left: number, right: number) {
   return Math.abs(left - right) <= 0.0001;
 }
 
-export function sameStringSet(left: string[], right: string[]) {
+export function sameStringSet(left: Array<string>, right: Array<string>) {
   if (left.length !== right.length) return false;
   const normalizedLeft = [...left].sort();
   const normalizedRight = [...right].sort();
@@ -163,7 +159,7 @@ export function toMaterialAmountMap(
   return amounts;
 }
 
-export function sortUsages(usages: ResourceUsage[]) {
+export function sortUsages(usages: Array<ResourceUsage>) {
   return [...usages].sort(
     (left, right) =>
       left.startTime - right.startTime || left._id.localeCompare(right._id),
@@ -304,10 +300,10 @@ export function computeUsagePreview(
 }
 
 export function computePeerTimeBlocks(
-  allDrafts: UsageDraft[],
+  allDrafts: Array<UsageDraft>,
   draft: UsageDraft,
   currentLabDate: Date | undefined,
-): { start: string; end: string }[] {
+): Array<{ start: string; end: string }> {
   return allDrafts
     .filter((peer) => peer.key !== draft.key)
     .filter((peer) => {
@@ -346,7 +342,7 @@ const NO_MATERIAL_VALUE = "__no_material__";
 interface UsageScheduleEditorProps {
   draft: UsageDraft;
   service: PricingService;
-  allDrafts: UsageDraft[];
+  allDrafts: Array<UsageDraft>;
   onChange: (nextValue: DateTimePickerValue | WorkshopTimeSlotValue) => void;
 }
 
@@ -387,7 +383,7 @@ function UsageScheduleEditor({
     ...peerTimeBlocks,
   ];
 
-  const groupedSchedules = useMemo((): WorkshopSchedule[] => {
+  const groupedSchedules = useMemo((): Array<WorkshopSchedule> => {
     if (!workshopSessions) return [];
     const dateMap = new Map<number, WorkshopSchedule>();
     for (const session of workshopSessions) {
@@ -437,7 +433,7 @@ function UsageScheduleEditor({
 
 interface UsageMaterialEditorProps {
   draft: UsageDraft;
-  materialOptions: RequestedMaterial[];
+  materialOptions: Array<RequestedMaterial>;
   onAddMaterial: (materialId: string) => void;
   onUpdateAmount: (materialId: string, amountUsed: number) => void;
   onRemoveMaterial: (materialId: string) => void;
@@ -558,10 +554,10 @@ interface UsageDraftItemProps {
   pricingType: "WORKSHOP" | "FABRICATION";
   preview: UsagePreview;
   service: PricingService;
-  editableResources: EditableResource[];
-  editableMaterialDocs: RequestedMaterial[];
+  editableResources: Array<EditableResource>;
+  editableMaterialDocs: Array<RequestedMaterial>;
   isBuyFromLab: boolean;
-  allDrafts: UsageDraft[];
+  allDrafts: Array<UsageDraft>;
   onRemove: () => void;
   onUpdateDraft: (updater: (draft: UsageDraft) => UsageDraft) => void;
 }

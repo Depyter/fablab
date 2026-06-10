@@ -1,8 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
+import { v } from "convex/values";
+import type { Doc } from "../_generated/dataModel";
+import { PROJECT_ARCHIVE_STATUSES } from "../constants";
 import { authQuery } from "../helper";
 import { checkRoomMembership } from "./helper";
-import { v } from "convex/values";
-import { PROJECT_ARCHIVE_STATUSES } from "../constants";
 
 const ARCHIVE_STATUSES = new Set(PROJECT_ARCHIVE_STATUSES);
 
@@ -104,26 +105,22 @@ export const getRooms = authQuery({
     // TODO: PAGINATED QUERY INSTEAD
     // TODO: Split this into lightweight room summaries plus per-room thread
     // queries as chat grows so the shell does not preload every thread up front.
-    let rooms;
+    const isStaff =
+      ctx.profile.role === "admin" || ctx.profile.role === "maker";
 
-    if (ctx.profile.role === "admin" || ctx.profile.role === "maker") {
-      // Admins and makers have implicit access to all rooms
-      rooms = await ctx.db.query("rooms").collect();
-    } else {
-      // Clients only see rooms they're explicitly added to
-      const roomMembers = await ctx.db
+    const rooms: Doc<"rooms">[] = await (async () => {
+      if (isStaff) return ctx.db.query("rooms").collect();
+      const members = await ctx.db
         .query("roomMembers")
         .withIndex("by_participantId", (q) =>
           q.eq("participantId", ctx.profile._id),
         )
         .collect();
-
-      rooms = await Promise.all(
-        roomMembers.map((member) => ctx.db.get(member.roomId)),
+      const resolved = await Promise.all(
+        members.map((m) => ctx.db.get(m.roomId)),
       );
-
-      rooms = rooms.filter((r): r is NonNullable<typeof r> => r !== null);
-    }
+      return resolved.filter((r): r is Doc<"rooms"> => r !== null);
+    })();
 
     const roomsWithThreads = await Promise.all(
       rooms.map(async (room) => {
@@ -132,8 +129,6 @@ export const getRooms = authQuery({
           .withIndex("by_roomId", (q) => q.eq("roomId", room._id))
           .order("desc")
           .collect();
-
-        let roomUnreadCount = 0;
 
         const threadsWithUnreads = await Promise.all(
           threads.map(async (thread) => {
@@ -144,14 +139,10 @@ export const getRooms = authQuery({
               )
               .first();
 
-            const lastReadMessageCount = threadRead?.lastReadMessageCount ?? 0;
-            const messageCount = thread.messageCount ?? 0;
-            const unreadCount = Math.max(
-              0,
-              messageCount - lastReadMessageCount,
-            );
+            const totalMessages = thread.messageCount ?? 0;
+            const readMessages = threadRead?.lastReadMessageCount ?? 0;
 
-            roomUnreadCount += unreadCount;
+            const unreadCount = Math.max(0, totalMessages - readMessages);
 
             return { ...thread, unreadCount };
           }),
@@ -159,8 +150,11 @@ export const getRooms = authQuery({
 
         return {
           ...room,
-          unreadCount: roomUnreadCount,
           threads: threadsWithUnreads,
+          unreadCount: threadsWithUnreads.reduce(
+            (sum, t) => sum + t.unreadCount,
+            0,
+          ),
         };
       }),
     );

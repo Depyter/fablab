@@ -1,7 +1,5 @@
-"use client";
-
-import { InventoryItemForm } from "./inventory-item-form";
 import { ResourceCategory } from "@convex/constants";
+import { InventoryItemForm } from "./inventory-item-form";
 
 interface AddRoomFormProps {
   onSuccess?: () => void;

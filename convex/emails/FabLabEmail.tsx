@@ -1,14 +1,14 @@
 import {
-  Html,
-  Head,
   Body,
-  Container,
-  Section,
-  Row,
   Column,
-  Text,
-  Preview,
+  Container,
   Font,
+  Head,
+  Html,
+  Preview,
+  Row,
+  Section,
+  Text,
 } from "@react-email/components";
 import { ProjectStatus, type ProjectStatusType } from "../constants";
 

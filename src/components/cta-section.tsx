@@ -1,5 +1,3 @@
-"use client";
-
 import { CtaButton } from "@/components/cta-button";
 
 type CtaSectionProps = {

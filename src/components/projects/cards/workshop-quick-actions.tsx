@@ -1,11 +1,9 @@
-"use client";
-
+import type { ProjectStatusType } from "@convex/constants";
+import { Link } from "@tanstack/react-router";
+import { CheckCheck, CreditCard, MessageSquare, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CheckCheck, CreditCard, XCircle, MessageSquare } from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { ProjectStatusType } from "@convex/constants";
 import { getStatusLabel } from "@/lib/project-type-meta";
+import { cn } from "@/lib/utils";
 
 interface WorkshopQuickActionsProps {
   projectId: string;

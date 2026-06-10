@@ -1,14 +1,13 @@
+import type { AuthFunctions } from "@convex-dev/better-auth";
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { components } from "./_generated/api";
-import { DataModel } from "./_generated/dataModel";
-import { betterAuth, BetterAuthOptions } from "better-auth/minimal";
-import authConfig from "./auth.config";
-import { AuthFunctions } from "@convex-dev/better-auth";
-import { internal } from "./_generated/api";
-import { authQuery } from "./helper";
-import authSchema from "./betterAuth/schema";
+import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 import { admin } from "better-auth/plugins";
+import { components, internal } from "./_generated/api";
+import type { DataModel } from "./_generated/dataModel";
+import authConfig from "./auth.config";
+import authSchema from "./betterAuth/schema";
+import { authQuery } from "./helper";
 
 const authfunctions: AuthFunctions = internal.auth;
 
@@ -51,7 +50,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
  * - `preview`      — set by the CI preview workflow via `bunx convex env set`
  */
 function isPreviewEnvironment(): boolean {
-  const env = process.env.NEXTJS_ENV;
+  const env = process.env.VITE_ENV;
   return env === "preview" || env === "development";
 }
 
@@ -118,8 +117,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       user: {
         create: {
           before: async (user, context) => {
+            if (!context) {
+              throw new Error("Better Auth create hook requires a context.");
+            }
+
             const userCount =
-              await context!.context.internalAdapter.countTotalUsers();
+              await context.context.internalAdapter.countTotalUsers();
 
             if (userCount === 0) {
               return {

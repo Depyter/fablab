@@ -1,7 +1,8 @@
+// biome-ignore-all lint/style/noNonNullAssertion: Biome cannot infer properly that asserted values exist.
 import { describe, expect, test } from "vitest";
-import { flushScheduledFunctions, setupUsers } from "./helper";
 import { api, internal } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
+import { flushScheduledFunctions, setupUsers } from "./helper";
 
 const HOUR_MS = 1000 * 60 * 60;
 

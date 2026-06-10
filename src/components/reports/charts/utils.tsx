@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 
 export const CHART_COLORS = [
@@ -32,7 +30,7 @@ export function ChartTooltip({
   label,
 }: {
   active?: boolean;
-  payload?: TooltipEntry[];
+  payload?: Array<TooltipEntry>;
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
@@ -106,7 +104,7 @@ export function PieTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: PieTooltipEntry[];
+  payload?: Array<PieTooltipEntry>;
 }) {
   if (!active || !payload?.length) return null;
   const entry = payload[0];

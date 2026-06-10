@@ -1,13 +1,11 @@
-import { Id } from "@convex/_generated/dataModel";
+import type { Id } from "@convex/_generated/dataModel";
+import type { ResourceUsage, UsageDraft, UsagePreview } from "./usage-item";
 import {
-  type UsageDraft,
-  type ResourceUsage,
-  type UsagePreview,
+  buildBookingRange,
+  isPastBookingRange,
   nearlyEqual,
   sameStringSet,
   toMaterialAmountMap,
-  buildBookingRange,
-  isPastBookingRange,
 } from "./usage-item";
 
 /** Minimum allowed duration for a usage booking (1 hour). */
@@ -18,7 +16,7 @@ export const MIN_USAGE_DURATION_MS = 60 * 60 * 1000;
  * strictly after start). Returns either a Map of booking payloads keyed by
  * draft key, or an error message.
  */
-export function validateUsageBookingPayloads(drafts: UsageDraft[]):
+export function validateUsageBookingPayloads(drafts: Array<UsageDraft>):
   | {
       valid: true;
       bookingPayloads: Map<
@@ -98,7 +96,9 @@ export function hasPastBooking(params: {
  * Collects the set of usage IDs present across drafts that should be retained
  * (drafts whose `usageId` field is non-empty).
  */
-export function extractRetainedUsageIds(drafts: UsageDraft[]): Set<string> {
+export function extractRetainedUsageIds(
+  drafts: Array<UsageDraft>,
+): Set<string> {
   return new Set(
     drafts
       .map((draft) => draft.usageId)
@@ -126,8 +126,7 @@ export function shouldUpdatePricingSnapshot(params: {
   const draftMaterialIds = Object.keys(draft.materialAmounts).sort();
 
   return (
-    !originalUsage ||
-    !originalUsage.pricingSnapshot ||
+    !originalUsage?.pricingSnapshot ||
     !nearlyEqual(
       originalUsage.pricingSnapshot.setupFeePortion,
       draft.setupFeePortion,

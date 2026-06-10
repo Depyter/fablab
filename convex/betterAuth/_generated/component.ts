@@ -122,6 +122,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "banReason"
                     | "banExpires"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -157,6 +158,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "userId"
                     | "impersonatedBy"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -196,6 +198,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -228,6 +231,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -259,6 +263,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "expiresAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -315,6 +320,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "banReason"
                     | "banExpires"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -350,6 +356,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "userId"
                     | "impersonatedBy"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -389,6 +396,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -421,6 +429,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -452,6 +461,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "expiresAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -494,10 +504,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             maximumRowsRead?: number;
             numItems: number;
           };
+          select?: Array<string>;
           sortBy?: { direction: "asc" | "desc"; field: string };
           where?: Array<{
             connector?: "AND" | "OR";
             field: string;
+            mode?: "sensitive" | "insensitive";
             operator?:
               | "lt"
               | "lte"
@@ -532,6 +544,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           where?: Array<{
             connector?: "AND" | "OR";
             field: string;
+            mode?: "sensitive" | "insensitive";
             operator?:
               | "lt"
               | "lte"
@@ -591,6 +604,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "banReason"
                     | "banExpires"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -636,6 +650,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "userId"
                     | "impersonatedBy"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -689,6 +704,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -728,6 +744,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -765,6 +782,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "expiresAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -834,6 +852,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "banReason"
                     | "banExpires"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -879,6 +898,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "userId"
                     | "impersonatedBy"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -932,6 +952,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -971,6 +992,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"
@@ -1008,6 +1030,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "expiresAt"
                     | "_id";
+                  mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
                     | "lte"

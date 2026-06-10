@@ -1,26 +1,28 @@
-"use client";
-
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import type { PaymentModeType, ProjectStatusType } from "@convex/constants";
+import { FILE_CATEGORIES, PROJECT_STATUS_LABELS } from "@convex/constants";
+import { Link } from "@tanstack/react-router";
+import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
+import { ExternalLink, MessageSquare } from "lucide-react";
 import * as React from "react";
-import Link from "next/link";
-import { MessageSquare, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import type { StatusColorSet } from "@/components/brand/primitives";
+import { StatusBadge } from "@/components/brand/primitives";
+import type { UploadedFile } from "@/components/file-upload";
+import { FileUpload } from "@/components/file-upload";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select as PaymentModeSelect,
   SelectContent as PaymentModeSelectContent,
@@ -29,26 +31,14 @@ import {
   SelectLabel as PaymentModeSelectLabel,
   SelectTrigger as PaymentModeSelectTrigger,
   SelectValue as PaymentModeSelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { FileUpload } from "@/components/file-upload";
-import type { UploadedFile } from "@/components/file-upload";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import {
-  PROJECT_STATUS_LABELS,
-  type ProjectStatusType,
-  type PaymentModeType,
-  FILE_CATEGORIES,
-} from "@convex/constants";
-import { useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
-import { ConvexError } from "convex/values";
-import { toast } from "sonner";
-import {
-  StatusBadge,
-  type StatusColorSet,
-} from "@/components/brand/primitives";
 
 export type AttendeeInfo = {
   projectId: string;
@@ -101,7 +91,7 @@ const STATUS_COLORS: Record<string, StatusColorSet> = {
 };
 
 /** Valid workshop workflow transitions keyed by current status. */
-const WORKSHOP_TRANSITIONS: Record<string, ProjectStatusType[]> = {
+const WORKSHOP_TRANSITIONS: Record<string, Array<ProjectStatusType>> = {
   pending: ["approved", "rejected", "cancelled"],
   approved: ["paid", "completed", "cancelled"],
   paid: ["completed", "cancelled"],
@@ -130,7 +120,7 @@ export function WorkshopAttendeeRow({
   const [receiptNumber, setReceiptNumber] = React.useState("");
   const [paymentMode, setPaymentMode] = React.useState<PaymentModeType>("cash");
   const [proof, setProof] = React.useState("");
-  const [proofFiles, setProofFiles] = React.useState<UploadedFile[]>([]);
+  const [proofFiles, setProofFiles] = React.useState<Array<UploadedFile>>([]);
   const [isPaying, setIsPaying] = React.useState(false);
   const [isUploadingProof, setIsUploadingProof] = React.useState(false);
 

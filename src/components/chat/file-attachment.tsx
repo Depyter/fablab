@@ -1,17 +1,15 @@
-"use client";
-
+import type { LucideIcon } from "lucide-react";
 import {
-  FileIcon,
-  FileText,
-  FileSpreadsheet,
-  Presentation,
-  FileArchive,
-  Code,
-  FileImage,
-  FileVideo,
   Box,
+  Code,
   Download,
-  type LucideIcon,
+  FileArchive,
+  FileIcon,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
+  Presentation,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

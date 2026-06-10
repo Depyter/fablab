@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import posthog from "posthog-js";
+import { usePostHog } from "@posthog/react";
+import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,11 +15,13 @@ export function ServiceCardClient({
   title,
   serviceType,
 }: ServiceCardProps) {
+  const posthog = usePostHog();
   const isWorkshop = serviceType === "WORKSHOP";
 
   return (
     <Link
-      href={`/services/${slug}`}
+      to="/services/$slug"
+      params={{ slug }}
       className={cn(
         "group relative block h-full overflow-hidden rounded-[2rem] border-4 border-black transition-all duration-200",
         "hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#000000] md:hover:shadow-[10px_10px_0_0_#000000] focus-visible:-translate-y-1 focus-visible:shadow-[5px_5px_0_0_#000000] md:focus-visible:shadow-[10px_10px_0_0_#000000] focus-visible:outline-none",

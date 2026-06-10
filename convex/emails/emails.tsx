@@ -1,10 +1,10 @@
 // IMPORTANT: this is a Convex Node Action
 "use node";
+import { render } from "@react-email/render";
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
-import { render } from "@react-email/render";
+import { FabLabEmail, type FabLabEmailProps } from "./FabLabEmail";
 import { resend } from "./send";
-import { FabLabEmail, FabLabEmailProps } from "./FabLabEmail";
 
 /**
  * Sends a FabLab project confirmation email.

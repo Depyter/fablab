@@ -1,8 +1,10 @@
-"use client";
-
+import { Link } from "@tanstack/react-router";
+import { Image } from "@unpic/react";
 import type { ComponentProps } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import {
+  SidebarNavigation,
+  SidebarUserFooter,
+} from "@/components/sidebar/app-sidebar-content";
 import {
   Sidebar,
   SidebarFooter,
@@ -11,10 +13,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import {
-  SidebarNavigation,
-  SidebarUserFooter,
-} from "@/components/sidebar/app-sidebar-content";
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   return (
@@ -28,7 +26,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
               className="md:h-10 md:p-0 border-2 border-black rounded-none bg-background"
             >
               <Link
-                href="/"
+                to="/"
                 aria-label="IskoLab home"
                 className="inline-flex items-center gap-3 mr-10"
               >

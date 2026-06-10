@@ -1,12 +1,12 @@
-import { describe, expect, test } from "vitest";
-import { convexTest } from "convex-test";
-import schema from "../convex/schema";
-import { api, internal } from "../convex/_generated/api";
-import { DataModel } from "../convex/_generated/dataModel";
-import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
-import { TestConvexForDataModel } from "convex-test";
+import type { TestConvexForDataModel } from "convex-test";
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+import { api, internal } from "../convex/_generated/api";
+import type { DataModel } from "../convex/_generated/dataModel";
+import schema from "../convex/schema";
+import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 
 process.env.RESEND_TEST_MODE = "true";
 process.env.RESEND_API_KEY ??= "test-api-key";
@@ -55,6 +55,14 @@ describe("workshop lifecycle edge cases", () => {
     });
   }
 
+  function expectPresent<T>(value: T | null, message: string): T {
+    expect(value).not.toBeNull();
+    if (!value) {
+      throw new Error(message);
+    }
+    return value;
+  }
+
   test("cancelling a workshop session does not cancel the booked projects (REPRODUCTION)", async () => {
     const { t, tClient, tAdmin } = await setup();
     const serviceId = await createWorkshopService(tAdmin);
@@ -99,8 +107,10 @@ describe("workshop lifecycle edge cases", () => {
     // Verify project is pending and session has 1 slot used
     let project = await t.run(async (ctx) => ctx.db.get(projectId));
     let session = await t.run(async (ctx) => ctx.db.get(sessionId));
-    expect(project!.status).toBe("pending");
-    expect(session!.usedUpSlots).toBe(1);
+    const pendingProject = expectPresent(project, "Expected booked project.");
+    const bookedSession = expectPresent(session, "Expected workshop session.");
+    expect(pendingProject.status).toBe("pending");
+    expect(bookedSession.usedUpSlots).toBe(1);
 
     // 3. Admin cancels the session
     await tAdmin.mutation(api.workshopSessions.mutate.cancel, { sessionId });
@@ -108,9 +118,16 @@ describe("workshop lifecycle edge cases", () => {
     // 4. Verify the session is cancelled BUT the project is still pending (THE ISSUE)
     session = await t.run(async (ctx) => ctx.db.get(sessionId));
     project = await t.run(async (ctx) => ctx.db.get(projectId));
-
-    expect(session!.status).toBe("cancelled");
-    expect(project!.status).toBe("cancelled"); // This SHOULD be cancelled
-    expect(session!.usedUpSlots).toBe(0); // The slot SHOULD be released
+    const cancelledSession = expectPresent(
+      session,
+      "Expected cancelled session.",
+    );
+    const cancelledProject = expectPresent(
+      project,
+      "Expected cancelled workshop project.",
+    );
+    expect(cancelledSession.status).toBe("cancelled");
+    expect(cancelledProject.status).toBe("cancelled"); // This SHOULD be cancelled
+    expect(cancelledSession.usedUpSlots).toBe(0); // The slot SHOULD be released
   });
 });

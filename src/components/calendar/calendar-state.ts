@@ -22,7 +22,7 @@ export const DEFAULT_CALENDAR_TAB = "services" as const;
 export interface CalendarVisibleRange {
   start: Date;
   endExclusive: Date;
-  days: Date[];
+  days: Array<Date>;
   label: string;
   scopeLabel: string;
   controlEyebrow: string;

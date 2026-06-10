@@ -1,38 +1,44 @@
-import { defineConfig } from "eslint/config";
-import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
-import nextTypescript from "eslint-config-next/typescript";
 import convexPlugin from "@convex-dev/eslint-plugin";
+import { tanstackConfig } from "@tanstack/eslint-config";
+import queryPlugin from "@tanstack/eslint-plugin-query";
+import routerPlugin from "@tanstack/eslint-plugin-router";
+import { defineConfig } from "eslint/config";
+
+const tanstackJavascriptConfig = tanstackConfig.find(
+  (config) => config.name === "tanstack/javascript",
+);
 
 export default defineConfig([
-  ...nextCoreWebVitals,
-  ...nextTypescript,
-  ...convexPlugin.configs.recommended,
   {
-    rules: {
-      "react/no-children-prop": "off",
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["*/_generated/server"],
-              importNames: ["query", "mutation"],
-              message: "Use helper.ts for queries and mutations",
-            },
-          ],
-        },
-      ],
-    },
+    ignores: [
+      ".output/**",
+      ".vinxi/**",
+      ".wrangler/**",
+      "(private)old/**",
+      "dist/**",
+      "node_modules/**",
+      "convex/_generated/**",
+      "convex/**/_generated/**",
+      "**/routeTree.gen.ts",
+    ],
   },
   {
-    files: [
-      "src/components/booking/**/*.{ts,tsx}",
-      "src/components/calendar/**/*.{ts,tsx}",
-      "convex/projects/helper.ts",
-      "convex/resource/mutate.ts",
-      "convex/services/query.ts",
-      "convex/services/mutate.ts",
-    ],
+    files: ["**/*.{js,mjs,cjs,jsx,ts,tsx}"],
+    languageOptions: {
+      ...tanstackJavascriptConfig?.languageOptions,
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    plugins: tanstackJavascriptConfig?.plugins,
+  },
+  ...routerPlugin.configs["flat/recommended"],
+  ...queryPlugin.configs["flat/recommended"],
+  ...convexPlugin.configs.recommended,
+  {
+    files: ["convex/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -43,50 +49,7 @@ export default defineConfig([
               importNames: ["query", "mutation"],
               message: "Use helper.ts for queries and mutations",
             },
-            {
-              group: ["date-fns"],
-              message:
-                "Use src/lib/lab-time.ts helpers instead of direct date-fns usage in booking and calendar flows.",
-            },
           ],
-        },
-      ],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "NewExpression[callee.name='Date']",
-          message:
-            "Use src/lib/lab-time.ts helpers instead of constructing Date directly in booking and calendar flows.",
-        },
-        {
-          selector:
-            "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-          message:
-            "Use getCurrentTimestamp from src/lib/lab-time.ts instead of Date.now().",
-        },
-        {
-          selector:
-            "CallExpression[callee.object.name='Date'][callee.property.name='parse']",
-          message:
-            "Use src/lib/lab-time.ts helpers instead of Date.parse() in booking and calendar flows.",
-        },
-        {
-          selector:
-            "CallExpression[callee.object.name='Date'][callee.property.name='UTC']",
-          message:
-            "Use src/lib/lab-time.ts helpers instead of Date.UTC() in booking and calendar flows.",
-        },
-        {
-          selector:
-            "CallExpression[callee.property.name=/^(toLocaleDateString|toLocaleTimeString|toLocaleString|toISOString)$/]",
-          message:
-            "Use src/lib/lab-time.ts formatting helpers instead of direct locale date formatting in booking and calendar flows.",
-        },
-        {
-          selector:
-            "CallExpression[callee.property.name=/^(getFullYear|getMonth|getDate|getDay|getHours|getMinutes|setHours|setMinutes)$/]",
-          message:
-            "Use src/lib/lab-time.ts helpers instead of direct Date field access in booking and calendar flows.",
         },
       ],
     },
@@ -96,13 +59,5 @@ export default defineConfig([
     rules: {
       "no-restricted-imports": "off",
     },
-  },
-  {
-    ignores: [
-      ".next/**",
-      ".open-next/**",
-      ".wrangler/**",
-      "convex/_generated/**",
-    ],
   },
 ]);

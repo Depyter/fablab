@@ -1,14 +1,25 @@
-import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
+import { convexBetterAuthReactStart } from "@convex-dev/better-auth/react-start";
+
+const convexUrl = import.meta.env.VITE_CONVEX_URL;
+const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL;
+
+if (!convexUrl) {
+  throw new Error("VITE_CONVEX_URL is not set");
+}
+
+if (!convexSiteUrl) {
+  throw new Error("VITE_CONVEX_SITE_URL is not set");
+}
 
 export const {
   handler,
-  preloadAuthQuery,
-  isAuthenticated,
   getToken,
   fetchAuthQuery,
   fetchAuthMutation,
   fetchAuthAction,
-} = convexBetterAuthNextJs({
-  convexUrl: process.env.NEXT_PUBLIC_CONVEX_URL!,
-  convexSiteUrl: process.env.NEXT_PUBLIC_CONVEX_SITE_URL!,
+} = convexBetterAuthReactStart({
+  convexUrl,
+  convexSiteUrl,
+  // // Optional, defaults to "/api/auth"
+  // basePath: '/custom/auth/path',
 });

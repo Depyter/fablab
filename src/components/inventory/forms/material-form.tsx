@@ -1,19 +1,17 @@
-"use client";
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { FieldSet } from "@/components/ui/field";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { MaterialCategory, MaterialUnit } from "@convex/constants";
+import { useAction, useMutation } from "convex/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { ActionDialog } from "@/components/action-dialog";
 import { FileUpload } from "@/components/file-upload/file-upload";
 import type { UploadedFile } from "@/components/file-upload/types";
-import { ActionDialog } from "@/components/action-dialog";
+import { Button } from "@/components/ui/button";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { FieldSet } from "@/components/ui/field";
 import { FormSection } from "@/components/ui/form-section";
-import { toast } from "sonner";
 import { useAppForm } from "@/lib/form-context";
-import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
 
 export type MaterialFormValues = {
   name: string;
@@ -31,11 +29,11 @@ export type MaterialFormValues = {
 interface MaterialFormProps {
   mode?: "add" | "edit";
   initialValues?: Partial<MaterialFormValues> & { _id?: string };
-  initialImages?: UploadedFile[];
+  initialImages?: Array<UploadedFile>;
   onSuccess?: () => void;
 }
 
-const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+const EMPTY_UPLOADED_FILES: Array<UploadedFile> = [];
 
 export function MaterialForm({
   mode = "add",
@@ -49,6 +47,7 @@ export function MaterialForm({
   const addMaterial = useMutation(api.materials.mutate.addMaterial);
   const updateMaterial = useMutation(api.materials.mutate.updateMaterial);
   const deleteMaterial = useMutation(api.materials.mutate.deleteMaterial);
+  const validateTextContent = useAction(api.moderation.validateTextContent);
 
   const handleThumbnailUploading = (isUploading: boolean) =>
     setThumbnailUploading(isUploading);
@@ -69,6 +68,21 @@ export function MaterialForm({
   const form = useAppForm({
     defaultValues,
     onSubmit: async ({ value }) => {
+      // ── Pre-flight moderation check ──────────────────────────────────
+      const moderation = await validateTextContent({
+        texts: [value.name, value.category, value.color].filter(
+          (t) => t.trim().length > 0,
+        ),
+      });
+
+      if (moderation.flagged) {
+        toast.error(
+          "Unable to save. The name, category, or color may violate content policies.",
+          { position: "top-center" },
+        );
+        return;
+      }
+
       const actionPromise = isEdit
         ? updateMaterial({
             id: initialValues?._id as Id<"materials">,

@@ -1,4 +1,4 @@
-import { RateLimiter, MINUTE } from "@convex-dev/rate-limiter";
+import { MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "./_generated/api";
 
 const RATE_LIMITS = {

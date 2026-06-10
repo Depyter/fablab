@@ -1,10 +1,10 @@
-import { describe, expect, test } from "vitest";
-import { convexTest } from "convex-test";
-import schema from "../convex/schema";
-import { api, internal } from "../convex/_generated/api";
-import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import resendComponent from "@convex-dev/resend/test";
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+import { api, internal } from "../convex/_generated/api";
+import schema from "../convex/schema";
+import { getLabDayStartTimestamp } from "../src/lib/lab-time";
 
 process.env.RESEND_TEST_MODE = "true";
 process.env.RESEND_API_KEY ??= "test-api-key";
@@ -86,17 +86,33 @@ describe("workshopSessions", () => {
     });
   }
 
+  type TestInstance = Awaited<ReturnType<typeof setup>>["t"];
+
+  async function getFirstServiceId(t: TestInstance) {
+    const service = await t.run(async (ctx) =>
+      ctx.db.query("services").first(),
+    );
+    expect(service).not.toBeNull();
+    if (!service) {
+      throw new Error("Expected a service to exist for this test.");
+    }
+    return service._id;
+  }
+
+  function expectPresent<T>(value: T | null, message: string): T {
+    expect(value).not.toBeNull();
+    if (!value) {
+      throw new Error(message);
+    }
+    return value;
+  }
+
   // ── 1. Create sessions & list by service ────────────────────────────────
 
   test("creates sessions for a workshop service and lists them by service", async () => {
     const { t, tAdmin, resourceId, materialId } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const now = Date.now();
     const futureDate = now + 7 * 24 * HOUR_MS;
@@ -147,9 +163,9 @@ describe("workshopSessions", () => {
     const fetched = await tAdmin.query(api.workshopSessions.query.get, {
       sessionId: s1,
     });
-    expect(fetched).not.toBeNull();
-    expect(fetched!.serviceId).toBe(serviceId);
-    expect(fetched!.maxSlots).toBe(10);
+    const fetchedSession = expectPresent(fetched, "Expected created session.");
+    expect(fetchedSession.serviceId).toBe(serviceId);
+    expect(fetchedSession.maxSlots).toBe(10);
   });
 
   // ── 2. Upcoming / past separation ───────────────────────────────────────
@@ -157,12 +173,7 @@ describe("workshopSessions", () => {
   test("separates upcoming and past sessions with serviceName attached", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const now = Date.now();
     const pastDate = now - 7 * 24 * HOUR_MS;
@@ -212,12 +223,7 @@ describe("workshopSessions", () => {
   test("cancel sets status to cancelled and omits session from default list", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const now = Date.now();
     const futureDate = now + 7 * 24 * HOUR_MS;
@@ -240,8 +246,11 @@ describe("workshopSessions", () => {
     const session = await tAdmin.query(api.workshopSessions.query.get, {
       sessionId,
     });
-    expect(session).not.toBeNull();
-    expect(session!.status).toBe("cancelled");
+    const cancelledSession = expectPresent(
+      session,
+      "Expected cancelled session.",
+    );
+    expect(cancelledSession.status).toBe("cancelled");
 
     // Default listByService excludes cancelled
     const activeOnly = await tAdmin.query(
@@ -264,12 +273,7 @@ describe("workshopSessions", () => {
   test("remove fails when usedUpSlots > 0 and succeeds when usedUpSlots is 0", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const now = Date.now();
     const futureDate = now + 7 * 24 * HOUR_MS;
@@ -331,11 +335,7 @@ describe("workshopSessions", () => {
       status: "Available",
     });
 
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const futureDate = Date.now() + 7 * 24 * HOUR_MS;
 
@@ -355,12 +355,7 @@ describe("workshopSessions", () => {
   test("create validates that endTime is after startTime", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const futureDate = Date.now() + 7 * 24 * HOUR_MS;
 
@@ -378,12 +373,7 @@ describe("workshopSessions", () => {
   test("create validates that maxSlots is at least 1", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const futureDate = Date.now() + 7 * 24 * HOUR_MS;
 
@@ -401,12 +391,7 @@ describe("workshopSessions", () => {
   test("create rejects non-existent serviceId", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     // Delete the service so the ID is no longer valid
     await tAdmin.mutation(api.services.mutate.deleteService, {
@@ -431,12 +416,7 @@ describe("workshopSessions", () => {
   test("update patches individual fields on a session", async () => {
     const { t, tAdmin, resourceId, materialId } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const now = Date.now();
     const futureDate = now + 7 * 24 * HOUR_MS;
@@ -467,25 +447,21 @@ describe("workshopSessions", () => {
     const session = await tAdmin.query(api.workshopSessions.query.get, {
       sessionId,
     });
-    expect(session!.endTime).toBe(newEndTime);
-    expect(session!.maxSlots).toBe(8);
-    expect(session!.resources).toEqual([resourceId]);
-    expect(session!.availableMaterials).toEqual([materialId]);
-    expect(session!.status).toBe("completed");
+    const updatedSession = expectPresent(session, "Expected updated session.");
+    expect(updatedSession.endTime).toBe(newEndTime);
+    expect(updatedSession.maxSlots).toBe(8);
+    expect(updatedSession.resources).toEqual([resourceId]);
+    expect(updatedSession.availableMaterials).toEqual([materialId]);
+    expect(updatedSession.status).toBe("completed");
     // Fields not in the update should remain unchanged
-    expect(session!.startTime).toBe(startTime);
-    expect(session!.date).toBe(getLabDayStartTimestamp(futureDate));
+    expect(updatedSession.startTime).toBe(startTime);
+    expect(updatedSession.date).toBe(getLabDayStartTimestamp(futureDate));
   });
 
   test("update prevents reducing maxSlots below usedUpSlots", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const futureDate = Date.now() + 7 * 24 * HOUR_MS;
 
@@ -518,12 +494,7 @@ describe("workshopSessions", () => {
   test("upcoming and past queries exclude cancelled sessions", async () => {
     const { t, tAdmin } = await setup();
     await createWorkshopService(tAdmin);
-
-    const service = await t.run(async (ctx) => {
-      const svc = await ctx.db.query("services").first();
-      return svc!;
-    });
-    const serviceId = service._id;
+    const serviceId = await getFirstServiceId(t);
 
     const now = Date.now();
     const futureDate = now + 7 * 24 * HOUR_MS;

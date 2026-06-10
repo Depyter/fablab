@@ -1,12 +1,11 @@
-"use client";
-
-import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export function ChatSidebarPane({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isInConversation = pathname !== "/dashboard/chat";
+interface ChatPaneProps {
+  children: React.ReactNode;
+  isInConversation: boolean;
+}
 
+export function ChatSidebarPane({ children, isInConversation }: ChatPaneProps) {
   return (
     <div
       className={cn(
@@ -20,10 +19,7 @@ export function ChatSidebarPane({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ChatContentPane({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isInConversation = pathname !== "/dashboard/chat";
-
+export function ChatContentPane({ children, isInConversation }: ChatPaneProps) {
   return (
     <div
       className={cn(

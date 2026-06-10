@@ -1,12 +1,9 @@
-"use client";
-
-import * as React from "react";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 interface ServiceGalleryProps {
-  images: string[];
+  images: Array<string>;
 }
 
 /**
@@ -35,13 +32,11 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
             )}
           >
             <div className="relative h-full w-full">
-              <Image
+              <img
                 src={src}
-                alt={`Product Image ${index + 1}`}
-                fill
-                className="object-contain"
-                sizes="(max-width: 1024px) 100vw, 800px"
-                priority={index === 0}
+                alt={`Product ${index + 1}`}
+                className="absolute inset-0 h-full w-full object-contain"
+                loading={index === 0 ? "eager" : "lazy"}
               />
             </div>
           </div>
@@ -51,6 +46,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
       {images.length > 1 && (
         <>
           <button
+            type="button"
             onClick={prev}
             className="absolute bottom-3 left-[44%] z-20 flex h-7 w-7 items-center justify-center border border-black bg-background text-foreground transition-colors hover:bg-sidebar-accent"
             aria-label="Previous image"
@@ -59,6 +55,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
           </button>
 
           <button
+            type="button"
             onClick={next}
             className="absolute bottom-3 left-[56%] z-20 flex h-7 w-7 items-center justify-center border border-black bg-background text-foreground transition-colors hover:bg-sidebar-accent"
             aria-label="Next image"
@@ -82,6 +79,7 @@ export function ServiceGallery({ images }: ServiceGalleryProps) {
           <div className="hidden">
             {images.map((src, idx) => (
               <button
+                type="button"
                 key={src}
                 onClick={() => setCurrent(idx)}
                 className={cn(

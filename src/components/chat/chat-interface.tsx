@@ -1,30 +1,26 @@
-"use client";
-
-import { useState } from "react";
-
-import { Loader2, Send, User, Hash, ArrowLeft, Clock } from "lucide-react";
-import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import Link from "next/link";
-
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { SystemMessageCard } from "./parts/system-message-card";
 import type { Id } from "@convex/_generated/dataModel";
-import { formatLabDate } from "@/lib/lab-time";
-import { getStatusLabel } from "@/lib/project-type-meta";
+import { usePostHog } from "@posthog/react";
+import { Link } from "@tanstack/react-router";
+import { Image } from "@unpic/react";
+import { useQuery } from "convex/react";
+import { ArrowLeft, Clock, Hash, Loader2, Send, User } from "lucide-react";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { FileUpload } from "@/components/file-upload";
 import { CHAT_ACCEPTED_TYPES } from "@/components/file-upload/utils";
-import { useChat } from "./use-chat";
-import ReactMarkdown from "react-markdown";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatLabDate } from "@/lib/lab-time";
+import { getStatusLabel } from "@/lib/project-type-meta";
+import { cn } from "@/lib/utils";
+import { ChatMessagesSkeletonList } from "./chat-loading";
 import { MessageAttachments } from "./parts/message-attachments";
 import { PendingAttachmentStrip } from "./parts/pending-attachment-strip";
+import { SystemMessageCard } from "./parts/system-message-card";
 import { PresenceIndicator } from "./presence-indicator";
-import { ChatInterfaceProps, MessageFile } from "./types";
-import { ChatMessagesSkeletonList } from "./chat-loading";
-import Image from "next/image";
-import posthog from "posthog-js";
+import type { ChatInterfaceProps, MessageFile } from "./types";
+import { useChat } from "./use-chat";
 
 const AVATAR_COLORS = [
   "var(--fab-magenta)",
@@ -73,10 +69,7 @@ function ArchivalBanner({ threadId }: { threadId: Id<"threads"> }) {
 
   if (!info) return null;
 
-  const statusLabel = getStatusLabel(
-    info.status as Parameters<typeof getStatusLabel>[0],
-    info.type,
-  );
+  const statusLabel = getStatusLabel(info.status, info.type);
 
   const deadlineDate =
     info.archivalDeadline !== null
@@ -111,6 +104,7 @@ export function ChatInterface({
   currentUserName,
   showBackButton,
 }: ChatInterfaceProps) {
+  const posthog = usePostHog();
   const [showTimeId, setShowTimeId] = useState<string | null>(null);
 
   const {
@@ -149,7 +143,7 @@ export function ChatInterface({
             asChild
             className="md:hidden -ml-2 shrink-0 rounded-none border-2 border-black bg-white "
           >
-            <Link href="/dashboard/chat">
+            <Link to="/dashboard/chat">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
@@ -230,9 +224,9 @@ export function ChatInterface({
                 message._creationTime - prevMessage._creationTime >
                   5 * 60 * 1000;
 
-              const messageFiles: MessageFile[] =
+              const messageFiles: Array<MessageFile> =
                 "files" in message && Array.isArray(message.files)
-                  ? (message.files as MessageFile[])
+                  ? (message.files as Array<MessageFile>)
                   : message.fileUrl
                     ? [
                         {
@@ -284,8 +278,8 @@ export function ChatInterface({
                               src="/fablab.jpg"
                               alt="System"
                               className="h-7.5 w-7.5"
-                              width="30"
-                              height="30"
+                              width={30}
+                              height={30}
                             />
                           </div>
                         ) : (
@@ -321,19 +315,28 @@ export function ChatInterface({
                           </div>
                         ) : null}
 
-                        <div
+                        <button
+                          type="button"
                           onClick={() =>
                             setShowTimeId(
                               showTimeId === message._id ? null : message._id,
                             )
                           }
-                          className="rounded-md border-2 border-black bg-[var(--fab-chat-system-bg)] px-3 py-2 text-sm leading-relaxed text-[var(--fab-text-muted)] cursor-pointer"
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setShowTimeId(
+                                showTimeId === message._id ? null : message._id,
+                              );
+                            }
+                          }}
+                          className="w-full rounded-md border-2 border-black bg-[var(--fab-chat-system-bg)] px-3 py-2 text-left text-sm leading-relaxed text-[var(--fab-text-muted)] cursor-pointer"
                         >
                           <SystemMessageCard
                             content={message.content}
                             files={messageFiles}
                           />
-                        </div>
+                        </button>
 
                         {showTimeId === message._id && (
                           <span className="text-[10px] mt-1.5 font-black uppercase tracking-widest opacity-50 text-[var(--fab-text-dim)]">
@@ -386,7 +389,6 @@ export function ChatInterface({
                           }}
                         >
                           {message.senderProfilePicUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={message.senderProfilePicUrl}
                               alt={message.sender}
@@ -543,11 +545,11 @@ export function ChatInterface({
                   f.status === "pending" ||
                   f.status === "error",
               )
-              .map((uf, i) => {
+              .map((uf) => {
                 if (uf.status === "error") {
                   return (
                     <div
-                      key={`err-${uf.file.name}-${uf.file.size}-${i}`}
+                      key={`err-${uf.file.name}-${uf.file.size}-${uf.file.lastModified}`}
                       className="flex items-center gap-1.5 px-0.5"
                     >
                       <span
@@ -575,7 +577,7 @@ export function ChatInterface({
                 const pct = Math.max(uf.progress, 2);
                 return (
                   <div
-                    key={`${uf.file.name}-${uf.file.size}-${i}`}
+                    key={`${uf.file.name}-${uf.file.size}-${uf.file.lastModified}`}
                     className="flex items-center gap-2 px-0.5"
                   >
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -648,6 +650,7 @@ export function ChatInterface({
 
           {/* Send button */}
           <button
+            type="button"
             onClick={handleSendMessage}
             disabled={!canSend}
             aria-label="Send message"

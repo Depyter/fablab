@@ -1,11 +1,11 @@
-import { v, ConvexError } from "convex/values";
+import { ConvexError, v } from "convex/values";
+import { getLabDayStartTimestamp } from "../../src/lib/lab-time";
 import { authMutation } from "../helper";
 import {
-  sendProjectSystemMessage,
-  scheduleProjectUpdateEmail,
   applyStatusChange,
+  scheduleProjectUpdateEmail,
+  sendProjectSystemMessage,
 } from "../projects/helper";
-import { getLabDayStartTimestamp } from "../../src/lib/lab-time";
 
 // ─── Create a new session for a workshop service ───────────────────────────
 // Inherits defaults (resources, materials) from the service unless overridden.

@@ -1,28 +1,26 @@
-"use client";
-
-import * as React from "react";
-import { useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useMutation } from "convex/react";
+import type * as React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  InlineMaterialSelect,
+  InlineResourceSelect,
+} from "@/components/services/forms/inline-resource-material-select";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  InlineResourceSelect,
-  InlineMaterialSelect,
-} from "@/components/services/forms/inline-resource-material-select";
-import { toast } from "sonner";
-import {
+  getLabDayKey,
   getLabDayStartTimestamp,
   getLabTimeTimestamp,
-  getLabDayKey,
   parseLabDayKey,
 } from "@/lib/lab-time";
 
@@ -37,8 +35,8 @@ type EditSessionDialogProps = {
     endTime: number;
     maxSlots: number;
     usedUpSlots: number;
-    resources?: string[];
-    availableMaterials?: string[];
+    resources?: Array<string>;
+    availableMaterials?: Array<string>;
   };
 };
 
@@ -65,10 +63,10 @@ export function EditSessionDialog({
   const [startTime, setStartTime] = useState(toTimeInput(session.startTime));
   const [endTime, setEndTime] = useState(toTimeInput(session.endTime));
   const [maxSlots, setMaxSlots] = useState(String(session.maxSlots));
-  const [selectedResources, setSelectedResources] = useState<string[]>(
+  const [selectedResources, setSelectedResources] = useState<Array<string>>(
     session.resources ?? [],
   );
-  const [selectedMaterials, setSelectedMaterials] = useState<string[]>(
+  const [selectedMaterials, setSelectedMaterials] = useState<Array<string>>(
     session.availableMaterials ?? [],
   );
 
@@ -110,10 +108,10 @@ export function EditSessionDialog({
         endTime: endTimestamp,
         maxSlots: slotsNum,
         ...(selectedResources.length > 0
-          ? { resources: selectedResources as Id<"resources">[] }
+          ? { resources: selectedResources as Array<Id<"resources">> }
           : {}),
         ...(selectedMaterials.length > 0
-          ? { availableMaterials: selectedMaterials as Id<"materials">[] }
+          ? { availableMaterials: selectedMaterials as Array<Id<"materials">> }
           : {}),
       });
       toast.success("Session updated!");
@@ -140,9 +138,9 @@ export function EditSessionDialog({
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Date */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Date
-            </label>
+            </div>
             <Input
               type="date"
               value={date}
@@ -155,9 +153,9 @@ export function EditSessionDialog({
           {/* Start / End time */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 Start Time
-              </label>
+              </div>
               <Input
                 type="time"
                 value={startTime}
@@ -167,9 +165,9 @@ export function EditSessionDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 End Time
-              </label>
+              </div>
               <Input
                 type="time"
                 value={endTime}
@@ -182,9 +180,9 @@ export function EditSessionDialog({
 
           {/* Max slots */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Max Slots
-            </label>
+            </div>
             <Input
               type="number"
               min={session.usedUpSlots}

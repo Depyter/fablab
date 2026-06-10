@@ -1,6 +1,6 @@
+import { ChevronDown, Hash, Paperclip, Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Hash, Paperclip, Send } from "lucide-react";
 import { PresenceIndicatorSkeleton } from "./presence-indicator";
 
 const messageSkeletonKeys = Array.from(
@@ -95,9 +95,9 @@ export function ChatSidebarRoomsLoading() {
             </div>
           </div>
           <div className="relative flex flex-col pb-2">
-            {["w-[80%]", "w-[65%]", "w-[72%]"].map((widthClass, index) => (
+            {["w-[80%]", "w-[65%]", "w-[72%]"].map((widthClass) => (
               <div
-                key={`${key}-thread-${index}`}
+                key={`${key}-thread-${widthClass}`}
                 className="relative flex items-center gap-2 py-2 pl-7 pr-3"
               >
                 <Hash

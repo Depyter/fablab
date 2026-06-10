@@ -1,4 +1,5 @@
-import { ProjectStatusType, PROJECT_STATUS_LABELS } from "@convex/constants";
+import type { ProjectStatusType } from "@convex/constants";
+import { PROJECT_STATUS_LABELS } from "@convex/constants";
 
 // ═══════════════════════════════════════════════════════════════════════
 // Types
@@ -14,20 +15,20 @@ export interface ProjectWorkflow {
   type: ProjectType;
 
   /** Timeline steps in display order. */
-  steps: readonly ProjectStatusType[];
+  steps: ReadonlyArray<ProjectStatusType>;
 
   /** Status display label overrides (falls back to PROJECT_STATUS_LABELS). */
   statusLabels: Partial<Record<ProjectStatusType, string>>;
 
   /** Which statuses allow payment via markProjectPaid. */
-  payableStatuses: readonly ProjectStatusType[];
+  payableStatuses: ReadonlyArray<ProjectStatusType>;
 
   /**
    * Valid transitions: { fromStatus: [toStatus1, toStatus2, ...] }
    * These are type-specific — workshops can't reach "claimed" and
    * fabrication can't skip to "paid" from "approved".
    */
-  transitions: Record<ProjectStatusType, readonly ProjectStatusType[]>;
+  transitions: Record<ProjectStatusType, ReadonlyArray<ProjectStatusType>>;
 
   /** Whether pending → approved requires assigning a maker first. */
   approvalRequiresMaker: boolean;
@@ -95,7 +96,7 @@ export function isKnownType(type: string): type is ProjectType {
 
 /** Safe workflow access. Falls back to FABRICATION for unknown types. */
 export function getWorkflow(type: string): ProjectWorkflow {
-  if (isKnownType(type)) return WORKFLOWS[type as ProjectType];
+  if (isKnownType(type)) return WORKFLOWS[type];
   return WORKFLOWS.FABRICATION;
 }
 

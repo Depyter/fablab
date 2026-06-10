@@ -32,12 +32,11 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Cache Bun dependencies and Next cache
+      - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.bun/install/cache
-            .next/cache
           key: ${{ runner.os }}-preview-${{ hashFiles('bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-preview-
@@ -47,15 +46,17 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Deploy Convex preview and build worker
-        run: bunx convex deploy --cmd "bun run build:worker:preview"
+        run: bunx convex deploy --cmd "bun run build"
         env:
+          CLOUDFLARE_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+          VITE_ENV: preview
 
       - name: Set preview environment variables in Convex
         run: |
           PREVIEW_URL="https://pr-${{ github.event.pull_request.number }}-fablab-preview.acabalharleyvan.workers.dev"
           bunx convex env set --preview-name "${{ github.head_ref }}" CURRENT_SITE_URL "$PREVIEW_URL"
-          bunx convex env set --preview-name "${{ github.head_ref }}" NEXTJS_ENV "preview"
+          bunx convex env set --preview-name "${{ github.head_ref }}" VITE_ENV "preview"
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
 
@@ -68,7 +69,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          bun run upload:worker:preview -- --preview-alias "$PREVIEW_ALIAS" | tee upload.log
+          bun run deploy:preview --preview-alias "$PREVIEW_ALIAS" | tee upload.log
           preview_url="https://${PREVIEW_ALIAS}-fablab-preview.acabalharleyvan.workers.dev"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
 
@@ -81,10 +82,7 @@ jobs:
             const marker = '<!-- cloudflare-preview-url -->';
             const previewUrl = process.env.PREVIEW_URL?.trim();
             const body = `${marker}
-            **Cloudflare preview**: ${previewUrl}
-
-            - Built inside Convex preview deployment context.
-            - This is a stable PR alias URL backed by Cloudflare preview versions.`;
+            **Cloudflare preview**: ${previewUrl}`;
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.paginate(github.rest.issues.listComments, {

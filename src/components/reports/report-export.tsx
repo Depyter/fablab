@@ -1,7 +1,7 @@
-"use client";
-
-import * as React from "react";
+import type { Id } from "@convex/_generated/dataModel";
 import { Download } from "lucide-react";
+import * as React from "react";
+import * as XLSX from "xlsx";
 import {
   Popover,
   PopoverContent,
@@ -9,8 +9,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import * as XLSX from "xlsx";
-import type { Id } from "@convex/_generated/dataModel";
 
 interface ExportData {
   metrics: {
@@ -111,15 +109,13 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
   const completedStages = (() => {
     const byStatus = m?.projectCountByStatus ?? {};
     return (
-      (byStatus["completed"] ?? 0) +
-      (byStatus["paid"] ?? 0) +
-      (byStatus["claimed"] ?? 0)
+      (byStatus.completed ?? 0) + (byStatus.paid ?? 0) + (byStatus.claimed ?? 0)
     );
   })();
 
   const totalRevenue = m?.totalRevenue ?? 0;
 
-  const summaryRows: unknown[][] = [
+  const summaryRows: Array<Array<unknown>> = [
     ["FabLab Report", ""],
     ["Period", `${formatDate(data.dateFrom)} – ${formatDate(data.dateTo)}`],
     ["Generated", new Date().toLocaleString()],
@@ -164,8 +160,8 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
   if (byStatus) {
     const entries = Object.entries(byStatus);
     const total = entries.reduce((s, [, c]) => s + c, 0);
-    const projectsRows: unknown[][] = [
-      ["Status", "Count", "%"] as string[],
+    const projectsRows: Array<Array<unknown>> = [
+      ["Status", "Count", "%"] as Array<string>,
       ...entries
         .sort(([, a], [, b]) => b - a)
         .map(([status, count]) => [
@@ -184,7 +180,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
   if (m) {
     const workshopCount = m.workshopCount ?? 0;
     const projectsWithoutWorkshops = totalProjects - workshopCount;
-    const workshopsRows: unknown[][] = [
+    const workshopsRows: Array<Array<unknown>> = [
       ["Metric", "Value"],
       ["Workshop Projects", workshopCount],
       ["Regular Projects", projectsWithoutWorkshops],
@@ -203,7 +199,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
 
   if (m?.topServices?.length) {
     const totalSvc = m.topServices.reduce((s, svc) => s + svc.projectCount, 0);
-    const servicesRows: unknown[][] = [
+    const servicesRows: Array<Array<unknown>> = [
       ["Service", "Project Count", "%", "Rank"],
       ...m.topServices
         .sort((a, b) => b.projectCount - a.projectCount)
@@ -233,7 +229,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
       ...m.resourceUtilization.map((r) => r.totalBookedMinutes / 60),
       1,
     );
-    const resourceRows: unknown[][] = [
+    const resourceRows: Array<Array<unknown>> = [
       ["Resource", "Booked Hours", "% of Busiest", "Rank"],
       ...m.resourceUtilization
         .sort((a, b) => b.totalBookedMinutes - a.totalBookedMinutes)
@@ -273,7 +269,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
       (s, mat) => s + mat.totalCost,
       0,
     );
-    const materialRows: unknown[][] = [
+    const materialRows: Array<Array<unknown>> = [
       [
         "Material",
         "Unit",
@@ -337,7 +333,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
       "Dec",
     ];
     let cumulative = 0;
-    const revenueRows: unknown[][] = [
+    const revenueRows: Array<Array<unknown>> = [
       ["Month", "Revenue", "Projects", "Avg/Project", "Cumulative Revenue"],
       ...monthlyData.map((mo) => {
         cumulative += mo.revenue;
@@ -374,7 +370,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
       (s, svc) => s + svc.revenue,
       0,
     );
-    const byServiceRows: unknown[][] = [
+    const byServiceRows: Array<Array<unknown>> = [
       ["Service", "Revenue", "% of Total", "Projects", "Rev/Project", "Rank"],
       ...r.byService
         .sort((a, b) => b.revenue - a.revenue)
@@ -405,7 +401,7 @@ function buildWorkbook(data: ExportData): XLSX.WorkBook {
 
   if (d?.length) {
     const maintenanceCount = d.filter((r) => r.isUnderMaintenance).length;
-    const downtimeRows: unknown[][] = [
+    const downtimeRows: Array<Array<unknown>> = [
       [
         "Resource",
         "Category",

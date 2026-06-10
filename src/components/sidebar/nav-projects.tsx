@@ -1,5 +1,9 @@
-"use client";
-
+import {
+  ArrowRightIcon,
+  FolderIcon,
+  MoreHorizontalIcon,
+  Trash2Icon,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,21 +20,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  MoreHorizontalIcon,
-  FolderIcon,
-  ArrowRightIcon,
-  Trash2Icon,
-} from "lucide-react";
 
 export function NavProjects({
   projects,
 }: {
-  projects: {
+  projects: Array<{
     name: string;
     url: string;
     icon: React.ReactNode;
-  }[];
+  }>;
 }) {
   const { isMobile } = useSidebar();
 

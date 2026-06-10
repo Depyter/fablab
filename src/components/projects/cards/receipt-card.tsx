@@ -1,9 +1,7 @@
-"use client";
-
-import { DetailCard, DetailChip } from "./detail-card";
+import type { ProjectStatusType } from "@convex/constants";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { getWorkflow } from "@/lib/project-type-meta";
-import { ProjectStatusType } from "@convex/constants";
+import { DetailCard, DetailChip } from "./detail-card";
 
 interface ReceiptFile {
   storageId: string;
@@ -16,7 +14,7 @@ interface Receipt {
   receiptString: string;
   paymentMode: string;
   proof?: string | null;
-  resolvedFiles?: ReceiptFile[] | null;
+  resolvedFiles?: Array<ReceiptFile> | null;
 }
 
 interface ReceiptCardProps {

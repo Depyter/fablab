@@ -1,6 +1,14 @@
-"use client";
-
-import { createElement } from "react";
+import { EXT_MIME } from "@convex/constants";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Paperclip,
+  ShieldAlert,
+  Upload,
+  X,
+} from "lucide-react";
+import { createElement, useId } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,26 +18,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {
-  Upload,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  Paperclip,
-  ShieldAlert,
-} from "lucide-react";
+import type { FileUploadProps, UploadedFile, UploadingFile } from "./types";
 import { useFileUpload } from "./use-file-upload";
 import {
-  getFileIcon,
   formatFileSize,
+  getFileIcon,
   isImageFile,
   resolveFileType,
 } from "./utils";
-import type { FileUploadProps, UploadedFile, UploadingFile } from "./types";
-import { EXT_MIME } from "@convex/constants";
 
-const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+const EMPTY_UPLOADED_FILES: Array<UploadedFile> = [];
 
 const getUploadingFileKey = (file: UploadingFile) =>
   file.storageId ??
@@ -64,7 +62,6 @@ function UploadingThumb({
       <div
         className={`${dim} rounded-md overflow-hidden bg-white shrink-0 relative`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={previewUrl}
           alt={uf.file.name}
@@ -124,7 +121,6 @@ function UploadedThumb({ uf, size }: { uf: UploadedFile; size: "sm" | "md" }) {
   if (uf.fileType.startsWith("image/") && uf.url) {
     return (
       <div className={`${dim} rounded-md overflow-hidden bg-muted shrink-0`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={uf.url}
           alt={uf.fileName}
@@ -169,6 +165,7 @@ export function FileUpload({
   value = EMPTY_UPLOADED_FILES,
   showDriveLinkNote = false,
 }: FileUploadProps) {
+  const fileInputId = useId();
   const {
     uploadingFiles,
     uploadedFiles,
@@ -210,6 +207,7 @@ export function FileUpload({
   // Shared hidden file input — rendered once, referenced by all variants.
   const fileInput = (
     <input
+      id={fileInputId}
       ref={fileInputRef}
       type="file"
       onChange={handleFileInputChange}
@@ -333,7 +331,8 @@ export function FileUpload({
   if (variant === "compact") {
     return (
       <div className={cn("space-y-3", className)}>
-        <div
+        <button
+          type="button"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -352,8 +351,8 @@ export function FileUpload({
               {isDragging ? "Drop here" : "Upload files"}
             </span>
           </div>
-          {fileInput}
-        </div>
+        </button>
+        {fileInput}
 
         {(uploadingFiles.length > 0 || uploadedFiles.length > 0) && (
           <div className="space-y-2">
@@ -462,13 +461,14 @@ export function FileUpload({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div
+        <button
+          type="button"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={triggerFileSelect}
           className={cn(
-            "cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center transition-all",
+            "w-full cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center transition-all",
             isDragging && !disabled
               ? "-translate-x-0.5 -translate-y-0.5 bg-fab-teal/15"
               : "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none hover:bg-fab-magenta/10",
@@ -501,7 +501,7 @@ export function FileUpload({
             </div>
           </div>
           {fileInput}
-        </div>
+        </button>
 
         {(uploadingFiles.length > 0 || uploadedFiles.length > 0) && (
           <div className="space-y-3">

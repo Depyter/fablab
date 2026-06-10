@@ -1,5 +1,3 @@
-"use client";
-
 import { formatLabDate, formatLabTime } from "@/lib/lab-time";
 import type { ProjectData } from "../project-details-content";
 import { DetailCard } from "./detail-card";

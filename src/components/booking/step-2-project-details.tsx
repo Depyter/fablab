@@ -1,8 +1,21 @@
+import type {
+  FulfillmentModeType,
+  ProjectMaterialType,
+} from "@convex/constants";
+import { ProjectMaterial } from "@convex/constants";
+import { usePostHog } from "@posthog/react";
+import { ChevronLeft } from "lucide-react";
+import { toast } from "sonner";
+import { DateTimePicker } from "@/components/booking/date-time-picker";
+import { FileUpload } from "@/components/file-upload";
 import {
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
+import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import {
   Select,
@@ -11,31 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroupChoiceCard } from "./select-option-form";
-import { DateTimePicker } from "@/components/booking/date-time-picker";
-
-import { FileUpload } from "@/components/file-upload";
-import { ChevronLeft } from "lucide-react";
-import type { AppFormApi } from "@/lib/form-context";
-import { toast } from "sonner";
-import posthog from "posthog-js";
-import {
-  getLabTimeRangeTimestamps,
-  getCurrentTimestamp,
-  formatLabCurrency,
-} from "@/lib/lab-time";
-import type { UploadedFile } from "../file-upload/types";
-import { FieldGroup, Field, FieldSeparator } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { WorkshopSchedule } from "./workshop-time-slot-picker";
-import type { ServicePricing } from "@/lib/project-pricing";
+import type { AppFormApi } from "@/lib/form-context";
 import {
-  ProjectMaterial,
-  type FulfillmentModeType,
-  type ProjectMaterialType,
-} from "@convex/constants";
+  formatLabCurrency,
+  getCurrentTimestamp,
+  getLabTimeRangeTimestamps,
+} from "@/lib/lab-time";
+import type { ServicePricing } from "@/lib/project-pricing";
+import type { UploadedFile } from "../file-upload/types";
+import { RadioGroupChoiceCard } from "./select-option-form";
+import type { WorkshopSchedule } from "./workshop-time-slot-picker";
 
 export interface BookingDetailsFormValues {
   dateTime: {
@@ -46,19 +45,19 @@ export interface BookingDetailsFormValues {
     originalStartTime?: number;
     originalEndTime?: number;
   };
-  files: UploadedFile[];
+  files: Array<UploadedFile>;
   name: string;
   description: string;
   notes: string;
   pricing: string;
   material: ProjectMaterialType;
-  requestedMaterialIds: string[];
+  requestedMaterialIds: Array<string>;
   serviceType: FulfillmentModeType;
 }
 
 type PricingVariantOption = { name: string };
 
-const EMPTY_PRICING_VARIANTS: PricingVariantOption[] = [];
+const EMPTY_PRICING_VARIANTS: Array<PricingVariantOption> = [];
 
 const isProjectMaterial = (value: string): value is ProjectMaterialType =>
   value === ProjectMaterial.PROVIDE_OWN ||
@@ -85,14 +84,14 @@ export function Step2ProjectDetails({
 }: {
   form: AppFormApi<BookingDetailsFormValues>;
   serviceName: string;
-  expandedFileTypes: string[];
+  expandedFileTypes: Array<string>;
   is3DPrinting: boolean;
   isUploading: boolean;
   onUploadingChange: (uploading: boolean) => void;
   onPrev: () => void;
   onNext: (e: React.FormEvent) => void;
-  requirements: string[];
-  availableDays: number[];
+  requirements: Array<string>;
+  availableDays: Array<number>;
   serviceMaterials: Array<{
     _id: string;
     name: string;
@@ -101,19 +100,21 @@ export function Step2ProjectDetails({
     unit?: string;
   }>;
   hasUpPricing: boolean;
-  pricingVariants?: PricingVariantOption[];
+  pricingVariants?: Array<PricingVariantOption>;
   servicePricing?: ServicePricing;
   serviceCategory?: string;
-  schedules?: WorkshopSchedule[];
-  bookedTimeBlocks?: { start: string; end: string }[];
+  schedules?: Array<WorkshopSchedule>;
+  bookedTimeBlocks?: Array<{ start: string; end: string }>;
 }) {
+  const posthog = usePostHog();
+
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
     const formValues = form.state.values;
     const dateTime = formValues.dateTime;
 
-    if (!dateTime || !dateTime.date) {
+    if (!dateTime?.date) {
       toast.error("Please select a valid date for your booking.");
       return;
     }
@@ -667,6 +668,9 @@ export function Step2ProjectDetails({
                     field.handleChange(val);
                   }}
                   onUploadingChange={onUploadingChange}
+                  onUploadError={(error) => {
+                    toast.error(error.message || "Failed to upload file");
+                  }}
                   onUploadComplete={(file: UploadedFile) => {
                     posthog.capture("booking_file_uploaded", {
                       service_name: serviceName,

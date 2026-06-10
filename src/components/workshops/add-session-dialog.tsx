@@ -1,18 +1,21 @@
-"use client";
-
-import * as React from "react";
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useMutation, useQuery } from "convex/react";
+import * as React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  InlineMaterialSelect,
+  InlineResourceSelect,
+} from "@/components/services/forms/inline-resource-material-select";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -21,11 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  InlineResourceSelect,
-  InlineMaterialSelect,
-} from "@/components/services/forms/inline-resource-material-select";
-import { toast } from "sonner";
 import {
   getLabDayStartTimestamp,
   getLabTimeTimestamp,
@@ -57,8 +55,8 @@ export function AddSessionDialog({
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [maxSlots, setMaxSlots] = useState("10");
-  const [selectedResources, setSelectedResources] = useState<string[]>([]);
-  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [selectedResources, setSelectedResources] = useState<Array<string>>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<Array<string>>([]);
 
   const reset = () => {
     setServiceId(preselectedServiceId ?? "");
@@ -100,10 +98,10 @@ export function AddSessionDialog({
         endTime: endTimestamp,
         maxSlots: parseInt(maxSlots, 10),
         ...(selectedResources.length > 0
-          ? { resources: selectedResources as Id<"resources">[] }
+          ? { resources: selectedResources as Array<Id<"resources">> }
           : {}),
         ...(selectedMaterials.length > 0
-          ? { availableMaterials: selectedMaterials as Id<"materials">[] }
+          ? { availableMaterials: selectedMaterials as Array<Id<"materials">> }
           : {}),
       });
       toast.success("Session created!");
@@ -133,9 +131,9 @@ export function AddSessionDialog({
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Workshop select */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Workshop
-            </label>
+            </div>
             <Select
               value={serviceId}
               onValueChange={setServiceId}
@@ -162,9 +160,9 @@ export function AddSessionDialog({
 
           {/* Date */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Date
-            </label>
+            </div>
             <Input
               type="date"
               value={date}
@@ -177,9 +175,9 @@ export function AddSessionDialog({
           {/* Start / End time */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 Start Time
-              </label>
+              </div>
               <Input
                 type="time"
                 value={startTime}
@@ -189,9 +187,9 @@ export function AddSessionDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
                 End Time
-              </label>
+              </div>
               <Input
                 type="time"
                 value={endTime}
@@ -204,9 +202,9 @@ export function AddSessionDialog({
 
           {/* Max slots */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60">
               Max Slots
-            </label>
+            </div>
             <Input
               type="number"
               min="1"

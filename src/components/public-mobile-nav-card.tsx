@@ -1,10 +1,8 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { Link } from "@tanstack/react-router";
+import gsap from "gsap";
 import { Menu, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicNavItemContent } from "@/components/public-nav-item-content";
 import { cn } from "@/lib/utils";
 
@@ -15,13 +13,11 @@ type PublicNavItem = {
 };
 
 type PublicMobileNavCardProps = {
-  items: readonly PublicNavItem[];
+  items: ReadonlyArray<PublicNavItem>;
 };
 
 const mobileNavLinkClass =
   "group flex items-center justify-between rounded-[1.4rem] border-4 border-black bg-white px-5 py-4 text-black shadow-[5px_5px_0_0_#000] transition-all duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_#000] active:translate-x-0 active:translate-y-0 active:shadow-[3px_3px_0_0_#000]";
-
-gsap.registerPlugin(useGSAP);
 
 export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
   const [open, setOpen] = useState(false);
@@ -39,13 +35,13 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
     },
   ] as const;
 
-  const openMenu = () => {
+  const openMenu = useCallback(() => {
     setOpen(true);
-  };
+  }, []);
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     setOpen(false);
-  };
+  }, []);
 
   useGSAP(
     () => {
@@ -108,7 +104,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   useEffect(() => {
     const timeline = timelineRef.current;
@@ -196,7 +192,7 @@ export function PublicMobileNavCard({ items }: PublicMobileNavCardProps) {
                 {primaryItems.map((item) => (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     onClick={closeMenu}
                     tabIndex={open ? 0 : -1}
                     className={cn(mobileNavLinkClass, item.mobileClassName)}
