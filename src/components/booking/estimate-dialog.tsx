@@ -73,6 +73,8 @@ export function EstimateProjectDetails({
 }: EstimateProjectDetailsProps) {
   const posthog = usePostHog();
   const [isChecked, setIsChecked] = useState(false);
+  const hasCompleteTimeRange =
+    !!data.dateTime.startTime && !!data.dateTime.endTime;
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
@@ -182,8 +184,9 @@ export function EstimateProjectDetails({
                     Time
                   </p>
                   <p className="text-sm font-bold text-black">
-                    {formatLabClockTime(data.dateTime.startTime)} -{" "}
-                    {formatLabClockTime(data.dateTime.endTime)}
+                    {hasCompleteTimeRange
+                      ? `${formatLabClockTime(data.dateTime.startTime)} - ${formatLabClockTime(data.dateTime.endTime)}`
+                      : "Not specified"}
                   </p>
                 </div>
               </div>
