@@ -6,13 +6,21 @@ import { ProfileProvider } from "@/components/sidebar/profile-context";
 
 export const Route = createFileRoute("/_private")({
   component: RouteComponent,
-  beforeLoad: ({ context, location }) => {
+  beforeLoad: async ({ context, location }) => {
     if (environmentManager.isServer() && !context.isAuthenticated) {
       throw redirect({
         to: "/login",
         search: { redirect: location.href },
       });
     }
+
+    const profile = await context.queryClient.ensureQueryData(
+      convexQuery(api.users.getUserProfile, {}),
+    );
+
+    return {
+      role: profile.role,
+    };
   },
   loader: async (opts) => {
     await opts.context.queryClient.ensureQueryData(

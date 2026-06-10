@@ -78,6 +78,8 @@ export function ServiceForm({
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [samplesUploading, setSamplesUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [imageFiles, setImageFiles] = useState(() => initialImages);
+  const [sampleFiles, setSampleFiles] = useState(() => initialSamples);
   const hasUploadsInProgress = thumbnailUploading || samplesUploading;
 
   const form = useAppForm({
@@ -87,6 +89,11 @@ export function ServiceForm({
       setIsSuccess(didSubmit);
     },
   });
+
+  const resetDisplayedFiles = () => {
+    setImageFiles(initialImages);
+    setSampleFiles(initialSamples);
+  };
 
   return (
     <ServiceFormModeContext.Provider value={mode}>
@@ -113,6 +120,7 @@ export function ServiceForm({
             onConfirm={async () => {
               await onDiscard(form.state.values);
               form.reset();
+              resetDisplayedFiles();
             }}
             title="Discard changes?"
             description="Are you sure you want to discard your changes? This cannot be undone."
@@ -160,12 +168,13 @@ export function ServiceForm({
                 <FileUpload
                   title="Sample Projects"
                   accept="*/*"
-                  value={initialSamples}
-                  onFilesChange={(files) =>
+                  value={sampleFiles}
+                  onFilesChange={(files) => {
+                    setSampleFiles(files);
                     field.handleChange(
                       files.map((f) => f.storageId as Id<"_storage">),
-                    )
-                  }
+                    );
+                  }}
                   onUploadingChange={setSamplesUploading}
                   onUploadError={(error) => {
                     toast.error(error.message || "Failed to upload file");
@@ -190,12 +199,13 @@ export function ServiceForm({
                   <FileUpload
                     title="Thumbnail *"
                     accept="*/*"
-                    value={initialImages}
-                    onFilesChange={(files) =>
+                    value={imageFiles}
+                    onFilesChange={(files) => {
+                      setImageFiles(files);
                       field.handleChange(
                         files.map((f) => f.storageId as Id<"_storage">),
-                      )
-                    }
+                      );
+                    }}
                     onUploadingChange={setThumbnailUploading}
                     onUploadError={(error) => {
                       toast.error(error.message || "Failed to upload file");

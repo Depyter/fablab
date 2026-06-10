@@ -17,7 +17,7 @@ export function ProfileProvider({
   isPending,
   children,
 }: React.PropsWithChildren<{
-  profile: CurrentUserProfile | null | undefined;
+  profile: CurrentUserProfile | undefined;
   isPending: boolean;
 }>) {
   return (

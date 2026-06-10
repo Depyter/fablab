@@ -71,7 +71,8 @@ export const getUserProfile = authQuery({
   handler: async (ctx) => {
     const profile = ctx.profile;
 
-    if (!profile) return null;
+    if (!profile)
+      throw new ConvexError("Profile does not exist but authenticated.");
 
     const betterUser = await authComponent.getAnyUserById(ctx, profile.userId);
 

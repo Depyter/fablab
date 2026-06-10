@@ -73,7 +73,7 @@ export const Route = createRootRouteWithContext<{
 
   notFoundComponent: () => {
     <div className="relative min-h-screen bg-background overflow-hidden flex flex-col items-center justify-center p-12">
-      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-[size:120px_120px] opacity-35" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_3px,transparent_3px),linear-gradient(to_bottom,var(--border)_3px,transparent_3px)] bg-size-[120px_120px opacity-35" />
       <h1 className="relative z-10 text-6xl font-black uppercase tracking-tighter sm:text-8xl">
         404 - Page Not Found
       </h1>
