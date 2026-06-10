@@ -331,11 +331,12 @@ export function FileUpload({
   if (variant === "compact") {
     return (
       <div className={cn("space-y-3", className)}>
-        <label
-          htmlFor={fileInputId}
+        <button
+          type="button"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onClick={triggerFileSelect}
           className={cn(
             "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
             isDragging && !disabled
@@ -350,7 +351,7 @@ export function FileUpload({
               {isDragging ? "Drop here" : "Upload files"}
             </span>
           </div>
-        </label>
+        </button>
         {fileInput}
 
         {(uploadingFiles.length > 0 || uploadedFiles.length > 0) && (
@@ -460,13 +461,14 @@ export function FileUpload({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <label
-          htmlFor={fileInputId}
+        <button
+          type="button"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onClick={triggerFileSelect}
           className={cn(
-            "cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center transition-all",
+            "w-full cursor-pointer border-dashed border-2 border-black rounded-lg p-8 text-center transition-all",
             isDragging && !disabled
               ? "-translate-x-0.5 -translate-y-0.5 bg-fab-teal/15"
               : "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none hover:bg-fab-magenta/10",
@@ -499,7 +501,7 @@ export function FileUpload({
             </div>
           </div>
           {fileInput}
-        </label>
+        </button>
 
         {(uploadingFiles.length > 0 || uploadedFiles.length > 0) && (
           <div className="space-y-3">
